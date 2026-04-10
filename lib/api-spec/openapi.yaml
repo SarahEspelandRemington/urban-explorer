@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: explore
+    description: Urban exploration operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /explore/discover:
+    post:
+      operationId: discoverPlaces
+      tags: [explore]
+      summary: Discover interesting places nearby
+      description: Given coordinates, returns interesting historical facts and stories about nearby buildings and spaces
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscoverRequest"
+      responses:
+        "200":
+          description: Discovered places with facts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverResponse"
+  /explore/place-detail:
+    post:
+      operationId: getPlaceDetail
+      tags: [explore]
+      summary: Get detailed info about a specific place
+      description: Returns in-depth historical information and stories about a specific place
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceDetailRequest"
+      responses:
+        "200":
+          description: Detailed place information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceDetailResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +73,108 @@ components:
           type: string
       required:
         - status
-
+    DiscoverRequest:
+      type: object
+      properties:
+        latitude:
+          type: number
+          description: Current latitude
+        longitude:
+          type: number
+          description: Current longitude
+        radius:
+          type: number
+          description: Search radius in meters (default 500)
+      required:
+        - latitude
+        - longitude
+    DiscoverResponse:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            $ref: "#/components/schemas/Place"
+        location:
+          type: string
+          description: Human-readable description of the area
+      required:
+        - places
+        - location
+    Place:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          description: "Type of place (e.g., building, monument, park, bridge)"
+        yearBuilt:
+          type: string
+          description: "Approximate year or era built"
+        summary:
+          type: string
+          description: "Brief one-line description"
+        facts:
+          type: array
+          items:
+            type: string
+          description: "List of interesting historical facts"
+        latitude:
+          type: number
+        longitude:
+          type: number
+        distanceMeters:
+          type: number
+      required:
+        - id
+        - name
+        - category
+        - summary
+        - facts
+        - latitude
+        - longitude
+    PlaceDetailRequest:
+      type: object
+      properties:
+        placeName:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        category:
+          type: string
+      required:
+        - placeName
+        - latitude
+        - longitude
+    PlaceDetailResponse:
+      type: object
+      properties:
+        name:
+          type: string
+        fullHistory:
+          type: string
+          description: "Rich historical narrative about the place"
+        architecturalStyle:
+          type: string
+        notableEvents:
+          type: array
+          items:
+            type: string
+        funFacts:
+          type: array
+          items:
+            type: string
+        nearbyRelated:
+          type: array
+          items:
+            type: string
+          description: "Names of related nearby places worth visiting"
+      required:
+        - name
+        - fullHistory
+        - funFacts

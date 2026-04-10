@@ -2,6 +2,8 @@
 
 ## Overview
 
+Urban Explorer - a mobile app for urban explorers that surfaces interesting history and facts about buildings and spaces as they walk around the city. Uses AI (OpenAI) to generate contextual historical information based on the user's GPS location.
+
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
 ## Stack
@@ -15,6 +17,29 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Mobile**: Expo (React Native)
+- **AI**: OpenAI via Replit AI Integrations (no API key needed)
+
+## Architecture
+
+- **Mobile app** (`artifacts/urban-explorer`): Expo React Native app with location-based discovery
+  - Uses `expo-location` for GPS coordinates
+  - Two tabs: Explore (discover nearby places) and Saved (bookmarked places)
+  - Place detail screen with rich historical information
+  - AsyncStorage for persisting saved places
+  - Design tokens: warm amber/navy/stone palette in `constants/colors.ts`
+
+- **API server** (`artifacts/api-server`): Express backend
+  - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places
+  - `POST /api/explore/place-detail` - Returns detailed history for a specific place
+  - Uses OpenAI GPT-5.2 for generating historical content
+
+- **Shared libs**:
+  - `lib/api-spec` - OpenAPI specification
+  - `lib/api-client-react` - Generated React Query hooks
+  - `lib/api-zod` - Generated Zod validation schemas
+  - `lib/integrations-openai-ai-server` - OpenAI client integration
+  - `lib/db` - Database schema (Drizzle ORM)
 
 ## Key Commands
 

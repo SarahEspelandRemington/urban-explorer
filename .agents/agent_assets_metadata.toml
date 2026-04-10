@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "3RrVEWPNq_1S61R6-_0OV"
+uri = "file://artifacts/urban-explorer/assets/images/icon.png"
+type = "image"
+title = "generated_image"

@@ -6,4 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./discoverRequest";
+export * from "./discoverResponse";
 export * from "./healthStatus";
+export * from "./place";
+export * from "./placeDetailRequest";
+export * from "./placeDetailResponse";

@@ -14,3 +14,65 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Given coordinates, returns interesting historical facts and stories about nearby buildings and spaces
+ * @summary Discover interesting places nearby
+ */
+export const DiscoverPlacesBody = zod.object({
+  latitude: zod.number().describe("Current latitude"),
+  longitude: zod.number().describe("Current longitude"),
+  radius: zod
+    .number()
+    .optional()
+    .describe("Search radius in meters (default 500)"),
+});
+
+export const DiscoverPlacesResponse = zod.object({
+  places: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      category: zod
+        .string()
+        .describe("Type of place (e.g., building, monument, park, bridge)"),
+      yearBuilt: zod
+        .string()
+        .optional()
+        .describe("Approximate year or era built"),
+      summary: zod.string().describe("Brief one-line description"),
+      facts: zod
+        .array(zod.string())
+        .describe("List of interesting historical facts"),
+      latitude: zod.number(),
+      longitude: zod.number(),
+      distanceMeters: zod.number().optional(),
+    }),
+  ),
+  location: zod.string().describe("Human-readable description of the area"),
+});
+
+/**
+ * Returns in-depth historical information and stories about a specific place
+ * @summary Get detailed info about a specific place
+ */
+export const GetPlaceDetailBody = zod.object({
+  placeName: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  category: zod.string().optional(),
+});
+
+export const GetPlaceDetailResponse = zod.object({
+  name: zod.string(),
+  fullHistory: zod
+    .string()
+    .describe("Rich historical narrative about the place"),
+  architecturalStyle: zod.string().optional(),
+  notableEvents: zod.array(zod.string()).optional(),
+  funFacts: zod.array(zod.string()),
+  nearbyRelated: zod
+    .array(zod.string())
+    .optional()
+    .describe("Names of related nearby places worth visiting"),
+});

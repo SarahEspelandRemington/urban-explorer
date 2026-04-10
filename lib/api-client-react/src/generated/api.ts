@@ -5,18 +5,27 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  DiscoverRequest,
+  DiscoverResponse,
+  HealthStatus,
+  PlaceDetailRequest,
+  PlaceDetailResponse,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +108,177 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Given coordinates, returns interesting historical facts and stories about nearby buildings and spaces
+ * @summary Discover interesting places nearby
+ */
+export const getDiscoverPlacesUrl = () => {
+  return `/api/explore/discover`;
+};
+
+export const discoverPlaces = async (
+  discoverRequest: DiscoverRequest,
+  options?: RequestInit,
+): Promise<DiscoverResponse> => {
+  return customFetch<DiscoverResponse>(getDiscoverPlacesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(discoverRequest),
+  });
+};
+
+export const getDiscoverPlacesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discoverPlaces>>,
+    TError,
+    { data: BodyType<DiscoverRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof discoverPlaces>>,
+  TError,
+  { data: BodyType<DiscoverRequest> },
+  TContext
+> => {
+  const mutationKey = ["discoverPlaces"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof discoverPlaces>>,
+    { data: BodyType<DiscoverRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return discoverPlaces(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DiscoverPlacesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof discoverPlaces>>
+>;
+export type DiscoverPlacesMutationBody = BodyType<DiscoverRequest>;
+export type DiscoverPlacesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Discover interesting places nearby
+ */
+export const useDiscoverPlaces = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discoverPlaces>>,
+    TError,
+    { data: BodyType<DiscoverRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof discoverPlaces>>,
+  TError,
+  { data: BodyType<DiscoverRequest> },
+  TContext
+> => {
+  return useMutation(getDiscoverPlacesMutationOptions(options));
+};
+
+/**
+ * Returns in-depth historical information and stories about a specific place
+ * @summary Get detailed info about a specific place
+ */
+export const getGetPlaceDetailUrl = () => {
+  return `/api/explore/place-detail`;
+};
+
+export const getPlaceDetail = async (
+  placeDetailRequest: PlaceDetailRequest,
+  options?: RequestInit,
+): Promise<PlaceDetailResponse> => {
+  return customFetch<PlaceDetailResponse>(getGetPlaceDetailUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(placeDetailRequest),
+  });
+};
+
+export const getGetPlaceDetailMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getPlaceDetail>>,
+    TError,
+    { data: BodyType<PlaceDetailRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getPlaceDetail>>,
+  TError,
+  { data: BodyType<PlaceDetailRequest> },
+  TContext
+> => {
+  const mutationKey = ["getPlaceDetail"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getPlaceDetail>>,
+    { data: BodyType<PlaceDetailRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getPlaceDetail(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetPlaceDetailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getPlaceDetail>>
+>;
+export type GetPlaceDetailMutationBody = BodyType<PlaceDetailRequest>;
+export type GetPlaceDetailMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get detailed info about a specific place
+ */
+export const useGetPlaceDetail = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getPlaceDetail>>,
+    TError,
+    { data: BodyType<PlaceDetailRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getPlaceDetail>>,
+  TError,
+  { data: BodyType<PlaceDetailRequest> },
+  TContext
+> => {
+  return useMutation(getGetPlaceDetailMutationOptions(options));
+};

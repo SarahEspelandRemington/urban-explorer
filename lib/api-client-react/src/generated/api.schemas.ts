@@ -8,3 +8,52 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface DiscoverRequest {
+  /** Current latitude */
+  latitude: number;
+  /** Current longitude */
+  longitude: number;
+  /** Search radius in meters (default 500) */
+  radius?: number;
+}
+
+export interface Place {
+  id: string;
+  name: string;
+  /** Type of place (e.g., building, monument, park, bridge) */
+  category: string;
+  /** Approximate year or era built */
+  yearBuilt?: string;
+  /** Brief one-line description */
+  summary: string;
+  /** List of interesting historical facts */
+  facts: string[];
+  latitude: number;
+  longitude: number;
+  distanceMeters?: number;
+}
+
+export interface DiscoverResponse {
+  places: Place[];
+  /** Human-readable description of the area */
+  location: string;
+}
+
+export interface PlaceDetailRequest {
+  placeName: string;
+  latitude: number;
+  longitude: number;
+  category?: string;
+}
+
+export interface PlaceDetailResponse {
+  name: string;
+  /** Rich historical narrative about the place */
+  fullHistory: string;
+  architecturalStyle?: string;
+  notableEvents?: string[];
+  funFacts: string[];
+  /** Names of related nearby places worth visiting */
+  nearbyRelated?: string[];
+}

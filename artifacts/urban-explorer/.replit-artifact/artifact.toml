@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Urban Explorer"
+version = "1.0.0"
+id = "artifacts/urban-explorer"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 23584
+
+[services.development]
+run = "pnpm --filter @workspace/urban-explorer run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/urban-explorer", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/urban-explorer", "run", "serve" ]
+
+[services.env]
+PORT = "23584"
+BASE_PATH = "/"
