@@ -6,6 +6,7 @@ export interface SavedPlace {
   name: string;
   category: string;
   yearBuilt?: string;
+  tags?: string[];
   summary: string;
   facts: string[];
   latitude: number;

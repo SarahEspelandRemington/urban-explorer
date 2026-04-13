@@ -25,6 +25,7 @@ interface PlaceCardProps {
     name: string;
     category: string;
     yearBuilt?: string;
+    tags?: string[];
     summary: string;
     facts: string[];
     latitude: number;
@@ -63,6 +64,7 @@ export function PlaceCard({ place, index }: PlaceCardProps) {
         longitude: String(place.longitude),
         category: place.category,
         yearBuilt: place.yearBuilt || "",
+        tags: JSON.stringify(place.tags || []),
         summary: place.summary,
         facts: JSON.stringify(place.facts),
         address: place.address || "",
@@ -123,6 +125,18 @@ export function PlaceCard({ place, index }: PlaceCardProps) {
         <Text style={[styles.summary, { color: colors.foreground }]} numberOfLines={2}>
           {place.summary}
         </Text>
+
+        {(place.tags && place.tags.length > 0) && (
+          <View style={styles.tagsRow}>
+            {place.tags.slice(0, 3).map((tag) => (
+              <View key={tag} style={[styles.tag, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.tagText, { color: colors.mutedForeground }]}>
+                  #{tag}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {place.facts.length > 0 && (
           <View style={[styles.factPreview, { backgroundColor: colors.muted }]}>
@@ -197,6 +211,21 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     lineHeight: 20,
     marginBottom: 10,
+  },
+  tagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  tag: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  tagText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
   },
   factPreview: {
     flexDirection: "row",

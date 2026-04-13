@@ -27,12 +27,28 @@ interface DiscoveredPlace {
   name: string;
   category: string;
   yearBuilt?: string;
+  tags?: string[];
   summary: string;
   facts: string[];
   latitude: number;
   longitude: number;
   address?: string;
   distanceMeters?: number;
+}
+
+function getEra(yearBuilt?: string): string | null {
+  if (!yearBuilt || yearBuilt === "unknown") return null;
+  const match = yearBuilt.match(/\d{4}|\d{3}0s/);
+  if (!match) return null;
+  const yearStr = match[0];
+  const year = yearStr.endsWith("s") ? parseInt(yearStr.slice(0, -1), 10) : parseInt(yearStr, 10);
+  if (isNaN(year)) return null;
+  if (year < 1850) return "Pre-1850";
+  if (year < 1900) return "1850–1900";
+  if (year < 1930) return "1900–1930";
+  if (year < 1960) return "1930–1960";
+  if (year < 1990) return "1960–1990";
+  return "1990+";
 }
 
 type ViewMode = "list" | "map";
@@ -48,7 +64,7 @@ export default function ExploreScreen() {
   const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [showLocationSearch, setShowLocationSearch] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
   const discoverMutation = useDiscoverPlaces();
   const geocodeMutation = useGeocodeLocation();
@@ -56,16 +72,39 @@ export default function ExploreScreen() {
   const places = (discoverMutation.data?.places as DiscoveredPlace[] | undefined) ?? [];
   const areaName = discoverMutation.data?.location ?? "";
 
-  const categories = useMemo(() => {
-    const cats = [...new Set(places.map((p) => p.category))];
-    cats.sort((a, b) => a.localeCompare(b));
-    return cats;
+  const filterGroups = useMemo(() => {
+    const cats = [...new Set(places.map((p) => p.category))].sort();
+    const eras = [...new Set(places.map((p) => getEra(p.yearBuilt)).filter(Boolean))] as string[];
+    const eraOrder = ["Pre-1850", "1850–1900", "1900–1930", "1930–1960", "1960–1990", "1990+"];
+    eras.sort((a, b) => eraOrder.indexOf(a) - eraOrder.indexOf(b));
+    const allTags = places.flatMap((p) => p.tags || []);
+    const tagCounts = new Map<string, number>();
+    allTags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) || 0) + 1));
+    const tags = [...tagCounts.keys()].sort((a, b) => (tagCounts.get(b) || 0) - (tagCounts.get(a) || 0));
+    return { categories: cats, eras, tags };
   }, [places]);
 
-  const filteredPlaces = useMemo(
-    () => (activeFilter ? places.filter((p) => p.category === activeFilter) : places),
-    [places, activeFilter],
-  );
+  const allFilters = useMemo(() => [
+    ...filterGroups.categories,
+    ...filterGroups.eras,
+    ...filterGroups.tags,
+  ], [filterGroups]);
+
+  const filteredPlaces = useMemo(() => {
+    if (activeFilters.size === 0) return places;
+    return places.filter((p) => {
+      const placeEra = getEra(p.yearBuilt);
+      const placeTags = new Set([
+        p.category,
+        ...(placeEra ? [placeEra] : []),
+        ...(p.tags || []),
+      ]);
+      for (const f of activeFilters) {
+        if (placeTags.has(f)) return true;
+      }
+      return false;
+    });
+  }, [places, activeFilters]);
 
   const effectiveLatitude = manualCoords?.latitude ?? location?.coords.latitude ?? 0;
   const effectiveLongitude = manualCoords?.longitude ?? location?.coords.longitude ?? 0;
@@ -92,7 +131,7 @@ export default function ExploreScreen() {
 
   const discoverAt = useCallback(
     (lat: number, lng: number) => {
-      setActiveFilter(null);
+      setActiveFilters(new Set());
       discoverMutation.mutate({
         data: {
           latitude: lat,
@@ -271,7 +310,7 @@ export default function ExploreScreen() {
         </View>
       </View>
 
-      {showContent && categories.length > 1 && (
+      {showContent && allFilters.length > 1 && (
         <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
           <ScrollView
             horizontal
@@ -280,33 +319,36 @@ export default function ExploreScreen() {
           >
             <Pressable
               onPress={() => {
-                setActiveFilter(null);
+                setActiveFilters(new Set());
                 if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               style={[
                 styles.filterChip,
                 {
-                  backgroundColor: activeFilter === null ? colors.foreground : colors.muted,
+                  backgroundColor: activeFilters.size === 0 ? colors.foreground : colors.muted,
                 },
               ]}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: activeFilter === null ? colors.background : colors.mutedForeground },
+                  { color: activeFilters.size === 0 ? colors.background : colors.mutedForeground },
                 ]}
               >
-                All ({places.length})
+                All
               </Text>
             </Pressable>
-            {categories.map((cat) => {
-              const isActive = activeFilter === cat;
-              const count = places.filter((p) => p.category === cat).length;
+            {filterGroups.categories.length > 1 && filterGroups.categories.map((cat) => {
+              const isActive = activeFilters.has(cat);
               return (
                 <Pressable
-                  key={cat}
+                  key={`cat-${cat}`}
                   onPress={() => {
-                    setActiveFilter(isActive ? null : cat);
+                    setActiveFilters((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(cat)) next.delete(cat); else next.add(cat);
+                      return next;
+                    });
                     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                   style={[
@@ -322,7 +364,78 @@ export default function ExploreScreen() {
                       { color: isActive ? colors.background : colors.mutedForeground },
                     ]}
                   >
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            {filterGroups.eras.length > 0 && (
+              <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+            )}
+            {filterGroups.eras.map((era) => {
+              const isActive = activeFilters.has(era);
+              return (
+                <Pressable
+                  key={`era-${era}`}
+                  onPress={() => {
+                    setActiveFilters((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(era)) next.delete(era); else next.add(era);
+                      return next;
+                    });
+                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={[
+                    styles.filterChip,
+                    styles.filterChipEra,
+                    {
+                      backgroundColor: isActive ? colors.primary : colors.primary + "15",
+                      borderColor: colors.primary + "30",
+                    },
+                  ]}
+                >
+                  <Feather name="clock" size={11} color={isActive ? colors.primaryForeground : colors.primary} />
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: isActive ? colors.primaryForeground : colors.primary },
+                    ]}
+                  >
+                    {era}
+                  </Text>
+                </Pressable>
+              );
+            })}
+            {filterGroups.tags.length > 0 && (
+              <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+            )}
+            {filterGroups.tags.map((tag) => {
+              const isActive = activeFilters.has(tag);
+              return (
+                <Pressable
+                  key={`tag-${tag}`}
+                  onPress={() => {
+                    setActiveFilters((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(tag)) next.delete(tag); else next.add(tag);
+                      return next;
+                    });
+                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: isActive ? colors.foreground : colors.muted,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: isActive ? colors.background : colors.mutedForeground },
+                    ]}
+                  >
+                    #{tag}
                   </Text>
                 </Pressable>
               );
@@ -497,13 +610,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
   },
+  filterChipEra: {
+    borderWidth: 1,
+  },
   filterChipText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
+  },
+  filterDivider: {
+    width: 1,
+    height: 20,
+    alignSelf: "center",
   },
   list: {
     padding: 16,

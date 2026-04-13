@@ -63,6 +63,7 @@ Respond in JSON format:
       "name": "Place Name",
       "category": "building|storefront|alley|corner|mural|infrastructure|former site|architectural detail|park|church|residential",
       "yearBuilt": "1920s" or "circa 1850" or "unknown",
+      "tags": ["2-4 descriptive tags like: ghost sign, speakeasy, art deco, industrial, immigrant history, prohibition era, jazz age, tenement, waterfront, transit, religious, commercial, residential, demolished, converted, landmarked"],
       "summary": "One-line captivating description — make it feel like a secret worth knowing",
       "facts": ["Hyper-specific fact 1", "Fact 2", "Fact 3"],
       "latitude": precise_lat_to_5_decimal_places,

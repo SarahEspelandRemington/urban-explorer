@@ -42,6 +42,7 @@ export default function PlaceDetailScreen() {
     longitude: string;
     category: string;
     yearBuilt: string;
+    tags: string;
     summary: string;
     facts: string;
     address: string;
@@ -50,6 +51,7 @@ export default function PlaceDetailScreen() {
   const lat = parseFloat(params.latitude || "0");
   const lng = parseFloat(params.longitude || "0");
   const basicFacts: string[] = params.facts ? JSON.parse(params.facts) : [];
+  const tags: string[] = params.tags ? JSON.parse(params.tags) : [];
   const placeId = `${params.name}-${lat}-${lng}`;
   const saved = isPlaceSaved(placeId);
   const iconName = CATEGORY_ICONS[params.category?.toLowerCase() || ""] || "map-marker";
@@ -141,6 +143,13 @@ export default function PlaceDetailScreen() {
               </Text>
             </View>
           ) : null}
+          {tags.map((tag) => (
+            <View key={tag} style={[styles.badge, { backgroundColor: colors.primary + "15" }]}>
+              <Text style={[styles.badgeText, { color: colors.primary }]}>
+                #{tag}
+              </Text>
+            </View>
+          ))}
         </View>
 
         <Text style={[styles.summary, { color: colors.mutedForeground }]}>
@@ -289,6 +298,7 @@ const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginBottom: 12,
   },
