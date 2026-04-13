@@ -49,8 +49,8 @@ export function useNarration() {
 
       const utterance = new SpeechSynthesisUtterance(item.text);
       utterance.lang = "en-US";
-      utterance.rate = 0.95;
-      utterance.pitch = 1.0;
+      utterance.rate = 0.9;
+      utterance.pitch = 1.05;
       utterance.onend = onFinish;
       utterance.onerror = (e) => {
         console.warn("Speech error:", e);
@@ -58,10 +58,15 @@ export function useNarration() {
       };
 
       const voices = window.speechSynthesis.getVoices();
-      const englishVoice = voices.find(
-        (v) => v.lang.startsWith("en") && v.default
+      const preferredNames = ["samantha", "karen", "daniel", "moira", "tessa", "rishi", "google us english", "google uk english"];
+      const premium = voices.find(
+        (v) => v.lang.startsWith("en") && preferredNames.some((n) => v.name.toLowerCase().includes(n))
+      );
+      const fallback = voices.find(
+        (v) => v.lang.startsWith("en-") && !v.name.toLowerCase().includes("compact")
       ) || voices.find((v) => v.lang.startsWith("en"));
-      if (englishVoice) utterance.voice = englishVoice;
+      const selectedVoice = premium || fallback;
+      if (selectedVoice) utterance.voice = selectedVoice;
 
       window.speechSynthesis.speak(utterance);
 
@@ -74,9 +79,9 @@ export function useNarration() {
       }, 500);
     } else {
       Speech.speak(item.text, {
-        language: "en",
-        rate: 0.95,
-        pitch: 1.0,
+        language: "en-US",
+        rate: 0.9,
+        pitch: 1.05,
         onStart: () => {
           console.log("Speech started:", item.placeName);
         },
