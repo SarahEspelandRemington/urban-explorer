@@ -24,6 +24,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 - **Mobile app** (`artifacts/urban-explorer`): Expo React Native app with location-based discovery
   - Uses `expo-location` for GPS coordinates, or manual location search (geocoding via AI)
+  - Header search button allows switching from GPS to manual location search at any time
   - Two tabs: Explore (discover nearby places) and Saved (bookmarked places)
   - Place detail screen with rich historical information
   - AsyncStorage for persisting saved places

@@ -45,6 +45,7 @@ export default function ExploreScreen() {
 
   const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
+  const [showLocationSearch, setShowLocationSearch] = useState(false);
 
   const discoverMutation = useDiscoverPlaces();
   const geocodeMutation = useGeocodeLocation();
@@ -115,6 +116,7 @@ export default function ExploreScreen() {
             if (data?.latitude && data?.longitude) {
               const coords = { latitude: data.latitude, longitude: data.longitude };
               setManualCoords(coords);
+              setShowLocationSearch(false);
               discoverAt(coords.latitude, coords.longitude);
             } else {
               setGeocodeError("Couldn't find that location. Try being more specific.");
@@ -142,14 +144,22 @@ export default function ExploreScreen() {
     setViewMode((prev) => (prev === "list" ? "map" : "list"));
   };
 
-  if (!permission?.granted && !manualCoords) {
+  if ((!permission?.granted && !manualCoords) || showLocationSearch) {
     return (
       <LocationPermission
         permission={permission}
-        requestPermission={requestPermission}
+        requestPermission={async () => {
+          const result = await requestPermission();
+          if (result.granted) {
+            setShowLocationSearch(false);
+          }
+          return result;
+        }}
         onManualLocation={handleManualLocation}
         isGeocoding={geocodeMutation.isPending}
         geocodeError={geocodeError}
+        showBackButton={showLocationSearch && (permission?.granted || !!manualCoords)}
+        onBack={() => setShowLocationSearch(false)}
       />
     );
   }
@@ -213,6 +223,18 @@ export default function ExploreScreen() {
               </Pressable>
             </View>
           )}
+          <Pressable
+            onPress={() => { setGeocodeError(null); setShowLocationSearch(true); }}
+            style={({ pressed }) => [
+              styles.searchButton,
+              {
+                backgroundColor: colors.muted,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+          >
+            <Feather name="search" size={18} color={colors.foreground} />
+          </Pressable>
           <Pressable
             onPress={handleDiscover}
             disabled={discoverMutation.isPending || locationLoading}
@@ -374,6 +396,13 @@ const styles = StyleSheet.create({
     width: 34,
     height: 30,
     borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  searchButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
   },

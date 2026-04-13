@@ -29,6 +29,8 @@ interface LocationPermissionProps {
   onManualLocation: (query: string) => void;
   isGeocoding?: boolean;
   geocodeError?: string | null;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 export function LocationPermission({
@@ -37,10 +39,12 @@ export function LocationPermission({
   onManualLocation,
   isGeocoding,
   geocodeError,
+  showBackButton,
+  onBack,
 }: LocationPermissionProps) {
   const colors = useColors();
   const [query, setQuery] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearch, setShowSearch] = useState(!!showBackButton);
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -243,22 +247,41 @@ export function LocationPermission({
               </Text>
             </Pressable>
 
-            <Pressable
-              onPress={() => {
-                setShowSearch(false);
-                setSuggestions([]);
-                setShowSuggestions(false);
-              }}
-              style={({ pressed }) => [
-                styles.switchLink,
-                { opacity: pressed ? 0.6 : 1 },
-              ]}
-            >
-              <Feather name="navigation" size={14} color={colors.primary} />
-              <Text style={[styles.switchText, { color: colors.primary }]}>
-                Use my current location instead
-              </Text>
-            </Pressable>
+            {showBackButton ? (
+              <Pressable
+                onPress={() => {
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                  onBack?.();
+                }}
+                style={({ pressed }) => [
+                  styles.switchLink,
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}
+              >
+                <Feather name="arrow-left" size={14} color={colors.primary} />
+                <Text style={[styles.switchText, { color: colors.primary }]}>
+                  Back to results
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => {
+                  setShowSearch(false);
+                  setSuggestions([]);
+                  setShowSuggestions(false);
+                }}
+                style={({ pressed }) => [
+                  styles.switchLink,
+                  { opacity: pressed ? 0.6 : 1 },
+                ]}
+              >
+                <Feather name="navigation" size={14} color={colors.primary} />
+                <Text style={[styles.switchText, { color: colors.primary }]}>
+                  Use my current location instead
+                </Text>
+              </Pressable>
+            )}
           </View>
         ) : (
           <View style={styles.buttonsSection}>
