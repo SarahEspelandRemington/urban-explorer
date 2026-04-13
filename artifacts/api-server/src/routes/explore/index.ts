@@ -2,6 +2,7 @@ import { Router } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import {
   DiscoverPlacesBody,
+  GeocodeLocationBody,
   GetPlaceDetailBody,
 } from "@workspace/api-zod";
 
@@ -76,6 +77,50 @@ Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact sho
   const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate discoveries" });
+    return;
+  }
+
+  const data = JSON.parse(content);
+  res.json(data);
+});
+
+router.post("/explore/geocode", async (req, res) => {
+  const parsed = GeocodeLocationBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const { query } = parsed.data;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-5.2",
+    max_completion_tokens: 256,
+    messages: [
+      {
+        role: "system",
+        content: `You are a geocoding assistant. Given a location name (city, neighborhood, intersection, address, or landmark), return its approximate latitude and longitude coordinates and a clean display name.
+
+Respond in JSON format:
+{
+  "latitude": number,
+  "longitude": number,
+  "displayName": "Clean, readable location name (e.g., 'Greenwich Village, New York' or 'Shibuya, Tokyo')"
+}
+
+Be as accurate as possible with coordinates. For neighborhoods, use the center point. For intersections, use the exact intersection coordinates.`,
+      },
+      {
+        role: "user",
+        content: `Geocode this location: "${query}"`,
+      },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    res.status(500).json({ error: "Failed to geocode location" });
     return;
   }
 

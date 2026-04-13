@@ -8,6 +8,8 @@
 
 export * from "./discoverRequest";
 export * from "./discoverResponse";
+export * from "./geocodeRequest";
+export * from "./geocodeResponse";
 export * from "./healthStatus";
 export * from "./place";
 export * from "./placeDetailRequest";

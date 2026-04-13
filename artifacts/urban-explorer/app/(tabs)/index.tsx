@@ -19,7 +19,7 @@ import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceMapView } from "@/components/PlaceMapView";
 import { useColors } from "@/hooks/useColors";
-import { useDiscoverPlaces } from "@workspace/api-client-react";
+import { useDiscoverPlaces, useGeocodeLocation } from "@workspace/api-client-react";
 
 interface DiscoveredPlace {
   id: string;
@@ -43,10 +43,18 @@ export default function ExploreScreen() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
+  const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [geocodeError, setGeocodeError] = useState<string | null>(null);
+
   const discoverMutation = useDiscoverPlaces();
+  const geocodeMutation = useGeocodeLocation();
 
   const places = (discoverMutation.data?.places as DiscoveredPlace[] | undefined) ?? [];
   const areaName = discoverMutation.data?.location ?? "";
+
+  const effectiveLatitude = manualCoords?.latitude ?? location?.coords.latitude ?? 0;
+  const effectiveLongitude = manualCoords?.longitude ?? location?.coords.longitude ?? 0;
+  const hasCoords = !!(manualCoords || location);
 
   const getLocation = useCallback(async () => {
     setLocationLoading(true);
@@ -62,39 +70,68 @@ export default function ExploreScreen() {
   }, []);
 
   useEffect(() => {
-    if (permission?.granted && !location) {
+    if (permission?.granted && !location && !manualCoords) {
       getLocation();
     }
-  }, [permission?.granted, location, getLocation]);
+  }, [permission?.granted, location, manualCoords, getLocation]);
+
+  const discoverAt = useCallback(
+    (lat: number, lng: number) => {
+      discoverMutation.mutate({
+        data: {
+          latitude: lat,
+          longitude: lng,
+          radius: 300,
+        },
+      });
+    },
+    [discoverMutation],
+  );
 
   const handleDiscover = useCallback(async () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    if (manualCoords) {
+      discoverAt(manualCoords.latitude, manualCoords.longitude);
+      return;
     }
     let loc = location;
     if (!loc) {
       loc = await getLocation();
     }
     if (loc) {
-      discoverMutation.mutate({
-        data: {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-          radius: 300,
-        },
-      });
+      discoverAt(loc.coords.latitude, loc.coords.longitude);
     }
-  }, [location, discoverMutation, getLocation]);
+  }, [location, manualCoords, discoverAt, getLocation]);
+
+  const handleManualLocation = useCallback(
+    (query: string) => {
+      setGeocodeError(null);
+      geocodeMutation.mutate(
+        { data: { query } },
+        {
+          onSuccess: (data: any) => {
+            if (data?.latitude && data?.longitude) {
+              const coords = { latitude: data.latitude, longitude: data.longitude };
+              setManualCoords(coords);
+              discoverAt(coords.latitude, coords.longitude);
+            } else {
+              setGeocodeError("Couldn't find that location. Try being more specific.");
+            }
+          },
+          onError: () => {
+            setGeocodeError("Something went wrong. Please try again.");
+          },
+        },
+      );
+    },
+    [geocodeMutation, discoverAt],
+  );
 
   useEffect(() => {
-    if (location && !discoverMutation.data && !discoverMutation.isPending) {
-      discoverMutation.mutate({
-        data: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          radius: 300,
-        },
-      });
+    if (location && !manualCoords && !discoverMutation.data && !discoverMutation.isPending) {
+      discoverAt(location.coords.latitude, location.coords.longitude);
     }
   }, [location]);
 
@@ -105,11 +142,14 @@ export default function ExploreScreen() {
     setViewMode((prev) => (prev === "list" ? "map" : "list"));
   };
 
-  if (!permission?.granted) {
+  if (!permission?.granted && !manualCoords) {
     return (
       <LocationPermission
         permission={permission}
         requestPermission={requestPermission}
+        onManualLocation={handleManualLocation}
+        isGeocoding={geocodeMutation.isPending}
+        geocodeError={geocodeError}
       />
     );
   }
@@ -194,8 +234,8 @@ export default function ExploreScreen() {
       {showContent && viewMode === "map" ? (
         <PlaceMapView
           places={places}
-          userLatitude={location?.coords.latitude ?? 0}
-          userLongitude={location?.coords.longitude ?? 0}
+          userLatitude={effectiveLatitude}
+          userLongitude={effectiveLongitude}
         />
       ) : (
         <FlatList

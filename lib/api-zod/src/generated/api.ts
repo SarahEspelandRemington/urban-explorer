@@ -53,6 +53,24 @@ export const DiscoverPlacesResponse = zod.object({
 });
 
 /**
+ * Uses AI to geocode a city, neighborhood, intersection, or landmark name into latitude/longitude coordinates
+ * @summary Convert a location name to coordinates
+ */
+export const GeocodeLocationBody = zod.object({
+  query: zod
+    .string()
+    .describe("Location name — city, neighborhood, intersection, or address"),
+});
+
+export const GeocodeLocationResponse = zod.object({
+  latitude: zod.number(),
+  longitude: zod.number(),
+  displayName: zod
+    .string()
+    .describe("Human-readable name of the resolved location"),
+});
+
+/**
  * Returns in-depth historical information and stories about a specific place
  * @summary Get detailed info about a specific place
  */

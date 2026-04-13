@@ -40,6 +40,18 @@ export interface DiscoverResponse {
   location: string;
 }
 
+export interface GeocodeRequest {
+  /** Location name — city, neighborhood, intersection, or address */
+  query: string;
+}
+
+export interface GeocodeResponse {
+  latitude: number;
+  longitude: number;
+  /** Human-readable name of the resolved location */
+  displayName: string;
+}
+
 export interface PlaceDetailRequest {
   placeName: string;
   latitude: number;

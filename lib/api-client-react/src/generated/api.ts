@@ -19,6 +19,8 @@ import type {
 import type {
   DiscoverRequest,
   DiscoverResponse,
+  GeocodeRequest,
+  GeocodeResponse,
   HealthStatus,
   PlaceDetailRequest,
   PlaceDetailResponse,
@@ -194,6 +196,93 @@ export const useDiscoverPlaces = <
   TContext
 > => {
   return useMutation(getDiscoverPlacesMutationOptions(options));
+};
+
+/**
+ * Uses AI to geocode a city, neighborhood, intersection, or landmark name into latitude/longitude coordinates
+ * @summary Convert a location name to coordinates
+ */
+export const getGeocodeLocationUrl = () => {
+  return `/api/explore/geocode`;
+};
+
+export const geocodeLocation = async (
+  geocodeRequest: GeocodeRequest,
+  options?: RequestInit,
+): Promise<GeocodeResponse> => {
+  return customFetch<GeocodeResponse>(getGeocodeLocationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(geocodeRequest),
+  });
+};
+
+export const getGeocodeLocationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof geocodeLocation>>,
+    TError,
+    { data: BodyType<GeocodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof geocodeLocation>>,
+  TError,
+  { data: BodyType<GeocodeRequest> },
+  TContext
+> => {
+  const mutationKey = ["geocodeLocation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof geocodeLocation>>,
+    { data: BodyType<GeocodeRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return geocodeLocation(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GeocodeLocationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof geocodeLocation>>
+>;
+export type GeocodeLocationMutationBody = BodyType<GeocodeRequest>;
+export type GeocodeLocationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Convert a location name to coordinates
+ */
+export const useGeocodeLocation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof geocodeLocation>>,
+    TError,
+    { data: BodyType<GeocodeRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof geocodeLocation>>,
+  TError,
+  { data: BodyType<GeocodeRequest> },
+  TContext
+> => {
+  return useMutation(getGeocodeLocationMutationOptions(options));
 };
 
 /**

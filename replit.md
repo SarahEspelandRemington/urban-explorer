@@ -23,7 +23,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ## Architecture
 
 - **Mobile app** (`artifacts/urban-explorer`): Expo React Native app with location-based discovery
-  - Uses `expo-location` for GPS coordinates
+  - Uses `expo-location` for GPS coordinates, or manual location search (geocoding via AI)
   - Two tabs: Explore (discover nearby places) and Saved (bookmarked places)
   - Place detail screen with rich historical information
   - AsyncStorage for persisting saved places
@@ -31,6 +31,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 - **API server** (`artifacts/api-server`): Express backend
   - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places
+  - `POST /api/explore/geocode` - Converts location name to lat/lng coordinates via AI
   - `POST /api/explore/place-detail` - Returns detailed history for a specific place
   - Uses OpenAI GPT-5.2 for generating historical content
 
