@@ -78,10 +78,23 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     fetchingRef.current = true;
     setIsLoading(true);
     try {
+      let addressHint = "";
+      try {
+        const geocoded = await Location.reverseGeocodeAsync({ latitude, longitude });
+        if (geocoded.length > 0) {
+          const g = geocoded[0];
+          const parts = [g.streetNumber, g.street, g.district, g.subregion, g.city].filter(Boolean);
+          addressHint = parts.join(", ");
+        }
+      } catch {}
+
+      const body: Record<string, unknown> = { latitude, longitude, radius: 250 };
+      if (addressHint) body.addressHint = addressHint;
+
       const res = await fetch(`${API_BASE}/api/explore/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude, longitude, radius: 150 }),
+        body: JSON.stringify(body),
       });
       if (res.ok) {
         const data = await res.json();

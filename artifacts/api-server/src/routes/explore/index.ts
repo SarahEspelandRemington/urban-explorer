@@ -17,31 +17,13 @@ router.post("/explore/discover", async (req, res) => {
   }
 
   const { latitude, longitude, radius } = parsed.data;
+  const addressHint = typeof req.body.addressHint === "string" ? req.body.addressHint.trim() : "";
   const searchRadius = radius ?? 300;
 
   const radiusFeet = Math.round(searchRadius * 3.281);
 
-  let reverseGeoHint = "";
-  try {
-    const geoRes = await openai.chat.completions.create({
-      model: "gpt-4.1-nano",
-      max_completion_tokens: 100,
-      messages: [
-        {
-          role: "system",
-          content: "Given GPS coordinates, return the nearest street address or intersection and neighborhood name. Be as specific as possible. Format: 'ADDRESS, NEIGHBORHOOD, CITY'. Nothing else.",
-        },
-        {
-          role: "user",
-          content: `${latitude}, ${longitude}`,
-        },
-      ],
-    });
-    reverseGeoHint = geoRes.choices[0]?.message?.content?.trim() || "";
-  } catch {}
-
-  const locationContext = reverseGeoHint
-    ? `\n\nThe user is currently near: ${reverseGeoHint}. Use this as a strong anchor — all places MUST be on or adjacent to the streets mentioned, within a few blocks at most.`
+  const locationContext = addressHint
+    ? `\n\nThe user's device reports they are near: ${addressHint}. This is from real GPS + map data, so treat it as ground truth. All places you return MUST be on or immediately adjacent to these streets, within a 1-2 block radius at most. Do NOT place results in other neighborhoods.`
     : "";
 
   const response = await openai.chat.completions.create({
@@ -116,7 +98,7 @@ Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact sho
   const data = JSON.parse(content);
 
   if (data.places && Array.isArray(data.places)) {
-    const maxDist = searchRadius * 1.5;
+    const maxDist = searchRadius * 3;
     data.places = data.places.filter((p: any) => {
       if (typeof p.latitude !== "number" || typeof p.longitude !== "number") return true;
       const dLat = ((p.latitude - latitude) * Math.PI) / 180;
