@@ -21,13 +21,36 @@ router.post("/explore/discover", async (req, res) => {
 
   const radiusFeet = Math.round(searchRadius * 3.281);
 
+  let reverseGeoHint = "";
+  try {
+    const geoRes = await openai.chat.completions.create({
+      model: "gpt-4.1-nano",
+      max_completion_tokens: 100,
+      messages: [
+        {
+          role: "system",
+          content: "Given GPS coordinates, return the nearest street address or intersection and neighborhood name. Be as specific as possible. Format: 'ADDRESS, NEIGHBORHOOD, CITY'. Nothing else.",
+        },
+        {
+          role: "user",
+          content: `${latitude}, ${longitude}`,
+        },
+      ],
+    });
+    reverseGeoHint = geoRes.choices[0]?.message?.content?.trim() || "";
+  } catch {}
+
+  const locationContext = reverseGeoHint
+    ? `\n\nThe user is currently near: ${reverseGeoHint}. Use this as a strong anchor — all places MUST be on or adjacent to the streets mentioned, within a few blocks at most.`
+    : "";
+
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
     max_completion_tokens: 4096,
     messages: [
       {
         role: "system",
-        content: `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
+        content: `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.${locationContext}
 
 Given GPS coordinates, identify real places WITHIN ${radiusFeet} FEET (roughly ${searchRadius} meters) of the exact coordinates. Think small and specific:
 
@@ -91,6 +114,23 @@ Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact sho
   }
 
   const data = JSON.parse(content);
+
+  if (data.places && Array.isArray(data.places)) {
+    const maxDist = searchRadius * 1.5;
+    data.places = data.places.filter((p: any) => {
+      if (typeof p.latitude !== "number" || typeof p.longitude !== "number") return true;
+      const dLat = ((p.latitude - latitude) * Math.PI) / 180;
+      const dLon = ((p.longitude - longitude) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((latitude * Math.PI) / 180) *
+          Math.cos((p.latitude * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+      const dist = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return dist <= maxDist;
+    });
+  }
+
   res.json(data);
 });
 

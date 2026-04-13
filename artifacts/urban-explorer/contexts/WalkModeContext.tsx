@@ -81,7 +81,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_BASE}/api/explore/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ latitude, longitude, radius: 300 }),
+        body: JSON.stringify({ latitude, longitude, radius: 150 }),
       });
       if (res.ok) {
         const data = await res.json();
