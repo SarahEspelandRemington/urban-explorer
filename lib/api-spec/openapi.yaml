@@ -45,6 +45,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DiscoverResponse"
+  /explore/suggest-locations:
+    post:
+      operationId: suggestLocations
+      tags: [explore]
+      summary: Get location suggestions as user types
+      description: Returns a list of location suggestions matching a partial query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuggestLocationsRequest"
+      responses:
+        "200":
+          description: Location suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuggestLocationsResponse"
   /explore/geocode:
     post:
       operationId: geocodeLocation
@@ -155,6 +174,35 @@ components:
         - facts
         - latitude
         - longitude
+    SuggestLocationsRequest:
+      type: object
+      properties:
+        query:
+          type: string
+          description: "Partial location text the user has typed so far"
+      required:
+        - query
+    SuggestLocationsResponse:
+      type: object
+      properties:
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LocationSuggestion"
+      required:
+        - suggestions
+    LocationSuggestion:
+      type: object
+      properties:
+        name:
+          type: string
+          description: "Full location name"
+        description:
+          type: string
+          description: "Short context about the location"
+      required:
+        - name
+        - description
     GeocodeRequest:
       type: object
       properties:

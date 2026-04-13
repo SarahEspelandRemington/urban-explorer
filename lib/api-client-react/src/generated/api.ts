@@ -24,6 +24,8 @@ import type {
   HealthStatus,
   PlaceDetailRequest,
   PlaceDetailResponse,
+  SuggestLocationsRequest,
+  SuggestLocationsResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -196,6 +198,93 @@ export const useDiscoverPlaces = <
   TContext
 > => {
   return useMutation(getDiscoverPlacesMutationOptions(options));
+};
+
+/**
+ * Returns a list of location suggestions matching a partial query
+ * @summary Get location suggestions as user types
+ */
+export const getSuggestLocationsUrl = () => {
+  return `/api/explore/suggest-locations`;
+};
+
+export const suggestLocations = async (
+  suggestLocationsRequest: SuggestLocationsRequest,
+  options?: RequestInit,
+): Promise<SuggestLocationsResponse> => {
+  return customFetch<SuggestLocationsResponse>(getSuggestLocationsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(suggestLocationsRequest),
+  });
+};
+
+export const getSuggestLocationsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof suggestLocations>>,
+    TError,
+    { data: BodyType<SuggestLocationsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof suggestLocations>>,
+  TError,
+  { data: BodyType<SuggestLocationsRequest> },
+  TContext
+> => {
+  const mutationKey = ["suggestLocations"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof suggestLocations>>,
+    { data: BodyType<SuggestLocationsRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return suggestLocations(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SuggestLocationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof suggestLocations>>
+>;
+export type SuggestLocationsMutationBody = BodyType<SuggestLocationsRequest>;
+export type SuggestLocationsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get location suggestions as user types
+ */
+export const useSuggestLocations = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof suggestLocations>>,
+    TError,
+    { data: BodyType<SuggestLocationsRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof suggestLocations>>,
+  TError,
+  { data: BodyType<SuggestLocationsRequest> },
+  TContext
+> => {
+  return useMutation(getSuggestLocationsMutationOptions(options));
 };
 
 /**

@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -8,6 +8,7 @@ import {
   Linking,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,6 +16,12 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useSuggestLocations } from "@workspace/api-client-react";
+
+interface LocationSuggestion {
+  name: string;
+  description: string;
+}
 
 interface LocationPermissionProps {
   permission: Location.LocationPermissionResponse | null;
@@ -34,6 +41,11 @@ export function LocationPermission({
   const colors = useColors();
   const [query, setQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const suggestMutation = useSuggestLocations();
 
   if (!permission) return null;
 
@@ -46,7 +58,50 @@ export function LocationPermission({
     const trimmed = query.trim();
     if (!trimmed) return;
     Keyboard.dismiss();
+    setShowSuggestions(false);
     onManualLocation(trimmed);
+  };
+
+  const handleSelectSuggestion = (suggestion: LocationSuggestion) => {
+    setQuery(suggestion.name);
+    setShowSuggestions(false);
+    Keyboard.dismiss();
+    onManualLocation(suggestion.name);
+  };
+
+  const handleQueryChange = (text: string) => {
+    setQuery(text);
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (text.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    debounceRef.current = setTimeout(() => {
+      suggestMutation.mutate(
+        { data: { query: text.trim() } },
+        {
+          onSuccess: (data: any) => {
+            if (data?.suggestions?.length > 0) {
+              setSuggestions(data.suggestions);
+              setShowSuggestions(true);
+            } else {
+              setSuggestions([]);
+              setShowSuggestions(false);
+            }
+          },
+          onError: () => {
+            setSuggestions([]);
+            setShowSuggestions(false);
+          },
+        },
+      );
+    }, 400);
   };
 
   return (
@@ -74,31 +129,90 @@ export function LocationPermission({
 
         {showSearch ? (
           <View style={styles.searchSection}>
-            <View
-              style={[
-                styles.inputContainer,
-                {
-                  backgroundColor: colors.muted,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Feather name="search" size={18} color={colors.mutedForeground} />
-              <TextInput
-                style={[styles.input, { color: colors.foreground }]}
-                placeholder="e.g. Greenwich Village, NYC"
-                placeholderTextColor={colors.mutedForeground}
-                value={query}
-                onChangeText={setQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-                autoFocus
-                editable={!isGeocoding}
-              />
-              {query.length > 0 && !isGeocoding && (
-                <Pressable onPress={() => setQuery("")} hitSlop={8}>
-                  <Feather name="x" size={16} color={colors.mutedForeground} />
-                </Pressable>
+            <View style={styles.inputWrapper}>
+              <View
+                style={[
+                  styles.inputContainer,
+                  {
+                    backgroundColor: colors.muted,
+                    borderColor: colors.border,
+                    borderBottomLeftRadius: showSuggestions ? 0 : 12,
+                    borderBottomRightRadius: showSuggestions ? 0 : 12,
+                  },
+                ]}
+              >
+                <Feather name="search" size={18} color={colors.mutedForeground} />
+                <TextInput
+                  style={[styles.input, { color: colors.foreground }]}
+                  placeholder="e.g. Greenwich Village, NYC"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={query}
+                  onChangeText={handleQueryChange}
+                  onSubmitEditing={handleSearch}
+                  returnKeyType="search"
+                  autoFocus
+                  editable={!isGeocoding}
+                />
+                {suggestMutation.isPending && (
+                  <ActivityIndicator size="small" color={colors.mutedForeground} />
+                )}
+                {query.length > 0 && !isGeocoding && !suggestMutation.isPending && (
+                  <Pressable
+                    onPress={() => {
+                      setQuery("");
+                      setSuggestions([]);
+                      setShowSuggestions(false);
+                    }}
+                    hitSlop={8}
+                  >
+                    <Feather name="x" size={16} color={colors.mutedForeground} />
+                  </Pressable>
+                )}
+              </View>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <ScrollView
+                  style={[
+                    styles.suggestionsContainer,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                >
+                  {suggestions.map((suggestion, index) => (
+                    <Pressable
+                      key={`${suggestion.name}-${index}`}
+                      onPress={() => handleSelectSuggestion(suggestion)}
+                      style={({ pressed }) => [
+                        styles.suggestionItem,
+                        {
+                          backgroundColor: pressed ? colors.muted : "transparent",
+                          borderTopWidth: index > 0 ? StyleSheet.hairlineWidth : 0,
+                          borderTopColor: colors.border,
+                        },
+                      ]}
+                    >
+                      <Feather name="map-pin" size={14} color={colors.primary} style={styles.suggestionIcon} />
+                      <View style={styles.suggestionText}>
+                        <Text
+                          style={[styles.suggestionName, { color: colors.foreground }]}
+                          numberOfLines={1}
+                        >
+                          {suggestion.name}
+                        </Text>
+                        <Text
+                          style={[styles.suggestionDesc, { color: colors.mutedForeground }]}
+                          numberOfLines={1}
+                        >
+                          {suggestion.description}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                </ScrollView>
               )}
             </View>
 
@@ -130,7 +244,11 @@ export function LocationPermission({
             </Pressable>
 
             <Pressable
-              onPress={() => setShowSearch(false)}
+              onPress={() => {
+                setShowSearch(false);
+                setSuggestions([]);
+                setShowSuggestions(false);
+              }}
               style={({ pressed }) => [
                 styles.switchLink,
                 { opacity: pressed ? 0.6 : 1 },
@@ -259,6 +377,10 @@ const styles = StyleSheet.create({
     gap: 14,
     marginTop: 8,
   },
+  inputWrapper: {
+    width: "100%",
+    zIndex: 10,
+  },
   button: {
     flexDirection: "row",
     alignItems: "center",
@@ -317,6 +439,37 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     paddingVertical: 0,
+  },
+  suggestionsContainer: {
+    maxHeight: 240,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    overflow: "hidden",
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  suggestionIcon: {
+    marginRight: 10,
+    marginTop: 1,
+  },
+  suggestionText: {
+    flex: 1,
+  },
+  suggestionName: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: -0.2,
+  },
+  suggestionDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
   },
   errorText: {
     fontSize: 13,

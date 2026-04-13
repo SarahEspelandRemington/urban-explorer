@@ -53,6 +53,25 @@ export const DiscoverPlacesResponse = zod.object({
 });
 
 /**
+ * Returns a list of location suggestions matching a partial query
+ * @summary Get location suggestions as user types
+ */
+export const SuggestLocationsBody = zod.object({
+  query: zod
+    .string()
+    .describe("Partial location text the user has typed so far"),
+});
+
+export const SuggestLocationsResponse = zod.object({
+  suggestions: zod.array(
+    zod.object({
+      name: zod.string().describe("Full location name"),
+      description: zod.string().describe("Short context about the location"),
+    }),
+  ),
+});
+
+/**
  * Uses AI to geocode a city, neighborhood, intersection, or landmark name into latitude/longitude coordinates
  * @summary Convert a location name to coordinates
  */

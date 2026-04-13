@@ -4,6 +4,7 @@ import {
   DiscoverPlacesBody,
   GeocodeLocationBody,
   GetPlaceDetailBody,
+  SuggestLocationsBody,
 } from "@workspace/api-zod";
 
 const router = Router();
@@ -77,6 +78,59 @@ Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact sho
   const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate discoveries" });
+    return;
+  }
+
+  const data = JSON.parse(content);
+  res.json(data);
+});
+
+router.post("/explore/suggest-locations", async (req, res) => {
+  const parsed = SuggestLocationsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const { query } = parsed.data;
+
+  if (query.trim().length < 2) {
+    res.json({ suggestions: [] });
+    return;
+  }
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-5.2",
+    max_completion_tokens: 512,
+    messages: [
+      {
+        role: "system",
+        content: `You are a location autocomplete assistant. Given a partial location query, suggest 5 real places that match. Prioritize:
+- Neighborhoods and districts known for interesting history or architecture
+- Historic intersections or streets
+- Cities and towns with rich urban exploration potential
+
+Respond in JSON format:
+{
+  "suggestions": [
+    { "name": "Greenwich Village, New York", "description": "Historic bohemian neighborhood in Manhattan" },
+    { "name": "Greenpoint, Brooklyn", "description": "Polish-American neighborhood with industrial heritage" }
+  ]
+}
+
+Return exactly 5 suggestions. Each name should be specific enough to geocode. Keep descriptions under 10 words.`,
+      },
+      {
+        role: "user",
+        content: `Suggest locations matching: "${query}"`,
+      },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    res.json({ suggestions: [] });
     return;
   }
 

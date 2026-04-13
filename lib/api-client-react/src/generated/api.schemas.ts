@@ -40,6 +40,22 @@ export interface DiscoverResponse {
   location: string;
 }
 
+export interface SuggestLocationsRequest {
+  /** Partial location text the user has typed so far */
+  query: string;
+}
+
+export interface LocationSuggestion {
+  /** Full location name */
+  name: string;
+  /** Short context about the location */
+  description: string;
+}
+
+export interface SuggestLocationsResponse {
+  suggestions: LocationSuggestion[];
+}
+
 export interface GeocodeRequest {
   /** Location name — city, neighborhood, intersection, or address */
   query: string;
