@@ -76,7 +76,7 @@ export default function ExploreScreen() {
         data: {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
-          radius: 500,
+          radius: 300,
         },
       });
     }
@@ -88,7 +88,7 @@ export default function ExploreScreen() {
         data: {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
-          radius: 500,
+          radius: 300,
         },
       });
     }

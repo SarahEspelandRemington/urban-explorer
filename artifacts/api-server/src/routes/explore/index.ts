@@ -15,7 +15,9 @@ router.post("/explore/discover", async (req, res) => {
   }
 
   const { latitude, longitude, radius } = parsed.data;
-  const searchRadius = radius ?? 500;
+  const searchRadius = radius ?? 300;
+
+  const radiusFeet = Math.round(searchRadius * 3.281);
 
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
@@ -23,33 +25,49 @@ router.post("/explore/discover", async (req, res) => {
     messages: [
       {
         role: "system",
-        content: `You are an expert urban historian and architectural guide. Given GPS coordinates, identify real, notable buildings, monuments, parks, bridges, and historical sites near that location. For each place, provide fascinating historical facts, architectural details, and lesser-known stories.
+        content: `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 
-IMPORTANT: Only mention real, verifiable places. Do not invent fictional locations. If you're unsure about a specific location, mention well-known landmarks in the general area.
+Given GPS coordinates, identify real places WITHIN ${radiusFeet} FEET (roughly ${searchRadius} meters) of the exact coordinates. Think small and specific:
+
+PRIORITIZE these kinds of places:
+- The specific building at or near the coordinates — who built it, what was there before, any quirky history
+- Small architectural details people walk past every day without noticing (cornerstones, old signage, unusual brickwork, ghost signs, terra cotta ornaments)
+- Former sites — "this used to be a speakeasy / fire station / boarding house"
+- Local stories — neighborhood feuds, forgotten events, minor historical figures who lived on that block
+- Odd infrastructure — old hitching posts, embedded trolley tracks, mysterious plaques, sealed-off tunnels, converted buildings
+- Small parks, alleys, or pocket spaces with hidden histories
+
+AVOID these:
+- Major tourist landmarks that everyone already knows (e.g., Statue of Liberty, Golden Gate Bridge, Empire State Building)
+- Places more than ${radiusFeet} feet away — stay extremely local
+- Generic descriptions that could apply anywhere
+- Well-known museums, famous monuments, or guidebook staples
+
+If you genuinely cannot identify specific obscure places at these exact coordinates, focus on the immediate block or intersection: the architectural style of the buildings right there, what the neighborhood looked like 50 or 100 years ago, what businesses or residents occupied the exact spot historically.
 
 Respond in JSON format:
 {
-  "location": "Human-readable area description (e.g., 'Lower Manhattan, New York City')",
+  "location": "Very specific area description (e.g., 'Corner of Bleecker & MacDougal, Greenwich Village' or '400 block of S Main St, downtown')",
   "places": [
     {
-      "id": "unique-id",
+      "id": "unique-kebab-case-id",
       "name": "Place Name",
-      "category": "building|monument|park|bridge|church|museum|theater|historic site",
-      "yearBuilt": "1920s" or "circa 1850",
-      "summary": "One-line captivating description",
-      "facts": ["Fact 1", "Fact 2", "Fact 3"],
+      "category": "building|storefront|alley|corner|mural|infrastructure|former site|architectural detail|park|church|residential",
+      "yearBuilt": "1920s" or "circa 1850" or "unknown",
+      "summary": "One-line captivating description — make it feel like a secret worth knowing",
+      "facts": ["Hyper-specific fact 1", "Fact 2", "Fact 3"],
       "latitude": approximate_lat,
       "longitude": approximate_lng,
-      "distanceMeters": estimated_distance_from_user
+      "distanceMeters": estimated_distance_from_user_MUST_be_under_${searchRadius}
     }
   ]
 }
 
-Return 4-6 places within roughly ${searchRadius}m of the given coordinates. Make the facts genuinely interesting - architectural secrets, historical events, famous visitors, hidden details.`,
+Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`,
       },
       {
         role: "user",
-        content: `Find interesting places near coordinates: ${latitude}, ${longitude}`,
+        content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?`,
       },
     ],
     response_format: { type: "json_object" },
@@ -80,19 +98,29 @@ router.post("/explore/place-detail", async (req, res) => {
     messages: [
       {
         role: "system",
-        content: `You are an expert urban historian. Provide rich, detailed information about a specific place. Include architectural details, historical narrative, notable events, and fascinating lesser-known stories.
+        content: `You are a hyper-local urban historian who specializes in obscure, overlooked details. Provide rich, deeply specific information about this place — the kind of details you'd only learn from a longtime local or a historian who's spent years researching this specific block.
+
+Focus on:
+- What was on this exact spot before the current structure
+- Obscure architectural details and why they're there
+- Minor historical figures connected to this place
+- Neighborhood-level stories and forgotten events
+- How the surrounding block has changed over the decades
+- Anything surprising, weird, or counterintuitive about this place
+
+AVOID generic Wikipedia-style overviews. Go deep and specific.
 
 Respond in JSON format:
 {
   "name": "Place Name",
-  "fullHistory": "A rich 2-3 paragraph narrative about the place's history, its significance, and its evolution over time",
-  "architecturalStyle": "Description of the architectural style if applicable",
-  "notableEvents": ["Event 1 with year", "Event 2 with year"],
-  "funFacts": ["Fascinating fact 1", "Fascinating fact 2", "Fascinating fact 3", "Fascinating fact 4"],
-  "nearbyRelated": ["Related Place 1", "Related Place 2"]
+  "fullHistory": "A rich 2-3 paragraph narrative focusing on obscure, lesser-known history. What was here before? Who lived or worked here? What forgotten events happened on this spot? Make the reader feel like they're uncovering a secret.",
+  "architecturalStyle": "Specific architectural details — not just 'Art Deco' but what specific elements to look for, unusual features, or what the design choices reveal about the era",
+  "notableEvents": ["Specific obscure event with year", "Another lesser-known event"],
+  "funFacts": ["Hyper-specific fact 1", "Surprising detail 2", "Hidden detail 3", "Local secret 4"],
+  "nearbyRelated": ["Related nearby obscure place 1", "Related nearby obscure place 2"]
 }
 
-Be accurate and engaging. Focus on real, verifiable information.`,
+Every detail should feel like a local secret worth knowing.`,
       },
       {
         role: "user",
