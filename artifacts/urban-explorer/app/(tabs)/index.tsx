@@ -217,6 +217,10 @@ export default function ExploreScreen() {
         geocodeError={geocodeError}
         showBackButton={showLocationSearch && (permission?.granted || !!manualCoords)}
         onBack={() => setShowLocationSearch(false)}
+        onWalkMode={() => {
+          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          router.push("/walk-mode");
+        }}
       />
     );
   }

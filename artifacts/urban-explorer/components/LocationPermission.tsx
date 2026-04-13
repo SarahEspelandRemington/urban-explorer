@@ -31,6 +31,7 @@ interface LocationPermissionProps {
   geocodeError?: string | null;
   showBackButton?: boolean;
   onBack?: () => void;
+  onWalkMode?: () => void;
 }
 
 export function LocationPermission({
@@ -41,6 +42,7 @@ export function LocationPermission({
   geocodeError,
   showBackButton,
   onBack,
+  onWalkMode,
 }: LocationPermissionProps) {
   const colors = useColors();
   const [query, setQuery] = useState("");
@@ -351,6 +353,37 @@ export function LocationPermission({
                 Search by Location
               </Text>
             </Pressable>
+
+            {onWalkMode && (
+              <>
+                <View style={styles.dividerRow}>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                  <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                </View>
+
+                <Pressable
+                  onPress={onWalkMode}
+                  style={({ pressed }) => [
+                    styles.walkButton,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                >
+                  <Feather name="headphones" size={18} color={colors.primaryForeground} />
+                  <View style={styles.walkButtonText}>
+                    <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                      Walk Mode
+                    </Text>
+                    <Text style={[styles.walkSubtext, { color: colors.primaryForeground + "bb" }]}>
+                      Skip ahead — explore on foot with audio
+                    </Text>
+                  </View>
+                </Pressable>
+              </>
+            )}
           </View>
         )}
       </View>
@@ -428,6 +461,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: "100%",
     justifyContent: "center",
+  },
+  walkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 14,
+    width: "100%",
+  },
+  walkButtonText: {
+    flex: 1,
+  },
+  walkSubtext: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
   secondaryButtonText: {
     fontSize: 16,
