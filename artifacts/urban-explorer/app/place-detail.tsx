@@ -14,6 +14,7 @@ import {
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { PlaceDetailMap } from "@/components/PlaceDetailMap";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
 import { useGetPlaceDetail } from "@workspace/api-client-react";
@@ -144,6 +145,14 @@ export default function PlaceDetailScreen() {
         <Text style={[styles.summary, { color: colors.mutedForeground }]}>
           {params.summary}
         </Text>
+
+        <View style={styles.mapSection}>
+          <PlaceDetailMap
+            latitude={lat}
+            longitude={lng}
+            name={params.name}
+          />
+        </View>
 
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
@@ -295,6 +304,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     lineHeight: 22,
+  },
+  mapSection: {
+    marginTop: 20,
   },
   divider: {
     height: 1,

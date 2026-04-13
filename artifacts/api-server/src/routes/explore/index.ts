@@ -100,7 +100,7 @@ router.post("/explore/suggest-locations", async (req, res) => {
   }
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5.2",
+    model: "gpt-4.1-nano",
     max_completion_tokens: 512,
     messages: [
       {
@@ -148,7 +148,7 @@ router.post("/explore/geocode", async (req, res) => {
   const { query } = parsed.data;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5.2",
+    model: "gpt-4.1-nano",
     max_completion_tokens: 256,
     messages: [
       {
@@ -192,8 +192,8 @@ router.post("/explore/place-detail", async (req, res) => {
   const { placeName, latitude, longitude, category } = parsed.data;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5.2",
-    max_completion_tokens: 4096,
+    model: "gpt-4.1-mini",
+    max_completion_tokens: 2048,
     messages: [
       {
         role: "system",
