@@ -1,13 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -47,12 +48,24 @@ export default function ExploreScreen() {
   const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [showLocationSearch, setShowLocationSearch] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   const discoverMutation = useDiscoverPlaces();
   const geocodeMutation = useGeocodeLocation();
 
   const places = (discoverMutation.data?.places as DiscoveredPlace[] | undefined) ?? [];
   const areaName = discoverMutation.data?.location ?? "";
+
+  const categories = useMemo(() => {
+    const cats = [...new Set(places.map((p) => p.category))];
+    cats.sort((a, b) => a.localeCompare(b));
+    return cats;
+  }, [places]);
+
+  const filteredPlaces = useMemo(
+    () => (activeFilter ? places.filter((p) => p.category === activeFilter) : places),
+    [places, activeFilter],
+  );
 
   const effectiveLatitude = manualCoords?.latitude ?? location?.coords.latitude ?? 0;
   const effectiveLongitude = manualCoords?.longitude ?? location?.coords.longitude ?? 0;
@@ -79,6 +92,7 @@ export default function ExploreScreen() {
 
   const discoverAt = useCallback(
     (lat: number, lng: number) => {
+      setActiveFilter(null);
       discoverMutation.mutate({
         data: {
           latitude: lat,
@@ -257,15 +271,75 @@ export default function ExploreScreen() {
         </View>
       </View>
 
+      {showContent && categories.length > 1 && (
+        <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScroll}
+          >
+            <Pressable
+              onPress={() => {
+                setActiveFilter(null);
+                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={[
+                styles.filterChip,
+                {
+                  backgroundColor: activeFilter === null ? colors.foreground : colors.muted,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  { color: activeFilter === null ? colors.background : colors.mutedForeground },
+                ]}
+              >
+                All ({places.length})
+              </Text>
+            </Pressable>
+            {categories.map((cat) => {
+              const isActive = activeFilter === cat;
+              const count = places.filter((p) => p.category === cat).length;
+              return (
+                <Pressable
+                  key={cat}
+                  onPress={() => {
+                    setActiveFilter(isActive ? null : cat);
+                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: isActive ? colors.foreground : colors.muted,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: isActive ? colors.background : colors.mutedForeground },
+                    ]}
+                  >
+                    {cat.charAt(0).toUpperCase() + cat.slice(1)} ({count})
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {showContent && viewMode === "map" ? (
         <PlaceMapView
-          places={places}
+          places={filteredPlaces}
           userLatitude={effectiveLatitude}
           userLongitude={effectiveLongitude}
         />
       ) : (
         <FlatList
-          data={places}
+          data={filteredPlaces}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
             <PlaceCard place={item} index={index} />
@@ -413,6 +487,23 @@ const styles = StyleSheet.create({
     borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
+  },
+  filterRow: {
+    borderBottomWidth: 1,
+    paddingVertical: 10,
+  },
+  filterScroll: {
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
   list: {
     padding: 16,
