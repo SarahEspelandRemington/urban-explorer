@@ -45,6 +45,13 @@ AVOID these:
 - Generic descriptions that could apply anywhere
 - Well-known museums, famous monuments, or guidebook staples
 
+COORDINATE ACCURACY IS CRITICAL:
+- Use precise coordinates to 5 decimal places (±1 meter accuracy)
+- For known addresses, use the exact building coordinates
+- For intersections, use the exact intersection point
+- For blocks or stretches, use the midpoint of that stretch
+- Always include a real street address or intersection in the "address" field — this helps users navigate
+
 If you genuinely cannot identify specific obscure places at these exact coordinates, focus on the immediate block or intersection: the architectural style of the buildings right there, what the neighborhood looked like 50 or 100 years ago, what businesses or residents occupied the exact spot historically.
 
 Respond in JSON format:
@@ -58,8 +65,9 @@ Respond in JSON format:
       "yearBuilt": "1920s" or "circa 1850" or "unknown",
       "summary": "One-line captivating description — make it feel like a secret worth knowing",
       "facts": ["Hyper-specific fact 1", "Fact 2", "Fact 3"],
-      "latitude": approximate_lat,
-      "longitude": approximate_lng,
+      "latitude": precise_lat_to_5_decimal_places,
+      "longitude": precise_lng_to_5_decimal_places,
+      "address": "Nearest real street address or intersection (e.g., '157 W 48th St' or 'W 48th St & 8th Ave')",
       "distanceMeters": estimated_distance_from_user_MUST_be_under_${searchRadius}
     }
   ]

@@ -9,19 +9,22 @@ interface PlaceDetailMapProps {
   latitude: number;
   longitude: number;
   name: string;
+  address?: string;
 }
 
-export function PlaceDetailMap({ latitude, longitude, name }: PlaceDetailMapProps) {
+export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDetailMapProps) {
   const colors = useColors();
 
   const handleOpenMaps = () => {
+    const searchQuery = address || name;
+    const encodedQuery = encodeURIComponent(searchQuery);
     const scheme = Platform.select({
-      ios: `maps:0,0?q=${name}@${latitude},${longitude}`,
-      android: `geo:0,0?q=${latitude},${longitude}(${name})`,
+      ios: `maps:0,0?q=${encodedQuery}&ll=${latitude},${longitude}`,
+      android: `geo:${latitude},${longitude}?q=${encodedQuery}`,
     });
     if (scheme) {
       Linking.openURL(scheme).catch(() => {
-        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`);
+        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedQuery}`);
       });
     }
   };

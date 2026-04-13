@@ -10,6 +10,7 @@ export interface SavedPlace {
   facts: string[];
   latitude: number;
   longitude: number;
+  address?: string;
   distanceMeters?: number;
   savedAt: string;
 }

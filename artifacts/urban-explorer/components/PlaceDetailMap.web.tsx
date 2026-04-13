@@ -8,13 +8,15 @@ interface PlaceDetailMapProps {
   latitude: number;
   longitude: number;
   name: string;
+  address?: string;
 }
 
-export function PlaceDetailMap({ latitude, longitude, name }: PlaceDetailMapProps) {
+export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDetailMapProps) {
   const colors = useColors();
 
   const handleOpenMaps = () => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+    const searchQuery = address || name;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchQuery)}`;
     Linking.openURL(url);
   };
 

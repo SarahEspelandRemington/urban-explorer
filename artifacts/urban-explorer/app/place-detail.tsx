@@ -44,6 +44,7 @@ export default function PlaceDetailScreen() {
     yearBuilt: string;
     summary: string;
     facts: string;
+    address: string;
   }>();
 
   const lat = parseFloat(params.latitude || "0");
@@ -151,6 +152,7 @@ export default function PlaceDetailScreen() {
             latitude={lat}
             longitude={lng}
             name={params.name}
+            address={params.address}
           />
         </View>
 

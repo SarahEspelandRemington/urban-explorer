@@ -29,6 +29,7 @@ interface PlaceCardProps {
     facts: string[];
     latitude: number;
     longitude: number;
+    address?: string;
     distanceMeters?: number;
   };
   index: number;
@@ -64,6 +65,7 @@ export function PlaceCard({ place, index }: PlaceCardProps) {
         yearBuilt: place.yearBuilt || "",
         summary: place.summary,
         facts: JSON.stringify(place.facts),
+        address: place.address || "",
       },
     });
   };

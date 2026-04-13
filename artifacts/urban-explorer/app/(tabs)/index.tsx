@@ -30,6 +30,7 @@ interface DiscoveredPlace {
   facts: string[];
   latitude: number;
   longitude: number;
+  address?: string;
   distanceMeters?: number;
 }
 
