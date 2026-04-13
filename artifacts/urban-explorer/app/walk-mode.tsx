@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -105,7 +106,7 @@ export default function WalkModeScreen() {
           <View style={styles.statItem}>
             <MaterialCommunityIcons name="map-marker-check" size={14} color={colors.mutedForeground} />
             <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {walk.stats.placesNarrated} stories
+              {walk.stats.placesNarrated}/{walk.nearbyPlaces.length} stories
             </Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -179,6 +180,45 @@ export default function WalkModeScreen() {
             </Text>
           </View>
         </Animated.View>
+      )}
+
+      {walk.nearbyPlaces.length > 0 && !walk.isLoading && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.placeChips}
+        >
+          {walk.nearbyPlaces.map((place) => {
+            const isNarrated = walk.narratedIds.has(place.id);
+            return (
+              <View
+                key={place.id}
+                style={[
+                  styles.placeChip,
+                  {
+                    backgroundColor: isNarrated ? colors.primary + "18" : colors.card,
+                    borderColor: isNarrated ? colors.primary + "40" : colors.border,
+                  },
+                ]}
+              >
+                <Feather
+                  name={isNarrated ? "check-circle" : "map-pin"}
+                  size={12}
+                  color={isNarrated ? colors.primary : colors.mutedForeground}
+                />
+                <Text
+                  style={[
+                    styles.placeChipText,
+                    { color: isNarrated ? colors.primary : colors.foreground },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {place.name}
+                </Text>
+              </View>
+            );
+          })}
+        </ScrollView>
       )}
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
@@ -302,6 +342,26 @@ const styles = StyleSheet.create({
   scanningText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+  placeChips: {
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingBottom: 8,
+  },
+  placeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    maxWidth: 200,
+  },
+  placeChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    flexShrink: 1,
   },
   bottomBar: {
     paddingHorizontal: 16,

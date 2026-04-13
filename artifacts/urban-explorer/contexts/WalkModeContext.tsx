@@ -170,8 +170,34 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     [fetchNearbyPlaces],
   );
 
+  const hasAutoNarratedRef = useRef(false);
+
   useEffect(() => {
     if (!isWalking || !currentLocation || nearbyPlaces.length === 0) return;
+
+    if (!hasAutoNarratedRef.current) {
+      hasAutoNarratedRef.current = true;
+      let closest: WalkPlace | null = null;
+      let closestDist = Infinity;
+      for (const place of nearbyPlaces) {
+        if (narratedIdsRef.current.has(place.id)) continue;
+        const dist = haversineDistance(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          place.latitude,
+          place.longitude,
+        );
+        if (dist < closestDist) {
+          closestDist = dist;
+          closest = place;
+        }
+      }
+      if (closest) {
+        narratedIdsRef.current.add(closest.id);
+        setNarratedIds(new Set(narratedIdsRef.current));
+        fetchNarration(closest);
+      }
+    }
 
     for (const place of nearbyPlaces) {
       if (narratedIdsRef.current.has(place.id)) continue;
@@ -200,6 +226,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     setNearbyPlaces([]);
     lastFetchRef.current = null;
     prevLocationRef.current = null;
+    hasAutoNarratedRef.current = false;
 
     const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
     handleLocationUpdate(loc);
