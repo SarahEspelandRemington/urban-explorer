@@ -248,4 +248,35 @@ Every detail should feel like a local secret worth knowing.`,
   res.json(data);
 });
 
+router.post("/explore/walk-narration", async (req, res) => {
+  const { placeName, category, summary, fact } = req.body || {};
+  if (!placeName || !summary) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4.1-nano",
+    max_completion_tokens: 256,
+    messages: [
+      {
+        role: "system",
+        content: `You are a friendly, knowledgeable walking tour guide narrating interesting spots as someone walks past them. Keep it conversational and brief — 2-3 sentences max. Speak as if you're walking alongside the person, casually pointing something out. Don't say "welcome" or introduce yourself. Just share the interesting tidbit naturally, like a friend who knows the neighborhood well. Never use quotes, asterisks, or formatting — just plain spoken text.`,
+      },
+      {
+        role: "user",
+        content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+      },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    res.status(500).json({ error: "Failed to generate narration" });
+    return;
+  }
+
+  res.json({ narration: content.trim() });
+});
+
 export default router;

@@ -26,15 +26,22 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - Uses `expo-location` for GPS coordinates, or manual location search (geocoding via AI)
   - Header search button allows switching from GPS to manual location search at any time
   - Two tabs: Explore (discover nearby places) and Saved (bookmarked places)
-  - Place detail screen with rich historical information
+  - Place detail screen with rich historical information and tags
+  - Filter chips: categories, era-based time periods, and AI-generated descriptive tags
+  - **Walk Mode**: continuous GPS tracking with proximity-based discovery and text-to-speech narration
+    - `WalkModeContext` manages location watching, proximity detection (~50m), and narration queue
+    - `useNarration` hook wraps expo-speech (native) / Web Speech API with queue, pause/resume/skip
+    - Platform-specific maps (native MapView vs web fallback)
   - AsyncStorage for persisting saved places
   - Design tokens: warm amber/navy/stone palette in `constants/colors.ts`
 
 - **API server** (`artifacts/api-server`): Express backend
-  - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places
+  - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses)
   - `POST /api/explore/geocode` - Converts location name to lat/lng coordinates via AI
   - `POST /api/explore/place-detail` - Returns detailed history for a specific place
-  - Uses OpenAI GPT-5.2 for generating historical content
+  - `POST /api/explore/walk-narration` - Generates brief tour-guide-style narrations for TTS (gpt-4.1-nano)
+  - `POST /api/explore/suggest-locations` - AI-powered location autocomplete (gpt-4.1-nano)
+  - Uses OpenAI GPT-5.2 for discover, gpt-4.1-mini for detail, gpt-4.1-nano for narration/geocode/suggest
 
 - **Shared libs**:
   - `lib/api-spec` - OpenAPI specification

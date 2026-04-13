@@ -16,6 +16,8 @@ import {
 import Animated, { FadeIn } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useRouter } from "expo-router";
+
 import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceMapView } from "@/components/PlaceMapView";
@@ -56,6 +58,7 @@ type ViewMode = "list" | "map";
 export default function ExploreScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [permission, requestPermission] = Location.useForegroundPermissions();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -462,6 +465,37 @@ export default function ExploreScreen() {
             { paddingBottom: insets.bottom + webBottomInset + 90 },
           ]}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            showContent ? (
+              <Pressable
+                onPress={() => {
+                  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push("/walk-mode");
+                }}
+                style={({ pressed }) => [
+                  styles.walkCard,
+                  {
+                    backgroundColor: colors.primary,
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  },
+                ]}
+              >
+                <View style={styles.walkCardContent}>
+                  <Feather name="headphones" size={22} color={colors.primaryForeground} />
+                  <View style={styles.walkCardText}>
+                    <Text style={[styles.walkCardTitle, { color: colors.primaryForeground }]}>
+                      Walk Mode
+                    </Text>
+                    <Text style={[styles.walkCardSubtitle, { color: colors.primaryForeground + "cc" }]}>
+                      Put headphones on and explore on foot
+                    </Text>
+                  </View>
+                  <Feather name="chevron-right" size={20} color={colors.primaryForeground + "aa"} />
+                </View>
+              </Pressable>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={discoverMutation.isPending}
@@ -628,6 +662,28 @@ const styles = StyleSheet.create({
     width: 1,
     height: 20,
     alignSelf: "center",
+  },
+  walkCard: {
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+  },
+  walkCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  walkCardText: {
+    flex: 1,
+  },
+  walkCardTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
+  walkCardSubtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
   list: {
     padding: 16,

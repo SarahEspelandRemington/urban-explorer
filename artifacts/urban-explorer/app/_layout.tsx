@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { DiscoveryProvider } from "@/contexts/DiscoveryContext";
+import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
@@ -28,6 +29,10 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="place-detail" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="walk-mode"
+        options={{ headerShown: false, gestureEnabled: false, animation: "slide_from_bottom" }}
+      />
     </Stack>
   );
 }
@@ -53,11 +58,13 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <DiscoveryProvider>
-            <GestureHandlerRootView>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
+            <WalkModeProvider>
+              <GestureHandlerRootView>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </WalkModeProvider>
           </DiscoveryProvider>
         </QueryClientProvider>
       </ErrorBoundary>
