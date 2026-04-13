@@ -171,8 +171,11 @@ export default function ExploreScreen() {
           },
         ]}
       >
-        <View>
-          <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
+        <View style={styles.headerTextContainer}>
+          <Text
+            style={[styles.greeting, { color: colors.mutedForeground }]}
+            numberOfLines={1}
+          >
             {locationLoading ? "Locating..." : areaName || "Ready to explore"}
           </Text>
           <Text style={[styles.title, { color: colors.foreground }]}>
@@ -341,6 +344,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerTextContainer: {
+    flex: 1,
+    marginRight: 12,
   },
   greeting: {
     fontSize: 13,
