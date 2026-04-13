@@ -191,22 +191,27 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
     handleLocationUpdate(loc);
 
-    const sub = await Location.watchPositionAsync(
-      {
-        accuracy: Location.Accuracy.High,
-        distanceInterval: 10,
-        timeInterval: 3000,
-      },
-      handleLocationUpdate,
-    );
-    watchRef.current = sub;
+    try {
+      const sub = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          distanceInterval: 10,
+          timeInterval: 3000,
+        },
+        handleLocationUpdate,
+      );
+      watchRef.current = sub;
+    } catch {
+    }
   }, [handleLocationUpdate]);
 
   const stopWalk = useCallback(() => {
     setIsWalking(false);
     narration.stop();
     if (watchRef.current) {
-      watchRef.current.remove();
+      try {
+        watchRef.current.remove();
+      } catch {}
       watchRef.current = null;
     }
   }, [narration]);
