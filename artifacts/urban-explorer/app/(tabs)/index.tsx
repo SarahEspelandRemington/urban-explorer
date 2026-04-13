@@ -488,7 +488,7 @@ export default function ExploreScreen() {
                       Walk Mode
                     </Text>
                     <Text style={[styles.walkCardSubtitle, { color: colors.primaryForeground + "cc" }]}>
-                      Put headphones on and explore on foot
+                      Audio tour guide — headphones or speaker
                     </Text>
                   </View>
                   <Feather name="chevron-right" size={20} color={colors.primaryForeground + "aa"} />
