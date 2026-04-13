@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WalkModeMap } from "@/components/WalkModeMap";
 import { useWalkMode } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
+import { unlockWebSpeech } from "@/hooks/useNarration";
 
 function formatDuration(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -48,6 +49,7 @@ export default function WalkModeScreen() {
   }, [walk.isWalking, walk.stats.startTime]);
 
   useEffect(() => {
+    unlockWebSpeech();
     if (!walk.isWalking) {
       walk.startWalk();
     }

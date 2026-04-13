@@ -22,6 +22,7 @@ import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceMapView } from "@/components/PlaceMapView";
 import { useColors } from "@/hooks/useColors";
+import { unlockWebSpeech } from "@/hooks/useNarration";
 import { useDiscoverPlaces, useGeocodeLocation } from "@workspace/api-client-react";
 
 interface DiscoveredPlace {
@@ -473,6 +474,7 @@ export default function ExploreScreen() {
             showContent ? (
               <Pressable
                 onPress={() => {
+                  unlockWebSpeech();
                   if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   router.push("/walk-mode");
                 }}

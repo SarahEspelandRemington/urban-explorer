@@ -16,6 +16,7 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { unlockWebSpeech } from "@/hooks/useNarration";
 import { useSuggestLocations } from "@workspace/api-client-react";
 
 interface LocationSuggestion {
@@ -363,7 +364,10 @@ export function LocationPermission({
                 </View>
 
                 <Pressable
-                  onPress={onWalkMode}
+                  onPress={() => {
+                    unlockWebSpeech();
+                    onWalkMode?.();
+                  }}
                   style={({ pressed }) => [
                     styles.walkButton,
                     {

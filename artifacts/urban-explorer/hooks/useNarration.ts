@@ -8,12 +8,26 @@ interface NarrationItem {
   placeName: string;
 }
 
+let webSpeechUnlocked = false;
+
+export function unlockWebSpeech() {
+  if (Platform.OS !== "web" || webSpeechUnlocked) return;
+  try {
+    const u = new SpeechSynthesisUtterance("");
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+    window.speechSynthesis.cancel();
+    webSpeechUnlocked = true;
+  } catch {}
+}
+
 export function useNarration() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentPlace, setCurrentPlace] = useState<string | null>(null);
   const queueRef = useRef<NarrationItem[]>([]);
   const speakingRef = useRef(false);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const processQueue = useCallback(() => {
     if (speakingRef.current || queueRef.current.length === 0) return;
@@ -23,38 +37,53 @@ export function useNarration() {
     setIsSpeaking(true);
     setCurrentPlace(item.placeName);
 
+    const onFinish = () => {
+      speakingRef.current = false;
+      setIsSpeaking(false);
+      setCurrentPlace(null);
+      processQueue();
+    };
+
     if (Platform.OS === "web") {
+      window.speechSynthesis.cancel();
+
       const utterance = new SpeechSynthesisUtterance(item.text);
+      utterance.lang = "en-US";
       utterance.rate = 0.95;
       utterance.pitch = 1.0;
-      utterance.onend = () => {
-        speakingRef.current = false;
-        setIsSpeaking(false);
-        setCurrentPlace(null);
-        processQueue();
+      utterance.onend = onFinish;
+      utterance.onerror = (e) => {
+        console.warn("Speech error:", e);
+        onFinish();
       };
-      utterance.onerror = () => {
-        speakingRef.current = false;
-        setIsSpeaking(false);
-        setCurrentPlace(null);
-        processQueue();
-      };
+
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoice = voices.find(
+        (v) => v.lang.startsWith("en") && v.default
+      ) || voices.find((v) => v.lang.startsWith("en"));
+      if (englishVoice) utterance.voice = englishVoice;
+
       window.speechSynthesis.speak(utterance);
+
+      retryTimerRef.current = setTimeout(() => {
+        if (speakingRef.current && !window.speechSynthesis.speaking) {
+          console.warn("Speech did not start, retrying...");
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(utterance);
+        }
+      }, 500);
     } else {
       Speech.speak(item.text, {
+        language: "en",
         rate: 0.95,
         pitch: 1.0,
-        onDone: () => {
-          speakingRef.current = false;
-          setIsSpeaking(false);
-          setCurrentPlace(null);
-          processQueue();
+        onStart: () => {
+          console.log("Speech started:", item.placeName);
         },
-        onError: () => {
-          speakingRef.current = false;
-          setIsSpeaking(false);
-          setCurrentPlace(null);
-          processQueue();
+        onDone: onFinish,
+        onError: (err) => {
+          console.warn("Speech error:", err);
+          onFinish();
         },
       });
     }
@@ -70,6 +99,7 @@ export function useNarration() {
 
   const stop = useCallback(() => {
     queueRef.current = [];
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     if (Platform.OS === "web") {
       window.speechSynthesis.cancel();
     } else {
@@ -100,6 +130,7 @@ export function useNarration() {
   }, []);
 
   const skip = useCallback(() => {
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     if (Platform.OS === "web") {
       window.speechSynthesis.cancel();
     } else {
