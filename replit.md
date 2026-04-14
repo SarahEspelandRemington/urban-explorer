@@ -28,10 +28,14 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - Two tabs: Explore (discover nearby places) and Saved (bookmarked places)
   - Place detail screen with rich historical information and tags
   - Filter chips: categories, era-based time periods, and AI-generated descriptive tags
+  - **Map view auto-discovery**: panning the map 150m+ from last fetch center auto-triggers new discovery (800ms debounce), accumulating markers across pans with deduplication
+    - Native: `react-native-maps` MapView with `onRegionChangeComplete`
+    - Web: Leaflet with OpenStreetMap tiles (dynamically loaded), full marker interaction and place card overlay
+    - "Finding places..." loading badge shown during map-triggered fetches
   - **Walk Mode**: continuous GPS tracking with proximity-based discovery and text-to-speech narration
     - `WalkModeContext` manages location watching, proximity detection (~50m), and narration queue
     - `useNarration` hook wraps expo-speech (native) / Web Speech API with queue, pause/resume/skip
-    - Platform-specific maps (native MapView vs web fallback)
+    - Platform-specific maps (native MapView vs Leaflet web map)
   - AsyncStorage for persisting saved places
   - Design tokens: warm amber/navy/stone palette in `constants/colors.ts`
 

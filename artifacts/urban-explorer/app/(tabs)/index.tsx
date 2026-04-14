@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -71,10 +71,26 @@ export default function ExploreScreen() {
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
   const discoverMutation = useDiscoverPlaces();
+  const mapDiscoverMutation = useDiscoverPlaces();
   const geocodeMutation = useGeocodeLocation();
+
+  const [mapPlaces, setMapPlaces] = useState<DiscoveredPlace[]>([]);
+  const [mapLoading, setMapLoading] = useState(false);
+  const mapPlacesRef = useRef<DiscoveredPlace[]>([]);
 
   const places = (discoverMutation.data?.places as DiscoveredPlace[] | undefined) ?? [];
   const areaName = discoverMutation.data?.location ?? "";
+
+  const allMapPlaces = useMemo(() => {
+    const combined = [...places, ...mapPlaces];
+    const seen = new Set<string>();
+    return combined.filter((p) => {
+      const key = `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [places, mapPlaces]);
 
   const filterGroups = useMemo(() => {
     const cats = [...new Set(places.map((p) => p.category))].sort();
@@ -136,6 +152,8 @@ export default function ExploreScreen() {
   const discoverAt = useCallback(
     (lat: number, lng: number) => {
       setActiveFilters(new Set());
+      setMapPlaces([]);
+      mapPlacesRef.current = [];
       discoverMutation.mutate({
         data: {
           latitude: lat,
@@ -145,6 +163,51 @@ export default function ExploreScreen() {
       });
     },
     [discoverMutation],
+  );
+
+  const mapLoadingRef = useRef(false);
+
+  const handleMapRegionDiscover = useCallback(
+    (lat: number, lng: number) => {
+      if (mapLoadingRef.current) return;
+      mapLoadingRef.current = true;
+      setMapLoading(true);
+      mapDiscoverMutation.mutate(
+        {
+          data: {
+            latitude: lat,
+            longitude: lng,
+            radius: 300,
+          },
+        },
+        {
+          onSuccess: (data: any) => {
+            const newPlaces = (data?.places as DiscoveredPlace[] | undefined) ?? [];
+            if (newPlaces.length > 0) {
+              const existing = new Set(
+                mapPlacesRef.current.map(
+                  (p) => `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`,
+                ),
+              );
+              const fresh = newPlaces.filter((p) => {
+                const key = `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`;
+                return !existing.has(key);
+              });
+              const updated = [...mapPlacesRef.current, ...fresh];
+              mapPlacesRef.current = updated;
+              setMapPlaces(updated);
+            }
+            mapLoadingRef.current = false;
+            setMapLoading(false);
+          },
+          onError: () => {
+            mapLoadingRef.current = false;
+            setMapLoading(false);
+          },
+        },
+      );
+    },
+    [mapDiscoverMutation],
   );
 
   const handleDiscover = useCallback(async () => {
@@ -454,9 +517,11 @@ export default function ExploreScreen() {
 
       {showContent && viewMode === "map" ? (
         <PlaceMapView
-          places={filteredPlaces}
+          places={allMapPlaces}
           userLatitude={effectiveLatitude}
           userLongitude={effectiveLongitude}
+          onMapRegionDiscover={handleMapRegionDiscover}
+          isLoadingMore={mapLoading}
         />
       ) : (
         <FlatList

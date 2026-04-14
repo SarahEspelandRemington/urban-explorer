@@ -1,15 +1,16 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Marker, PROVIDER_DEFAULT, type Region } from "react-native-maps";
 
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
@@ -31,6 +32,9 @@ const CATEGORY_ICONS: Record<string, string> = {
   "former site": "history",
   "architectural detail": "eye-outline",
   residential: "home-variant",
+  school: "school",
+  arts_centre: "palette",
+  theatre: "drama-masks",
 };
 
 interface Place {
@@ -49,14 +53,38 @@ interface PlaceMapViewProps {
   places: Place[];
   userLatitude: number;
   userLongitude: number;
+  onMapRegionDiscover?: (lat: number, lng: number) => void;
+  isLoadingMore?: boolean;
 }
 
-export function PlaceMapView({ places, userLatitude, userLongitude }: PlaceMapViewProps) {
+const PAN_DISTANCE_THRESHOLD = 150;
+
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export function PlaceMapView({
+  places,
+  userLatitude,
+  userLongitude,
+  onMapRegionDiscover,
+  isLoadingMore,
+}: PlaceMapViewProps) {
   const colors = useColors();
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const lastFetchCenter = useRef({ lat: userLatitude, lng: userLongitude });
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedPlace = places.find((p) => p.id === selectedId);
 
@@ -91,6 +119,31 @@ export function PlaceMapView({ places, userLatitude, userLongitude }: PlaceMapVi
     }
   };
 
+  const handleRegionChangeComplete = useCallback(
+    (region: Region) => {
+      if (!onMapRegionDiscover) return;
+
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+
+      debounceTimer.current = setTimeout(() => {
+        const dist = haversineDistance(
+          lastFetchCenter.current.lat,
+          lastFetchCenter.current.lng,
+          region.latitude,
+          region.longitude,
+        );
+
+        if (dist > PAN_DISTANCE_THRESHOLD) {
+          lastFetchCenter.current = { lat: region.latitude, lng: region.longitude };
+          onMapRegionDiscover(region.latitude, region.longitude);
+        }
+      }, 800);
+    },
+    [onMapRegionDiscover],
+  );
+
   const initialRegion = {
     latitude: userLatitude,
     longitude: userLongitude,
@@ -108,6 +161,7 @@ export function PlaceMapView({ places, userLatitude, userLongitude }: PlaceMapVi
         showsMyLocationButton
         provider={PROVIDER_DEFAULT}
         onPress={() => setSelectedId(null)}
+        onRegionChangeComplete={handleRegionChangeComplete}
       >
         {places.map((place) => (
           <Marker
@@ -122,6 +176,15 @@ export function PlaceMapView({ places, userLatitude, userLongitude }: PlaceMapVi
           />
         ))}
       </MapView>
+
+      {isLoadingMore && (
+        <View style={[styles.loadingBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={[styles.loadingBadgeText, { color: colors.mutedForeground }]}>
+            Finding places...
+          </Text>
+        </View>
+      )}
 
       {selectedPlace && (
         <View style={[styles.cardOverlay, { paddingBottom: 100 }]}>
@@ -183,6 +246,27 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  loadingBadge: {
+    position: "absolute",
+    top: 12,
+    alignSelf: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  loadingBadgeText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
   cardOverlay: {
     position: "absolute",
