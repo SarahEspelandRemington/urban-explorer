@@ -157,6 +157,10 @@ export function PlaceMapView({
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, [leafletReady]);
 

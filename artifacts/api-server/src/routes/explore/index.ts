@@ -5,6 +5,7 @@ import {
   GeocodeLocationBody,
   GetPlaceDetailBody,
   GetPlaceTimelineBody,
+  GetWalkNarrationBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
 
@@ -581,11 +582,12 @@ Create 4-6 eras spanning the full history. Each era should feel distinct and ali
 });
 
 router.post("/explore/walk-narration", async (req, res) => {
-  const { placeName, category, summary, fact } = req.body || {};
-  if (!placeName || !summary) {
+  const parsed = GetWalkNarrationBody.safeParse(req.body);
+  if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
+  const { placeName, category, summary, fact } = parsed.data;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-nano",

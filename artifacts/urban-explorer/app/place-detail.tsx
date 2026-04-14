@@ -204,9 +204,14 @@ export default function PlaceDetailScreen() {
 
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <PlaceTimeline
-          eras={timelineMutation.data?.eras as any}
+          eras={timelineMutation.data?.eras}
           isLoading={timelineMutation.isPending}
+          error={timelineMutation.isError}
           onLoad={handleLoadTimeline}
+          onRetry={() => {
+            setTimelineLoaded(false);
+            timelineMutation.reset();
+          }}
           hasLoaded={timelineLoaded}
         />
 
@@ -216,6 +221,28 @@ export default function PlaceDetailScreen() {
             <Text style={[styles.detailLoadingText, { color: colors.mutedForeground }]}>
               Loading detailed history...
             </Text>
+          </View>
+        ) : detailMutation.isError ? (
+          <View style={styles.detailLoading}>
+            <Feather name="alert-circle" size={20} color={colors.destructive} />
+            <Text style={[styles.detailLoadingText, { color: colors.mutedForeground }]}>
+              Could not load detailed history. Check your connection and try again.
+            </Text>
+            <Pressable
+              onPress={() =>
+                detailMutation.mutate({
+                  data: {
+                    placeName: params.name,
+                    latitude: lat,
+                    longitude: lng,
+                    category: params.category,
+                  },
+                })
+              }
+              style={[styles.retryButton, { borderColor: colors.border }]}
+            >
+              <Text style={[styles.retryText, { color: colors.accent }]}>Retry</Text>
+            </Pressable>
           </View>
         ) : detail ? (
           <Animated.View entering={Platform.OS !== "web" ? FadeInUp.delay(200) : undefined}>
@@ -445,5 +472,16 @@ const styles = StyleSheet.create({
   relatedText: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  retryText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
 });

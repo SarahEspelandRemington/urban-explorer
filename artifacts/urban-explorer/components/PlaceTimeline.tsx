@@ -24,11 +24,13 @@ interface TimelineEra {
 interface PlaceTimelineProps {
   eras: TimelineEra[] | undefined;
   isLoading: boolean;
+  error?: boolean;
   onLoad: () => void;
+  onRetry?: () => void;
   hasLoaded: boolean;
 }
 
-export function PlaceTimeline({ eras, isLoading, onLoad, hasLoaded }: PlaceTimelineProps) {
+export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoaded }: PlaceTimelineProps) {
   const colors = useColors();
   const [expandedEra, setExpandedEra] = React.useState<number | null>(null);
 
@@ -69,6 +71,28 @@ export function PlaceTimeline({ eras, isLoading, onLoad, hasLoaded }: PlaceTimel
         <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
           Traveling through time...
         </Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Feather name="alert-circle" size={20} color={colors.destructive} />
+        <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+          Could not load timeline. Check your connection and try again.
+        </Text>
+        {onRetry && (
+          <Pressable
+            onPress={onRetry}
+            style={({ pressed }) => [
+              styles.retryButton,
+              { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+            ]}
+          >
+            <Text style={[styles.retryText, { color: colors.accent }]}>Retry</Text>
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -234,6 +258,18 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  retryText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
   timeline: {
     paddingLeft: 4,
