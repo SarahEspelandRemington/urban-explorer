@@ -147,6 +147,15 @@ export default function PlaceDetailScreen() {
 
         <Text style={[styles.name, { color: colors.foreground }]}>{params.name}</Text>
 
+        {params.address ? (
+          <View style={styles.addressRow}>
+            <Feather name="map-pin" size={14} color={colors.mutedForeground} />
+            <Text style={[styles.addressText, { color: colors.mutedForeground }]}>
+              {params.address}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.metaRow}>
           {params.category ? (
             <View style={[styles.badge, { backgroundColor: colors.muted }]}>
@@ -348,7 +357,18 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontFamily: "Inter_700Bold",
     letterSpacing: -0.6,
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  addressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
+  addressText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    flexShrink: 1,
   },
   metaRow: {
     flexDirection: "row",
