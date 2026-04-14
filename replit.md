@@ -43,6 +43,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses, confidence levels)
   - `POST /api/explore/geocode` - Converts location name to lat/lng coordinates via AI
   - `POST /api/explore/place-detail` - Returns detailed history for a specific place
+  - `POST /api/explore/place-timeline` - "Time Travel" feature: generates 4-6 historical eras showing how a place transformed through time (gpt-4.1-mini)
   - `POST /api/explore/walk-narration` - Generates brief tour-guide-style narrations for TTS (gpt-4.1-nano)
   - `POST /api/explore/suggest-locations` - AI-powered location autocomplete (gpt-4.1-nano)
   - Uses OpenAI GPT-5.2 for discover, gpt-4.1-mini for detail, gpt-4.1-nano for narration/geocode/suggest

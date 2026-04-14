@@ -15,9 +15,10 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PlaceDetailMap } from "@/components/PlaceDetailMap";
+import { PlaceTimeline } from "@/components/PlaceTimeline";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
-import { useGetPlaceDetail } from "@workspace/api-client-react";
+import { useGetPlaceDetail, useGetPlaceTimeline } from "@workspace/api-client-react";
 
 const CATEGORY_ICONS: Record<string, string> = {
   building: "office-building",
@@ -59,6 +60,8 @@ export default function PlaceDetailScreen() {
   const iconName = CATEGORY_ICONS[params.category?.toLowerCase() || ""] || "map-marker";
 
   const detailMutation = useGetPlaceDetail();
+  const timelineMutation = useGetPlaceTimeline();
+  const [timelineLoaded, setTimelineLoaded] = React.useState(false);
 
   React.useEffect(() => {
     if (params.name) {
@@ -74,6 +77,20 @@ export default function PlaceDetailScreen() {
   }, [params.name]);
 
   const detail = detailMutation.data;
+
+  const handleLoadTimeline = React.useCallback(() => {
+    if (timelineMutation.isPending || timelineLoaded) return;
+    setTimelineLoaded(true);
+    timelineMutation.mutate({
+      data: {
+        placeName: params.name,
+        latitude: lat,
+        longitude: lng,
+        category: params.category,
+        yearBuilt: params.yearBuilt || undefined,
+      },
+    });
+  }, [params.name, lat, lng, params.category, params.yearBuilt, timelineMutation, timelineLoaded]);
 
   const handleSave = () => {
     if (Platform.OS !== "web") {
@@ -184,6 +201,14 @@ export default function PlaceDetailScreen() {
             <Text style={[styles.factContent, { color: colors.foreground }]}>{fact}</Text>
           </Animated.View>
         ))}
+
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <PlaceTimeline
+          eras={timelineMutation.data?.eras as any}
+          isLoading={timelineMutation.isPending}
+          onLoad={handleLoadTimeline}
+          hasLoaded={timelineLoaded}
+        />
 
         {detailMutation.isPending ? (
           <View style={styles.detailLoading}>

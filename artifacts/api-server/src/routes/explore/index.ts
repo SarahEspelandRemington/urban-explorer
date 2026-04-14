@@ -4,6 +4,7 @@ import {
   DiscoverPlacesBody,
   GeocodeLocationBody,
   GetPlaceDetailBody,
+  GetPlaceTimelineBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
 
@@ -494,6 +495,88 @@ Every detail should feel like a local secret worth knowing.`,
     res.status(500).json({ error: "Failed to parse place detail results" });
     return;
   }
+  res.json(data);
+});
+
+router.post("/explore/place-timeline", async (req, res) => {
+  const parsed = GetPlaceTimelineBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const { placeName, latitude, longitude, category, yearBuilt } = parsed.data;
+  const yearContext = yearBuilt ? ` It was built around ${yearBuilt}.` : "";
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    max_completion_tokens: 3000,
+    messages: [
+      {
+        role: "system",
+        content: `You are a vivid urban historian who specializes in bringing places to life across different time periods. Given a place, create a chronological timeline showing how it transformed through history — what someone standing on this exact spot would have seen, heard, and experienced in each era.
+
+For each era, paint a vivid picture:
+- What did the building/space physically look like? Materials, colors, signage, condition
+- What was the street life like? Who walked past? What sounds and smells?
+- What was the building being used for? By whom?
+- What was the neighborhood context? Was it thriving, declining, transforming?
+
+QUALITY RULES:
+- Include specific years, names, and verifiable details in every era
+- Make each era feel cinematically different — the reader should sense the passage of time
+- Don't repeat the same information across eras
+- Start from the earliest relevant period (before the current structure if possible)
+- End with the present day
+- The "atmosphere" field should read like a line from a novel — sensory, evocative, specific
+- The "visualDescription" should be what a time-traveler would see looking at this exact spot
+- If uncertain about specific details, use phrases like "likely" or "according to local accounts"
+
+Respond in JSON format:
+{
+  "placeName": "Place Name",
+  "eras": [
+    {
+      "period": "1850s-1870s",
+      "title": "Short evocative era title (e.g., 'Before the Building', 'The Gilded Age', 'Wartime')",
+      "description": "2-3 sentences describing what was happening here during this period. Be vivid and specific.",
+      "visualDescription": "1-2 sentences describing exactly what you'd see standing here in this era. Architecture, signage, street activity, materials.",
+      "keyFigures": ["Specific person's name and their connection to this place"],
+      "atmosphere": "One sensory, evocative sentence — what it felt like to be here. Like a line from a novel."
+    }
+  ]
+}
+
+Create 4-6 eras spanning the full history. Each era should feel distinct and alive.`,
+      },
+      {
+        role: "user",
+        content: `Create a historical timeline for "${placeName}" (${category || "place"}) located near ${latitude}, ${longitude}.${yearContext} Show me how this exact spot transformed through time.`,
+      },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    res.status(500).json({ error: "Failed to generate timeline" });
+    return;
+  }
+
+  let data: any;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    res.status(500).json({ error: "Failed to parse timeline results" });
+    return;
+  }
+
+  if (data.eras && Array.isArray(data.eras)) {
+    data.eras = data.eras.filter(
+      (era: any) => era.period && era.title && era.description && era.atmosphere,
+    );
+  }
+
   res.json(data);
 });
 

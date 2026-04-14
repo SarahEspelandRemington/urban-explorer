@@ -104,6 +104,35 @@ export interface PlaceDetailResponse {
   nearbyRelated?: string[];
 }
 
+export interface PlaceTimelineRequest {
+  placeName: string;
+  latitude: number;
+  longitude: number;
+  category?: string;
+  /** Known year or era the place was built */
+  yearBuilt?: string;
+}
+
+export interface TimelineEra {
+  /** Date range like '1850s-1880s' or '1920' */
+  period: string;
+  /** Short era title like 'Original Construction' or 'The Jazz Age' */
+  title: string;
+  /** Vivid 2-3 sentence description of what this place was like during this era */
+  description: string;
+  /** What someone standing here would see — architecture, signage, street life, materials */
+  visualDescription?: string;
+  /** Notable people connected to this place during this era */
+  keyFigures?: string[];
+  /** One evocative sentence capturing the mood/feel of this era */
+  atmosphere: string;
+}
+
+export interface PlaceTimelineResponse {
+  placeName: string;
+  eras: TimelineEra[];
+}
+
 export interface WalkNarrationRequest {
   placeName: string;
   category?: string;

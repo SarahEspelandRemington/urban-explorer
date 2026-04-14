@@ -129,6 +129,55 @@ export const GetPlaceDetailResponse = zod.object({
 });
 
 /**
+ * Returns era-by-era snapshots showing how a place evolved through history
+ * @summary Get a historical timeline for a place
+ */
+export const GetPlaceTimelineBody = zod.object({
+  placeName: zod.string(),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  category: zod.string().optional(),
+  yearBuilt: zod
+    .string()
+    .optional()
+    .describe("Known year or era the place was built"),
+});
+
+export const GetPlaceTimelineResponse = zod.object({
+  placeName: zod.string(),
+  eras: zod.array(
+    zod.object({
+      period: zod.string().describe("Date range like '1850s-1880s' or '1920'"),
+      title: zod
+        .string()
+        .describe(
+          "Short era title like 'Original Construction' or 'The Jazz Age'",
+        ),
+      description: zod
+        .string()
+        .describe(
+          "Vivid 2-3 sentence description of what this place was like during this era",
+        ),
+      visualDescription: zod
+        .string()
+        .optional()
+        .describe(
+          "What someone standing here would see — architecture, signage, street life, materials",
+        ),
+      keyFigures: zod
+        .array(zod.string())
+        .optional()
+        .describe("Notable people connected to this place during this era"),
+      atmosphere: zod
+        .string()
+        .describe(
+          "One evocative sentence capturing the mood\/feel of this era",
+        ),
+    }),
+  ),
+});
+
+/**
  * Converts place facts into natural-sounding speech text optimized for TTS
  * @summary Generate a walking tour narration for a place
  */

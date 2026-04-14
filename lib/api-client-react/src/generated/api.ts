@@ -24,6 +24,8 @@ import type {
   HealthStatus,
   PlaceDetailRequest,
   PlaceDetailResponse,
+  PlaceTimelineRequest,
+  PlaceTimelineResponse,
   SuggestLocationsRequest,
   SuggestionsResult,
   WalkNarrationRequest,
@@ -461,6 +463,93 @@ export const useGetPlaceDetail = <
   TContext
 > => {
   return useMutation(getGetPlaceDetailMutationOptions(options));
+};
+
+/**
+ * Returns era-by-era snapshots showing how a place evolved through history
+ * @summary Get a historical timeline for a place
+ */
+export const getGetPlaceTimelineUrl = () => {
+  return `/api/explore/place-timeline`;
+};
+
+export const getPlaceTimeline = async (
+  placeTimelineRequest: PlaceTimelineRequest,
+  options?: RequestInit,
+): Promise<PlaceTimelineResponse> => {
+  return customFetch<PlaceTimelineResponse>(getGetPlaceTimelineUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(placeTimelineRequest),
+  });
+};
+
+export const getGetPlaceTimelineMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getPlaceTimeline>>,
+    TError,
+    { data: BodyType<PlaceTimelineRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getPlaceTimeline>>,
+  TError,
+  { data: BodyType<PlaceTimelineRequest> },
+  TContext
+> => {
+  const mutationKey = ["getPlaceTimeline"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getPlaceTimeline>>,
+    { data: BodyType<PlaceTimelineRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getPlaceTimeline(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetPlaceTimelineMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getPlaceTimeline>>
+>;
+export type GetPlaceTimelineMutationBody = BodyType<PlaceTimelineRequest>;
+export type GetPlaceTimelineMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get a historical timeline for a place
+ */
+export const useGetPlaceTimeline = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getPlaceTimeline>>,
+    TError,
+    { data: BodyType<PlaceTimelineRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getPlaceTimeline>>,
+  TError,
+  { data: BodyType<PlaceTimelineRequest> },
+  TContext
+> => {
+  return useMutation(getGetPlaceTimelineMutationOptions(options));
 };
 
 /**

@@ -102,6 +102,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlaceDetailResponse"
+  /explore/place-timeline:
+    post:
+      operationId: getPlaceTimeline
+      tags: [explore]
+      summary: Get a historical timeline for a place
+      description: Returns era-by-era snapshots showing how a place evolved through history
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlaceTimelineRequest"
+      responses:
+        "200":
+          description: Historical timeline with eras
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlaceTimelineResponse"
   /explore/walk-narration:
     post:
       operationId: getWalkNarration
@@ -298,6 +317,64 @@ components:
         - name
         - fullHistory
         - funFacts
+    PlaceTimelineRequest:
+      type: object
+      properties:
+        placeName:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        category:
+          type: string
+        yearBuilt:
+          type: string
+          description: "Known year or era the place was built"
+      required:
+        - placeName
+        - latitude
+        - longitude
+    PlaceTimelineResponse:
+      type: object
+      properties:
+        placeName:
+          type: string
+        eras:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineEra"
+      required:
+        - placeName
+        - eras
+    TimelineEra:
+      type: object
+      properties:
+        period:
+          type: string
+          description: "Date range like '1850s-1880s' or '1920'"
+        title:
+          type: string
+          description: "Short era title like 'Original Construction' or 'The Jazz Age'"
+        description:
+          type: string
+          description: "Vivid 2-3 sentence description of what this place was like during this era"
+        visualDescription:
+          type: string
+          description: "What someone standing here would see — architecture, signage, street life, materials"
+        keyFigures:
+          type: array
+          items:
+            type: string
+          description: "Notable people connected to this place during this era"
+        atmosphere:
+          type: string
+          description: "One evocative sentence capturing the mood/feel of this era"
+      required:
+        - period
+        - title
+        - description
+        - atmosphere
     WalkNarrationRequest:
       type: object
       properties:
