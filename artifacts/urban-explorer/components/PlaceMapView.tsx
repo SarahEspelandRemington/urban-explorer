@@ -170,7 +170,6 @@ export function PlaceMapView({
               latitude: place.latitude,
               longitude: place.longitude,
             }}
-            title={place.name}
             pinColor={selectedId === place.id ? colors.accent : colors.primary}
             onPress={() => handleMarkerPress(place)}
           />
@@ -178,7 +177,16 @@ export function PlaceMapView({
       </MapView>
 
       {isLoadingMore && (
-        <View style={[styles.loadingBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.loadingBadge,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+          pointerEvents="none"
+        >
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={[styles.loadingBadgeText, { color: colors.mutedForeground }]}>
             Finding places...
@@ -187,7 +195,7 @@ export function PlaceMapView({
       )}
 
       {selectedPlace && (
-        <View style={[styles.cardOverlay, { paddingBottom: 100 }]}>
+        <View style={styles.cardOverlay}>
           <Pressable
             onPress={handleCardPress}
             style={({ pressed }) => [
@@ -258,11 +266,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 24,
     borderWidth: 1,
+    zIndex: 10,
+    elevation: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
   },
   loadingBadgeText: {
     fontSize: 13,
@@ -270,15 +279,22 @@ const styles = StyleSheet.create({
   },
   cardOverlay: {
     position: "absolute",
-    bottom: 0,
+    bottom: 16,
     left: 0,
     right: 0,
     paddingHorizontal: 16,
+    zIndex: 20,
+    elevation: 20,
   },
   card: {
     borderRadius: 16,
     borderWidth: 1,
     padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
   },
   cardHeader: {
     flexDirection: "row",
