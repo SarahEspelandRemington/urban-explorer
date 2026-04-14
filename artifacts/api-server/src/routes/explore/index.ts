@@ -9,6 +9,130 @@ import {
 
 const router = Router();
 
+interface OSMPlace {
+  name: string;
+  lat: number;
+  lon: number;
+  type: string;
+  tags: Record<string, string>;
+}
+
+const OVERPASS_API = "https://overpass-api.de/api/interpreter";
+
+async function fetchNearbyOSMPlaces(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+): Promise<OSMPlace[]> {
+  const r = Math.min(radiusMeters, 500);
+  const query = `
+[out:json][timeout:8];
+(
+  nwr["name"]["building"](around:${r},${lat},${lng});
+  nwr["historic"](around:${r},${lat},${lng});
+  nwr["heritage"](around:${r},${lat},${lng});
+  nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](around:${r},${lat},${lng});
+  nwr["amenity"]["name"](around:${r},${lat},${lng});
+  nwr["name"]["landuse"~"^(religious|cemetery)$"](around:${r},${lat},${lng});
+  nwr["memorial"](around:${r},${lat},${lng});
+  nwr["name"]["man_made"](around:${r},${lat},${lng});
+);
+out center body 40;
+`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const resp = await fetch(OVERPASS_API, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `data=${encodeURIComponent(query)}`,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!resp.ok) return [];
+
+    const json = await resp.json() as { elements?: any[] };
+    if (!json.elements) return [];
+
+    const seen = new Set<string>();
+    const results: OSMPlace[] = [];
+
+    for (const el of json.elements) {
+      const name = el.tags?.name;
+      if (!name) continue;
+
+      const normKey = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (seen.has(normKey)) continue;
+      seen.add(normKey);
+
+      const elLat = el.lat ?? el.center?.lat;
+      const elLon = el.lon ?? el.center?.lon;
+      if (typeof elLat !== "number" || typeof elLon !== "number") continue;
+
+      const osmType =
+        el.tags?.historic ||
+        el.tags?.tourism ||
+        el.tags?.amenity ||
+        el.tags?.building ||
+        el.tags?.landuse ||
+        el.tags?.man_made ||
+        "place";
+
+      results.push({
+        name,
+        lat: elLat,
+        lon: elLon,
+        type: osmType === "yes" ? "building" : osmType,
+        tags: el.tags || {},
+      });
+    }
+
+    return results.slice(0, 25);
+  } catch {
+    clearTimeout(timeout);
+    return [];
+  }
+}
+
+function sanitizeOSMText(raw: string, maxLen = 80): string {
+  return raw
+    .replace(/[\n\r\t]/g, " ")
+    .replace(/[^\x20-\x7E\u00C0-\u024F\u0400-\u04FF\u4E00-\u9FFF\u3040-\u30FF]/g, "")
+    .trim()
+    .slice(0, maxLen);
+}
+
+function formatOSMContext(places: OSMPlace[], userLat: number, userLng: number): string {
+  if (places.length === 0) return "";
+
+  const lines = places.map((p, i) => {
+    const dist = Math.round(haversineDistance(userLat, userLng, p.lat, p.lon));
+    const name = sanitizeOSMText(p.name, 100);
+    const details: string[] = [];
+    if (p.tags["addr:street"]) {
+      const num = sanitizeOSMText(p.tags["addr:housenumber"] || "", 10);
+      const street = sanitizeOSMText(p.tags["addr:street"], 60);
+      details.push(`address: ${num} ${street}`.trim());
+    }
+    if (p.tags.start_date) details.push(`built: ${sanitizeOSMText(p.tags.start_date, 20)}`);
+    if (p.tags.architect) details.push(`architect: ${sanitizeOSMText(p.tags.architect, 60)}`);
+    if (p.tags.heritage) details.push(`heritage site`);
+    if (p.tags.historic) details.push(`historic: ${sanitizeOSMText(p.tags.historic, 30)}`);
+    if (p.tags["building:levels"]) details.push(`${sanitizeOSMText(p.tags["building:levels"], 5)} stories`);
+    if (p.tags["building:material"]) details.push(`material: ${sanitizeOSMText(p.tags["building:material"], 30)}`);
+    if (p.tags.wikidata) {
+      const wd = p.tags.wikidata.match(/^Q\d{1,12}$/);
+      if (wd) details.push(`wikidata: ${wd[0]}`);
+    }
+    const extra = details.length > 0 ? ` (${details.join(", ")})` : "";
+    return `  ${i + 1}. "${name}" [${sanitizeOSMText(p.type, 30)}] at ${p.lat.toFixed(5)},${p.lon.toFixed(5)} — ${dist}m away${extra}`;
+  });
+
+  return `\n\nREAL PLACES FROM MAP DATA (OpenStreetMap) near these coordinates:\n${lines.join("\n")}\n\nIMPORTANT: You MUST use these real places as your primary source. For each place from the map data, use the EXACT name and coordinates provided — do not rename them or move them. Add your historical knowledge to these verified locations. You may also include 1-2 additional places you know about that are not in the map data, but mark those with confidence "medium" or "low". Places from the map data should be confidence "high" since their existence is verified.`;
+}
+
 function haversineDistance(
   lat1: number, lon1: number,
   lat2: number, lon2: number,
@@ -30,6 +154,7 @@ function normalizeText(s: string): string {
 
 function postProcessPlaces(places: any[], userLat: number, userLng: number, searchRadius: number): any[] {
   const validConfidence = new Set(["high", "medium", "low"]);
+  const maxDist = searchRadius * 1.25;
 
   let processed = places.filter((p: any) => {
     if (typeof p.latitude !== "number" || typeof p.longitude !== "number") return false;
@@ -45,7 +170,7 @@ function postProcessPlaces(places: any[], userLat: number, userLng: number, sear
   processed = processed.filter((p: any) => {
     const dist = haversineDistance(userLat, userLng, p.latitude, p.longitude);
     p.distanceMeters = Math.round(dist);
-    return dist <= searchRadius;
+    return dist <= maxDist;
   });
 
   const seen = new Map<string, any>();
@@ -93,14 +218,18 @@ router.post("/explore/discover", async (req, res) => {
   }
 
   const { latitude, longitude, radius } = parsed.data;
-  const addressHint = typeof req.body.addressHint === "string" ? req.body.addressHint.trim() : "";
+  const rawHint = typeof req.body.addressHint === "string" ? req.body.addressHint.trim() : "";
+  const addressHint = rawHint ? sanitizeOSMText(rawHint, 200) : "";
   const searchRadius = radius ?? 300;
 
   const radiusFeet = Math.round(searchRadius * 3.281);
 
   const locationContext = addressHint
-    ? `\n\nThe user's device reports they are near: ${addressHint}. This is from real GPS + map data, so treat it as ground truth. All places you return MUST be on or immediately adjacent to these streets, within a 1-2 block radius at most. Do NOT place results in other neighborhoods.`
+    ? `\nThe user's device reports they are near: ${addressHint}. Use this as a geographic anchor.`
     : "";
+
+  const osmPlaces = await fetchNearbyOSMPlaces(latitude, longitude, searchRadius);
+  const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
   const response = await openai.chat.completions.create({
     model: "gpt-5.2",
@@ -108,7 +237,7 @@ router.post("/explore/discover", async (req, res) => {
     messages: [
       {
         role: "system",
-        content: `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.${locationContext}
+        content: `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 
 Given GPS coordinates, identify real places WITHIN ${radiusFeet} FEET (roughly ${searchRadius} meters) of the exact coordinates. Think small and specific:
 
@@ -169,7 +298,7 @@ Return 5-7 places. Every place MUST be within ${radiusFeet} feet. Every fact sho
       },
       {
         role: "user",
-        content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?`,
+        content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?${locationContext}${osmContext}`,
       },
     ],
     response_format: { type: "json_object" },

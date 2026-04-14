@@ -43,7 +43,9 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `POST /api/explore/suggest-locations` - AI-powered location autocomplete (gpt-4.1-nano)
   - Uses OpenAI GPT-5.2 for discover, gpt-4.1-mini for detail, gpt-4.1-nano for narration/geocode/suggest
   - Discover prompt includes numbered priority list, BAD/GOOD examples, quality standards, and HONESTY RULE
-  - `postProcessPlaces()` validates fields, enforces strict radius, deduplicates by name/coords, filters vague content, sorts by distance
+  - **OpenStreetMap grounding**: `fetchNearbyOSMPlaces()` queries Overpass API for real buildings, historic sites, tourism features, amenities nearby; results are sanitized and injected into the user message so the AI attaches history to verified locations
+  - `postProcessPlaces()` validates fields, enforces 1.25x radius tolerance, deduplicates by name/coords, filters vague content, validates confidence enum, sorts by distance
+  - OSM text inputs are sanitized (control chars stripped, length-capped) to prevent prompt injection
 
 - **Shared libs**:
   - `lib/api-spec` - OpenAPI specification
