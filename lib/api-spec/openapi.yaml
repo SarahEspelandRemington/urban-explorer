@@ -161,6 +161,10 @@ components:
         radius:
           type: number
           description: Search radius in meters (default 500)
+        mode:
+          type: string
+          enum: [full, quick]
+          description: "Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning"
       required:
         - latitude
         - longitude

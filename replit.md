@@ -40,7 +40,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - Design tokens: warm amber/navy/stone palette in `constants/colors.ts`
 
 - **API server** (`artifacts/api-server`): Express backend
-  - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses, confidence levels)
+  - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses, confidence levels). Supports `mode: "quick"` for faster map panning discovery (gpt-4.1-mini, 500m radius, 8-12 places) vs default `"full"` mode (gpt-5.2, 300m, 5-7 places). OSM Overpass results are cached (5min TTL, 200m distance match) to speed up nearby queries.
   - `POST /api/explore/geocode` - Converts location name to lat/lng coordinates via AI
   - `POST /api/explore/place-detail` - Returns detailed history for a specific place
   - `POST /api/explore/place-timeline` - "Time Travel" feature: generates 4-6 historical eras showing how a place transformed through time (gpt-4.1-mini)

@@ -9,6 +9,17 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning
+ */
+export type DiscoverRequestMode =
+  (typeof DiscoverRequestMode)[keyof typeof DiscoverRequestMode];
+
+export const DiscoverRequestMode = {
+  full: "full",
+  quick: "quick",
+} as const;
+
 export interface DiscoverRequest {
   /** Current latitude */
   latitude: number;
@@ -16,6 +27,8 @@ export interface DiscoverRequest {
   longitude: number;
   /** Search radius in meters (default 500) */
   radius?: number;
+  /** Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning */
+  mode?: DiscoverRequestMode;
 }
 
 /**

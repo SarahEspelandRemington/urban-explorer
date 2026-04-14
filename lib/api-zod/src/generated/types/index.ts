@@ -7,6 +7,7 @@
  */
 
 export * from "./discoverRequest";
+export * from "./discoverRequestMode";
 export * from "./discoverResponse";
 export * from "./geocodeRequest";
 export * from "./geocodeResponse";

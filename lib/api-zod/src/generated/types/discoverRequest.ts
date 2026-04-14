@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { DiscoverRequestMode } from "./discoverRequestMode";
 
 export interface DiscoverRequest {
   /** Current latitude */
@@ -13,4 +14,6 @@ export interface DiscoverRequest {
   longitude: number;
   /** Search radius in meters (default 500) */
   radius?: number;
+  /** Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning */
+  mode?: DiscoverRequestMode;
 }

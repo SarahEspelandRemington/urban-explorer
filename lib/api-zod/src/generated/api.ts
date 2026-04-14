@@ -26,6 +26,12 @@ export const DiscoverPlacesBody = zod.object({
     .number()
     .optional()
     .describe("Search radius in meters (default 500)"),
+  mode: zod
+    .enum(["full", "quick"])
+    .optional()
+    .describe(
+      "Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning",
+    ),
 });
 
 export const DiscoverPlacesResponse = zod.object({

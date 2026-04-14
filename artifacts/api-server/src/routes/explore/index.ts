@@ -21,14 +21,38 @@ interface OSMPlace {
 
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
 
+const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
+const OSM_CACHE_TTL = 5 * 60 * 1000;
+const OSM_CACHE_DISTANCE = 200;
+
+function getOSMCacheKey(lat: number, lng: number): { key: string; places: OSMPlace[] } | null {
+  const now = Date.now();
+  for (const [key, entry] of osmCache) {
+    if (now - entry.timestamp > OSM_CACHE_TTL) {
+      osmCache.delete(key);
+      continue;
+    }
+    const [cachedLat, cachedLng] = key.split(",").map(Number);
+    if (haversineDistance(lat, lng, cachedLat, cachedLng) < OSM_CACHE_DISTANCE) {
+      return { key, places: entry.places };
+    }
+  }
+  return null;
+}
+
 async function fetchNearbyOSMPlaces(
   lat: number,
   lng: number,
   radiusMeters: number,
+  quickMode = false,
 ): Promise<OSMPlace[]> {
+  const cached = getOSMCacheKey(lat, lng);
+  if (cached) return cached.places;
+
   const r = Math.min(radiusMeters, 500);
+  const timeoutSec = quickMode ? 5 : 8;
   const query = `
-[out:json][timeout:8];
+[out:json][timeout:${timeoutSec}];
 (
   nwr["name"]["building"](around:${r},${lat},${lng});
   nwr["historic"](around:${r},${lat},${lng});
@@ -42,7 +66,8 @@ async function fetchNearbyOSMPlaces(
 out center body 40;
 `;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const abortTimeout = quickMode ? 6000 : 10000;
+  const timeout = setTimeout(() => controller.abort(), abortTimeout);
 
   try {
     const resp = await fetch(OVERPASS_API, {
@@ -91,7 +116,9 @@ out center body 40;
       });
     }
 
-    return results.slice(0, 25);
+    const finalResults = results.slice(0, 25);
+    osmCache.set(`${lat},${lng}`, { places: finalResults, timestamp: Date.now() });
+    return finalResults;
   } catch {
     clearTimeout(timeout);
     return [];
@@ -219,10 +246,11 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const { latitude, longitude, radius } = parsed.data;
+  const { latitude, longitude, radius, mode } = parsed.data;
   const rawHint = typeof req.body.addressHint === "string" ? req.body.addressHint.trim() : "";
   const addressHint = rawHint ? sanitizeOSMText(rawHint, 200) : "";
-  const searchRadius = radius ?? 300;
+  const isQuick = mode === "quick";
+  const searchRadius = radius ?? (isQuick ? 500 : 300);
 
   const radiusFeet = Math.round(searchRadius * 3.281);
 
@@ -230,16 +258,15 @@ router.post("/explore/discover", async (req, res) => {
     ? `\nThe user's device reports they are near: ${addressHint}. Use this as a geographic anchor.`
     : "";
 
-  const osmPlaces = await fetchNearbyOSMPlaces(latitude, longitude, searchRadius);
+  const osmPlaces = await fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick);
   const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-5.2",
-    max_completion_tokens: 4096,
-    messages: [
-      {
-        role: "system",
-        content: `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
+  const placeCount = isQuick ? "8-12" : "5-7";
+  const factCount = isQuick ? 2 : 3;
+  const modelName = isQuick ? "gpt-4.1-mini" : "gpt-5.2";
+  const maxTokens = isQuick ? 3000 : 4096;
+
+  const systemPrompt = `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 
 Given GPS coordinates, identify real places WITHIN ${radiusFeet} FEET (roughly ${searchRadius} meters) of the exact coordinates. Think small and specific:
 
@@ -262,7 +289,7 @@ QUALITY STANDARDS FOR FACTS:
 - Every fact MUST include at least one of: a specific year/decade, a person's name, a verifiable detail (address, building material, style name), or a concrete event
 - BAD fact: "This building has seen many changes over the years"
 - GOOD fact: "The Italianate cornice was added in 1887 when dry goods merchant Samuel Hewitt converted the ground floor from a livery stable to a department store"
-- Each place should have 3 genuinely distinct facts, not restatements of the same point
+- Each place should have ${factCount} genuinely distinct facts, not restatements of the same point
 
 COORDINATE ACCURACY IS CRITICAL:
 - Use precise coordinates to 5 decimal places (±1 meter accuracy)
@@ -296,7 +323,15 @@ Respond in JSON format:
   ]
 }
 
-Return 5-7 places. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`,
+Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
+
+  const response = await openai.chat.completions.create({
+    model: modelName,
+    max_completion_tokens: maxTokens,
+    messages: [
+      {
+        role: "system",
+        content: systemPrompt,
       },
       {
         role: "user",

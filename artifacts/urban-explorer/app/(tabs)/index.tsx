@@ -177,7 +177,8 @@ export default function ExploreScreen() {
           data: {
             latitude: lat,
             longitude: lng,
-            radius: 300,
+            radius: 500,
+            mode: "quick" as const,
           },
         },
         {
