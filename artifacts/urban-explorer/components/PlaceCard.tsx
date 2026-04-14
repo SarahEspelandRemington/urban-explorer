@@ -40,7 +40,8 @@ export function PlaceCard({ place, index }: PlaceCardProps) {
   const colors = useColors();
   const router = useRouter();
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
-  const saved = isPlaceSaved(place.id);
+  const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
+  const saved = isPlaceSaved(placeId);
 
   const iconName = CATEGORY_ICONS[place.category.toLowerCase()] || "map-marker";
 
@@ -49,9 +50,9 @@ export function PlaceCard({ place, index }: PlaceCardProps) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     if (saved) {
-      removePlace(place.id);
+      removePlace(placeId);
     } else {
-      savePlace(place as Omit<SavedPlace, "savedAt">);
+      savePlace({ ...place, id: placeId } as Omit<SavedPlace, "savedAt">);
     }
   };
 

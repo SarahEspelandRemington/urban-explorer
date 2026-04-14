@@ -7,6 +7,6 @@
  */
 import type { LocationSuggestion } from "./locationSuggestion";
 
-export interface SuggestLocationsResponse {
+export interface SuggestionsResult {
   suggestions: LocationSuggestion[];
 }

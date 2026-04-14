@@ -50,9 +50,11 @@ export default function PlaceDetailScreen() {
 
   const lat = parseFloat(params.latitude || "0");
   const lng = parseFloat(params.longitude || "0");
-  const basicFacts: string[] = params.facts ? JSON.parse(params.facts) : [];
-  const tags: string[] = params.tags ? JSON.parse(params.tags) : [];
-  const placeId = `${params.name}-${lat}-${lng}`;
+  let basicFacts: string[] = [];
+  try { basicFacts = params.facts ? JSON.parse(params.facts) : []; } catch { basicFacts = []; }
+  let tags: string[] = [];
+  try { tags = params.tags ? JSON.parse(params.tags) : []; } catch { tags = []; }
+  const placeId = params.name ? `${params.name}-${lat}-${lng}` : "";
   const saved = isPlaceSaved(placeId);
   const iconName = CATEGORY_ICONS[params.category?.toLowerCase() || ""] || "map-marker";
 

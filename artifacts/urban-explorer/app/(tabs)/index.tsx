@@ -171,7 +171,7 @@ export default function ExploreScreen() {
         { data: { query } },
         {
           onSuccess: (data: any) => {
-            if (data?.latitude && data?.longitude) {
+            if (typeof data?.latitude === "number" && typeof data?.longitude === "number") {
               const coords = { latitude: data.latitude, longitude: data.longitude };
               setManualCoords(coords);
               setShowLocationSearch(false);

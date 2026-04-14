@@ -15,5 +15,7 @@ export * from "./locationSuggestion";
 export * from "./place";
 export * from "./placeDetailRequest";
 export * from "./placeDetailResponse";
+export * from "./suggestionsResult";
 export * from "./suggestLocationsRequest";
-export * from "./suggestLocationsResponse";
+export * from "./walkNarrationRequest";
+export * from "./walkNarrationResponse";

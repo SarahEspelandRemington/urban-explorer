@@ -38,7 +38,12 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((data) => {
       if (data) {
-        setSavedPlaces(JSON.parse(data));
+        try {
+          const parsed = JSON.parse(data);
+          if (Array.isArray(parsed)) {
+            setSavedPlaces(parsed);
+          }
+        } catch {}
       }
     });
   }, []);

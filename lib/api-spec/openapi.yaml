@@ -63,7 +63,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuggestLocationsResponse"
+                $ref: "#/components/schemas/SuggestionsResult"
   /explore/geocode:
     post:
       operationId: geocodeLocation
@@ -102,6 +102,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlaceDetailResponse"
+  /explore/walk-narration:
+    post:
+      operationId: getWalkNarration
+      tags: [explore]
+      summary: Generate a walking tour narration for a place
+      description: Converts place facts into natural-sounding speech text optimized for TTS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalkNarrationRequest"
+      responses:
+        "200":
+          description: Generated narration text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalkNarrationResponse"
 components:
   schemas:
     HealthStatus:
@@ -152,6 +171,11 @@ components:
         yearBuilt:
           type: string
           description: "Approximate year or era built"
+        tags:
+          type: array
+          items:
+            type: string
+          description: "Descriptive tags like ghost sign, art deco, etc."
         summary:
           type: string
           description: "Brief one-line description"
@@ -164,6 +188,9 @@ components:
           type: number
         longitude:
           type: number
+        address:
+          type: string
+          description: "Nearest real street address or intersection"
         distanceMeters:
           type: number
       required:
@@ -182,7 +209,7 @@ components:
           description: "Partial location text the user has typed so far"
       required:
         - query
-    SuggestLocationsResponse:
+    SuggestionsResult:
       type: object
       properties:
         suggestions:
@@ -267,3 +294,25 @@ components:
         - name
         - fullHistory
         - funFacts
+    WalkNarrationRequest:
+      type: object
+      properties:
+        placeName:
+          type: string
+        category:
+          type: string
+        summary:
+          type: string
+        fact:
+          type: string
+      required:
+        - placeName
+        - summary
+    WalkNarrationResponse:
+      type: object
+      properties:
+        narration:
+          type: string
+          description: "Natural-sounding narration text for TTS"
+      required:
+        - narration

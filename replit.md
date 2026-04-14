@@ -58,4 +58,12 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
+## Security & Dependency Notes
+
+- Dependency overrides in `pnpm-workspace.yaml` enforce minimum secure versions for transitive dependencies (lodash, path-to-regexp, picomatch)
+- Catalog entries pin minimum versions for drizzle-orm (^0.45.2), vite (^7.3.2)
+- Global Express error handler catches unhandled errors and returns consistent JSON responses
+- All AI response JSON.parse calls are wrapped in try-catch with proper error responses
+- Frontend JSON.parse calls (navigation params, AsyncStorage) have safe fallbacks
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.

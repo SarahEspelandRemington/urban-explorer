@@ -25,7 +25,9 @@ import type {
   PlaceDetailRequest,
   PlaceDetailResponse,
   SuggestLocationsRequest,
-  SuggestLocationsResponse,
+  SuggestionsResult,
+  WalkNarrationRequest,
+  WalkNarrationResponse,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -211,8 +213,8 @@ export const getSuggestLocationsUrl = () => {
 export const suggestLocations = async (
   suggestLocationsRequest: SuggestLocationsRequest,
   options?: RequestInit,
-): Promise<SuggestLocationsResponse> => {
-  return customFetch<SuggestLocationsResponse>(getSuggestLocationsUrl(), {
+): Promise<SuggestionsResult> => {
+  return customFetch<SuggestionsResult>(getSuggestLocationsUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
@@ -459,4 +461,91 @@ export const useGetPlaceDetail = <
   TContext
 > => {
   return useMutation(getGetPlaceDetailMutationOptions(options));
+};
+
+/**
+ * Converts place facts into natural-sounding speech text optimized for TTS
+ * @summary Generate a walking tour narration for a place
+ */
+export const getGetWalkNarrationUrl = () => {
+  return `/api/explore/walk-narration`;
+};
+
+export const getWalkNarration = async (
+  walkNarrationRequest: WalkNarrationRequest,
+  options?: RequestInit,
+): Promise<WalkNarrationResponse> => {
+  return customFetch<WalkNarrationResponse>(getGetWalkNarrationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(walkNarrationRequest),
+  });
+};
+
+export const getGetWalkNarrationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getWalkNarration>>,
+    TError,
+    { data: BodyType<WalkNarrationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getWalkNarration>>,
+  TError,
+  { data: BodyType<WalkNarrationRequest> },
+  TContext
+> => {
+  const mutationKey = ["getWalkNarration"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getWalkNarration>>,
+    { data: BodyType<WalkNarrationRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getWalkNarration(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetWalkNarrationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getWalkNarration>>
+>;
+export type GetWalkNarrationMutationBody = BodyType<WalkNarrationRequest>;
+export type GetWalkNarrationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Generate a walking tour narration for a place
+ */
+export const useGetWalkNarration = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getWalkNarration>>,
+    TError,
+    { data: BodyType<WalkNarrationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getWalkNarration>>,
+  TError,
+  { data: BodyType<WalkNarrationRequest> },
+  TContext
+> => {
+  return useMutation(getGetWalkNarrationMutationOptions(options));
 };

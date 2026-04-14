@@ -25,12 +25,16 @@ export interface Place {
   category: string;
   /** Approximate year or era built */
   yearBuilt?: string;
+  /** Descriptive tags like ghost sign, art deco, etc. */
+  tags?: string[];
   /** Brief one-line description */
   summary: string;
   /** List of interesting historical facts */
   facts: string[];
   latitude: number;
   longitude: number;
+  /** Nearest real street address or intersection */
+  address?: string;
   distanceMeters?: number;
 }
 
@@ -52,7 +56,7 @@ export interface LocationSuggestion {
   description: string;
 }
 
-export interface SuggestLocationsResponse {
+export interface SuggestionsResult {
   suggestions: LocationSuggestion[];
 }
 
@@ -84,4 +88,16 @@ export interface PlaceDetailResponse {
   funFacts: string[];
   /** Names of related nearby places worth visiting */
   nearbyRelated?: string[];
+}
+
+export interface WalkNarrationRequest {
+  placeName: string;
+  category?: string;
+  summary: string;
+  fact?: string;
+}
+
+export interface WalkNarrationResponse {
+  /** Natural-sounding narration text for TTS */
+  narration: string;
 }

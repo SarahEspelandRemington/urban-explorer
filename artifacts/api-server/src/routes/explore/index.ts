@@ -95,7 +95,13 @@ Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact sho
     return;
   }
 
-  const data = JSON.parse(content);
+  let data: any;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    res.status(500).json({ error: "Failed to parse discovery results" });
+    return;
+  }
 
   if (data.places && Array.isArray(data.places)) {
     const maxDist = searchRadius * 3;
@@ -165,7 +171,13 @@ Return exactly 5 suggestions. Each name should be specific enough to geocode. Ke
     return;
   }
 
-  const data = JSON.parse(content);
+  let data: any;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    res.json({ suggestions: [] });
+    return;
+  }
   res.json(data);
 });
 
@@ -209,7 +221,13 @@ Be as accurate as possible with coordinates. For neighborhoods, use the center p
     return;
   }
 
-  const data = JSON.parse(content);
+  let data: any;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    res.status(500).json({ error: "Failed to parse geocode results" });
+    return;
+  }
   res.json(data);
 });
 
@@ -266,7 +284,13 @@ Every detail should feel like a local secret worth knowing.`,
     return;
   }
 
-  const data = JSON.parse(content);
+  let data: any;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    res.status(500).json({ error: "Failed to parse place detail results" });
+    return;
+  }
   res.json(data);
 });
 

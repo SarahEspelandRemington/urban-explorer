@@ -40,12 +40,20 @@ export const DiscoverPlacesResponse = zod.object({
         .string()
         .optional()
         .describe("Approximate year or era built"),
+      tags: zod
+        .array(zod.string())
+        .optional()
+        .describe("Descriptive tags like ghost sign, art deco, etc."),
       summary: zod.string().describe("Brief one-line description"),
       facts: zod
         .array(zod.string())
         .describe("List of interesting historical facts"),
       latitude: zod.number(),
       longitude: zod.number(),
+      address: zod
+        .string()
+        .optional()
+        .describe("Nearest real street address or intersection"),
       distanceMeters: zod.number().optional(),
     }),
   ),
@@ -112,4 +120,19 @@ export const GetPlaceDetailResponse = zod.object({
     .array(zod.string())
     .optional()
     .describe("Names of related nearby places worth visiting"),
+});
+
+/**
+ * Converts place facts into natural-sounding speech text optimized for TTS
+ * @summary Generate a walking tour narration for a place
+ */
+export const GetWalkNarrationBody = zod.object({
+  placeName: zod.string(),
+  category: zod.string().optional(),
+  summary: zod.string(),
+  fact: zod.string().optional(),
+});
+
+export const GetWalkNarrationResponse = zod.object({
+  narration: zod.string().describe("Natural-sounding narration text for TTS"),
 });
