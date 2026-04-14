@@ -15,17 +15,33 @@ interface PlaceDetailMapProps {
 export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDetailMapProps) {
   const colors = useColors();
 
-  const handleOpenMaps = () => {
+  const handleOpenMaps = async () => {
     const searchQuery = address || name;
     const encodedQuery = encodeURIComponent(searchQuery);
-    const scheme = Platform.select({
-      ios: `maps:0,0?q=${encodedQuery}&ll=${latitude},${longitude}`,
-      android: `geo:${latitude},${longitude}?q=${encodedQuery}`,
-    });
-    if (scheme) {
-      Linking.openURL(scheme).catch(() => {
-        Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodedQuery}`);
-      });
+
+    const urls = Platform.select({
+      ios: [
+        `maps:0,0?q=${encodedQuery}&ll=${latitude},${longitude}`,
+        `https://maps.apple.com/?q=${encodedQuery}&ll=${latitude},${longitude}`,
+        `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`,
+      ],
+      android: [
+        `geo:${latitude},${longitude}?q=${encodedQuery}`,
+        `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`,
+      ],
+      default: [
+        `https://www.google.com/maps/search/?api=1&query=${encodedQuery}`,
+      ],
+    }) as string[];
+
+    for (const url of urls) {
+      try {
+        const canOpen = await Linking.canOpenURL(url);
+        if (canOpen) {
+          await Linking.openURL(url);
+          return;
+        }
+      } catch {}
     }
   };
 
