@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
+import * as Location from "expo-location";
+import React, { useEffect, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 
@@ -14,6 +15,21 @@ interface PlaceDetailMapProps {
 
 export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDetailMapProps) {
   const colors = useColors();
+  const [coords, setCoords] = useState({ latitude, longitude });
+
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const results = await Location.geocodeAsync(address);
+        if (!cancelled && results.length > 0) {
+          setCoords({ latitude: results[0].latitude, longitude: results[0].longitude });
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [address]);
 
   const handleOpenMaps = async () => {
     const searchQuery = address || name;
@@ -50,9 +66,9 @@ export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDeta
       <View style={[styles.mapContainer, { borderColor: colors.border }]}>
         <MapView
           style={styles.map}
-          initialRegion={{
-            latitude,
-            longitude,
+          region={{
+            latitude: coords.latitude,
+            longitude: coords.longitude,
             latitudeDelta: 0.003,
             longitudeDelta: 0.003,
           }}
@@ -64,7 +80,7 @@ export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDeta
           provider={PROVIDER_DEFAULT}
         >
           <Marker
-            coordinate={{ latitude, longitude }}
+            coordinate={coords}
             title={name}
             pinColor={colors.primary}
           />
