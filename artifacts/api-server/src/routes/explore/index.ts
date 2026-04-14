@@ -9,6 +9,82 @@ import {
 
 const router = Router();
 
+function haversineDistance(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number,
+): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function normalizeText(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function postProcessPlaces(places: any[], userLat: number, userLng: number, searchRadius: number): any[] {
+  const validConfidence = new Set(["high", "medium", "low"]);
+
+  let processed = places.filter((p: any) => {
+    if (typeof p.latitude !== "number" || typeof p.longitude !== "number") return false;
+    if (!p.name || typeof p.name !== "string") return false;
+    if (!p.summary || typeof p.summary !== "string") return false;
+    if (!Array.isArray(p.facts) || p.facts.length === 0) return false;
+    if (p.confidence && !validConfidence.has(p.confidence)) {
+      p.confidence = "low";
+    }
+    return true;
+  });
+
+  processed = processed.filter((p: any) => {
+    const dist = haversineDistance(userLat, userLng, p.latitude, p.longitude);
+    p.distanceMeters = Math.round(dist);
+    return dist <= searchRadius;
+  });
+
+  const seen = new Map<string, any>();
+  processed = processed.filter((p: any) => {
+    const normName = normalizeText(p.name);
+    for (const [existingName, existingPlace] of seen) {
+      if (normName === existingName) return false;
+      if (normName.includes(existingName) || existingName.includes(normName)) return false;
+      const coordDist = haversineDistance(
+        p.latitude, p.longitude,
+        existingPlace.latitude, existingPlace.longitude,
+      );
+      if (coordDist < 10) return false;
+    }
+    seen.set(normName, p);
+    return true;
+  });
+
+  processed = processed.filter((p: any) => {
+    const vague = [
+      "interesting history", "rich history", "long history",
+      "has a story", "worth a visit", "notable building",
+      "historic building", "old building",
+    ];
+    const summaryLower = p.summary.toLowerCase();
+    const isVague = vague.some((v) => summaryLower === v || summaryLower === v + ".");
+    if (isVague) return false;
+    const allFactsGeneric = p.facts.every((f: string) =>
+      f.length < 20 || /^(this|the) (place|building|site) (is|was|has)/i.test(f)
+    );
+    if (allFactsGeneric) return false;
+    return true;
+  });
+
+  processed.sort((a: any, b: any) => a.distanceMeters - b.distanceMeters);
+
+  return processed;
+}
+
 router.post("/explore/discover", async (req, res) => {
   const parsed = DiscoverPlacesBody.safeParse(req.body);
   if (!parsed.success) {
@@ -36,19 +112,26 @@ router.post("/explore/discover", async (req, res) => {
 
 Given GPS coordinates, identify real places WITHIN ${radiusFeet} FEET (roughly ${searchRadius} meters) of the exact coordinates. Think small and specific:
 
-PRIORITIZE these kinds of places:
-- The specific building at or near the coordinates — who built it, what was there before, any quirky history
-- Small architectural details people walk past every day without noticing (cornerstones, old signage, unusual brickwork, ghost signs, terra cotta ornaments)
-- Former sites — "this used to be a speakeasy / fire station / boarding house"
-- Local stories — neighborhood feuds, forgotten events, minor historical figures who lived on that block
-- Odd infrastructure — old hitching posts, embedded trolley tracks, mysterious plaques, sealed-off tunnels, converted buildings
-- Small parks, alleys, or pocket spaces with hidden histories
+PRIORITIZE these kinds of places (in rough order of interest):
+1. The specific building at or near the coordinates — who built it, who commissioned it, what was there before, any quirky history
+2. Small architectural details people walk past every day without noticing — cornerstones with dates, old signage painted on brick (ghost signs), unusual brickwork patterns, terra cotta ornaments, decorative ironwork, faded advertisements
+3. Former sites — "this used to be a speakeasy / fire station / boarding house / vaudeville theater / immigrant social club"
+4. Local stories with names, dates, and specifics — not "there was a neighborhood feud" but "in 1923, the building owner John Rinaldi refused to sell to the subway authority, forcing the tunnel to curve around his basement"
+5. Odd infrastructure — old hitching posts, embedded trolley tracks, mysterious plaques, sealed-off subway entrances, converted buildings with visible remnants of their past use
+6. Small parks, alleys, or pocket spaces with hidden histories
 
 AVOID these:
-- Major tourist landmarks that everyone already knows (e.g., Statue of Liberty, Golden Gate Bridge, Empire State Building)
+- Major tourist landmarks that appear in guidebooks (e.g., Statue of Liberty, Golden Gate Bridge, Empire State Building, Times Square as a destination)
 - Places more than ${radiusFeet} feet away — stay extremely local
-- Generic descriptions that could apply anywhere
-- Well-known museums, famous monuments, or guidebook staples
+- Generic descriptions that could apply to any old building in any city. BAD: "This building has a rich history." GOOD: "The carved stone face above the third-floor window is a portrait of the building's architect, who hid his own likeness in all his projects."
+- Well-known museums, famous monuments, or top-10 lists
+- Descriptions that are mostly about the neighborhood in general rather than the specific place
+
+QUALITY STANDARDS FOR FACTS:
+- Every fact MUST include at least one of: a specific year/decade, a person's name, a verifiable detail (address, building material, style name), or a concrete event
+- BAD fact: "This building has seen many changes over the years"
+- GOOD fact: "The Italianate cornice was added in 1887 when dry goods merchant Samuel Hewitt converted the ground floor from a livery stable to a department store"
+- Each place should have 3 genuinely distinct facts, not restatements of the same point
 
 COORDINATE ACCURACY IS CRITICAL:
 - Use precise coordinates to 5 decimal places (±1 meter accuracy)
@@ -56,6 +139,9 @@ COORDINATE ACCURACY IS CRITICAL:
 - For intersections, use the exact intersection point
 - For blocks or stretches, use the midpoint of that stretch
 - Always include a real street address or intersection in the "address" field — this helps users navigate
+- The coordinates and address MUST agree with each other. Do not give coordinates in one location and an address in a different location.
+
+HONESTY RULE: If you are uncertain whether a place or fact is real, say so in the fact itself (e.g., "Local lore holds that..." or "According to neighborhood accounts..."). Never present uncertain claims as established fact. It is far better to share fewer places with genuine, verifiable details than to pad the list with invented stories.
 
 If you genuinely cannot identify specific obscure places at these exact coordinates, focus on the immediate block or intersection: the architectural style of the buildings right there, what the neighborhood looked like 50 or 100 years ago, what businesses or residents occupied the exact spot historically.
 
@@ -65,21 +151,21 @@ Respond in JSON format:
   "places": [
     {
       "id": "unique-kebab-case-id",
-      "name": "Place Name",
+      "name": "Place Name — use the real or historical name, not a generic label",
       "category": "building|storefront|alley|corner|mural|infrastructure|former site|architectural detail|park|church|residential",
       "yearBuilt": "1920s" or "circa 1850" or "unknown",
       "tags": ["2-4 descriptive tags like: ghost sign, speakeasy, art deco, industrial, immigrant history, prohibition era, jazz age, tenement, waterfront, transit, religious, commercial, residential, demolished, converted, landmarked"],
-      "summary": "One-line captivating description — make it feel like a secret worth knowing",
-      "facts": ["Hyper-specific fact 1", "Fact 2", "Fact 3"],
+      "summary": "One captivating sentence that makes this specific place sound like a secret worth knowing. Include the most surprising or vivid detail.",
+      "facts": ["Fact with a specific year, name, or verifiable detail", "A second distinct fact", "A third distinct fact"],
       "latitude": precise_lat_to_5_decimal_places,
       "longitude": precise_lng_to_5_decimal_places,
       "address": "Nearest real street address or intersection (e.g., '157 W 48th St' or 'W 48th St & 8th Ave')",
-      "distanceMeters": estimated_distance_from_user_MUST_be_under_${searchRadius}
+      "confidence": "high|medium|low"
     }
   ]
 }
 
-Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`,
+Return 5-7 places. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`,
       },
       {
         role: "user",
@@ -104,19 +190,7 @@ Return 4-6 places. Every place MUST be within ${radiusFeet} feet. Every fact sho
   }
 
   if (data.places && Array.isArray(data.places)) {
-    const maxDist = searchRadius * 3;
-    data.places = data.places.filter((p: any) => {
-      if (typeof p.latitude !== "number" || typeof p.longitude !== "number") return true;
-      const dLat = ((p.latitude - latitude) * Math.PI) / 180;
-      const dLon = ((p.longitude - longitude) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((latitude * Math.PI) / 180) *
-          Math.cos((p.latitude * Math.PI) / 180) *
-          Math.sin(dLon / 2) ** 2;
-      const dist = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return dist <= maxDist;
-    });
+    data.places = postProcessPlaces(data.places, latitude, longitude, searchRadius);
   }
 
   res.json(data);

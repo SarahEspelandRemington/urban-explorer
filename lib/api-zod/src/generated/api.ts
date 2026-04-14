@@ -55,6 +55,12 @@ export const DiscoverPlacesResponse = zod.object({
         .optional()
         .describe("Nearest real street address or intersection"),
       distanceMeters: zod.number().optional(),
+      confidence: zod
+        .enum(["high", "medium", "low"])
+        .optional()
+        .describe(
+          "How confident the AI is about this place's existence and details",
+        ),
     }),
   ),
   location: zod.string().describe("Human-readable description of the area"),

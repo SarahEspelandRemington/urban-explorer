@@ -13,6 +13,7 @@ export * from "./geocodeResponse";
 export * from "./healthStatus";
 export * from "./locationSuggestion";
 export * from "./place";
+export * from "./placeConfidence";
 export * from "./placeDetailRequest";
 export * from "./placeDetailResponse";
 export * from "./suggestionsResult";

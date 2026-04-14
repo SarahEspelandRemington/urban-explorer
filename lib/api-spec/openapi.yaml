@@ -193,6 +193,10 @@ components:
           description: "Nearest real street address or intersection"
         distanceMeters:
           type: number
+        confidence:
+          type: string
+          enum: [high, medium, low]
+          description: "How confident the AI is about this place's existence and details"
       required:
         - id
         - name

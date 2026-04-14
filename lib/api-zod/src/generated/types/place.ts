@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PlaceConfidence } from "./placeConfidence";
 
 export interface Place {
   id: string;
@@ -24,4 +25,6 @@ export interface Place {
   /** Nearest real street address or intersection */
   address?: string;
   distanceMeters?: number;
+  /** How confident the AI is about this place's existence and details */
+  confidence?: PlaceConfidence;
 }

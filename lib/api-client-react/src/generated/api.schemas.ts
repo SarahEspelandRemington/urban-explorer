@@ -18,6 +18,18 @@ export interface DiscoverRequest {
   radius?: number;
 }
 
+/**
+ * How confident the AI is about this place's existence and details
+ */
+export type PlaceConfidence =
+  (typeof PlaceConfidence)[keyof typeof PlaceConfidence];
+
+export const PlaceConfidence = {
+  high: "high",
+  medium: "medium",
+  low: "low",
+} as const;
+
 export interface Place {
   id: string;
   name: string;
@@ -36,6 +48,8 @@ export interface Place {
   /** Nearest real street address or intersection */
   address?: string;
   distanceMeters?: number;
+  /** How confident the AI is about this place's existence and details */
+  confidence?: PlaceConfidence;
 }
 
 export interface DiscoverResponse {
