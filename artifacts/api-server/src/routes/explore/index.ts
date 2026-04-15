@@ -25,6 +25,34 @@ const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
 const OSM_CACHE_TTL = 5 * 60 * 1000;
 const OSM_CACHE_DISTANCE = 200;
 
+interface LLMCacheEntry<T = any> {
+  data: T;
+  timestamp: number;
+}
+
+const llmCache = new Map<string, LLMCacheEntry>();
+const LLM_CACHE_TTL = 15 * 60 * 1000;
+const LLM_CACHE_MAX_SIZE = 200;
+
+function getLLMCache<T>(key: string): T | null {
+  const entry = llmCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > LLM_CACHE_TTL) {
+    llmCache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setLLMCache(key: string, data: any): void {
+  if (llmCache.size >= LLM_CACHE_MAX_SIZE) {
+    const oldest = llmCache.keys().next().value;
+    if (oldest) llmCache.delete(oldest);
+  }
+  llmCache.set(key, { data, timestamp: Date.now() });
+}
+
+
 function getOSMCacheKey(lat: number, lng: number): { key: string; places: OSMPlace[] } | null {
   const now = Date.now();
   for (const [key, entry] of osmCache) {
@@ -258,6 +286,13 @@ router.post("/explore/discover", async (req, res) => {
     ? `\nThe user's device reports they are near: ${addressHint}. Use this as a geographic anchor.`
     : "";
 
+  const discoverCacheKey = `${mode}:${searchRadius}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const cachedDiscover = getLLMCache(discoverCacheKey);
+  if (cachedDiscover) {
+    res.json(cachedDiscover);
+    return;
+  }
+
   const osmPlaces = await fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick);
   const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
@@ -359,6 +394,7 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
     data.places = postProcessPlaces(data.places, latitude, longitude, searchRadius);
   }
 
+  setLLMCache(discoverCacheKey, data);
   res.json(data);
 });
 
@@ -373,6 +409,13 @@ router.post("/explore/suggest-locations", async (req, res) => {
 
   if (query.trim().length < 2) {
     res.json({ suggestions: [] });
+    return;
+  }
+
+  const suggestCacheKey = `suggest:${query.trim().toLowerCase()}`;
+  const cachedSuggest = getLLMCache(suggestCacheKey);
+  if (cachedSuggest) {
+    res.json(cachedSuggest);
     return;
   }
 
@@ -418,6 +461,7 @@ Return exactly 5 suggestions. Each name should be specific enough to geocode. Ke
     res.json({ suggestions: [] });
     return;
   }
+  setLLMCache(suggestCacheKey, data);
   res.json(data);
 });
 
@@ -429,6 +473,13 @@ router.post("/explore/geocode", async (req, res) => {
   }
 
   const { query } = parsed.data;
+
+  const geocodeCacheKey = `geocode:${query.trim().toLowerCase()}`;
+  const cachedGeocode = getLLMCache(geocodeCacheKey);
+  if (cachedGeocode) {
+    res.json(cachedGeocode);
+    return;
+  }
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-nano",
@@ -468,6 +519,7 @@ Be as accurate as possible with coordinates. For neighborhoods, use the center p
     res.status(500).json({ error: "Failed to parse geocode results" });
     return;
   }
+  setLLMCache(geocodeCacheKey, data);
   res.json(data);
 });
 
@@ -479,6 +531,13 @@ router.post("/explore/place-detail", async (req, res) => {
   }
 
   const { placeName, latitude, longitude, category } = parsed.data;
+
+  const detailCacheKey = `detail:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const cachedDetail = getLLMCache(detailCacheKey);
+  if (cachedDetail) {
+    res.json(cachedDetail);
+    return;
+  }
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
@@ -531,6 +590,7 @@ Every detail should feel like a local secret worth knowing.`,
     res.status(500).json({ error: "Failed to parse place detail results" });
     return;
   }
+  setLLMCache(detailCacheKey, data);
   res.json(data);
 });
 
@@ -543,6 +603,13 @@ router.post("/explore/place-timeline", async (req, res) => {
 
   const { placeName, latitude, longitude, category, yearBuilt } = parsed.data;
   const yearContext = yearBuilt ? ` It was built around ${yearBuilt}.` : "";
+
+  const timelineCacheKey = `timeline:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${yearBuilt || ""}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const cachedTimeline = getLLMCache(timelineCacheKey);
+  if (cachedTimeline) {
+    res.json(cachedTimeline);
+    return;
+  }
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-mini",
@@ -613,6 +680,7 @@ Create 4-6 eras spanning the full history. Each era should feel distinct and ali
     );
   }
 
+  setLLMCache(timelineCacheKey, data);
   res.json(data);
 });
 

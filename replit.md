@@ -46,6 +46,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `POST /api/explore/place-timeline` - "Time Travel" feature: generates 4-6 historical eras showing how a place transformed through time (gpt-4.1-mini)
   - `POST /api/explore/walk-narration` - Generates brief tour-guide-style narrations for TTS (gpt-4.1-nano)
   - `POST /api/explore/suggest-locations` - AI-powered location autocomplete (gpt-4.1-nano)
+  - **LLM result caching**: In-memory cache (15min TTL, 200 entry max) for all AI-backed endpoints (discover, place-detail, place-timeline, geocode, suggest-locations). Cache keys include all prompt-shaping inputs (place name, category, yearBuilt, coordinates, radius, mode) to prevent stale data. Coordinates rounded to 4 decimal places (~11m precision).
   - Uses OpenAI GPT-5.2 for discover, gpt-4.1-mini for detail, gpt-4.1-nano for narration/geocode/suggest
   - Discover prompt includes numbered priority list, BAD/GOOD examples, quality standards, and HONESTY RULE
   - **OpenStreetMap grounding**: `fetchNearbyOSMPlaces()` queries Overpass API for real buildings, historic sites, tourism features, amenities nearby; results are sanitized and injected into the user message so the AI attaches history to verified locations

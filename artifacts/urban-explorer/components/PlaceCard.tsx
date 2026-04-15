@@ -36,7 +36,7 @@ interface PlaceCardProps {
   index: number;
 }
 
-export function PlaceCard({ place, index }: PlaceCardProps) {
+export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCardProps) {
   const colors = useColors();
   const router = useRouter();
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
@@ -161,7 +161,7 @@ export function PlaceCard({ place, index }: PlaceCardProps) {
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {
