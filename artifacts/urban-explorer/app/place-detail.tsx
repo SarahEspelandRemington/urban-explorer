@@ -14,6 +14,7 @@ import {
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LoadingMessages } from "@/components/LoadingMessages";
 import { PlaceDetailMap } from "@/components/PlaceDetailMap";
 import { PlaceTimeline } from "@/components/PlaceTimeline";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
@@ -229,9 +230,7 @@ export default function PlaceDetailScreen() {
         {detailMutation.isPending ? (
           <View style={styles.detailLoading}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={[styles.detailLoadingText, { color: colors.mutedForeground }]}>
-              Loading detailed history...
-            </Text>
+            <LoadingMessages variant="detail" />
           </View>
         ) : detailMutation.isError ? (
           <View style={styles.detailLoading}>

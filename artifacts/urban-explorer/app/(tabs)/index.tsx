@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
 
+import { LoadingMessages } from "@/components/LoadingMessages";
 import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceMapView } from "@/components/PlaceMapView";
@@ -582,16 +583,7 @@ export default function ExploreScreen() {
                 style={styles.loadingContainer}
               >
                 <ActivityIndicator size="large" color={colors.primary} />
-                <Text
-                  style={[styles.loadingText, { color: colors.mutedForeground }]}
-                >
-                  Discovering nearby places...
-                </Text>
-                <Text
-                  style={[styles.loadingSubtext, { color: colors.mutedForeground }]}
-                >
-                  Looking up history and stories
-                </Text>
+                <LoadingMessages variant="discovery" />
               </Animated.View>
             ) : discoverMutation.isError ? (
               <View style={styles.emptyContainer}>
@@ -765,15 +757,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 100,
     gap: 12,
-  },
-  loadingText: {
-    fontSize: 16,
-    fontFamily: "Inter_500Medium",
-    marginTop: 8,
-  },
-  loadingSubtext: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
   },
   emptyContainer: {
     alignItems: "center",
