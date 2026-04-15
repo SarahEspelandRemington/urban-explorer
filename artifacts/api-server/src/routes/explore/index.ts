@@ -78,23 +78,21 @@ async function fetchNearbyOSMPlaces(
   if (cached) return cached.places;
 
   const r = Math.min(radiusMeters, 500);
-  const timeoutSec = quickMode ? 5 : 8;
+  const timeoutSec = quickMode ? 4 : 5;
   const query = `
 [out:json][timeout:${timeoutSec}];
 (
-  nwr["name"]["building"](around:${r},${lat},${lng});
   nwr["historic"](around:${r},${lat},${lng});
   nwr["heritage"](around:${r},${lat},${lng});
   nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](around:${r},${lat},${lng});
-  nwr["amenity"]["name"](around:${r},${lat},${lng});
+  nwr["name"]["building"~"^(church|cathedral|chapel|mosque|synagogue|temple|civic|public|commercial|industrial|warehouse|train_station|hotel)$"](around:${r},${lat},${lng});
   nwr["name"]["landuse"~"^(religious|cemetery)$"](around:${r},${lat},${lng});
   nwr["memorial"](around:${r},${lat},${lng});
-  nwr["name"]["man_made"](around:${r},${lat},${lng});
 );
-out center body 40;
+out center body 25;
 `;
   const controller = new AbortController();
-  const abortTimeout = quickMode ? 6000 : 10000;
+  const abortTimeout = quickMode ? 5000 : 6000;
   const timeout = setTimeout(() => controller.abort(), abortTimeout);
 
   try {
@@ -293,7 +291,16 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const osmPlaces = await fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick);
+  const osmTimeLimit = isQuick ? 3000 : 4000;
+  let osmPlaces: OSMPlace[] = [];
+  try {
+    osmPlaces = await Promise.race([
+      fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick),
+      new Promise<OSMPlace[]>((resolve) => setTimeout(() => resolve([]), osmTimeLimit)),
+    ]);
+  } catch {
+    osmPlaces = [];
+  }
   const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
   const placeCount = isQuick ? "8-12" : "5-7";

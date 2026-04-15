@@ -49,7 +49,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - **LLM result caching**: In-memory cache (15min TTL, 200 entry max) for all AI-backed endpoints (discover, place-detail, place-timeline, geocode, suggest-locations). Cache keys include all prompt-shaping inputs (place name, category, yearBuilt, coordinates, radius, mode) to prevent stale data. Coordinates rounded to 4 decimal places (~11m precision).
   - Uses OpenAI GPT-5.2 for discover, gpt-4.1-mini for detail, gpt-4.1-nano for narration/geocode/suggest
   - Discover prompt includes numbered priority list, BAD/GOOD examples, quality standards, and HONESTY RULE
-  - **OpenStreetMap grounding**: `fetchNearbyOSMPlaces()` queries Overpass API for real buildings, historic sites, tourism features, amenities nearby; results are sanitized and injected into the user message so the AI attaches history to verified locations
+  - **OpenStreetMap grounding**: `fetchNearbyOSMPlaces()` queries Overpass API for historic sites, heritage, tourism, notable buildings, cemeteries, and memorials nearby; results are sanitized and injected into the user message so the AI attaches history to verified locations. Overpass query is optimized with targeted building type filters (not broad `amenity`), 25-result limit at source, 4-5s query timeouts, and a competitive `Promise.race` timeout (3-4s) so discovery proceeds without OSM data if the external API is slow
   - `postProcessPlaces()` validates fields, enforces 1.25x radius tolerance, deduplicates by name/coords, filters vague content, validates confidence enum, sorts by distance
   - OSM text inputs are sanitized (control chars stripped, length-capped) to prevent prompt injection
 
