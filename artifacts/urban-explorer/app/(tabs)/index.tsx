@@ -663,9 +663,9 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontFamily: "Inter_700Bold",
-    letterSpacing: -0.8,
+    letterSpacing: -0.6,
   },
   headerActions: {
     flexDirection: "row",
@@ -728,9 +728,9 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   walkCard: {
-    borderRadius: 14,
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 14,
+    marginBottom: 16,
   },
   walkCardContent: {
     flexDirection: "row",
@@ -751,6 +751,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    paddingTop: 12,
   },
   loadingContainer: {
     alignItems: "center",
