@@ -6,3 +6,15 @@ id = "3RrVEWPNq_1S61R6-_0OV"
 uri = "file://artifacts/urban-explorer/assets/images/icon.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "aeWV9YjDaRdv5q4DX6G7a"
+uri = "file://artifacts/mockup-sandbox/public/images/empire-state-dark.png"
+type = "image"
+title = "Empire State Building night"
+
+[[generated]]
+id = "sV9w9KPlCwp9SYcoeILiZ"
+uri = "file://artifacts/mockup-sandbox/public/images/st-patricks-dark.png"
+type = "image"
+title = "St Patricks Cathedral night"
