@@ -1,8 +1,31 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "3RrVEWPNq_1S61R6-_0OV"
 uri = "file://artifacts/urban-explorer/assets/images/icon.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "4xgRGTWmK2MnngeOTBB3l"
+uri = "file://artifacts/mockup-sandbox/public/images/curious-night-street.jpg"
+type = "image"
+title = "atmospheric dark city street at midnight with warm golden streetlights raining slick street"
+
+[[outputs]]
+id = "U_sOEku5MO0rtHhsq9sPh"
+uri = "file://artifacts/mockup-sandbox/public/images/curious-night-building.jpg"
+type = "image"
+title = "old historic stone building at night illuminated with warm golden light"
+
+[[outputs]]
+id = "AVN4CKKqDh2Kb6Lyk7VCL"
+uri = "file://artifacts/mockup-sandbox/public/images/curious-night-alley.jpg"
+type = "image"
+title = "hidden narrow alleyway at night with warm cafe lights and brick walls"
+
+[[outputs]]
+id = "1lsstXXYckNmOLikP-AFA"
+uri = "file://artifacts/mockup-sandbox/public/images/curious-night-church.jpg"
+type = "image"
+title = "gothic church or cathedral illuminated against dark night sky"
