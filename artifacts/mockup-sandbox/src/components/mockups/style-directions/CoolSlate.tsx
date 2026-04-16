@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Building, Monument, Bookmark, Search, BookmarkCheck, ChevronRight, Info } from "lucide-react";
+import { MapPin, Building, Landmark, Bookmark, Search, BookmarkCheck, ChevronRight, Info } from "lucide-react";
 
 export function CoolSlate() {
   return (
@@ -66,7 +66,7 @@ export function CoolSlate() {
           <div className="flex justify-between items-start gap-4">
             <div className="flex gap-3 items-start">
               <div className="w-10 h-10 rounded-lg bg-[#f1f5f9] flex items-center justify-center text-[#4a6fa5] shrink-0">
-                <Monument className="w-5 h-5" />
+                <Landmark className="w-5 h-5" />
               </div>
               <div className="flex flex-col gap-0.5">
                 <h2 className="text-lg font-semibold text-[#0f172a] leading-tight">New York Public Library</h2>

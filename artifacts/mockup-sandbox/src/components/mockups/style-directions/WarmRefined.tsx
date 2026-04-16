@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Building2, Monument, TreePine, Bookmark, Compass, Search, ChevronRight } from "lucide-react";
+import { MapPin, Building2, Landmark, TreePine, Bookmark, Compass, Search, ChevronRight } from "lucide-react";
 
 export function WarmRefined() {
   return (
@@ -124,7 +124,7 @@ export function WarmRefined() {
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-[#fcfaf5] border border-[#f5f1e6] flex items-center justify-center text-[#92700c] shrink-0">
-                  <Monument size={18} />
+                  <Landmark size={18} />
                 </div>
                 <div>
                   <div className="text-[10px] tracking-widest uppercase font-bold text-[#92700c] mb-1">Church · 1878</div>
