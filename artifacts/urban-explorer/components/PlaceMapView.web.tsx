@@ -11,30 +11,9 @@ import {
   View,
 } from "react-native";
 
+import { getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
-
-const CATEGORY_ICONS: Record<string, string> = {
-  building: "office-building",
-  monument: "pillar",
-  park: "tree",
-  bridge: "bridge",
-  church: "church",
-  museum: "bank",
-  theater: "drama-masks",
-  "historic site": "castle",
-  storefront: "storefront-outline",
-  alley: "road-variant",
-  corner: "sign-direction",
-  mural: "palette",
-  infrastructure: "wrench",
-  "former site": "history",
-  "architectural detail": "eye-outline",
-  residential: "home-variant",
-  school: "school",
-  arts_centre: "palette",
-  theatre: "drama-masks",
-};
 
 interface Place {
   id: string;
@@ -258,7 +237,7 @@ export function PlaceMapView({
             <View style={styles.cardHeader}>
               <View style={[styles.iconContainer, { backgroundColor: colors.primary + "18" }]}>
                 <MaterialCommunityIcons
-                  name={(CATEGORY_ICONS[selectedPlace.category.toLowerCase()] || "map-marker") as any}
+                  name={getCategoryIcon(selectedPlace.category) as any}
                   size={20}
                   color={colors.primary}
                 />

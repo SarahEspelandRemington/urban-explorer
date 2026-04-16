@@ -530,7 +530,7 @@ export default function ExploreScreen() {
           data={filteredPlaces}
           keyExtractor={(item) => item.id}
           renderItem={({ item, index }) => (
-            <PlaceCard place={item} index={index} />
+            <PlaceCard place={item} index={index} isNearest={index === 0} />
           )}
           contentContainerStyle={[
             styles.list,

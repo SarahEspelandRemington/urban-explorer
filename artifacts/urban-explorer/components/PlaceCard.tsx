@@ -5,32 +5,19 @@ import React from "react";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
+import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
 
-const CATEGORY_ICONS: Record<string, string> = {
-  building: "office-building",
-  monument: "pillar",
-  park: "tree",
-  bridge: "bridge",
-  church: "church",
-  museum: "bank",
-  theater: "drama-masks",
-  "historic site": "castle",
-};
-
-type CategoryColorKey = "categorySage" | "categoryTerracotta" | "categoryMauve";
-
-const CATEGORY_COLOR_MAP: Record<string, CategoryColorKey> = {
-  building: "categorySage",
-  monument: "categoryTerracotta",
-  park: "categorySage",
-  bridge: "categoryMauve",
-  church: "categoryTerracotta",
-  museum: "categoryMauve",
-  theater: "categoryTerracotta",
-  "historic site": "categoryMauve",
-};
+function formatWalkDistance(meters?: number): string {
+  if (meters == null) return "";
+  if (meters < 80) return "< 1 min";
+  if (meters < 800) {
+    const mins = Math.round(meters / 80);
+    return `${mins} min`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
+}
 
 interface PlaceCardProps {
   place: {
@@ -47,18 +34,19 @@ interface PlaceCardProps {
     distanceMeters?: number;
   };
   index: number;
+  isNearest?: boolean;
 }
 
-export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCardProps) {
+export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest }: PlaceCardProps) {
   const colors = useColors();
   const router = useRouter();
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
   const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
   const saved = isPlaceSaved(placeId);
 
-  const iconName = CATEGORY_ICONS[place.category.toLowerCase()] || "map-marker";
-  const colorKey = CATEGORY_COLOR_MAP[place.category.toLowerCase()] || "categorySage";
-  const categoryColor = (colors as any)[colorKey] || colors.primary;
+  const iconName = getCategoryIcon(place.category);
+  const categoryColor = getCategoryColor(place.category, colors);
+  const walkTime = formatWalkDistance(place.distanceMeters);
 
   const handleSave = () => {
     if (Platform.OS !== "web") {
@@ -88,12 +76,68 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCa
     });
   };
 
+  if (isNearest) {
+    return (
+      <Animated.View entering={Platform.OS !== "web" ? FadeInDown.springify() : undefined}>
+        <Pressable
+          onPress={handlePress}
+          style={({ pressed }) => [
+            styles.heroCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: categoryColor + "40",
+              opacity: pressed ? 0.95 : 1,
+              transform: [{ scale: pressed ? 0.98 : 1 }],
+            },
+          ]}
+        >
+          <View style={styles.heroTop}>
+            <View style={[styles.heroIconContainer, { backgroundColor: categoryColor + "20" }]}>
+              <MaterialCommunityIcons name={iconName as any} size={22} color={categoryColor} />
+            </View>
+            <View style={styles.heroActions}>
+              <Pressable onPress={handleSave} hitSlop={16} style={styles.saveButton}>
+                <Feather
+                  name="bookmark"
+                  size={20}
+                  color={saved ? categoryColor : colors.mutedForeground}
+                />
+              </Pressable>
+            </View>
+          </View>
+
+          <Text style={[styles.heroName, { color: colors.foreground }]} numberOfLines={2}>
+            {place.name}
+          </Text>
+
+          <View style={styles.heroMeta}>
+            {walkTime ? (
+              <View style={[styles.walkBadge, { backgroundColor: colors.primary + "18" }]}>
+                <Feather name="navigation" size={12} color={colors.primary} />
+                <Text style={[styles.walkBadgeText, { color: colors.primary }]}>
+                  {walkTime}
+                </Text>
+              </View>
+            ) : null}
+            <Text style={[styles.heroCategory, { color: categoryColor }]}>
+              {place.category}
+            </Text>
+          </View>
+
+          <Text style={[styles.heroSummary, { color: colors.mutedForeground }]} numberOfLines={2}>
+            {place.summary}
+          </Text>
+        </Pressable>
+      </Animated.View>
+    );
+  }
+
   return (
-    <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index * 80).springify() : undefined}>
+    <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index * 60).springify() : undefined}>
       <Pressable
         onPress={handlePress}
         style={({ pressed }) => [
-          styles.card,
+          styles.compactCard,
           {
             backgroundColor: colors.card,
             borderColor: colors.border,
@@ -102,146 +146,142 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCa
           },
         ]}
       >
-        <View style={styles.topRow}>
-          <View style={styles.categoryRow}>
-            <View style={[styles.iconContainer, { backgroundColor: categoryColor + "18" }]}>
-              <MaterialCommunityIcons
-                name={iconName as any}
-                size={14}
-                color={categoryColor}
-              />
-            </View>
-            <Text style={[styles.category, { color: categoryColor }]}>
-              {place.category}
-            </Text>
-          </View>
-          {place.distanceMeters != null && (
-            <Text style={[styles.distance, { color: colors.mutedForeground }]}>
-              {place.distanceMeters < 1000
-                ? `${Math.round(place.distanceMeters)}m`
-                : `${(place.distanceMeters / 1000).toFixed(1)}km`}
-            </Text>
-          )}
+        <View style={[styles.compactIcon, { backgroundColor: categoryColor + "18" }]}>
+          <MaterialCommunityIcons name={iconName as any} size={18} color={categoryColor} />
         </View>
 
-        <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
-          {place.name}
-        </Text>
-
-        <Text style={[styles.summary, { color: colors.mutedForeground }]} numberOfLines={2}>
-          {place.summary}
-        </Text>
-
-        <View style={styles.bottomRow}>
-          <View style={styles.tagsRow}>
-            {place.yearBuilt && place.yearBuilt !== "unknown" && (
-              <View style={[styles.tag, { backgroundColor: colors.muted }]}>
-                <Text style={[styles.tagText, { color: colors.mutedForeground }]}>
-                  {place.yearBuilt}
-                </Text>
-              </View>
-            )}
-            {(place.tags || []).slice(0, 2).map((tag) => (
-              <View key={tag} style={[styles.tag, { backgroundColor: colors.muted }]}>
-                <Text style={[styles.tagText, { color: colors.mutedForeground }]}>
-                  {tag}
-                </Text>
-              </View>
-            ))}
-          </View>
-          <View style={styles.actions}>
-            <Pressable onPress={handleSave} hitSlop={12} style={styles.saveButton}>
-              <Feather
-                name="bookmark"
-                size={16}
-                color={saved ? categoryColor : colors.mutedForeground}
-                style={{ opacity: saved ? 1 : 0.5 }}
-              />
-            </Pressable>
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
-          </View>
+        <View style={styles.compactInfo}>
+          <Text style={[styles.compactName, { color: colors.foreground }]} numberOfLines={1}>
+            {place.name}
+          </Text>
+          <Text style={[styles.compactCategory, { color: colors.mutedForeground }]} numberOfLines={1}>
+            {place.category}
+            {place.yearBuilt && place.yearBuilt !== "unknown" ? ` · ${place.yearBuilt}` : ""}
+          </Text>
         </View>
+
+        {walkTime ? (
+          <Text style={[styles.compactDistance, { color: colors.primary }]}>
+            {walkTime}
+          </Text>
+        ) : null}
+
+        <Pressable onPress={handleSave} hitSlop={12} style={styles.compactSave}>
+          <Feather
+            name="bookmark"
+            size={16}
+            color={saved ? categoryColor : colors.mutedForeground}
+            style={{ opacity: saved ? 1 : 0.4 }}
+          />
+        </Pressable>
+
+        <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ opacity: 0.3 }} />
       </Pressable>
     </Animated.View>
   );
 });
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 14,
-    marginBottom: 8,
+  heroCard: {
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 18,
+    marginBottom: 12,
   },
-  topRow: {
+  heroTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 12,
   },
-  categoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  iconContainer: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
+  heroIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  category: {
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-    textTransform: "uppercase",
-    letterSpacing: 1,
+  heroActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
-  distance: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.5,
+  heroName: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.5,
+    marginBottom: 8,
+    lineHeight: 28,
   },
-  name: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: -0.3,
-    marginBottom: 4,
-  },
-  summary: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 18,
+  heroMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     marginBottom: 10,
   },
-  bottomRow: {
+  walkBadge: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  tagsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: 4,
-    flex: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+  walkBadgeText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
   },
-  tagText: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.3,
+  heroCategory: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
-  actions: {
+  heroSummary: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+  },
+
+  compactCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginLeft: 8,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 6,
+    gap: 12,
+  },
+  compactIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  compactInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  compactName: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.2,
+  },
+  compactCategory: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  compactDistance: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    marginRight: 4,
+  },
+  compactSave: {
+    padding: 4,
   },
   saveButton: {
-    padding: 2,
+    padding: 4,
   },
 });

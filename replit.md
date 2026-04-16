@@ -37,7 +37,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
     - `useNarration` hook wraps expo-speech (native) / Web Speech API with queue, pause/resume/skip
     - Platform-specific maps (native MapView vs Leaflet web map)
   - AsyncStorage for persisting saved places
-  - Design tokens: warm earthy palette in `constants/colors.ts` — dark mode: warm charcoal `#242220` background with sage `#8A9A86`, terracotta `#B4846C`, mauve `#988496` category accents. Light mode: cream `#F5F3F0` with darker accessible variants. Compact V2-style card layout (tight padding, small text, line-clamped summaries). Category-specific colors via `categorySage`/`categoryTerracotta`/`categoryMauve` tokens in both themes. Passes WCAG AA contrast requirements.
+  - Design tokens: warm earthy palette in `constants/colors.ts` — dark mode: warm charcoal `#242220` background with copper `#D4845A` primary, category accents (sage `#8A9A86`, terracotta `#B4846C`, mauve `#988496`). Light mode: cream `#F5F3F0` with copper `#9C5A2E` primary. Category colors/icons centralized in `constants/categories.ts`. WCAG AA compliant.
+  - **Glanceable card layout**: Hero card for nearest place (22px bold name, walk-time badge, summary) + compact single-row cards for the rest (icon + name + walk time). Optimized for walking users who need quick identification without stopping. Distances shown as walk time ("2 min", "< 1 min") instead of raw meters.
 
 - **API server** (`artifacts/api-server`): Express backend
   - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses, confidence levels). Supports `mode: "quick"` for faster map panning discovery (gpt-4.1-mini, 500m radius, 8-12 places) vs default `"full"` mode (gpt-5.2, 300m, 5-7 places). OSM Overpass results are cached (5min TTL, 200m distance match) to speed up nearby queries.

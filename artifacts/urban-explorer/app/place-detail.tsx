@@ -17,20 +17,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LoadingMessages } from "@/components/LoadingMessages";
 import { PlaceDetailMap } from "@/components/PlaceDetailMap";
 import { PlaceTimeline } from "@/components/PlaceTimeline";
+import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
 import { useGetPlaceDetail, useGetPlaceTimeline } from "@workspace/api-client-react";
-
-const CATEGORY_ICONS: Record<string, string> = {
-  building: "office-building",
-  monument: "pillar",
-  park: "tree",
-  bridge: "bridge",
-  church: "church",
-  museum: "bank",
-  theater: "drama-masks",
-  "historic site": "castle",
-};
 
 export default function PlaceDetailScreen() {
   const colors = useColors();
@@ -60,20 +50,8 @@ export default function PlaceDetailScreen() {
   }, [params.tags]);
   const placeId = React.useMemo(() => params.name ? `${params.name}-${lat}-${lng}` : "", [params.name, lat, lng]);
   const saved = isPlaceSaved(placeId);
-  const iconName = CATEGORY_ICONS[params.category?.toLowerCase() || ""] || "map-marker";
-
-  const CATEGORY_COLOR_MAP: Record<string, string> = {
-    building: "categorySage",
-    monument: "categoryTerracotta",
-    park: "categorySage",
-    bridge: "categoryMauve",
-    church: "categoryTerracotta",
-    museum: "categoryMauve",
-    theater: "categoryTerracotta",
-    "historic site": "categoryMauve",
-  };
-  const categoryColorKey = CATEGORY_COLOR_MAP[params.category?.toLowerCase() || ""] || "categorySage";
-  const categoryColor = (colors as any)[categoryColorKey] || colors.primary;
+  const iconName = getCategoryIcon(params.category || "");
+  const categoryColor = getCategoryColor(params.category || "", colors);
 
   const detailMutation = useGetPlaceDetail();
   const timelineMutation = useGetPlaceTimeline();
