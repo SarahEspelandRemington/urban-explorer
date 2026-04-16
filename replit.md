@@ -37,7 +37,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
     - `useNarration` hook wraps expo-speech (native) / Web Speech API with queue, pause/resume/skip
     - Platform-specific maps (native MapView vs Leaflet web map)
   - AsyncStorage for persisting saved places
-  - Design tokens: warm earthy palette in `constants/colors.ts` — dark mode: warm charcoal `#242220` background with copper `#D4845A` primary, category accents (sage `#8A9A86`, terracotta `#B4846C`, mauve `#988496`). Light mode: cream `#F5F3F0` with copper `#9C5A2E` primary. Category colors/icons centralized in `constants/categories.ts`. WCAG AA compliant.
+  - Design tokens: warm earthy palette in `constants/colors.ts` — dark mode: warm charcoal `#242220` background with copper `#D4845A` primary, category accents (sage `#8A9A86`, terracotta `#B4846C`, mauve `#988496`). Light mode: cream `#F5F3F0` with copper `#9C5A2E` primary, mutedForeground `#5C5752` (WCAG AA). Category colors/icons centralized in `constants/categories.ts`.
+  - **Accessibility**: Full WCAG AA compliance — all interactive elements have `accessibilityRole`, `accessibilityLabel`, `accessibilityState`; all touch targets 44×44px minimum with `hitSlop={20}`; filter chip text 12px; badge text 12px; narration labels 12px; walk-mode narration/loading cards use `accessibilityLiveRegion="polite"` for screen reader announcements.
   - **Glanceable card layout**: Hero card for nearest place (22px bold name, walk-time badge, summary) + compact single-row cards for the rest (icon + name + walk time). Optimized for walking users who need quick identification without stopping. Distances shown as walk time ("2 min", "< 1 min") instead of raw meters.
 
 - **API server** (`artifacts/api-server`): Express backend

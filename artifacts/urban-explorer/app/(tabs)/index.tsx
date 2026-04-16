@@ -331,6 +331,9 @@ export default function ExploreScreen() {
                   styles.toggleButton,
                   viewMode === "list" && { backgroundColor: colors.card },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="List view"
+                accessibilityState={{ selected: viewMode === "list" }}
               >
                 <Feather
                   name="list"
@@ -344,6 +347,9 @@ export default function ExploreScreen() {
                   styles.toggleButton,
                   viewMode === "map" && { backgroundColor: colors.card },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Map view"
+                accessibilityState={{ selected: viewMode === "map" }}
               >
                 <Feather
                   name="map"
@@ -362,6 +368,8 @@ export default function ExploreScreen() {
                 opacity: pressed ? 0.85 : 1,
               },
             ]}
+            accessibilityRole="button"
+            accessibilityLabel="Search by location"
           >
             <Feather name="search" size={18} color={colors.foreground} />
           </Pressable>
@@ -376,6 +384,8 @@ export default function ExploreScreen() {
                 transform: [{ scale: pressed ? 0.95 : 1 }],
               },
             ]}
+            accessibilityRole="button"
+            accessibilityLabel="Discover nearby places"
           >
             {discoverMutation.isPending ? (
               <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -404,6 +414,9 @@ export default function ExploreScreen() {
                   backgroundColor: activeFilters.size === 0 ? colors.foreground : colors.muted,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel="Show all categories"
+              accessibilityState={{ selected: activeFilters.size === 0 }}
             >
               <Text
                 style={[
@@ -433,6 +446,9 @@ export default function ExploreScreen() {
                       backgroundColor: isActive ? colors.foreground : colors.muted,
                     },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by ${cat}`}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <Text
                     style={[
@@ -469,6 +485,9 @@ export default function ExploreScreen() {
                       borderColor: colors.primary + "30",
                     },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by era: ${era}`}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <Feather name="clock" size={11} color={isActive ? colors.primaryForeground : colors.primary} />
                   <Text
@@ -504,6 +523,9 @@ export default function ExploreScreen() {
                       backgroundColor: isActive ? colors.foreground : colors.muted,
                     },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by tag: ${tag}`}
+                  accessibilityState={{ selected: isActive }}
                 >
                   <Text
                     style={[
@@ -566,6 +588,9 @@ export default function ExploreScreen() {
                     transform: [{ scale: pressed ? 0.98 : 1 }],
                   },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Walk Mode"
+                accessibilityHint="Start an audio walking tour with headphones or speaker"
               >
                 <View style={styles.walkCardContent}>
                   <Feather name="headphones" size={22} color={colors.primaryForeground} />
@@ -620,6 +645,8 @@ export default function ExploreScreen() {
                       opacity: pressed ? 0.85 : 1,
                     },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry discovering places"
                 >
                   <Feather name="refresh-cw" size={16} color={colors.primaryForeground} />
                   <Text
@@ -694,16 +721,16 @@ const styles = StyleSheet.create({
     padding: 3,
   },
   toggleButton: {
-    width: 34,
-    height: 30,
+    width: 38,
+    height: 36,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
   searchButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -726,15 +753,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 8,
   },
   filterChipEra: {
     borderWidth: 1,
   },
   filterChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
     letterSpacing: 0.2,
   },

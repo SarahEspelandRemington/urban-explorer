@@ -239,6 +239,9 @@ export function LocationPermission({
                   opacity: !query.trim() || isGeocoding ? 0.5 : pressed ? 0.85 : 1,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={isGeocoding ? "Finding location" : "Explore this location"}
+              accessibilityState={{ disabled: !query.trim() || isGeocoding }}
             >
               {isGeocoding ? (
                 <ActivityIndicator size="small" color={colors.primaryForeground} />
@@ -261,6 +264,8 @@ export function LocationPermission({
                   styles.switchLink,
                   { opacity: pressed ? 0.6 : 1 },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Back to results"
               >
                 <Feather name="arrow-left" size={14} color={colors.primary} />
                 <Text style={[styles.switchText, { color: colors.primary }]}>
@@ -278,6 +283,8 @@ export function LocationPermission({
                   styles.switchLink,
                   { opacity: pressed ? 0.6 : 1 },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Use my current location instead"
               >
                 <Feather name="navigation" size={14} color={colors.primary} />
                 <Text style={[styles.switchText, { color: colors.primary }]}>
@@ -303,6 +310,8 @@ export function LocationPermission({
                       opacity: pressed ? 0.85 : 1,
                     },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open device settings to enable location"
                 >
                   <Feather name="settings" size={18} color={colors.primaryForeground} />
                   <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
@@ -324,6 +333,9 @@ export function LocationPermission({
                     opacity: pressed ? 0.85 : 1,
                   },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="Allow location access"
+                accessibilityHint="Grants the app permission to use your GPS location"
               >
                 <Feather name="navigation" size={18} color={colors.primaryForeground} />
                 <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
@@ -348,6 +360,9 @@ export function LocationPermission({
                   opacity: pressed ? 0.85 : 1,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel="Search by location"
+              accessibilityHint="Enter a city or address to explore manually"
             >
               <Feather name="search" size={18} color={colors.foreground} />
               <Text style={[styles.secondaryButtonText, { color: colors.foreground }]}>
@@ -375,6 +390,9 @@ export function LocationPermission({
                       opacity: pressed ? 0.85 : 1,
                     },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Walk Mode"
+                  accessibilityHint="Start walking with audio narration of nearby places"
                 >
                   <Feather name="headphones" size={18} color={colors.primaryForeground} />
                   <View style={styles.walkButtonText}>

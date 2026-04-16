@@ -119,10 +119,23 @@ export default function PlaceDetailScreen() {
           },
         ]}
       >
-        <Pressable onPress={() => router.back()} hitSlop={12}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={20}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          style={styles.topBarButton}
+        >
           <Feather name="arrow-left" size={24} color={colors.foreground} />
         </Pressable>
-        <Pressable onPress={handleSave} hitSlop={12}>
+        <Pressable
+          onPress={handleSave}
+          hitSlop={20}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? `Remove ${params.name} from saved` : `Save ${params.name}`}
+          accessibilityState={{ selected: saved }}
+          style={styles.topBarButton}
+        >
           <Feather
             name="bookmark"
             size={22}
@@ -241,6 +254,8 @@ export default function PlaceDetailScreen() {
                 })
               }
               style={[styles.retryButton, { borderColor: colors.border }]}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading history"
             >
               <Text style={[styles.retryText, { color: colors.accent }]}>Retry</Text>
             </Pressable>
@@ -374,10 +389,16 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  topBarButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   summary: {
     fontSize: 14,

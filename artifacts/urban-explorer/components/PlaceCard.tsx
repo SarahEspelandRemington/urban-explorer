@@ -89,11 +89,15 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     onToggleExpand?.();
   };
 
+  const saveLabel = saved ? `Remove ${place.name} from saved` : `Save ${place.name}`;
+
   if (expanded) {
     return (
       <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index === 0 ? 0 : index * 60).springify() : undefined}>
         <Pressable
           onPress={toggleExpand}
+          accessibilityRole="button"
+          accessibilityLabel={`${place.name}, ${place.category}${walkTime ? `, ${walkTime} walk` : ""}. Tap to collapse`}
           style={({ pressed }) => [
             styles.heroCard,
             {
@@ -104,18 +108,35 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           ]}
         >
           <View style={styles.heroTop}>
-            <View style={[styles.heroIconContainer, { backgroundColor: categoryColor + "20" }]}>
+            <View
+              style={[styles.heroIconContainer, { backgroundColor: categoryColor + "20" }]}
+              accessibilityLabel={place.category}
+            >
               <MaterialCommunityIcons name={iconName as any} size={22} color={categoryColor} />
             </View>
             <View style={styles.heroActions}>
-              <Pressable onPress={handleSave} hitSlop={16} style={styles.actionButton}>
+              <Pressable
+                onPress={handleSave}
+                hitSlop={20}
+                style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel={saveLabel}
+                accessibilityState={{ selected: saved }}
+              >
                 <Feather
                   name="bookmark"
                   size={20}
                   color={saved ? categoryColor : colors.mutedForeground}
                 />
               </Pressable>
-              <Pressable onPress={navigateToDetail} hitSlop={12} style={styles.detailArrow}>
+              <Pressable
+                onPress={navigateToDetail}
+                hitSlop={20}
+                style={styles.detailArrow}
+                accessibilityRole="button"
+                accessibilityLabel={`View full details for ${place.name}`}
+                accessibilityHint="Opens the detail screen"
+              >
                 <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
@@ -127,7 +148,10 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
           <View style={styles.heroMeta}>
             {walkTime ? (
-              <View style={[styles.walkBadge, { backgroundColor: colors.primary + "18" }]}>
+              <View
+                style={[styles.walkBadge, { backgroundColor: colors.primary + "18" }]}
+                accessibilityLabel={`${walkTime} walk`}
+              >
                 <Feather name="navigation" size={12} color={colors.primary} />
                 <Text style={[styles.walkBadgeText, { color: colors.primary }]}>
                   {walkTime}
@@ -151,6 +175,8 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index * 60).springify() : undefined}>
       <Pressable
         onPress={toggleExpand}
+        accessibilityRole="button"
+        accessibilityLabel={`${place.name}, ${place.category}${walkTime ? `, ${walkTime} walk` : ""}. Tap to expand`}
         style={({ pressed }) => [
           styles.compactCard,
           {
@@ -180,7 +206,14 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           </Text>
         ) : null}
 
-        <Pressable onPress={handleSave} hitSlop={12} style={styles.compactSave}>
+        <Pressable
+          onPress={handleSave}
+          hitSlop={20}
+          style={styles.compactSave}
+          accessibilityRole="button"
+          accessibilityLabel={saveLabel}
+          accessibilityState={{ selected: saved }}
+        >
           <Feather
             name="bookmark"
             size={16}
@@ -189,7 +222,13 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           />
         </Pressable>
 
-        <Pressable onPress={navigateToDetail} hitSlop={12} style={styles.detailArrowCompact}>
+        <Pressable
+          onPress={navigateToDetail}
+          hitSlop={20}
+          style={styles.detailArrowCompact}
+          accessibilityRole="button"
+          accessibilityLabel={`View details for ${place.name}`}
+        >
           <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
         </Pressable>
       </Pressable>
@@ -220,7 +259,7 @@ const styles = StyleSheet.create({
   heroActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 20,
   },
   heroName: {
     fontSize: 22,
@@ -268,6 +307,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginBottom: 6,
     gap: 12,
+    minHeight: 56,
   },
   compactIcon: {
     width: 36,
@@ -295,15 +335,28 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   compactSave: {
-    padding: 4,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   actionButton: {
-    padding: 4,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   detailArrow: {
-    padding: 4,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   detailArrowCompact: {
-    padding: 4,
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: -10,
   },
 });

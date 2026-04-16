@@ -74,7 +74,13 @@ export default function WalkModeScreen() {
         ]}
       >
         <View style={styles.headerTop}>
-          <Pressable onPress={handleStop} hitSlop={12}>
+          <Pressable
+            onPress={handleStop}
+            hitSlop={20}
+            accessibilityRole="button"
+            accessibilityLabel="End walk and go back"
+            style={styles.headerButton}
+          >
             <Feather name="x" size={24} color={colors.foreground} />
           </Pressable>
           <View style={styles.walkingIndicator}>
@@ -87,7 +93,10 @@ export default function WalkModeScreen() {
               else walk.narration.pause();
               if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
-            hitSlop={12}
+            hitSlop={20}
+            accessibilityRole="button"
+            accessibilityLabel={walk.narration.isPaused ? "Resume narration" : "Pause narration"}
+            style={styles.headerButton}
           >
             <Feather
               name={walk.narration.isPaused ? "volume-x" : "volume-2"}
@@ -144,6 +153,8 @@ export default function WalkModeScreen() {
           entering={Platform.OS !== "web" ? FadeInDown.springify() : undefined}
           exiting={Platform.OS !== "web" ? FadeOut : undefined}
           style={[styles.narrationCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={`Now playing: ${walk.narration.currentPlace}`}
         >
           <View style={styles.narrationHeader}>
             <View style={[styles.narrationIcon, { backgroundColor: colors.primary + "18" }]}>
@@ -162,7 +173,10 @@ export default function WalkModeScreen() {
                 walk.narration.skip();
                 if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
-              hitSlop={12}
+              hitSlop={20}
+              accessibilityRole="button"
+              accessibilityLabel="Skip to next narration"
+              style={styles.headerButton}
             >
               <Feather name="skip-forward" size={20} color={colors.mutedForeground} />
             </Pressable>
@@ -174,6 +188,8 @@ export default function WalkModeScreen() {
         <Animated.View
           entering={Platform.OS !== "web" ? FadeIn : undefined}
           style={[styles.narrationCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          accessibilityLiveRegion="polite"
+          accessibilityLabel="Scanning for nearby stories"
         >
           <View style={styles.narrationHeader}>
             <ActivityIndicator size="small" color={colors.primary} />
@@ -234,6 +250,8 @@ export default function WalkModeScreen() {
               transform: [{ scale: pressed ? 0.95 : 1 }],
             },
           ]}
+          accessibilityRole="button"
+          accessibilityLabel="End walk"
         >
           <Feather name="square" size={18} color="#fff" />
           <Text style={styles.stopText}>End Walk</Text>
@@ -331,10 +349,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   narrationLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   narrationPlace: {
     fontSize: 15,
