@@ -14,7 +14,7 @@ const CATEGORY_COLORS = {
 const colors = {
   light: {
     text: "#2C2A28",
-    tint: "#4D5E4A",
+    tint: "#9C5A2E",
 
     background: "#F5F3F0",
     foreground: "#2C2A28",
@@ -22,7 +22,7 @@ const colors = {
     card: "#FFFFFF",
     cardForeground: "#2C2A28",
 
-    primary: "#4D5E4A",
+    primary: "#9C5A2E",
     primaryForeground: "#FFFFFF",
 
     secondary: "#353230",
@@ -47,7 +47,7 @@ const colors = {
 
   dark: {
     text: "#E2DFD8",
-    tint: "#8A9A86",
+    tint: "#D4845A",
 
     background: "#242220",
     foreground: "#E2DFD8",
@@ -55,7 +55,7 @@ const colors = {
     card: "#2C2A28",
     cardForeground: "#E2DFD8",
 
-    primary: "#8A9A86",
+    primary: "#D4845A",
     primaryForeground: "#242220",
 
     secondary: "#353230",
