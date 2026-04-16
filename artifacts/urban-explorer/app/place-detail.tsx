@@ -62,6 +62,19 @@ export default function PlaceDetailScreen() {
   const saved = isPlaceSaved(placeId);
   const iconName = CATEGORY_ICONS[params.category?.toLowerCase() || ""] || "map-marker";
 
+  const CATEGORY_COLOR_MAP: Record<string, string> = {
+    building: "categorySage",
+    monument: "categoryTerracotta",
+    park: "categorySage",
+    bridge: "categoryMauve",
+    church: "categoryTerracotta",
+    museum: "categoryMauve",
+    theater: "categoryTerracotta",
+    "historic site": "categoryMauve",
+  };
+  const categoryColorKey = CATEGORY_COLOR_MAP[params.category?.toLowerCase() || ""] || "categorySage";
+  const categoryColor = (colors as any)[categoryColorKey] || colors.primary;
+
   const detailMutation = useGetPlaceDetail();
   const timelineMutation = useGetPlaceTimeline();
   const [timelineLoaded, setTimelineLoaded] = React.useState(false);
@@ -144,8 +157,8 @@ export default function PlaceDetailScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.iconContainer, { backgroundColor: colors.primary + "18" }]}>
-          <MaterialCommunityIcons name={iconName as any} size={32} color={colors.primary} />
+        <View style={[styles.iconContainer, { backgroundColor: categoryColor + "18" }]}>
+          <MaterialCommunityIcons name={iconName as any} size={24} color={categoryColor} />
         </View>
 
         <Text style={[styles.name, { color: colors.foreground }]}>{params.name}</Text>
@@ -175,8 +188,8 @@ export default function PlaceDetailScreen() {
             </View>
           ) : null}
           {tags.map((tag) => (
-            <View key={tag} style={[styles.badge, { backgroundColor: colors.primary + "15" }]}>
-              <Text style={[styles.badgeText, { color: colors.primary }]}>
+            <View key={tag} style={[styles.badge, { backgroundColor: categoryColor + "15" }]}>
+              <Text style={[styles.badgeText, { color: categoryColor }]}>
                 #{tag}
               </Text>
             </View>
@@ -347,17 +360,17 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   name: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: -0.5,
+    fontSize: 22,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.4,
     marginBottom: 6,
   },
   addressRow: {
@@ -378,20 +391,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
   },
   badgeText: {
-    fontSize: 12,
+    fontSize: 10,
     fontFamily: "Inter_500Medium",
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   summary: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
-    lineHeight: 22,
+    lineHeight: 21,
   },
   mapSection: {
     marginTop: 20,
@@ -401,19 +414,19 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: -0.2,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   factCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 10,
+    gap: 10,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 8,
   },
   factNumber: {
     width: 28,

@@ -37,7 +37,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
     - `useNarration` hook wraps expo-speech (native) / Web Speech API with queue, pause/resume/skip
     - Platform-specific maps (native MapView vs Leaflet web map)
   - AsyncStorage for persisting saved places
-  - Design tokens: refined gold/charcoal palette in `constants/colors.ts` — dark-first design with deep charcoal backgrounds and warm gold accents (light: `#92700c`, dark: `#d4a24c`). Modern Heritage aesthetic with clean card styling, hairline borders, uppercase category labels, and generous spacing. Passes WCAG AA contrast requirements.
+  - Design tokens: warm earthy palette in `constants/colors.ts` — dark mode: warm charcoal `#242220` background with sage `#8A9A86`, terracotta `#B4846C`, mauve `#988496` category accents. Light mode: cream `#F5F3F0` with darker accessible variants. Compact V2-style card layout (tight padding, small text, line-clamped summaries). Category-specific colors via `categorySage`/`categoryTerracotta`/`categoryMauve` tokens in both themes. Passes WCAG AA contrast requirements.
 
 - **API server** (`artifacts/api-server`): Express backend
   - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses, confidence levels). Supports `mode: "quick"` for faster map panning discovery (gpt-4.1-mini, 500m radius, 8-12 places) vs default `"full"` mode (gpt-5.2, 300m, 5-7 places). OSM Overpass results are cached (5min TTL, 200m distance match) to speed up nearby queries.

@@ -1,60 +1,81 @@
+const CATEGORY_COLORS = {
+  light: {
+    sage: "#4D5E4A",
+    terracotta: "#8B5E47",
+    mauve: "#6E5C6B",
+  },
+  dark: {
+    sage: "#8A9A86",
+    terracotta: "#B4846C",
+    mauve: "#988496",
+  },
+};
+
 const colors = {
   light: {
-    text: "#18181b",
-    tint: "#92700c",
+    text: "#2C2A28",
+    tint: "#4D5E4A",
 
-    background: "#f5f5f3",
-    foreground: "#18181b",
+    background: "#F5F3F0",
+    foreground: "#2C2A28",
 
-    card: "#ffffff",
-    cardForeground: "#18181b",
+    card: "#FFFFFF",
+    cardForeground: "#2C2A28",
 
-    primary: "#92700c",
-    primaryForeground: "#ffffff",
+    primary: "#4D5E4A",
+    primaryForeground: "#FFFFFF",
 
-    secondary: "#363640",
-    secondaryForeground: "#f5f5f3",
+    secondary: "#353230",
+    secondaryForeground: "#F5F3F0",
 
-    muted: "#eeeceb",
-    mutedForeground: "#64646c",
+    muted: "#EDEBE8",
+    mutedForeground: "#6B6660",
 
-    accent: "#b0502a",
-    accentForeground: "#ffffff",
+    accent: "#8B5E47",
+    accentForeground: "#FFFFFF",
 
     destructive: "#dc2626",
     destructiveForeground: "#ffffff",
 
-    border: "#e4e4e7",
-    input: "#e4e4e7",
+    border: "#E5E2DD",
+    input: "#E5E2DD",
+
+    categorySage: CATEGORY_COLORS.light.sage,
+    categoryTerracotta: CATEGORY_COLORS.light.terracotta,
+    categoryMauve: CATEGORY_COLORS.light.mauve,
   },
 
   dark: {
-    text: "#f0eeeb",
-    tint: "#d4a24c",
+    text: "#E2DFD8",
+    tint: "#8A9A86",
 
-    background: "#111116",
-    foreground: "#f0eeeb",
+    background: "#242220",
+    foreground: "#E2DFD8",
 
-    card: "#1a1a22",
-    cardForeground: "#f0eeeb",
+    card: "#2C2A28",
+    cardForeground: "#E2DFD8",
 
-    primary: "#d4a24c",
-    primaryForeground: "#111116",
+    primary: "#8A9A86",
+    primaryForeground: "#242220",
 
-    secondary: "#2a2a35",
-    secondaryForeground: "#f0eeeb",
+    secondary: "#353230",
+    secondaryForeground: "#E2DFD8",
 
-    muted: "#22222c",
-    mutedForeground: "#8b8b95",
+    muted: "#2C2A28",
+    mutedForeground: "#9A968C",
 
-    accent: "#d4724a",
-    accentForeground: "#ffffff",
+    accent: "#B4846C",
+    accentForeground: "#242220",
 
     destructive: "#ef4444",
     destructiveForeground: "#ffffff",
 
-    border: "#28283a",
-    input: "#28283a",
+    border: "rgba(255,255,255,0.06)",
+    input: "rgba(255,255,255,0.06)",
+
+    categorySage: CATEGORY_COLORS.dark.sage,
+    categoryTerracotta: CATEGORY_COLORS.dark.terracotta,
+    categoryMauve: CATEGORY_COLORS.dark.mauve,
   },
 
   radius: 12,

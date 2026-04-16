@@ -19,6 +19,19 @@ const CATEGORY_ICONS: Record<string, string> = {
   "historic site": "castle",
 };
 
+type CategoryColorKey = "categorySage" | "categoryTerracotta" | "categoryMauve";
+
+const CATEGORY_COLOR_MAP: Record<string, CategoryColorKey> = {
+  building: "categorySage",
+  monument: "categoryTerracotta",
+  park: "categorySage",
+  bridge: "categoryMauve",
+  church: "categoryTerracotta",
+  museum: "categoryMauve",
+  theater: "categoryTerracotta",
+  "historic site": "categoryMauve",
+};
+
 interface PlaceCardProps {
   place: {
     id: string;
@@ -44,6 +57,8 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCa
   const saved = isPlaceSaved(placeId);
 
   const iconName = CATEGORY_ICONS[place.category.toLowerCase()] || "map-marker";
+  const colorKey = CATEGORY_COLOR_MAP[place.category.toLowerCase()] || "categorySage";
+  const categoryColor = (colors as any)[colorKey] || colors.primary;
 
   const handleSave = () => {
     if (Platform.OS !== "web") {
@@ -74,7 +89,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCa
   };
 
   return (
-    <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index * 100).springify() : undefined}>
+    <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index * 80).springify() : undefined}>
       <Pressable
         onPress={handlePress}
         style={({ pressed }) => [
@@ -87,77 +102,65 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCa
           },
         ]}
       >
-        <View style={styles.header}>
-          <View style={[styles.iconContainer, { backgroundColor: colors.primary + "18" }]}>
-            <MaterialCommunityIcons
-              name={iconName as any}
-              size={22}
-              color={colors.primary}
-            />
-          </View>
-          <View style={styles.headerText}>
-            <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
-              {place.name}
-            </Text>
-            <View style={styles.meta}>
-              <Text style={[styles.category, { color: colors.mutedForeground }]}>
-                {place.category}
-              </Text>
-              {place.yearBuilt ? (
-                <>
-                  <View style={[styles.dot, { backgroundColor: colors.mutedForeground }]} />
-                  <Text style={[styles.category, { color: colors.mutedForeground }]}>
-                    {place.yearBuilt}
-                  </Text>
-                </>
-              ) : null}
+        <View style={styles.topRow}>
+          <View style={styles.categoryRow}>
+            <View style={[styles.iconContainer, { backgroundColor: categoryColor + "18" }]}>
+              <MaterialCommunityIcons
+                name={iconName as any}
+                size={14}
+                color={categoryColor}
+              />
             </View>
+            <Text style={[styles.category, { color: categoryColor }]}>
+              {place.category}
+            </Text>
           </View>
-          <Pressable onPress={handleSave} hitSlop={12}>
-            <Feather
-              name={saved ? "bookmark" : "bookmark"}
-              size={20}
-              color={saved ? colors.primary : colors.mutedForeground}
-              style={saved ? { opacity: 1 } : { opacity: 0.6 }}
-            />
-          </Pressable>
+          {place.distanceMeters != null && (
+            <Text style={[styles.distance, { color: colors.mutedForeground }]}>
+              {place.distanceMeters < 1000
+                ? `${Math.round(place.distanceMeters)}m`
+                : `${(place.distanceMeters / 1000).toFixed(1)}km`}
+            </Text>
+          )}
         </View>
 
-        <Text style={[styles.summary, { color: colors.foreground }]} numberOfLines={2}>
+        <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={1}>
+          {place.name}
+        </Text>
+
+        <Text style={[styles.summary, { color: colors.mutedForeground }]} numberOfLines={2}>
           {place.summary}
         </Text>
 
-        {(place.tags && place.tags.length > 0) && (
+        <View style={styles.bottomRow}>
           <View style={styles.tagsRow}>
-            {place.tags.slice(0, 3).map((tag) => (
+            {place.yearBuilt && place.yearBuilt !== "unknown" && (
+              <View style={[styles.tag, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.tagText, { color: colors.mutedForeground }]}>
+                  {place.yearBuilt}
+                </Text>
+              </View>
+            )}
+            {(place.tags || []).slice(0, 2).map((tag) => (
               <View key={tag} style={[styles.tag, { backgroundColor: colors.muted }]}>
                 <Text style={[styles.tagText, { color: colors.mutedForeground }]}>
-                  #{tag}
+                  {tag}
                 </Text>
               </View>
             ))}
           </View>
-        )}
-
-        {place.facts.length > 0 && (
-          <View style={[styles.factPreview, { backgroundColor: colors.muted }]}>
-            <Feather name="info" size={14} color={colors.primary} />
-            <Text style={[styles.factText, { color: colors.foreground }]} numberOfLines={2}>
-              {place.facts[0]}
-            </Text>
+          <View style={styles.actions}>
+            <Pressable onPress={handleSave} hitSlop={12} style={styles.saveButton}>
+              <Feather
+                name="bookmark"
+                size={16}
+                color={saved ? categoryColor : colors.mutedForeground}
+                style={{ opacity: saved ? 1 : 0.5 }}
+              />
+            </Pressable>
+            <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
           </View>
-        )}
-
-        {place.distanceMeters != null && (
-          <View style={styles.footer}>
-            <Feather name="navigation" size={12} color={colors.mutedForeground} />
-            <Text style={[styles.distance, { color: colors.mutedForeground }]}>
-              {place.distanceMeters < 1000
-                ? `${Math.round(place.distanceMeters)}m away`
-                : `${(place.distanceMeters / 1000).toFixed(1)}km away`}
-            </Text>
-          </View>
-        )}
+        </View>
       </Pressable>
     </Animated.View>
   );
@@ -165,94 +168,80 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index }: PlaceCa
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 18,
-    marginBottom: 10,
+    padding: 14,
+    marginBottom: 8,
   },
-  header: {
+  topRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 12,
+    justifyContent: "space-between",
+    marginBottom: 6,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerText: {
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: -0.4,
-  },
-  meta: {
+  categoryRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 3,
+  },
+  iconContainer: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
   },
   category: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 1,
   },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
+  distance: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.5,
+  },
+  name: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.3,
+    marginBottom: 4,
   },
   summary: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
-    lineHeight: 21,
-    marginBottom: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
+  bottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   tagsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 12,
+    gap: 4,
+    flex: 1,
   },
   tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   tagText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_500Medium",
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
   },
-  factPreview: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 8,
-  },
-  factText: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 19,
-  },
-  footer: {
+  actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    marginTop: 4,
+    gap: 8,
+    marginLeft: 8,
   },
-  distance: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    letterSpacing: 0.1,
+  saveButton: {
+    padding: 2,
   },
 });
