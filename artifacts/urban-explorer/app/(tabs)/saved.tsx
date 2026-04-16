@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import { FlatList, Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,6 +11,7 @@ export default function SavedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { savedPlaces } = useDiscovery();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
@@ -36,9 +37,17 @@ export default function SavedScreen() {
       <FlatList
         data={savedPlaces}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => (
-          <PlaceCard place={item} index={index} />
-        )}
+        renderItem={({ item, index }) => {
+          const isExpanded = expandedId === item.id;
+          return (
+            <PlaceCard
+              place={item}
+              index={index}
+              expanded={isExpanded}
+              onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
+            />
+          );
+        }}
         contentContainerStyle={[
           styles.list,
           { paddingBottom: insets.bottom + webBottomInset + 90 },

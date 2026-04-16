@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
@@ -38,16 +38,16 @@ interface PlaceCardProps {
     distanceMeters?: number;
   };
   index: number;
-  isNearest?: boolean;
+  expanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
-export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest }: PlaceCardProps) {
+export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded, onToggleExpand }: PlaceCardProps) {
   const colors = useColors();
   const router = useRouter();
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
   const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
   const saved = isPlaceSaved(placeId);
-  const [expanded, setExpanded] = useState(!!isNearest);
 
   const iconName = getCategoryIcon(place.category);
   const categoryColor = getCategoryColor(place.category, colors);
@@ -86,12 +86,12 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setExpanded((prev) => !prev);
+    onToggleExpand?.();
   };
 
   if (expanded) {
     return (
-      <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(isNearest ? 0 : index * 60).springify() : undefined}>
+      <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index === 0 ? 0 : index * 60).springify() : undefined}>
         <Pressable
           onPress={toggleExpand}
           style={({ pressed }) => [

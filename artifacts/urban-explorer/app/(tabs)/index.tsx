@@ -71,6 +71,8 @@ export default function ExploreScreen() {
   const [showLocationSearch, setShowLocationSearch] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const discoverMutation = useDiscoverPlaces();
   const mapDiscoverMutation = useDiscoverPlaces();
   const geocodeMutation = useGeocodeLocation();
@@ -153,6 +155,7 @@ export default function ExploreScreen() {
   const discoverAt = useCallback(
     (lat: number, lng: number) => {
       setActiveFilters(new Set());
+      setExpandedId(null);
       setMapPlaces([]);
       mapPlacesRef.current = [];
       discoverMutation.mutate({
@@ -529,9 +532,19 @@ export default function ExploreScreen() {
         <FlatList
           data={filteredPlaces}
           keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => (
-            <PlaceCard place={item} index={index} isNearest={index === 0} />
-          )}
+          renderItem={({ item, index }) => {
+            const isExpanded = expandedId === item.id || (expandedId === null && index === 0);
+            return (
+              <PlaceCard
+                place={item}
+                index={index}
+                expanded={isExpanded}
+                onToggleExpand={() => {
+                  setExpandedId(isExpanded ? null : item.id);
+                }}
+              />
+            );
+          }}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: insets.bottom + webBottomInset + 90 },
