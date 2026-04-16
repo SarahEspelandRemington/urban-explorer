@@ -1,13 +1,17 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 function formatWalkDistance(meters?: number): string {
   if (meters == null) return "";
@@ -43,6 +47,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
   const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
   const saved = isPlaceSaved(placeId);
+  const [expanded, setExpanded] = useState(!!isNearest);
 
   const iconName = getCategoryIcon(place.category);
   const categoryColor = getCategoryColor(place.category, colors);
@@ -59,7 +64,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
     }
   };
 
-  const handlePress = () => {
+  const navigateToDetail = () => {
     router.push({
       pathname: "/place-detail",
       params: {
@@ -76,18 +81,25 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
     });
   };
 
-  if (isNearest) {
+  const toggleExpand = () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded((prev) => !prev);
+  };
+
+  if (expanded) {
     return (
-      <Animated.View entering={Platform.OS !== "web" ? FadeInDown.springify() : undefined}>
+      <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(isNearest ? 0 : index * 60).springify() : undefined}>
         <Pressable
-          onPress={handlePress}
+          onPress={toggleExpand}
           style={({ pressed }) => [
             styles.heroCard,
             {
               backgroundColor: colors.card,
               borderColor: categoryColor + "40",
               opacity: pressed ? 0.95 : 1,
-              transform: [{ scale: pressed ? 0.98 : 1 }],
             },
           ]}
         >
@@ -96,12 +108,15 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
               <MaterialCommunityIcons name={iconName as any} size={22} color={categoryColor} />
             </View>
             <View style={styles.heroActions}>
-              <Pressable onPress={handleSave} hitSlop={16} style={styles.saveButton}>
+              <Pressable onPress={handleSave} hitSlop={16} style={styles.actionButton}>
                 <Feather
                   name="bookmark"
                   size={20}
                   color={saved ? categoryColor : colors.mutedForeground}
                 />
+              </Pressable>
+              <Pressable onPress={navigateToDetail} hitSlop={12} style={styles.detailArrow}>
+                <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
               </Pressable>
             </View>
           </View>
@@ -124,7 +139,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
             </Text>
           </View>
 
-          <Text style={[styles.heroSummary, { color: colors.mutedForeground }]} numberOfLines={2}>
+          <Text style={[styles.heroSummary, { color: colors.mutedForeground }]} numberOfLines={3}>
             {place.summary}
           </Text>
         </Pressable>
@@ -135,14 +150,13 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
   return (
     <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index * 60).springify() : undefined}>
       <Pressable
-        onPress={handlePress}
+        onPress={toggleExpand}
         style={({ pressed }) => [
           styles.compactCard,
           {
             backgroundColor: colors.card,
             borderColor: colors.border,
             opacity: pressed ? 0.95 : 1,
-            transform: [{ scale: pressed ? 0.98 : 1 }],
           },
         ]}
       >
@@ -175,7 +189,9 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, isNearest
           />
         </Pressable>
 
-        <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ opacity: 0.3 }} />
+        <Pressable onPress={navigateToDetail} hitSlop={12} style={styles.detailArrowCompact}>
+          <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
+        </Pressable>
       </Pressable>
     </Animated.View>
   );
@@ -186,7 +202,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     padding: 18,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   heroTop: {
     flexDirection: "row",
@@ -281,7 +297,13 @@ const styles = StyleSheet.create({
   compactSave: {
     padding: 4,
   },
-  saveButton: {
+  actionButton: {
+    padding: 4,
+  },
+  detailArrow: {
+    padding: 4,
+  },
+  detailArrowCompact: {
     padding: 4,
   },
 });
