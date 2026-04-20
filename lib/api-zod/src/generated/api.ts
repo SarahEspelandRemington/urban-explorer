@@ -197,3 +197,84 @@ export const GetWalkNarrationBody = zod.object({
 export const GetWalkNarrationResponse = zod.object({
   narration: zod.string().describe("Natural-sounding narration text for TTS"),
 });
+
+/**
+ * Returns a pedestrian walking route between a start and end point with optional intermediate waypoints, using OpenStreetMap-based routing.
+ * @summary Get a pedestrian walking route
+ */
+export const GetRouteBody = zod.object({
+  start: zod.object({
+    latitude: zod.number(),
+    longitude: zod.number(),
+  }),
+  end: zod.object({
+    latitude: zod.number(),
+    longitude: zod.number(),
+  }),
+  waypoints: zod
+    .array(
+      zod.object({
+        latitude: zod.number(),
+        longitude: zod.number(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Optional intermediate waypoints, in order, between start and end",
+    ),
+});
+
+export const GetRouteResponse = zod.object({
+  geometry: zod
+    .array(zod.array(zod.number()))
+    .describe("Route polyline as ordered [latitude, longitude] pairs"),
+  distanceMeters: zod.number(),
+  durationSeconds: zod.number(),
+});
+
+/**
+ * Given a route geometry, finds interesting historical places near the route and returns them in walking order with progress along the route.
+ * @summary Find historical places along a planned route
+ */
+export const GetPlacesAlongRouteBody = zod.object({
+  geometry: zod
+    .array(zod.array(zod.number()))
+    .describe("Route polyline as ordered [latitude, longitude] pairs"),
+  maxPlaces: zod
+    .number()
+    .optional()
+    .describe("Maximum number of places to return (default 8)"),
+  corridorMeters: zod
+    .number()
+    .optional()
+    .describe(
+      "How far from the route to look for places, in meters (default 120)",
+    ),
+});
+
+export const GetPlacesAlongRouteResponse = zod.object({
+  places: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      category: zod.string(),
+      yearBuilt: zod.string().optional(),
+      tags: zod.array(zod.string()).optional(),
+      summary: zod.string(),
+      facts: zod.array(zod.string()),
+      latitude: zod.number(),
+      longitude: zod.number(),
+      address: zod.string().optional(),
+      progressMeters: zod
+        .number()
+        .describe(
+          "Distance from the route start to the closest point on the route, in meters",
+        ),
+      offsetMeters: zod
+        .number()
+        .describe(
+          "Perpendicular distance from the route to the place, in meters",
+        ),
+    }),
+  ),
+});

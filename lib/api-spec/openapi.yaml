@@ -140,6 +140,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WalkNarrationResponse"
+  /explore/route:
+    post:
+      operationId: getRoute
+      tags: [explore]
+      summary: Get a pedestrian walking route
+      description: Returns a pedestrian walking route between a start and end point with optional intermediate waypoints, using OpenStreetMap-based routing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteRequest"
+      responses:
+        "200":
+          description: Routing geometry, distance, and duration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouteResponse"
+  /explore/places-along-route:
+    post:
+      operationId: getPlacesAlongRoute
+      tags: [explore]
+      summary: Find historical places along a planned route
+      description: Given a route geometry, finds interesting historical places near the route and returns them in walking order with progress along the route.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlacesAlongRouteRequest"
+      responses:
+        "200":
+          description: Ordered list of places along the route
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlacesAlongRouteResponse"
 components:
   schemas:
     HealthStatus:
@@ -401,3 +439,116 @@ components:
           description: "Natural-sounding narration text for TTS"
       required:
         - narration
+    LatLng:
+      type: object
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+      required:
+        - latitude
+        - longitude
+    RouteRequest:
+      type: object
+      properties:
+        start:
+          $ref: "#/components/schemas/LatLng"
+        end:
+          $ref: "#/components/schemas/LatLng"
+        waypoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/LatLng"
+          description: "Optional intermediate waypoints, in order, between start and end"
+      required:
+        - start
+        - end
+    RouteResponse:
+      type: object
+      properties:
+        geometry:
+          type: array
+          description: "Route polyline as ordered [latitude, longitude] pairs"
+          items:
+            type: array
+            items:
+              type: number
+        distanceMeters:
+          type: number
+        durationSeconds:
+          type: number
+      required:
+        - geometry
+        - distanceMeters
+        - durationSeconds
+    PlacesAlongRouteRequest:
+      type: object
+      properties:
+        geometry:
+          type: array
+          description: "Route polyline as ordered [latitude, longitude] pairs"
+          items:
+            type: array
+            items:
+              type: number
+        maxPlaces:
+          type: number
+          description: "Maximum number of places to return (default 8)"
+        corridorMeters:
+          type: number
+          description: "How far from the route to look for places, in meters (default 120)"
+      required:
+        - geometry
+    RoutePlace:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        yearBuilt:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        facts:
+          type: array
+          items:
+            type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: string
+        progressMeters:
+          type: number
+          description: "Distance from the route start to the closest point on the route, in meters"
+        offsetMeters:
+          type: number
+          description: "Perpendicular distance from the route to the place, in meters"
+      required:
+        - id
+        - name
+        - category
+        - summary
+        - facts
+        - latitude
+        - longitude
+        - progressMeters
+        - offsetMeters
+    PlacesAlongRouteResponse:
+      type: object
+      properties:
+        places:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoutePlace"
+      required:
+        - places

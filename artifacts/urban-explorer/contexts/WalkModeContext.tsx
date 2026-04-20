@@ -1,9 +1,9 @@
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 
-import { useNarration } from "@/hooks/useNarration";
+import { unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 
 interface WalkPlace {
   id: string;
@@ -17,6 +17,17 @@ interface WalkPlace {
   longitude: number;
   address?: string;
   distanceMeters?: number;
+  progressMeters?: number;
+  offsetMeters?: number;
+}
+
+export interface PlannedRoute {
+  start: { latitude: number; longitude: number; label?: string };
+  end: { latitude: number; longitude: number; label?: string };
+  geometry: [number, number][];
+  distanceMeters: number;
+  durationSeconds: number;
+  places: WalkPlace[];
 }
 
 interface WalkStats {
@@ -35,11 +46,16 @@ interface WalkModeContextType {
   stats: WalkStats;
   narration: ReturnType<typeof useNarration>;
   isLoading: boolean;
+  plannedRoute: PlannedRoute | null;
+  setPlannedRoute: (route: PlannedRoute | null) => void;
+  routeProgressMeters: number;
+  nextPlace: WalkPlace | null;
+  nextPlaceDistanceMeters: number | null;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
 
-const PROXIMITY_RADIUS = 50;
+const PROXIMITY_RADIUS = 80;
 const REFETCH_DISTANCE = 200;
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -58,6 +74,54 @@ function haversineDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function projectToMeters(
+  lat: number, lng: number,
+  originLat: number, originLng: number,
+): { x: number; y: number } {
+  const cosLat = Math.cos((originLat * Math.PI) / 180);
+  return {
+    x: (lng - originLng) * 111320 * cosLat,
+    y: (lat - originLat) * 111320,
+  };
+}
+
+function progressAlongRoute(
+  geometry: [number, number][],
+  lat: number, lng: number,
+): number {
+  if (!geometry || geometry.length < 2) return 0;
+  const [originLat, originLng] = geometry[0];
+  const projected = geometry.map(([la, ln]) => projectToMeters(la, ln, originLat, originLng));
+  const target = projectToMeters(lat, lng, originLat, originLng);
+
+  let bestDist = Infinity;
+  let bestProgress = 0;
+  let cumulative = 0;
+
+  for (let i = 0; i < projected.length - 1; i++) {
+    const a = projected[i];
+    const b = projected[i + 1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const segLen2 = dx * dx + dy * dy;
+    let t = 0;
+    if (segLen2 > 0) {
+      t = ((target.x - a.x) * dx + (target.y - a.y) * dy) / segLen2;
+      t = Math.max(0, Math.min(1, t));
+    }
+    const closestX = a.x + t * dx;
+    const closestY = a.y + t * dy;
+    const dist = Math.sqrt((target.x - closestX) ** 2 + (target.y - closestY) ** 2);
+    const segLen = Math.sqrt(segLen2);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestProgress = cumulative + t * segLen;
+    }
+    cumulative += segLen;
+  }
+  return bestProgress;
+}
+
 export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [isWalking, setIsWalking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -65,6 +129,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [narratedIds, setNarratedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
+  const [plannedRoute, setPlannedRouteState] = useState<PlannedRoute | null>(null);
+  const [routeProgressMeters, setRouteProgressMeters] = useState(0);
 
   const narration = useNarration();
   const watchRef = useRef<Location.LocationSubscription | null>(null);
@@ -72,9 +138,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const prevLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const fetchingRef = useRef(false);
   const narratedIdsRef = useRef<Set<string>>(new Set());
+  const plannedRouteRef = useRef<PlannedRoute | null>(null);
+
+  const setPlannedRoute = useCallback((route: PlannedRoute | null) => {
+    plannedRouteRef.current = route;
+    setPlannedRouteState(route);
+    if (route) {
+      setNearbyPlaces(route.places);
+    }
+  }, []);
 
   const fetchNearbyPlaces = useCallback(async (latitude: number, longitude: number) => {
     if (fetchingRef.current) return;
+    if (plannedRouteRef.current) return; // planned routes use their own pre-fetched places
     fetchingRef.current = true;
     setIsLoading(true);
     try {
@@ -148,9 +224,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           latitude,
           longitude,
         );
-        setStats((prev) => ({ ...prev, distanceWalked: prev.distanceWalked + dist }));
+        if (dist < 200) {
+          // ignore GPS jumps that suggest teleport
+          setStats((prev) => ({ ...prev, distanceWalked: prev.distanceWalked + dist }));
+        }
       }
       prevLocationRef.current = { latitude, longitude };
+
+      if (plannedRouteRef.current) {
+        const progress = progressAlongRoute(
+          plannedRouteRef.current.geometry, latitude, longitude,
+        );
+        setRouteProgressMeters(progress);
+        return;
+      }
 
       if (!lastFetchRef.current) {
         fetchNearbyPlaces(latitude, longitude);
@@ -175,7 +262,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isWalking || !currentLocation || nearbyPlaces.length === 0) return;
 
-    if (!hasAutoNarratedRef.current) {
+    const isPlanned = !!plannedRouteRef.current;
+
+    // For ad-hoc (non-planned) walks: kick off narration with the closest unnarrated
+    // place on the very first location update so the user hears something immediately.
+    // Planned walks rely on real proximity + route-progress ordering only.
+    if (!isPlanned && !hasAutoNarratedRef.current) {
       hasAutoNarratedRef.current = true;
       let closest: WalkPlace | null = null;
       let closestDist = Infinity;
@@ -207,13 +299,22 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         place.latitude,
         place.longitude,
       );
-      if (dist <= PROXIMITY_RADIUS) {
-        narratedIdsRef.current.add(place.id);
-        setNarratedIds(new Set(narratedIdsRef.current));
-        fetchNarration(place);
+      if (dist > PROXIMITY_RADIUS) continue;
+
+      // For planned walks, also enforce route-progress ordering so loopbacks /
+      // crossings don't trigger out-of-sequence narration.
+      if (isPlanned) {
+        const placeProgress = place.progressMeters ?? 0;
+        // Allow places within a window of where the user currently is along the route.
+        if (placeProgress < routeProgressMeters - 60) continue; // already passed
+        if (placeProgress > routeProgressMeters + 200) continue; // way ahead
       }
+
+      narratedIdsRef.current.add(place.id);
+      setNarratedIds(new Set(narratedIdsRef.current));
+      fetchNarration(place);
     }
-  }, [isWalking, currentLocation, nearbyPlaces, fetchNarration]);
+  }, [isWalking, currentLocation, nearbyPlaces, fetchNarration, routeProgressMeters]);
 
   const startWalk = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -223,27 +324,41 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
     setNarratedIds(new Set());
     narratedIdsRef.current = new Set();
-    setNearbyPlaces([]);
+    if (!plannedRouteRef.current) {
+      setNearbyPlaces([]);
+    }
     lastFetchRef.current = null;
     prevLocationRef.current = null;
     hasAutoNarratedRef.current = false;
+    setRouteProgressMeters(0);
 
-    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-    handleLocationUpdate(loc);
+    if (Platform.OS === "web") {
+      try {
+        unlockWebSpeech();
+      } catch {}
+    }
+
+    const accuracy =
+      Platform.OS === "web" ? Location.Accuracy.High : Location.Accuracy.BestForNavigation;
+
+    try {
+      const loc = await Location.getCurrentPositionAsync({ accuracy });
+      handleLocationUpdate(loc);
+    } catch {}
 
     try {
       const sub = await Location.watchPositionAsync(
         {
-          accuracy: Location.Accuracy.High,
-          distanceInterval: 10,
-          timeInterval: 3000,
+          accuracy,
+          distanceInterval: 5,
+          timeInterval: 2000,
         },
         handleLocationUpdate,
       );
       watchRef.current = sub;
     } catch {
     }
-  }, [handleLocationUpdate]);
+  }, [handleLocationUpdate, narration]);
 
   const stopWalk = useCallback(() => {
     setIsWalking(false);
@@ -255,6 +370,23 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       watchRef.current = null;
     }
   }, [narration]);
+
+  const { nextPlace, nextPlaceDistanceMeters } = useMemo(() => {
+    if (!plannedRoute || !currentLocation) {
+      return { nextPlace: null as WalkPlace | null, nextPlaceDistanceMeters: null as number | null };
+    }
+    const upcoming = plannedRoute.places
+      .filter((p) => !narratedIds.has(p.id))
+      .filter((p) => (p.progressMeters ?? 0) >= routeProgressMeters - 30)
+      .sort((a, b) => (a.progressMeters ?? 0) - (b.progressMeters ?? 0));
+    const next = upcoming[0] ?? null;
+    if (!next) return { nextPlace: null, nextPlaceDistanceMeters: null };
+    const dist = haversineDistance(
+      currentLocation.latitude, currentLocation.longitude,
+      next.latitude, next.longitude,
+    );
+    return { nextPlace: next, nextPlaceDistanceMeters: Math.round(dist) };
+  }, [plannedRoute, currentLocation, narratedIds, routeProgressMeters]);
 
   return (
     <WalkModeContext.Provider
@@ -268,6 +400,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         stats,
         narration,
         isLoading,
+        plannedRoute,
+        setPlannedRoute,
+        routeProgressMeters,
+        nextPlace,
+        nextPlaceDistanceMeters,
       }}
     >
       {children}

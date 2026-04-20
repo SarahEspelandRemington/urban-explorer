@@ -39,6 +39,12 @@ export default function WalkModeScreen() {
   const [elapsed, setElapsed] = useState(0);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const planned = walk.plannedRoute;
+  const totalRouteMeters = planned?.distanceMeters ?? 0;
+  const progressPct =
+    totalRouteMeters > 0
+      ? Math.max(0, Math.min(100, (walk.routeProgressMeters / totalRouteMeters) * 100))
+      : 0;
 
   useEffect(() => {
     if (!walk.isWalking) return;
@@ -59,8 +65,11 @@ export default function WalkModeScreen() {
   const handleStop = () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     walk.stopWalk();
+    walk.setPlannedRoute(null);
     router.back();
   };
+
+  const totalStories = planned ? planned.places.length : walk.nearbyPlaces.length;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -85,7 +94,9 @@ export default function WalkModeScreen() {
           </Pressable>
           <View style={styles.walkingIndicator}>
             <View style={[styles.liveDot, { backgroundColor: "#22c55e" }]} />
-            <Text style={[styles.walkingText, { color: colors.foreground }]}>Walking</Text>
+            <Text style={[styles.walkingText, { color: colors.foreground }]}>
+              {planned ? "On Route" : "Walking"}
+            </Text>
           </View>
           <Pressable
             onPress={() => {
@@ -117,17 +128,33 @@ export default function WalkModeScreen() {
           <View style={styles.statItem}>
             <MaterialCommunityIcons name="map-marker-check" size={14} color={colors.mutedForeground} />
             <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {walk.stats.placesNarrated}/{walk.nearbyPlaces.length} stories
+              {walk.stats.placesNarrated}/{totalStories} stories
             </Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <Feather name="navigation" size={14} color={colors.mutedForeground} />
             <Text style={[styles.statValue, { color: colors.foreground }]}>
-              {formatDistance(walk.stats.distanceWalked)}
+              {planned
+                ? `${formatDistance(walk.routeProgressMeters)} / ${formatDistance(totalRouteMeters)}`
+                : formatDistance(walk.stats.distanceWalked)}
             </Text>
           </View>
         </View>
+
+        {planned && (
+          <View
+            style={[styles.progressTrack, { backgroundColor: colors.border }]}
+            accessibilityLabel={`Route progress: ${Math.round(progressPct)} percent`}
+          >
+            <View
+              style={[
+                styles.progressFill,
+                { backgroundColor: colors.primary, width: `${progressPct}%` },
+              ]}
+            />
+          </View>
+        )}
       </View>
 
       <View style={styles.mapContainer}>
@@ -137,6 +164,9 @@ export default function WalkModeScreen() {
             userLongitude={walk.currentLocation.longitude}
             places={walk.nearbyPlaces}
             narratedIds={walk.narratedIds}
+            routeGeometry={planned?.geometry}
+            startPoint={planned ? planned.start : null}
+            endPoint={planned ? planned.end : null}
           />
         ) : (
           <View style={[styles.loadingMap, { backgroundColor: colors.muted }]}>
@@ -147,6 +177,30 @@ export default function WalkModeScreen() {
           </View>
         )}
       </View>
+
+      {planned && walk.nextPlace && !walk.narration.currentPlace && (
+        <Animated.View
+          entering={Platform.OS !== "web" ? FadeInDown.springify() : undefined}
+          style={[styles.nextCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={`Next up: ${walk.nextPlace.name} in ${walk.nextPlaceDistanceMeters} meters`}
+        >
+          <View style={[styles.nextIcon, { backgroundColor: colors.primary + "18" }]}>
+            <Feather name="navigation-2" size={16} color={colors.primary} />
+          </View>
+          <View style={styles.nextText}>
+            <Text style={[styles.nextLabel, { color: colors.mutedForeground }]}>Next up</Text>
+            <Text style={[styles.nextPlace, { color: colors.foreground }]} numberOfLines={1}>
+              {walk.nextPlace.name}
+            </Text>
+          </View>
+          {walk.nextPlaceDistanceMeters !== null && (
+            <Text style={[styles.nextDistance, { color: colors.primary }]}>
+              {formatDistance(walk.nextPlaceDistanceMeters)}
+            </Text>
+          )}
+        </Animated.View>
+      )}
 
       {walk.narration.currentPlace && (
         <Animated.View
@@ -262,52 +316,28 @@ export default function WalkModeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-  },
+  container: { flex: 1 },
+  header: { paddingHorizontal: 20, paddingBottom: 12 },
   headerTop: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  walkingIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  walkingIndicator: { flexDirection: "row", alignItems: "center", gap: 6 },
+  liveDot: { width: 8, height: 8, borderRadius: 4 },
+  walkingText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  statsRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16 },
+  statItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statValue: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  statDivider: { width: 1, height: 16 },
+  progressTrack: {
+    marginTop: 12,
+    height: 4,
+    borderRadius: 2,
+    overflow: "hidden",
   },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  walkingText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-  },
-  statItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  statValue: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  statDivider: {
-    width: 1,
-    height: 16,
-  },
+  progressFill: { height: "100%", borderRadius: 2 },
   mapContainer: {
     flex: 1,
     marginHorizontal: 16,
@@ -322,10 +352,34 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 12,
   },
-  loadingText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
+  loadingText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  nextCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1,
   },
+  nextIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nextText: { flex: 1 },
+  nextLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  nextPlace: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginTop: 1 },
+  nextDistance: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   narrationCard: {
     marginHorizontal: 16,
     marginBottom: 8,
@@ -333,11 +387,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 14,
   },
-  narrationHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  narrationHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   narrationIcon: {
     width: 36,
     height: 36,
@@ -345,35 +395,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  narrationText: {
-    flex: 1,
-  },
+  narrationText: { flex: 1 },
   narrationLabel: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  headerButton: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  narrationPlace: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    marginTop: 1,
-  },
-  scanningText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-  },
-  placeChips: {
-    paddingHorizontal: 16,
-    gap: 8,
-    paddingBottom: 8,
-  },
+  headerButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  narrationPlace: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginTop: 1 },
+  scanningText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  placeChips: { paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
   placeChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -384,15 +416,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     maxWidth: 200,
   },
-  placeChipText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    flexShrink: 1,
-  },
-  bottomBar: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
+  placeChipText: { fontSize: 12, fontFamily: "Inter_500Medium", flexShrink: 1 },
+  bottomBar: { paddingHorizontal: 16, paddingTop: 8 },
   stopButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -401,9 +426,5 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 14,
   },
-  stopText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: "#fff",
-  },
+  stopText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" },
 });

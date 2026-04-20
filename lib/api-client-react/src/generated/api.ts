@@ -26,6 +26,10 @@ import type {
   PlaceDetailResponse,
   PlaceTimelineRequest,
   PlaceTimelineResponse,
+  PlacesAlongRouteRequest,
+  PlacesAlongRouteResponse,
+  RouteRequest,
+  RouteResponse,
   SuggestLocationsRequest,
   SuggestionsResult,
   WalkNarrationRequest,
@@ -637,4 +641,178 @@ export const useGetWalkNarration = <
   TContext
 > => {
   return useMutation(getGetWalkNarrationMutationOptions(options));
+};
+
+/**
+ * Returns a pedestrian walking route between a start and end point with optional intermediate waypoints, using OpenStreetMap-based routing.
+ * @summary Get a pedestrian walking route
+ */
+export const getGetRouteUrl = () => {
+  return `/api/explore/route`;
+};
+
+export const getRoute = async (
+  routeRequest: RouteRequest,
+  options?: RequestInit,
+): Promise<RouteResponse> => {
+  return customFetch<RouteResponse>(getGetRouteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(routeRequest),
+  });
+};
+
+export const getGetRouteMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getRoute>>,
+    TError,
+    { data: BodyType<RouteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getRoute>>,
+  TError,
+  { data: BodyType<RouteRequest> },
+  TContext
+> => {
+  const mutationKey = ["getRoute"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getRoute>>,
+    { data: BodyType<RouteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getRoute(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetRouteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getRoute>>
+>;
+export type GetRouteMutationBody = BodyType<RouteRequest>;
+export type GetRouteMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get a pedestrian walking route
+ */
+export const useGetRoute = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getRoute>>,
+    TError,
+    { data: BodyType<RouteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getRoute>>,
+  TError,
+  { data: BodyType<RouteRequest> },
+  TContext
+> => {
+  return useMutation(getGetRouteMutationOptions(options));
+};
+
+/**
+ * Given a route geometry, finds interesting historical places near the route and returns them in walking order with progress along the route.
+ * @summary Find historical places along a planned route
+ */
+export const getGetPlacesAlongRouteUrl = () => {
+  return `/api/explore/places-along-route`;
+};
+
+export const getPlacesAlongRoute = async (
+  placesAlongRouteRequest: PlacesAlongRouteRequest,
+  options?: RequestInit,
+): Promise<PlacesAlongRouteResponse> => {
+  return customFetch<PlacesAlongRouteResponse>(getGetPlacesAlongRouteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(placesAlongRouteRequest),
+  });
+};
+
+export const getGetPlacesAlongRouteMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getPlacesAlongRoute>>,
+    TError,
+    { data: BodyType<PlacesAlongRouteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getPlacesAlongRoute>>,
+  TError,
+  { data: BodyType<PlacesAlongRouteRequest> },
+  TContext
+> => {
+  const mutationKey = ["getPlacesAlongRoute"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getPlacesAlongRoute>>,
+    { data: BodyType<PlacesAlongRouteRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getPlacesAlongRoute(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetPlacesAlongRouteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getPlacesAlongRoute>>
+>;
+export type GetPlacesAlongRouteMutationBody = BodyType<PlacesAlongRouteRequest>;
+export type GetPlacesAlongRouteMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Find historical places along a planned route
+ */
+export const useGetPlacesAlongRoute = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getPlacesAlongRoute>>,
+    TError,
+    { data: BodyType<PlacesAlongRouteRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getPlacesAlongRoute>>,
+  TError,
+  { data: BodyType<PlacesAlongRouteRequest> },
+  TContext
+> => {
+  return useMutation(getGetPlacesAlongRouteMutationOptions(options));
 };

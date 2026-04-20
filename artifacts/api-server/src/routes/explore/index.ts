@@ -5,6 +5,8 @@ import {
   GeocodeLocationBody,
   GetPlaceDetailBody,
   GetPlaceTimelineBody,
+  GetPlacesAlongRouteBody,
+  GetRouteBody,
   GetWalkNarrationBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
@@ -98,7 +100,11 @@ out center body 25;
   try {
     const resp = await fetch(OVERPASS_API, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+      },
       body: `data=${encodeURIComponent(query)}`,
       signal: controller.signal,
     });
@@ -732,6 +738,386 @@ Rules for natural-sounding speech:
   }
 
   res.json({ narration: content.trim() });
+});
+
+const OSRM_API = "https://router.project-osrm.org";
+
+router.post("/explore/route", async (req, res) => {
+  const parsed = GetRouteBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const { start, end, waypoints } = parsed.data;
+
+  const points = [
+    { lat: start.latitude, lng: start.longitude },
+    ...(waypoints || []).map((w) => ({ lat: w.latitude, lng: w.longitude })),
+    { lat: end.latitude, lng: end.longitude },
+  ];
+
+  const coords = points.map((p) => `${p.lng},${p.lat}`).join(";");
+  const url = `${OSRM_API}/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!resp.ok) {
+      res.status(502).json({ error: "Routing service unavailable" });
+      return;
+    }
+
+    const json = (await resp.json()) as {
+      routes?: Array<{
+        geometry: { coordinates: [number, number][] };
+        distance: number;
+        duration: number;
+      }>;
+    };
+    const route = json.routes?.[0];
+    if (!route) {
+      res.status(404).json({ error: "No walking route could be found between those points" });
+      return;
+    }
+
+    const geometry = route.geometry.coordinates.map(
+      ([lng, lat]) => [lat, lng] as [number, number],
+    );
+
+    res.json({
+      geometry,
+      distanceMeters: route.distance,
+      durationSeconds: route.duration,
+    });
+  } catch {
+    clearTimeout(timeout);
+    res.status(502).json({ error: "Routing failed" });
+  }
+});
+
+function projectToMeters(
+  lat: number,
+  lng: number,
+  originLat: number,
+  originLng: number,
+): { x: number; y: number } {
+  const cosLat = Math.cos((originLat * Math.PI) / 180);
+  const x = (lng - originLng) * 111320 * cosLat;
+  const y = (lat - originLat) * 111320;
+  return { x, y };
+}
+
+function pointToRouteDistance(
+  geometry: [number, number][],
+  lat: number,
+  lng: number,
+): { distance: number; progress: number } {
+  if (geometry.length === 0) return { distance: Infinity, progress: 0 };
+  const [originLat, originLng] = geometry[0];
+
+  const projected = geometry.map(([la, ln]) => projectToMeters(la, ln, originLat, originLng));
+  const target = projectToMeters(lat, lng, originLat, originLng);
+
+  let bestDist = Infinity;
+  let bestProgress = 0;
+  let cumulative = 0;
+
+  for (let i = 0; i < projected.length - 1; i++) {
+    const a = projected[i];
+    const b = projected[i + 1];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const segLen2 = dx * dx + dy * dy;
+    let t = 0;
+    if (segLen2 > 0) {
+      t = ((target.x - a.x) * dx + (target.y - a.y) * dy) / segLen2;
+      t = Math.max(0, Math.min(1, t));
+    }
+    const closestX = a.x + t * dx;
+    const closestY = a.y + t * dy;
+    const distX = target.x - closestX;
+    const distY = target.y - closestY;
+    const dist = Math.sqrt(distX * distX + distY * distY);
+    const segLen = Math.sqrt(segLen2);
+
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestProgress = cumulative + t * segLen;
+    }
+    cumulative += segLen;
+  }
+
+  return { distance: bestDist, progress: bestProgress };
+}
+
+function routeBoundingBox(
+  geometry: [number, number][],
+  paddingMeters: number,
+): { south: number; west: number; north: number; east: number } | null {
+  if (geometry.length === 0) return null;
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [la, ln] of geometry) {
+    if (la < minLat) minLat = la;
+    if (la > maxLat) maxLat = la;
+    if (ln < minLng) minLng = ln;
+    if (ln > maxLng) maxLng = ln;
+  }
+  const latPad = paddingMeters / 111320;
+  const lngPad = paddingMeters / (111320 * Math.cos(((minLat + maxLat) / 2) * Math.PI / 180));
+  return {
+    south: minLat - latPad,
+    west: minLng - lngPad,
+    north: maxLat + latPad,
+    east: maxLng + lngPad,
+  };
+}
+
+async function fetchOSMPlacesInBoundingBox(bbox: {
+  south: number; west: number; north: number; east: number;
+}): Promise<OSMPlace[]> {
+  const { south, west, north, east } = bbox;
+  const query = `
+[out:json][timeout:8];
+(
+  nwr["historic"](${south},${west},${north},${east});
+  nwr["heritage"](${south},${west},${north},${east});
+  nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](${south},${west},${north},${east});
+  nwr["name"]["building"~"^(church|cathedral|chapel|mosque|synagogue|temple|civic|public|commercial|industrial|warehouse|train_station|hotel)$"](${south},${west},${north},${east});
+  nwr["memorial"](${south},${west},${north},${east});
+);
+out center body 80;
+`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const resp = await fetch(OVERPASS_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+      },
+      body: `data=${encodeURIComponent(query)}`,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return [];
+
+    const json = (await resp.json()) as { elements?: any[] };
+    if (!json.elements) return [];
+
+    const seen = new Set<string>();
+    const results: OSMPlace[] = [];
+    for (const el of json.elements) {
+      const name = el.tags?.name;
+      if (!name) continue;
+      const normKey = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (seen.has(normKey)) continue;
+      seen.add(normKey);
+      const elLat = el.lat ?? el.center?.lat;
+      const elLon = el.lon ?? el.center?.lon;
+      if (typeof elLat !== "number" || typeof elLon !== "number") continue;
+      const osmType =
+        el.tags?.historic ||
+        el.tags?.tourism ||
+        el.tags?.amenity ||
+        el.tags?.building ||
+        el.tags?.man_made ||
+        "place";
+      results.push({
+        name,
+        lat: elLat,
+        lon: elLon,
+        type: osmType === "yes" ? "building" : osmType,
+        tags: el.tags || {},
+      });
+    }
+    return results;
+  } catch {
+    clearTimeout(timeout);
+    return [];
+  }
+}
+
+router.post("/explore/places-along-route", async (req, res) => {
+  const parsed = GetPlacesAlongRouteBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const { geometry, maxPlaces, corridorMeters } = parsed.data;
+
+  const geom = geometry as [number, number][];
+  if (!geom || geom.length < 2) {
+    res.status(400).json({ error: "Route geometry must have at least 2 points" });
+    return;
+  }
+
+  const corridor = corridorMeters ?? 120;
+  const cap = maxPlaces ?? 8;
+
+  const bbox = routeBoundingBox(geom, corridor);
+  if (!bbox) {
+    res.json({ places: [] });
+    return;
+  }
+
+  // Hash a sampled signature of the geometry so different routes between the
+  // same endpoints (e.g. with different waypoints) don't collide in cache.
+  const sampleCount = Math.min(8, geom.length);
+  const step = (geom.length - 1) / Math.max(1, sampleCount - 1);
+  const sig: string[] = [];
+  for (let i = 0; i < sampleCount; i++) {
+    const idx = Math.round(i * step);
+    const [la, ln] = geom[idx];
+    sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
+  }
+  const cacheKey = `places-route:${sig.join("|")}:${corridor}:${cap}`;
+  const cached = getLLMCache<{ places: any[] }>(cacheKey);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
+  const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox);
+
+  const candidates = osmPlaces
+    .map((p) => {
+      const { distance, progress } = pointToRouteDistance(geom, p.lat, p.lon);
+      return { place: p, offsetMeters: Math.round(distance), progressMeters: Math.round(progress) };
+    })
+    .filter((c) => c.offsetMeters <= corridor)
+    .sort((a, b) => a.progressMeters - b.progressMeters);
+
+  // Space-out: skip places that are too close (along the route) to one already chosen
+  const minSpacing = Math.max(80, Math.floor(geom.length > 0 ? 0 : 0) + 80);
+  const spaced: typeof candidates = [];
+  let lastProgress = -Infinity;
+  for (const c of candidates) {
+    if (c.progressMeters - lastProgress >= minSpacing) {
+      spaced.push(c);
+      lastProgress = c.progressMeters;
+    }
+    if (spaced.length >= cap * 2) break;
+  }
+
+  const finalCandidates = spaced.slice(0, cap);
+
+  if (finalCandidates.length === 0) {
+    res.json({ places: [] });
+    return;
+  }
+
+  const osmContext = finalCandidates
+    .map((c, i) => {
+      const t = c.place.tags;
+      const details: string[] = [];
+      if (t["addr:street"]) {
+        const num = sanitizeOSMText(t["addr:housenumber"] || "", 10);
+        const street = sanitizeOSMText(t["addr:street"], 60);
+        details.push(`address: ${num} ${street}`.trim());
+      }
+      if (t.start_date) details.push(`built: ${sanitizeOSMText(t.start_date, 20)}`);
+      if (t.architect) details.push(`architect: ${sanitizeOSMText(t.architect, 60)}`);
+      if (t.heritage) details.push(`heritage site`);
+      if (t.historic) details.push(`historic: ${sanitizeOSMText(t.historic, 30)}`);
+      const extra = details.length ? ` (${details.join(", ")})` : "";
+      return `  ${i + 1}. "${sanitizeOSMText(c.place.name, 100)}" [${sanitizeOSMText(c.place.type, 30)}] at ${c.place.lat.toFixed(5)},${c.place.lon.toFixed(5)}${extra}`;
+    })
+    .join("\n");
+
+  const systemPrompt = `You are a hyper-local urban historian writing brief, vivid blurbs for a walking tour app.
+
+You will be given a list of REAL places (verified from OpenStreetMap) along a planned walking route. For EACH place, write a captivating one-sentence summary and 2 specific historical facts.
+
+QUALITY STANDARDS:
+- Each fact MUST include a year, person's name, or concrete verifiable detail
+- Avoid generic statements like "has rich history" or "notable building"
+- Be honest: if you're uncertain, frame as "Local lore holds that..." rather than invent
+- Use the EXACT name and coordinates provided — do not rename or move places
+
+Respond in JSON format:
+{
+  "places": [
+    {
+      "id": "unique-kebab-case-id",
+      "name": "Exact place name from input",
+      "category": "building|monument|memorial|church|park|landmark|museum|gallery|infrastructure",
+      "yearBuilt": "1920s" or "circa 1850" or omit if unknown,
+      "tags": ["2-3 short descriptive tags"],
+      "summary": "One captivating sentence with the most surprising or vivid detail",
+      "facts": ["Specific fact with year/name/detail", "Second specific fact"],
+      "latitude": exact_input_latitude,
+      "longitude": exact_input_longitude,
+      "address": "Street address if known, or empty string"
+    }
+  ]
+}
+
+Return one entry per input place, in the same order. Be concise — these blurbs are read aloud while walking.`;
+
+  const llmResp = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    max_completion_tokens: 2500,
+    messages: [
+      { role: "system", content: systemPrompt },
+      {
+        role: "user",
+        content: `Generate brief walking-tour blurbs for these places along my route:\n${osmContext}`,
+      },
+    ],
+    response_format: { type: "json_object" },
+  });
+
+  const content = llmResp.choices[0]?.message?.content;
+  if (!content) {
+    res.status(500).json({ error: "Failed to generate place descriptions" });
+    return;
+  }
+
+  let parsed2: any;
+  try {
+    parsed2 = JSON.parse(content);
+  } catch {
+    res.status(500).json({ error: "Failed to parse place descriptions" });
+    return;
+  }
+
+  const llmPlaces: any[] = Array.isArray(parsed2.places) ? parsed2.places : [];
+
+  // Match LLM output back to candidates by position (same order); fall back to nearest by name
+  const enriched = finalCandidates.map((c, i) => {
+    const llm = llmPlaces[i] || {};
+    return {
+      id: typeof llm.id === "string" && llm.id ? llm.id : `route-place-${i}-${Math.round(c.place.lat * 1e4)}-${Math.round(c.place.lon * 1e4)}`,
+      name: c.place.name,
+      category: typeof llm.category === "string" ? llm.category : c.place.type,
+      yearBuilt: typeof llm.yearBuilt === "string" ? llm.yearBuilt : undefined,
+      tags: Array.isArray(llm.tags) ? llm.tags.slice(0, 4) : undefined,
+      summary:
+        typeof llm.summary === "string" && llm.summary.trim().length > 0
+          ? llm.summary.trim()
+          : `A notable ${c.place.type} along your route.`,
+      facts: Array.isArray(llm.facts) && llm.facts.length > 0
+        ? llm.facts.slice(0, 3).map(String)
+        : ["A real place verified on OpenStreetMap, but we don't have detailed history yet."],
+      latitude: c.place.lat,
+      longitude: c.place.lon,
+      address: typeof llm.address === "string" && llm.address ? llm.address : undefined,
+      progressMeters: c.progressMeters,
+      offsetMeters: c.offsetMeters,
+    };
+  });
+
+  const result = { places: enriched };
+  setLLMCache(cacheKey, result);
+  res.json(result);
 });
 
 export default router;

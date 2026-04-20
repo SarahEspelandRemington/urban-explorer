@@ -32,7 +32,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
     - Native: `react-native-maps` MapView with `onRegionChangeComplete`
     - Web: Leaflet with OpenStreetMap tiles (dynamically loaded), full marker interaction and place card overlay
     - "Finding places..." loading badge shown during map-triggered fetches
-  - **Walk Mode**: continuous GPS tracking with proximity-based discovery and text-to-speech narration
+  - **Walk Mode**: pre-walk planning (start/end address) with OSRM pedestrian routing and pre-fetched places along the route, then continuous GPS tracking with proximity + route-progress gated narration. Plan screen at `/walk-plan` hands off `plannedRoute` to walk-mode via `WalkModeContext`. Server endpoints: `POST /api/explore/route` (OSRM) and `POST /api/explore/places-along-route` (Overpass + LLM blurbs, geometry-signature cache).
     - `WalkModeContext` manages location watching, proximity detection (~50m), and narration queue
     - `useNarration` hook wraps expo-speech (native) / Web Speech API with queue, pause/resume/skip
     - Platform-specific maps (native MapView vs Leaflet web map)

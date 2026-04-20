@@ -157,3 +157,52 @@ export interface WalkNarrationResponse {
   /** Natural-sounding narration text for TTS */
   narration: string;
 }
+
+export interface LatLng {
+  latitude: number;
+  longitude: number;
+}
+
+export interface RouteRequest {
+  start: LatLng;
+  end: LatLng;
+  /** Optional intermediate waypoints, in order, between start and end */
+  waypoints?: LatLng[];
+}
+
+export interface RouteResponse {
+  /** Route polyline as ordered [latitude, longitude] pairs */
+  geometry: number[][];
+  distanceMeters: number;
+  durationSeconds: number;
+}
+
+export interface PlacesAlongRouteRequest {
+  /** Route polyline as ordered [latitude, longitude] pairs */
+  geometry: number[][];
+  /** Maximum number of places to return (default 8) */
+  maxPlaces?: number;
+  /** How far from the route to look for places, in meters (default 120) */
+  corridorMeters?: number;
+}
+
+export interface RoutePlace {
+  id: string;
+  name: string;
+  category: string;
+  yearBuilt?: string;
+  tags?: string[];
+  summary: string;
+  facts: string[];
+  latitude: number;
+  longitude: number;
+  address?: string;
+  /** Distance from the route start to the closest point on the route, in meters */
+  progressMeters: number;
+  /** Perpendicular distance from the route to the place, in meters */
+  offsetMeters: number;
+}
+
+export interface PlacesAlongRouteResponse {
+  places: RoutePlace[];
+}

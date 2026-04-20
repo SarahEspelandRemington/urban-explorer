@@ -30,6 +30,10 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="place-detail" options={{ headerShown: false }} />
       <Stack.Screen
+        name="walk-plan"
+        options={{ headerShown: false, animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
         name="walk-mode"
         options={{ headerShown: false, gestureEnabled: false, animation: "slide_from_bottom" }}
       />
