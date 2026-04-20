@@ -68,7 +68,19 @@ export default function WalkModeScreen() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     walk.stopWalk();
     walk.setPlannedRoute(null);
-    router.back();
+    // Always land on the home/Explore tab so the user can immediately switch
+    // into "Explore this location" — `router.back()` would have dropped them
+    // back on the walk-plan screen, which was confusing on the sidewalk.
+    router.dismissAll?.();
+    router.replace("/(tabs)");
+  };
+
+  const handleSwitchToExplore = () => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    walk.stopWalk();
+    walk.setPlannedRoute(null);
+    router.dismissAll?.();
+    router.replace("/(tabs)");
   };
 
   const totalStories = planned ? planned.places.length : walk.nearbyPlaces.length;
@@ -89,10 +101,18 @@ export default function WalkModeScreen() {
             onPress={handleStop}
             hitSlop={20}
             accessibilityRole="button"
-            accessibilityLabel="End walk and go back"
-            style={styles.headerButton}
+            accessibilityLabel="End walk and return to home"
+            style={({ pressed }) => [
+              styles.headerHomeButton,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
           >
-            <Feather name="x" size={24} color={colors.foreground} />
+            <Feather name="home" size={16} color={colors.foreground} />
+            <Text style={[styles.headerHomeText, { color: colors.foreground }]}>Home</Text>
           </Pressable>
           <View style={styles.walkingIndicator}>
             <View style={[styles.liveDot, { backgroundColor: "#22c55e" }]} />
@@ -297,6 +317,23 @@ export default function WalkModeScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
+          onPress={handleSwitchToExplore}
+          style={({ pressed }) => [
+            styles.exploreButton,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              opacity: pressed ? 0.85 : 1,
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="End walk and explore this location instead"
+        >
+          <Feather name="compass" size={18} color={colors.foreground} />
+          <Text style={[styles.exploreText, { color: colors.foreground }]}>Explore Here</Text>
+        </Pressable>
+        <Pressable
           onPress={handleStop}
           style={({ pressed }) => [
             styles.stopButton,
@@ -419,8 +456,25 @@ const styles = StyleSheet.create({
     maxWidth: 200,
   },
   placeChipText: { fontSize: 12, fontFamily: "Inter_500Medium", flexShrink: 1 },
-  bottomBar: { paddingHorizontal: 16, paddingTop: 8 },
+  bottomBar: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    flexDirection: "row",
+    gap: 10,
+  },
+  exploreButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  exploreText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   stopButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -429,4 +483,14 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   stopText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  headerHomeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  headerHomeText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
 });
