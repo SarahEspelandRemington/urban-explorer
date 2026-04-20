@@ -42,11 +42,11 @@ export default function PlaceDetailScreen() {
 
   const lat = parseFloat(params.latitude || "0");
   const lng = parseFloat(params.longitude || "0");
-  const basicFacts = React.useMemo(() => {
-    try { return params.facts ? JSON.parse(params.facts) : []; } catch { return []; }
+  const basicFacts = React.useMemo<string[]>(() => {
+    try { return params.facts ? (JSON.parse(params.facts) as string[]) : []; } catch { return []; }
   }, [params.facts]);
-  const tags = React.useMemo(() => {
-    try { return params.tags ? JSON.parse(params.tags) : []; } catch { return []; }
+  const tags = React.useMemo<string[]>(() => {
+    try { return params.tags ? (JSON.parse(params.tags) as string[]) : []; } catch { return []; }
   }, [params.tags]);
   const placeId = React.useMemo(() => params.name ? `${params.name}-${lat}-${lng}` : "", [params.name, lat, lng]);
   const saved = isPlaceSaved(placeId);
