@@ -27,8 +27,10 @@ function formatDuration(ms: number): string {
 }
 
 function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)}m`;
-  return `${(meters / 1000).toFixed(1)}km`;
+  const feet = meters * 3.28084;
+  if (feet < 528) return `${Math.round(feet)} ft`;
+  const miles = meters * 0.000621371;
+  return `${miles.toFixed(2)} mi`;
 }
 
 export default function WalkModeScreen() {

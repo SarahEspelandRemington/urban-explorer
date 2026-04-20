@@ -41,9 +41,11 @@ interface RoutePlace {
   offsetMeters: number;
 }
 
-function formatMeters(m: number): string {
-  if (m < 1000) return `${Math.round(m)}m`;
-  return `${(m / 1000).toFixed(2)}km`;
+function formatDistance(m: number): string {
+  const feet = m * 3.28084;
+  if (feet < 528) return `${Math.round(feet)} ft`;
+  const miles = m * 0.000621371;
+  return `${miles.toFixed(2)} mi`;
 }
 
 function formatDuration(seconds: number): string {
@@ -66,7 +68,7 @@ export default function WalkPlanScreen() {
   const [end, setEnd] = useState<Waypoint | null>(null);
   const [startLabel, setStartLabel] = useState<string | null>(null);
   const [endLabel, setEndLabel] = useState<string | null>(null);
-  const [waypoints, setWaypoints] = useState<Waypoint[]>([]);
+  const [bendPoint, setBendPoint] = useState<Waypoint | null>(null);
   const [geometry, setGeometry] = useState<[number, number][]>([]);
   const [distanceMeters, setDistanceMeters] = useState(0);
   const [durationSeconds, setDurationSeconds] = useState(0);
@@ -121,7 +123,7 @@ export default function WalkPlanScreen() {
   };
 
   const fetchRouteAndPlaces = async (
-    s: Waypoint, e: Waypoint, wps: Waypoint[],
+    s: Waypoint, e: Waypoint, bend: Waypoint | null,
   ) => {
     const myVersion = ++planVersionRef.current;
     if (planAbortRef.current) {
@@ -146,7 +148,7 @@ export default function WalkPlanScreen() {
         body: JSON.stringify({
           start: { latitude: s.latitude, longitude: s.longitude },
           end: { latitude: e.latitude, longitude: e.longitude },
-          waypoints: wps.map((w) => ({ latitude: w.latitude, longitude: w.longitude })),
+          waypoints: bend ? [{ latitude: bend.latitude, longitude: bend.longitude }] : [],
         }),
         signal: controller.signal,
       });
@@ -170,7 +172,7 @@ export default function WalkPlanScreen() {
         const placesRes = await fetch(`${API_BASE}/api/explore/places-along-route`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ geometry: geom, maxPlaces: 8, corridorMeters: 120 }),
+          body: JSON.stringify({ geometry: geom, maxPlaces: 18, corridorMeters: 70 }),
           signal: controller.signal,
         });
         if (planVersionRef.current !== myVersion) return;
@@ -231,7 +233,8 @@ export default function WalkPlanScreen() {
       return;
     }
 
-    await fetchRouteAndPlaces(s, e, waypoints);
+    setBendPoint(null);
+    await fetchRouteAndPlaces(s, e, null);
   };
 
   const handleStartWalk = () => {
@@ -376,32 +379,21 @@ export default function WalkPlanScreen() {
         <RoutePlanMap
           start={start}
           end={end}
-          waypoints={waypoints}
+          bendPoint={bendPoint}
           geometry={geometry}
           places={places}
           excludedPlaceIds={excluded}
           onMoveStart={(next) => {
             setStart(next);
-            if (end) fetchRouteAndPlaces(next, end, waypoints);
+            if (end) fetchRouteAndPlaces(next, end, bendPoint);
           }}
           onMoveEnd={(next) => {
             setEnd(next);
-            if (start) fetchRouteAndPlaces(start, next, waypoints);
+            if (start) fetchRouteAndPlaces(start, next, bendPoint);
           }}
-          onMoveWaypoint={(i, next) => {
-            const updated = waypoints.map((w, idx) => (idx === i ? next : w));
-            setWaypoints(updated);
-            if (start && end) fetchRouteAndPlaces(start, end, updated);
-          }}
-          onAddWaypoint={(next) => {
-            const updated = [...waypoints, next];
-            setWaypoints(updated);
-            if (start && end) fetchRouteAndPlaces(start, end, updated);
-          }}
-          onRemoveWaypoint={(i) => {
-            const updated = waypoints.filter((_, idx) => idx !== i);
-            setWaypoints(updated);
-            if (start && end) fetchRouteAndPlaces(start, end, updated);
+          onBendRoute={(next) => {
+            setBendPoint(next);
+            if (start && end) fetchRouteAndPlaces(start, end, next);
           }}
           onTogglePlace={togglePlace}
         />
@@ -412,7 +404,7 @@ export default function WalkPlanScreen() {
           <View style={styles.summaryRow}>
             <Feather name="map-pin" size={14} color={colors.mutedForeground} />
             <Text style={[styles.summaryText, { color: colors.foreground }]}>
-              {formatMeters(distanceMeters)}
+              {formatDistance(distanceMeters)}
             </Text>
             <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
             <Feather name="clock" size={14} color={colors.mutedForeground} />
@@ -428,7 +420,7 @@ export default function WalkPlanScreen() {
           <Text style={[styles.summaryHint, { color: colors.mutedForeground }]}>
             {Platform.OS === "web"
               ? "Tap a place to skip or include it."
-              : "Drag the green or red pin to adjust. Long-press the map to add a waypoint. Tap a marker to skip a story."}
+              : "Drag the green or red pin to adjust the start or end. Drag the small handle on the route to bend it. Tap a marker to skip a story."}
           </Text>
         </View>
       )}

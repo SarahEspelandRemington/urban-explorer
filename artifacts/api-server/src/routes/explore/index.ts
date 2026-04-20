@@ -752,7 +752,7 @@ router.post("/explore/route", async (req, res) => {
 
   const points = [
     { lat: start.latitude, lng: start.longitude },
-    ...(waypoints || []).map((w) => ({ lat: w.latitude, lng: w.longitude })),
+    ...(waypoints || []).map((w: { latitude: number; longitude: number }) => ({ lat: w.latitude, lng: w.longitude })),
     { lat: end.latitude, lng: end.longitude },
   ];
 
@@ -881,15 +881,17 @@ async function fetchOSMPlacesInBoundingBox(bbox: {
 }): Promise<OSMPlace[]> {
   const { south, west, north, east } = bbox;
   const query = `
-[out:json][timeout:8];
+[out:json][timeout:10];
 (
   nwr["historic"](${south},${west},${north},${east});
   nwr["heritage"](${south},${west},${north},${east});
-  nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](${south},${west},${north},${east});
-  nwr["name"]["building"~"^(church|cathedral|chapel|mosque|synagogue|temple|civic|public|commercial|industrial|warehouse|train_station|hotel)$"](${south},${west},${north},${east});
+  nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint|hotel)$"](${south},${west},${north},${east});
+  nwr["name"]["building"~"^(church|cathedral|chapel|mosque|synagogue|temple|civic|public|commercial|industrial|warehouse|train_station|hotel|theatre|school|university|college|hospital|government|apartments|residential|office)$"](${south},${west},${north},${east});
+  nwr["amenity"~"^(theatre|library|cinema|townhall|courthouse|university|college|school|place_of_worship|marketplace)$"]["name"](${south},${west},${north},${east});
   nwr["memorial"](${south},${west},${north},${east});
+  nwr["man_made"~"^(tower|bridge|obelisk|water_tower|lighthouse)$"]["name"](${south},${west},${north},${east});
 );
-out center body 80;
+out center body 250;
 `;
 
   const controller = new AbortController();
@@ -959,8 +961,8 @@ router.post("/explore/places-along-route", async (req, res) => {
     return;
   }
 
-  const corridor = corridorMeters ?? 120;
-  const cap = maxPlaces ?? 8;
+  const corridor = corridorMeters ?? 70;
+  const cap = maxPlaces ?? 18;
 
   const bbox = routeBoundingBox(geom, corridor);
   if (!bbox) {
@@ -986,6 +988,7 @@ router.post("/explore/places-along-route", async (req, res) => {
   }
 
   const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox);
+  console.log(`[places-along-route] geom=${geom.length} corridor=${corridor} bbox-osm=${osmPlaces.length}`);
 
   const candidates = osmPlaces
     .map((p) => {
@@ -995,8 +998,9 @@ router.post("/explore/places-along-route", async (req, res) => {
     .filter((c) => c.offsetMeters <= corridor)
     .sort((a, b) => a.progressMeters - b.progressMeters);
 
-  // Space-out: skip places that are too close (along the route) to one already chosen
-  const minSpacing = Math.max(80, Math.floor(geom.length > 0 ? 0 : 0) + 80);
+  // Space-out: skip places that are too close (along the route) to one already chosen.
+  // Smaller spacing = more density of stories along the walk.
+  const minSpacing = 45;
   const spaced: typeof candidates = [];
   let lastProgress = -Infinity;
   for (const c of candidates) {
@@ -1008,6 +1012,7 @@ router.post("/explore/places-along-route", async (req, res) => {
   }
 
   const finalCandidates = spaced.slice(0, cap);
+  console.log(`[places-along-route] candidates=${candidates.length} spaced=${spaced.length} final=${finalCandidates.length}`);
 
   if (finalCandidates.length === 0) {
     res.json({ places: [] });
@@ -1062,29 +1067,39 @@ Respond in JSON format:
 
 Return one entry per input place, in the same order. Be concise — these blurbs are read aloud while walking.`;
 
-  const llmResp = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    max_completion_tokens: 2500,
-    messages: [
-      { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: `Generate brief walking-tour blurbs for these places along my route:\n${osmContext}`,
-      },
-    ],
-    response_format: { type: "json_object" },
-  });
+  let llmResp;
+  try {
+    llmResp = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      max_completion_tokens: 4000,
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Generate brief walking-tour blurbs for these places along my route:\n${osmContext}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+  } catch (e: any) {
+    console.error("[places-along-route] OpenAI error:", e?.message || e);
+    res.status(500).json({ error: "LLM call failed", detail: e?.message || String(e) });
+    return;
+  }
 
   const content = llmResp.choices[0]?.message?.content;
+  const finishReason = llmResp.choices[0]?.finish_reason;
+  console.log(`[places-along-route] llm finish=${finishReason} contentLen=${content?.length || 0}`);
   if (!content) {
-    res.status(500).json({ error: "Failed to generate place descriptions" });
+    res.status(500).json({ error: "Failed to generate place descriptions", finishReason });
     return;
   }
 
   let parsed2: any;
   try {
     parsed2 = JSON.parse(content);
-  } catch {
+  } catch (e: any) {
+    console.error("[places-along-route] JSON parse fail:", e?.message, "head=", content.slice(0, 200));
     res.status(500).json({ error: "Failed to parse place descriptions" });
     return;
   }

@@ -20,7 +20,10 @@ function formatWalkDistance(meters?: number): string {
     const mins = Math.round(meters / 80);
     return `${mins} min`;
   }
-  return `${(meters / 1000).toFixed(1)} km`;
+  const feet = meters * 3.28084;
+  if (feet < 528) return `${Math.round(feet)} ft`;
+  const miles = meters * 0.000621371;
+  return `${miles.toFixed(2)} mi`;
 }
 
 interface PlaceCardProps {

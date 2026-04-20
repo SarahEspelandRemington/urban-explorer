@@ -19,26 +19,22 @@ interface Waypoint {
 interface RoutePlanMapProps {
   start: Waypoint | null;
   end: Waypoint | null;
-  waypoints: Waypoint[];
+  bendPoint: Waypoint | null;
   geometry: [number, number][];
   places: RoutePlace[];
   excludedPlaceIds: Set<string>;
   onMoveStart?: (next: Waypoint) => void;
   onMoveEnd?: (next: Waypoint) => void;
-  onMoveWaypoint?: (index: number, next: Waypoint) => void;
-  onAddWaypoint?: (next: Waypoint) => void;
-  onRemoveWaypoint?: (index: number) => void;
+  onBendRoute?: (next: Waypoint) => void;
   onTogglePlace?: (id: string) => void;
 }
 
 export function RoutePlanMap({
   start,
   end,
-  waypoints,
   geometry,
   places,
   excludedPlaceIds,
-  onRemoveWaypoint,
   onTogglePlace,
 }: RoutePlanMapProps) {
   const colors = useColors();
@@ -62,23 +58,6 @@ export function RoutePlanMap({
             </Text>
           </View>
         )}
-
-        {waypoints.map((w, i) => (
-          <View key={`wp-${i}`} style={[styles.item, { borderColor: colors.border }]}>
-            <View style={[styles.dot, { backgroundColor: "#3b82f6" }]} />
-            <Text style={[styles.itemText, { color: colors.foreground }]}>
-              Waypoint {i + 1}
-            </Text>
-            <Pressable
-              onPress={() => onRemoveWaypoint?.(i)}
-              accessibilityRole="button"
-              accessibilityLabel={`Remove waypoint ${i + 1}`}
-              hitSlop={8}
-            >
-              <Feather name="x" size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </View>
-        ))}
 
         {end && (
           <View style={[styles.item, { borderColor: colors.border }]}>

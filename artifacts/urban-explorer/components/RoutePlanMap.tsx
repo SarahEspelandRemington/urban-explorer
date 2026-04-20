@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import MapView, {
   LatLng,
-  LongPressEvent,
   Marker,
   MarkerDragStartEndEvent,
   Polyline,
@@ -26,30 +25,34 @@ interface Waypoint {
 interface RoutePlanMapProps {
   start: Waypoint | null;
   end: Waypoint | null;
-  waypoints: Waypoint[];
+  bendPoint: Waypoint | null;
   geometry: [number, number][];
   places: RoutePlace[];
   excludedPlaceIds: Set<string>;
   onMoveStart?: (next: Waypoint) => void;
   onMoveEnd?: (next: Waypoint) => void;
-  onMoveWaypoint?: (index: number, next: Waypoint) => void;
-  onAddWaypoint?: (next: Waypoint) => void;
-  onRemoveWaypoint?: (index: number) => void;
+  onBendRoute?: (next: Waypoint) => void;
   onTogglePlace?: (id: string) => void;
+}
+
+function midpointOfGeometry(geometry: [number, number][]): Waypoint | null {
+  if (geometry.length < 2) return null;
+  // Walk along the polyline halfway by point-count (good enough for a drag handle)
+  const idx = Math.floor(geometry.length / 2);
+  const [lat, lng] = geometry[idx];
+  return { latitude: lat, longitude: lng };
 }
 
 export function RoutePlanMap({
   start,
   end,
-  waypoints,
+  bendPoint,
   geometry,
   places,
   excludedPlaceIds,
   onMoveStart,
   onMoveEnd,
-  onMoveWaypoint,
-  onAddWaypoint,
-  onRemoveWaypoint,
+  onBendRoute,
   onTogglePlace,
 }: RoutePlanMapProps) {
   const colors = useColors();
@@ -58,17 +61,18 @@ export function RoutePlanMap({
   const polyline: LatLng[] =
     geometry.length > 0
       ? geometry.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
-      : [start, ...waypoints, end].filter(Boolean).map((p) => ({
+      : [start, end].filter(Boolean).map((p) => ({
           latitude: p!.latitude,
           longitude: p!.longitude,
         }));
+
+  const handlePoint = bendPoint ?? midpointOfGeometry(geometry);
 
   useEffect(() => {
     if (!mapRef.current) return;
     const points: LatLng[] = [];
     if (start) points.push({ latitude: start.latitude, longitude: start.longitude });
     if (end) points.push({ latitude: end.latitude, longitude: end.longitude });
-    waypoints.forEach((w) => points.push({ latitude: w.latitude, longitude: w.longitude }));
     geometry.forEach(([lat, lng]) => points.push({ latitude: lat, longitude: lng }));
     if (points.length >= 2) {
       mapRef.current.fitToCoordinates(points, {
@@ -83,7 +87,7 @@ export function RoutePlanMap({
         longitudeDelta: 0.01,
       });
     }
-  }, [start, end, waypoints, geometry]);
+  }, [start, end, geometry]);
 
   const initialRegion = start
     ? {
@@ -106,12 +110,6 @@ export function RoutePlanMap({
         longitudeDelta: 0.05,
       };
 
-  const handleLongPress = (e: LongPressEvent) => {
-    if (!onAddWaypoint) return;
-    const c = e.nativeEvent.coordinate;
-    onAddWaypoint({ latitude: c.latitude, longitude: c.longitude });
-  };
-
   return (
     <View style={styles.container}>
       <MapView
@@ -119,7 +117,6 @@ export function RoutePlanMap({
         style={styles.map}
         provider={PROVIDER_DEFAULT}
         initialRegion={initialRegion}
-        onLongPress={handleLongPress}
       >
         {polyline.length >= 2 && (
           <Polyline
@@ -160,23 +157,28 @@ export function RoutePlanMap({
           />
         )}
 
-        {waypoints.map((w, i) => (
+        {handlePoint && geometry.length >= 2 && (
           <Marker
-            key={`wp-${i}`}
-            coordinate={{ latitude: w.latitude, longitude: w.longitude }}
-            title={`Waypoint ${i + 1}`}
-            description="Long-press to remove"
-            pinColor="#3b82f6"
+            coordinate={{
+              latitude: handlePoint.latitude,
+              longitude: handlePoint.longitude,
+            }}
+            title="Drag to reshape route"
+            anchor={{ x: 0.5, y: 0.5 }}
             draggable
+            tracksViewChanges={false}
             onDragEnd={(e: MarkerDragStartEndEvent) =>
-              onMoveWaypoint?.(i, {
+              onBendRoute?.({
                 latitude: e.nativeEvent.coordinate.latitude,
                 longitude: e.nativeEvent.coordinate.longitude,
               })
             }
-            onCalloutPress={() => onRemoveWaypoint?.(i)}
-          />
-        ))}
+          >
+            <View style={[styles.bendHandleOuter, { borderColor: colors.primary }]}>
+              <View style={[styles.bendHandleInner, { backgroundColor: colors.primary }]} />
+            </View>
+          </Marker>
+        )}
 
         {places.map((p) => {
           const excluded = excludedPlaceIds.has(p.id);
@@ -200,4 +202,18 @@ export function RoutePlanMap({
 const styles = StyleSheet.create({
   container: { flex: 1, borderRadius: 16, overflow: "hidden" },
   map: { flex: 1 },
+  bendHandleOuter: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 3,
+    backgroundColor: "white",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bendHandleInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
 });
