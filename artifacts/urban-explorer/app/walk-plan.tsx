@@ -172,14 +172,31 @@ export default function WalkPlanScreen() {
         const placesRes = await fetch(`${API_BASE}/api/explore/places-along-route`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ geometry: geom, maxPlaces: 18, corridorMeters: 70 }),
+          body: JSON.stringify({ geometry: geom, maxPlaces: 12, corridorMeters: 70 }),
           signal: controller.signal,
         });
         if (planVersionRef.current !== myVersion) return;
         if (placesRes.ok) {
           const placesData = await placesRes.json();
           if (planVersionRef.current !== myVersion) return;
-          setPlaces(Array.isArray(placesData.places) ? placesData.places : []);
+          const placesList = Array.isArray(placesData.places) ? placesData.places : [];
+          setPlaces(placesList);
+
+          // Pre-warm the narration cache on the server in the background so that
+          // when the user starts the walk, narration responses are instant.
+          for (const p of placesList) {
+            fetch(`${API_BASE}/api/explore/walk-narration`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                placeName: p.name,
+                category: p.category,
+                summary: p.summary,
+                fact: Array.isArray(p.facts) ? p.facts[0] : undefined,
+              }),
+              signal: controller.signal,
+            }).catch(() => {});
+          }
         }
       }
     } catch (err: any) {

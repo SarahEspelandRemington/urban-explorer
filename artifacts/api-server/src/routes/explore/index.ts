@@ -712,6 +712,13 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact } = parsed.data;
 
+  const narrationCacheKey = `narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
+  if (cachedNarration) {
+    res.json(cachedNarration);
+    return;
+  }
+
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-nano",
     max_completion_tokens: 256,
@@ -744,7 +751,9 @@ Rules for natural-sounding speech:
     return;
   }
 
-  res.json({ narration: content.trim() });
+  const result = { narration: content.trim() };
+  setLLMCache(narrationCacheKey, result);
+  res.json(result);
 });
 
 const OSRM_API = "https://router.project-osrm.org";
@@ -969,7 +978,7 @@ router.post("/explore/places-along-route", async (req, res) => {
   }
 
   const corridor = corridorMeters ?? 70;
-  const cap = maxPlaces ?? 18;
+  const cap = maxPlaces ?? 12;
 
   const bbox = routeBoundingBox(geom, corridor);
   if (!bbox) {
@@ -1026,23 +1035,21 @@ router.post("/explore/places-along-route", async (req, res) => {
     return;
   }
 
-  const osmContext = finalCandidates
-    .map((c, i) => {
-      const t = c.place.tags;
-      const details: string[] = [];
-      if (t["addr:street"]) {
-        const num = sanitizeOSMText(t["addr:housenumber"] || "", 10);
-        const street = sanitizeOSMText(t["addr:street"], 60);
-        details.push(`address: ${num} ${street}`.trim());
-      }
-      if (t.start_date) details.push(`built: ${sanitizeOSMText(t.start_date, 20)}`);
-      if (t.architect) details.push(`architect: ${sanitizeOSMText(t.architect, 60)}`);
-      if (t.heritage) details.push(`heritage site`);
-      if (t.historic) details.push(`historic: ${sanitizeOSMText(t.historic, 30)}`);
-      const extra = details.length ? ` (${details.join(", ")})` : "";
-      return `  ${i + 1}. "${sanitizeOSMText(c.place.name, 100)}" [${sanitizeOSMText(c.place.type, 30)}] at ${c.place.lat.toFixed(5)},${c.place.lon.toFixed(5)}${extra}`;
-    })
-    .join("\n");
+  const formatCandidateLine = (c: typeof finalCandidates[number], i: number) => {
+    const t = c.place.tags;
+    const details: string[] = [];
+    if (t["addr:street"]) {
+      const num = sanitizeOSMText(t["addr:housenumber"] || "", 10);
+      const street = sanitizeOSMText(t["addr:street"], 60);
+      details.push(`address: ${num} ${street}`.trim());
+    }
+    if (t.start_date) details.push(`built: ${sanitizeOSMText(t.start_date, 20)}`);
+    if (t.architect) details.push(`architect: ${sanitizeOSMText(t.architect, 60)}`);
+    if (t.heritage) details.push(`heritage site`);
+    if (t.historic) details.push(`historic: ${sanitizeOSMText(t.historic, 30)}`);
+    const extra = details.length ? ` (${details.join(", ")})` : "";
+    return `  ${i + 1}. "${sanitizeOSMText(c.place.name, 100)}" [${sanitizeOSMText(c.place.type, 30)}] at ${c.place.lat.toFixed(5)},${c.place.lon.toFixed(5)}${extra}`;
+  };
 
   const systemPrompt = `You are a hyper-local urban historian writing brief, vivid blurbs for a walking tour app.
 
@@ -1074,44 +1081,57 @@ Respond in JSON format:
 
 Return one entry per input place, in the same order. Be concise — these blurbs are read aloud while walking.`;
 
-  let llmResp;
+  // Split candidates into chunks and run LLM calls in parallel — drops total
+  // latency from ~30s (one big call) to ~5-8s (slowest chunk).
+  const CHUNK_SIZE = 4;
+  const chunks: { offset: number; items: typeof finalCandidates }[] = [];
+  for (let i = 0; i < finalCandidates.length; i += CHUNK_SIZE) {
+    chunks.push({ offset: i, items: finalCandidates.slice(i, i + CHUNK_SIZE) });
+  }
+
+  const t0 = Date.now();
+  // Pre-allocate the slot array so each chunk writes into the right candidate
+  // index even if the LLM returns fewer items than requested for some chunks.
+  const llmPlaces: any[] = new Array(finalCandidates.length).fill(null);
   try {
-    llmResp = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      max_completion_tokens: 4000,
-      messages: [
-        { role: "system", content: systemPrompt },
-        {
-          role: "user",
-          content: `Generate brief walking-tour blurbs for these places along my route:\n${osmContext}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    });
+    await Promise.all(
+      chunks.map(async ({ offset, items }) => {
+        const ctx = items.map((c, j) => formatCandidateLine(c, j)).join("\n");
+        const resp = await openai.chat.completions.create({
+          model: "gpt-4.1-mini",
+          max_completion_tokens: 1400,
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: `Generate brief walking-tour blurbs for these places along my route:\n${ctx}`,
+            },
+          ],
+          response_format: { type: "json_object" },
+        });
+        const c = resp.choices[0]?.message?.content;
+        if (!c) return;
+        let chunkPlaces: any[] = [];
+        try {
+          const parsedChunk = JSON.parse(c);
+          chunkPlaces = Array.isArray(parsedChunk.places) ? parsedChunk.places : [];
+        } catch {
+          return;
+        }
+        // Write each returned place into its corresponding global slot. If the
+        // LLM short-returned, leftover slots stay null and the candidate falls
+        // back to OSM defaults below.
+        for (let j = 0; j < items.length && j < chunkPlaces.length; j++) {
+          llmPlaces[offset + j] = chunkPlaces[j];
+        }
+      }),
+    );
   } catch (e: any) {
     console.error("[places-along-route] OpenAI error:", e?.message || e);
     res.status(500).json({ error: "LLM call failed", detail: e?.message || String(e) });
     return;
   }
-
-  const content = llmResp.choices[0]?.message?.content;
-  const finishReason = llmResp.choices[0]?.finish_reason;
-  console.log(`[places-along-route] llm finish=${finishReason} contentLen=${content?.length || 0}`);
-  if (!content) {
-    res.status(500).json({ error: "Failed to generate place descriptions", finishReason });
-    return;
-  }
-
-  let parsed2: any;
-  try {
-    parsed2 = JSON.parse(content);
-  } catch (e: any) {
-    console.error("[places-along-route] JSON parse fail:", e?.message, "head=", content.slice(0, 200));
-    res.status(500).json({ error: "Failed to parse place descriptions" });
-    return;
-  }
-
-  const llmPlaces: any[] = Array.isArray(parsed2.places) ? parsed2.places : [];
+  console.log(`[places-along-route] ${chunks.length} parallel LLM chunks in ${Date.now() - t0}ms`);
 
   // Match LLM output back to candidates by position (same order); fall back to nearest by name
   const enriched = finalCandidates.map((c, i) => {
