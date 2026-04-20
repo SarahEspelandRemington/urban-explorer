@@ -336,6 +336,7 @@ export default function WalkPlanScreen() {
           dotColor="#ef4444"
           editable={!isPlanning}
           returnKeyType="search"
+          nearLocation={startLabel || startQuery}
           rightAdornment={
             isResolving === "end" ? (
               <ActivityIndicator size="small" color={colors.primary} />

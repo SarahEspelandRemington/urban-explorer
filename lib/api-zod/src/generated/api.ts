@@ -80,6 +80,12 @@ export const SuggestLocationsBody = zod.object({
   query: zod
     .string()
     .describe("Partial location text the user has typed so far"),
+  nearLocation: zod
+    .string()
+    .optional()
+    .describe(
+      "Optional context location (e.g. another address the user already entered) used to bias suggestions toward the same city/region",
+    ),
 });
 
 export const SuggestLocationsResponse = zod.object({

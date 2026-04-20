@@ -418,19 +418,24 @@ router.post("/explore/suggest-locations", async (req, res) => {
     return;
   }
 
-  const { query } = parsed.data;
+  const { query, nearLocation } = parsed.data;
 
   if (query.trim().length < 2) {
     res.json({ suggestions: [] });
     return;
   }
 
-  const suggestCacheKey = `suggest:${query.trim().toLowerCase()}`;
+  const nearTrimmed = (nearLocation ?? "").trim().slice(0, 200);
+  const suggestCacheKey = `suggest:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
   const cachedSuggest = getLLMCache(suggestCacheKey);
   if (cachedSuggest) {
     res.json(cachedSuggest);
     return;
   }
+
+  const nearClause = nearTrimmed
+    ? `\n\nIMPORTANT — LOCATION CONTEXT: The user has already entered another address: "${nearTrimmed}". Strongly prefer suggestions in the SAME city / metropolitan area as that address, unless the user's query explicitly references a different city or country. Walking routes only make sense within one city.`
+    : "";
 
   const response = await openai.chat.completions.create({
     model: "gpt-4.1-nano",
@@ -451,11 +456,13 @@ Respond in JSON format:
   ]
 }
 
-Return exactly 5 suggestions. Each name should be specific enough to geocode. Keep descriptions under 10 words.`,
+Return exactly 5 suggestions. Each name should be specific enough to geocode. Keep descriptions under 10 words.${nearClause}`,
       },
       {
         role: "user",
-        content: `Suggest locations matching: "${query}"`,
+        content: nearTrimmed
+          ? `Suggest locations matching: "${query}" — context: near "${nearTrimmed}"`
+          : `Suggest locations matching: "${query}"`,
       },
     ],
     response_format: { type: "json_object" },

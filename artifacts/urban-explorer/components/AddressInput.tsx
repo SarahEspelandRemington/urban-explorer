@@ -31,6 +31,8 @@ interface AddressInputProps {
   returnKeyType?: "next" | "search" | "done" | "go";
   rightAdornment?: React.ReactNode;
   testID?: string;
+  /** Optional context address to bias suggestions toward the same city/region. */
+  nearLocation?: string | null;
 }
 
 export function AddressInput({
@@ -44,6 +46,7 @@ export function AddressInput({
   returnKeyType = "next",
   rightAdornment,
   testID,
+  nearLocation,
 }: AddressInputProps) {
   const colors = useColors();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -69,10 +72,11 @@ export function AddressInput({
     const controller = new AbortController();
     abortRef.current = controller;
     setIsLoading(true);
+    const near = (nearLocation ?? "").trim();
     fetch(`${API_BASE}/api/explore/suggest-locations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: text }),
+      body: JSON.stringify(near ? { query: text, nearLocation: near } : { query: text }),
       signal: controller.signal,
     })
       .then((r) => (r.ok ? r.json() : { suggestions: [] }))
