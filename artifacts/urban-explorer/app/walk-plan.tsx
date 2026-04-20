@@ -10,11 +10,11 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AddressInput } from "@/components/AddressInput";
 import { RoutePlanMap } from "@/components/RoutePlanMap";
 import { useWalkMode, type PlannedRoute } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
@@ -286,54 +286,62 @@ export default function WalkPlanScreen() {
       </View>
 
       <View style={styles.inputs}>
-        <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.card }]}>
-          <View style={[styles.dot, { backgroundColor: "#22c55e" }]} />
-          <TextInput
-            style={[styles.input, { color: colors.foreground }]}
-            placeholder="Start address"
-            placeholderTextColor={colors.mutedForeground}
-            value={startQuery}
-            onChangeText={(t) => {
-              setStartQuery(t);
-              setStart(null);
-              setStartLabel(null);
-            }}
-            returnKeyType="next"
-            editable={!isPlanning}
-          />
-          <Pressable
-            onPress={useMyCurrentLocationForStart}
-            accessibilityRole="button"
-            accessibilityLabel="Use my current location for start"
-            hitSlop={8}
-            disabled={isPlanning || isResolving === "start"}
-          >
-            {isResolving === "start" ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Feather name="crosshair" size={18} color={colors.primary} />
-            )}
-          </Pressable>
-        </View>
+        <AddressInput
+          value={startQuery}
+          onChangeText={(t) => {
+            setStartQuery(t);
+            setStart(null);
+            setStartLabel(null);
+          }}
+          onSelectSuggestion={(s) => {
+            setStartQuery(s.name);
+            setStart(null);
+            setStartLabel(null);
+          }}
+          placeholder="Start address"
+          dotColor="#22c55e"
+          editable={!isPlanning}
+          returnKeyType="next"
+          rightAdornment={
+            <Pressable
+              onPress={useMyCurrentLocationForStart}
+              accessibilityRole="button"
+              accessibilityLabel="Use my current location for start"
+              hitSlop={8}
+              disabled={isPlanning || isResolving === "start"}
+            >
+              {isResolving === "start" ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Feather name="crosshair" size={18} color={colors.primary} />
+              )}
+            </Pressable>
+          }
+        />
 
-        <View style={[styles.inputRow, { borderColor: colors.border, backgroundColor: colors.card }]}>
-          <View style={[styles.dot, { backgroundColor: "#ef4444" }]} />
-          <TextInput
-            style={[styles.input, { color: colors.foreground }]}
-            placeholder="End address"
-            placeholderTextColor={colors.mutedForeground}
-            value={endQuery}
-            onChangeText={(t) => {
-              setEndQuery(t);
-              setEnd(null);
-              setEndLabel(null);
-            }}
-            returnKeyType="search"
-            editable={!isPlanning}
-            onSubmitEditing={handlePlanWalk}
-          />
-          {isResolving === "end" && <ActivityIndicator size="small" color={colors.primary} />}
-        </View>
+        <AddressInput
+          value={endQuery}
+          onChangeText={(t) => {
+            setEndQuery(t);
+            setEnd(null);
+            setEndLabel(null);
+          }}
+          onSelectSuggestion={(s) => {
+            setEndQuery(s.name);
+            setEnd(null);
+            setEndLabel(null);
+          }}
+          onSubmitEditing={handlePlanWalk}
+          placeholder="End address"
+          dotColor="#ef4444"
+          editable={!isPlanning}
+          returnKeyType="search"
+          rightAdornment={
+            isResolving === "end" ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : undefined
+          }
+        />
 
         {error && (
           <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
