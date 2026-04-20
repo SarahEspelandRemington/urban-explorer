@@ -15,6 +15,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LoadingMessages } from "@/components/LoadingMessages";
+import { PlaceActions } from "@/components/PlaceActions";
 import { PlaceDetailMap } from "@/components/PlaceDetailMap";
 import { PlaceTimeline } from "@/components/PlaceTimeline";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
@@ -190,6 +191,19 @@ export default function PlaceDetailScreen() {
         <Text style={[styles.summary, { color: colors.mutedForeground }]}>
           {params.summary}
         </Text>
+
+        <PlaceActions
+          place={{
+            id: placeId,
+            name: params.name,
+            category: params.category,
+            yearBuilt: params.yearBuilt,
+            summary: params.summary,
+            facts: basicFacts,
+            latitude: lat,
+            longitude: lng,
+          }}
+        />
 
         <View style={styles.mapSection}>
           <PlaceDetailMap

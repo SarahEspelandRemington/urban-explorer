@@ -15,7 +15,9 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { HeadingBanner } from "@/components/HeadingBanner";
 import { DiscoveryProvider } from "@/contexts/DiscoveryContext";
+import { HeadingProvider } from "@/contexts/HeadingContext";
 import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
@@ -63,11 +65,14 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <DiscoveryProvider>
             <WalkModeProvider>
-              <GestureHandlerRootView>
-                <KeyboardProvider>
-                  <RootLayoutNav />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
+              <HeadingProvider>
+                <GestureHandlerRootView>
+                  <KeyboardProvider>
+                    <RootLayoutNav />
+                    <HeadingBanner />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </HeadingProvider>
             </WalkModeProvider>
           </DiscoveryProvider>
         </QueryClientProvider>

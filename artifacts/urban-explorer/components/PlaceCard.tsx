@@ -5,6 +5,7 @@ import React from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
+import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
@@ -169,6 +170,19 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           <Text style={[styles.heroSummary, { color: colors.mutedForeground }]} numberOfLines={3}>
             {place.summary}
           </Text>
+
+          <PlaceActions
+            place={{
+              id: placeId,
+              name: place.name,
+              category: place.category,
+              yearBuilt: place.yearBuilt,
+              summary: place.summary,
+              facts: place.facts,
+              latitude: place.latitude,
+              longitude: place.longitude,
+            }}
+          />
         </Pressable>
       </Animated.View>
     );

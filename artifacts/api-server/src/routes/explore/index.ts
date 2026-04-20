@@ -756,6 +756,58 @@ Rules for natural-sounding speech:
   res.json(result);
 });
 
+router.post("/explore/deep-narration", async (req, res) => {
+  const parsed = GetWalkNarrationBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const { placeName, category, summary, fact } = parsed.data;
+  const yearBuilt = typeof (req.body as any)?.yearBuilt === "string" ? (req.body as any).yearBuilt : undefined;
+
+  const deepCacheKey = `deep-narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
+  if (cachedDeep) {
+    res.json(cachedDeep);
+    return;
+  }
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4.1-mini",
+    max_completion_tokens: 700,
+    messages: [
+      {
+        role: "system",
+        content: `You are a knowledgeable, captivating walking-tour guide doing a longer-form deep dive on a single place. Your narration will be read aloud by a text-to-speech engine while someone walks toward the place, so write for the EAR.
+
+Rules for natural-sounding speech:
+- Total length: roughly 150 to 220 words (about 60 to 90 seconds when spoken).
+- Open with a hook — a vivid scene, a surprising fact, a question, or a sensory detail.
+- Cover, in your own narrative flow: when it was built and why, who built or used it, one or two specific human stories or events tied to it, what makes it architecturally or culturally distinctive, and how it fits into the surrounding neighborhood today.
+- Be honest: if you're uncertain, frame as "Local lore holds that..." or "Historians believe..." rather than invent specifics.
+- Use short and medium sentences. Mix rhythms. Use commas, dashes, and ellipses for breathing room.
+- Use contractions and casual phrasing. No lists, no bullets, no headings, no quotes, no parentheses, no asterisks.
+- Spell out years and numbers as words a TTS engine will pronounce well (e.g. "eighteen ninety-two" not "1892", "around nineteen twenty" not "circa 1920").
+- End with something to look at, notice, or reflect on as the listener arrives.`,
+      },
+      {
+        role: "user",
+        content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}.\n\nWhat we already know: ${summary}${fact ? `\nAlso noted: ${fact}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
+      },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    res.status(500).json({ error: "Failed to generate deep narration" });
+    return;
+  }
+
+  const result = { narration: content.trim() };
+  setLLMCache(deepCacheKey, result);
+  res.json(result);
+});
+
 const OSRM_API = "https://router.project-osrm.org";
 
 router.post("/explore/route", async (req, res) => {
