@@ -76,12 +76,7 @@ const expensiveEndpoints = [
   "/api/explore/places-along-route",
 ];
 
-// TEMPORARY: auth disabled on explore endpoints for the NYC field test
-// (2026-04-21). The mobile app has no login UI yet, so requiring auth here
-// blocks all functionality. Re-enable by flipping this flag back to true once
-// the login flow is wired up. Anyone with the URL can hit these AI endpoints
-// while this is false — keep the rate limiter on as a partial mitigation.
-const REQUIRE_AUTH_ON_EXPLORE = false;
+const REQUIRE_AUTH_ON_EXPLORE = true;
 
 app.use("/api", generalLimiter);
 

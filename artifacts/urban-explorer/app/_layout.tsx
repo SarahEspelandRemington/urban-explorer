@@ -8,14 +8,14 @@ import {
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 import { getApiToken } from "@/lib/apiToken";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { FeedbackBridges } from "@/components/FeedbackBridges";
 import { FeedbackButton } from "@/components/FeedbackButton";
@@ -33,8 +33,26 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (isLoading) return;
+    const onLoginScreen = segments[0] === "login";
+    if (!isAuthenticated && !onLoginScreen) {
+      router.replace("/login");
+    } else if (isAuthenticated && onLoginScreen) {
+      router.replace("/(tabs)");
+    }
+  }, [isAuthenticated, isLoading, segments, router]);
+
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack.Screen
+        name="login"
+        options={{ headerShown: false, animation: "fade" }}
+      />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="place-detail" options={{ headerShown: false }} />
       <Stack.Screen
