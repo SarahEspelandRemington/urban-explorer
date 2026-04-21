@@ -19,13 +19,31 @@ export const HealthCheckResponse = zod.object({
  * Given coordinates, returns interesting historical facts and stories about nearby buildings and spaces
  * @summary Discover interesting places nearby
  */
+export const discoverPlacesBodyRadiusMin = 50;
+export const discoverPlacesBodyRadiusMax = 1000;
+
+export const discoverPlacesBodyAccuracyMin = 0;
+export const discoverPlacesBodyAccuracyMax = 10000;
+
 export const DiscoverPlacesBody = zod.object({
   latitude: zod.number().describe("Current latitude"),
   longitude: zod.number().describe("Current longitude"),
   radius: zod
     .number()
+    .min(discoverPlacesBodyRadiusMin)
+    .max(discoverPlacesBodyRadiusMax)
     .optional()
-    .describe("Search radius in meters (default 500)"),
+    .describe(
+      "Search radius in meters (default 300 for full mode, 500 for quick)",
+    ),
+  accuracy: zod
+    .number()
+    .min(discoverPlacesBodyAccuracyMin)
+    .max(discoverPlacesBodyAccuracyMax)
+    .optional()
+    .describe(
+      "Reported GPS horizontal accuracy in meters. Used to bucket the cache key so a low-accuracy fix cannot poison results for a later high-accuracy fix at the same coordinates.",
+    ),
   mode: zod
     .enum(["full", "quick"])
     .optional()

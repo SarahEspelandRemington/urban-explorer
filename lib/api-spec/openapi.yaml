@@ -314,7 +314,14 @@ components:
           description: Current longitude
         radius:
           type: number
-          description: Search radius in meters (default 500)
+          minimum: 50
+          maximum: 1000
+          description: Search radius in meters (default 300 for full mode, 500 for quick)
+        accuracy:
+          type: number
+          minimum: 0
+          maximum: 10000
+          description: Reported GPS horizontal accuracy in meters. Used to bucket the cache key so a low-accuracy fix cannot poison results for a later high-accuracy fix at the same coordinates.
         mode:
           type: string
           enum: [full, quick]

@@ -25,8 +25,18 @@ export interface DiscoverRequest {
   latitude: number;
   /** Current longitude */
   longitude: number;
-  /** Search radius in meters (default 500) */
+  /**
+   * Search radius in meters (default 300 for full mode, 500 for quick)
+   * @minimum 50
+   * @maximum 1000
+   */
   radius?: number;
+  /**
+   * Reported GPS horizontal accuracy in meters. Used to bucket the cache key so a low-accuracy fix cannot poison results for a later high-accuracy fix at the same coordinates.
+   * @minimum 0
+   * @maximum 10000
+   */
+  accuracy?: number;
   /** Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning */
   mode?: DiscoverRequestMode;
 }

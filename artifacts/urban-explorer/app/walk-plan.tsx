@@ -112,7 +112,7 @@ export default function WalkPlanScreen() {
         setError("Location permission required to use your current location.");
         return;
       }
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setStart({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
       setStartLabel("Current location");
       setStartQuery("Current location");

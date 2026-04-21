@@ -215,7 +215,7 @@ function normalizeText(s: string): string {
 
 function postProcessPlaces(places: any[], userLat: number, userLng: number, searchRadius: number): any[] {
   const validConfidence = new Set(["high", "medium", "low"]);
-  const maxDist = searchRadius * 1.25;
+  const maxDist = searchRadius * 1.10;
 
   let processed = places.filter((p: any) => {
     if (typeof p.latitude !== "number" || typeof p.longitude !== "number") return false;
@@ -278,13 +278,17 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const { latitude, longitude, radius, mode } = parsed.data;
+  const { latitude, longitude, radius, mode, accuracy } = parsed.data;
   const isQuick = mode === "quick";
-  const searchRadius = radius ?? (isQuick ? 500 : 300);
+  const requestedRadius = radius ?? (isQuick ? 500 : 300);
+  const searchRadius = Math.max(50, Math.min(1000, requestedRadius));
 
   const radiusFeet = Math.round(searchRadius * 3.281);
 
-  const discoverCacheKey = `${mode}:${searchRadius}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const accuracyBucket = typeof accuracy === "number" && Number.isFinite(accuracy)
+    ? Math.min(500, Math.round(accuracy / 25) * 25)
+    : 0;
+  const discoverCacheKey = `${mode}:${searchRadius}:${latitude.toFixed(4)},${longitude.toFixed(4)}:acc${accuracyBucket}`;
   const cachedDiscover = getLLMCache(discoverCacheKey);
   if (cachedDiscover) {
     res.json(cachedDiscover);

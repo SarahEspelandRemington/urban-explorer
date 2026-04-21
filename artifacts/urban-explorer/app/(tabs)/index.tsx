@@ -64,7 +64,9 @@ export default function ExploreScreen() {
   const [permission, requestPermission] = Location.useForegroundPermissions();
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [locationCalibrating, setLocationCalibrating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [searchRadius, setSearchRadius] = useState<150 | 300 | 500>(300);
 
   const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
@@ -81,8 +83,8 @@ export default function ExploreScreen() {
   const [mapLoading, setMapLoading] = useState(false);
   const mapPlacesRef = useRef<DiscoveredPlace[]>([]);
 
-  const places = (discoverMutation.data?.places as DiscoveredPlace[] | undefined) ?? [];
-  const areaName = discoverMutation.data?.location ?? "";
+  const [places, setPlaces] = useState<DiscoveredPlace[]>([]);
+  const [areaName, setAreaName] = useState<string>("");
 
   const allMapPlaces = useMemo(() => {
     const combined = [...places, ...mapPlaces];
@@ -135,13 +137,56 @@ export default function ExploreScreen() {
 
   const getLocation = useCallback(async () => {
     setLocationLoading(true);
+    setLocationCalibrating(false);
+    const accuracyPref =
+      Platform.OS === "web" ? Location.Accuracy.High : Location.Accuracy.BestForNavigation;
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([
+        p,
+        new Promise<T>((_, reject) =>
+          setTimeout(() => reject(new Error("location-timeout")), ms),
+        ),
+      ]);
     try {
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setLocation(loc);
-      return loc;
+      let first: Location.LocationObject;
+      try {
+        first = await withTimeout(
+          Location.getCurrentPositionAsync({ accuracy: accuracyPref }),
+          10000,
+        );
+      } catch {
+        try {
+          const last = await Location.getLastKnownPositionAsync();
+          if (last) {
+            setLocation(last);
+            return last;
+          }
+        } catch {
+          /* ignore */
+        }
+        return null;
+      }
+      const firstAcc = first.coords.accuracy ?? 9999;
+      if (firstAcc <= 50) {
+        setLocation(first);
+        return first;
+      }
+      setLocationCalibrating(true);
+      try {
+        const second = await withTimeout(
+          Location.getCurrentPositionAsync({ accuracy: accuracyPref }),
+          6000,
+        );
+        const secondAcc = second.coords.accuracy ?? 9999;
+        const best = secondAcc < firstAcc ? second : first;
+        setLocation(best);
+        return best;
+      } catch {
+        setLocation(first);
+        return first;
+      }
     } finally {
+      setLocationCalibrating(false);
       setLocationLoading(false);
     }
   }, []);
@@ -152,21 +197,37 @@ export default function ExploreScreen() {
     }
   }, [permission?.granted, location, manualCoords, getLocation]);
 
+  const discoverRequestRef = useRef(0);
   const discoverAt = useCallback(
-    (lat: number, lng: number) => {
+    (lat: number, lng: number, accuracy?: number | null, radiusOverride?: 150 | 300 | 500) => {
+      const requestId = ++discoverRequestRef.current;
+      const r = radiusOverride ?? searchRadius;
       setActiveFilters(new Set());
       setExpandedId(null);
       setMapPlaces([]);
       mapPlacesRef.current = [];
-      discoverMutation.mutate({
-        data: {
-          latitude: lat,
-          longitude: lng,
-          radius: 300,
+      discoverMutation.mutate(
+        {
+          data: {
+            latitude: lat,
+            longitude: lng,
+            radius: r,
+            ...(typeof accuracy === "number" && Number.isFinite(accuracy)
+              ? { accuracy }
+              : {}),
+          },
         },
-      });
+        {
+          onSuccess: (data: any) => {
+            // Race guard: only commit if this is still the latest request.
+            if (requestId !== discoverRequestRef.current) return;
+            setPlaces((data?.places as DiscoveredPlace[] | undefined) ?? []);
+            setAreaName((data?.location as string | undefined) ?? "");
+          },
+        },
+      );
     },
-    [discoverMutation],
+    [discoverMutation, searchRadius],
   );
 
   const mapLoadingRef = useRef(false);
@@ -228,7 +289,7 @@ export default function ExploreScreen() {
       loc = await getLocation();
     }
     if (loc) {
-      discoverAt(loc.coords.latitude, loc.coords.longitude);
+      discoverAt(loc.coords.latitude, loc.coords.longitude, loc.coords.accuracy);
     }
   }, [location, manualCoords, discoverAt, getLocation]);
 
@@ -259,7 +320,7 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     if (location && !manualCoords && !discoverMutation.data && !discoverMutation.isPending) {
-      discoverAt(location.coords.latitude, location.coords.longitude);
+      discoverAt(location.coords.latitude, location.coords.longitude, location.coords.accuracy);
     }
   }, [location]);
 
@@ -316,7 +377,14 @@ export default function ExploreScreen() {
             style={[styles.greeting, { color: colors.mutedForeground }]}
             numberOfLines={1}
           >
-            {locationLoading ? "Locating..." : areaName || "Ready to explore"}
+            {locationCalibrating
+              ? "Improving GPS accuracy…"
+              : locationLoading
+              ? "Locating…"
+              : areaName || "Ready to explore"}
+            {!locationLoading && !manualCoords && location?.coords.accuracy
+              ? `  ·  ±${Math.round(location.coords.accuracy)}m`
+              : ""}
           </Text>
           <Text style={[styles.title, { color: colors.foreground }]}>
             Discover
@@ -395,6 +463,51 @@ export default function ExploreScreen() {
           </Pressable>
         </View>
       </View>
+
+      {(hasCoords || locationLoading) && (
+        <View style={[styles.radiusRow, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+          <Text style={[styles.radiusLabel, { color: colors.mutedForeground }]}>Range</Text>
+          {([150, 300, 500] as const).map((r) => {
+            const isActive = searchRadius === r;
+            return (
+              <Pressable
+                key={`r-${r}`}
+                onPress={() => {
+                  if (r === searchRadius) return;
+                  setSearchRadius(r);
+                  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (manualCoords) {
+                    discoverAt(manualCoords.latitude, manualCoords.longitude, null, r);
+                  } else if (location) {
+                    discoverAt(
+                      location.coords.latitude,
+                      location.coords.longitude,
+                      location.coords.accuracy,
+                      r,
+                    );
+                  }
+                }}
+                style={[
+                  styles.radiusChip,
+                  { backgroundColor: isActive ? colors.foreground : colors.muted },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Set discovery range to ${r} meters`}
+                accessibilityState={{ selected: isActive }}
+              >
+                <Text
+                  style={[
+                    styles.radiusChipText,
+                    { color: isActive ? colors.background : colors.mutedForeground },
+                  ]}
+                >
+                  {r === 150 ? "Close" : r === 300 ? "Medium" : "Wide"} · {r}m
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       {showContent && allFilters.length > 1 && (
         <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
@@ -744,6 +857,31 @@ const styles = StyleSheet.create({
   filterRow: {
     borderBottomWidth: 1,
     paddingVertical: 10,
+  },
+  radiusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  radiusLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    marginRight: 4,
+  },
+  radiusChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 7,
+  },
+  radiusChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.2,
   },
   filterScroll: {
     paddingHorizontal: 16,
