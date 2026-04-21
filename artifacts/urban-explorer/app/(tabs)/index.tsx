@@ -25,6 +25,8 @@ import { PlaceMapView } from "@/components/PlaceMapView";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import { useDiscoverPlaces, useGeocodeLocation } from "@workspace/api-client-react";
+import { useFeedback } from "@/contexts/FeedbackContext";
+import { logEvent } from "@/lib/feedback";
 
 interface DiscoveredPlace {
   id: string;
@@ -58,6 +60,7 @@ function getEra(yearBuilt?: string): string | null {
 type ViewMode = "list" | "map";
 
 export default function ExploreScreen() {
+  const feedback = useFeedback();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -202,6 +205,13 @@ export default function ExploreScreen() {
     (lat: number, lng: number, accuracy?: number | null, radiusOverride?: 150 | 300 | 500) => {
       const requestId = ++discoverRequestRef.current;
       const r = radiusOverride ?? searchRadius;
+      const startedAt = Date.now();
+      logEvent("discover_request", {
+        lat: +lat.toFixed(5),
+        lng: +lng.toFixed(5),
+        radius: r,
+        acc: accuracy != null ? Math.round(accuracy) : null,
+      });
       setActiveFilters(new Set());
       setExpandedId(null);
       setMapPlaces([]);
@@ -223,6 +233,17 @@ export default function ExploreScreen() {
             if (requestId !== discoverRequestRef.current) return;
             setPlaces((data?.places as DiscoveredPlace[] | undefined) ?? []);
             setAreaName((data?.location as string | undefined) ?? "");
+            logEvent("discover_success", {
+              count: (data?.places as unknown[] | undefined)?.length ?? 0,
+              ms: Date.now() - startedAt,
+              area: data?.location ?? null,
+            });
+          },
+          onError: (err: any) => {
+            logEvent("discover_error", {
+              error: err?.message ?? "unknown",
+              ms: Date.now() - startedAt,
+            });
           },
         },
       );
@@ -326,6 +347,22 @@ export default function ExploreScreen() {
     // infinite loop because discoverAt() sets discoverMutation.data itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
+
+  // Surface the active discovery location to the feedback snapshot so any
+  // report captured from this screen records where the user thinks they are.
+  useEffect(() => {
+    return feedback.registerSnapshotProvider("discover", () => {
+      const coords = manualCoords ?? location?.coords;
+      if (!coords) return {};
+      return {
+        location: {
+          lat: coords.latitude,
+          lng: coords.longitude,
+          accuracy: "accuracy" in coords ? (coords as Location.LocationObjectCoords).accuracy : null,
+        },
+      };
+    });
+  }, [feedback, location, manualCoords]);
 
   if ((!permission?.granted && !manualCoords) || showLocationSearch) {
     return (

@@ -14,9 +14,14 @@
       "backgroundColor": "#faf8f5"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Record voice memos to capture issues during a walk."
+      }
     },
-    "android": {},
+    "android": {
+      "permissions": ["RECORD_AUDIO"]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -28,7 +33,13 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Record voice memos to capture issues during a walk."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
