@@ -273,13 +273,19 @@ function nominatimTypeLabel(r: NominatimResult): string {
 async function nominatimSearch(
   query: string,
   limit: number,
-  timeoutMs = 5000,
+  extraParams?: Record<string, string>,
 ): Promise<NominatimResult[]> {
-  const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=${limit}&addressdetails=0`;
+  const params = new URLSearchParams({
+    q: query,
+    format: "jsonv2",
+    limit: String(limit),
+    addressdetails: "0",
+    ...extraParams,
+  });
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const resp = await fetch(url, { signal: controller.signal, headers: NOMINATIM_HEADERS });
+    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, { signal: controller.signal, headers: NOMINATIM_HEADERS });
     clearTimeout(timer);
     if (!resp.ok) return [];
     const data = (await resp.json()) as NominatimResult[];
@@ -287,6 +293,54 @@ async function nominatimSearch(
   } catch {
     clearTimeout(timer);
     return [];
+  }
+}
+
+interface NearCoordCacheEntry {
+  value: { lat: number; lon: number } | null;
+  expiresAt: number;
+}
+
+const NEAR_COORD_CACHE_MAX = 500;
+const NEAR_COORD_TTL_SUCCESS_MS = 30 * 60 * 1000;
+const NEAR_COORD_TTL_FAILURE_MS = 2 * 60 * 1000;
+const nearLocationCoordCache = new Map<string, NearCoordCacheEntry>();
+
+function setNearCoordCache(key: string, value: { lat: number; lon: number } | null): void {
+  if (nearLocationCoordCache.size >= NEAR_COORD_CACHE_MAX) {
+    const firstKey = nearLocationCoordCache.keys().next().value;
+    if (firstKey !== undefined) nearLocationCoordCache.delete(firstKey);
+  }
+  nearLocationCoordCache.set(key, {
+    value,
+    expiresAt: Date.now() + (value ? NEAR_COORD_TTL_SUCCESS_MS : NEAR_COORD_TTL_FAILURE_MS),
+  });
+}
+
+/** Geocode an address string to coordinates. Results are cached per-process:
+ *  successful lookups for 30 min, failures for 2 min (so transient errors
+ *  don't permanently disable viewbox bias). Cache is capped at 500 entries. */
+async function geocodeNearLocation(address: string): Promise<{ lat: number; lon: number } | null> {
+  const key = address.toLowerCase();
+  const cached = nearLocationCoordCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.value;
+  const params = new URLSearchParams({ q: address, format: "jsonv2", limit: "1" });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+  try {
+    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, { signal: controller.signal, headers: NOMINATIM_HEADERS });
+    clearTimeout(timer);
+    if (!resp.ok) { setNearCoordCache(key, null); return null; }
+    const json = await resp.json();
+    const first = Array.isArray(json) ? json[0] : null;
+    if (!first) { setNearCoordCache(key, null); return null; }
+    const result = { lat: parseFloat(first.lat), lon: parseFloat(first.lon) };
+    setNearCoordCache(key, result);
+    return result;
+  } catch {
+    clearTimeout(timer);
+    setNearCoordCache(key, null);
+    return null;
   }
 }
 
@@ -495,63 +549,6 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
   res.json(data);
 });
 
-const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
-const NOMINATIM_USER_AGENT = "UrbanExplorer/1.0 (walking-tour app; contact@urbanexplorer.app)";
-
-interface NominatimResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-  type: string;
-  class: string;
-  address?: Record<string, string>;
-}
-
-async function nominatimSearch(
-  query: string,
-  limit: number,
-): Promise<NominatimResult[]> {
-  const params = new URLSearchParams({
-    q: query,
-    format: "jsonv2",
-    limit: String(limit),
-    addressdetails: "1",
-  });
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4000);
-  try {
-    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, {
-      headers: {
-        "User-Agent": NOMINATIM_USER_AGENT,
-        "Accept": "application/json",
-      },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) return [];
-    const json = await resp.json();
-    return Array.isArray(json) ? json : [];
-  } catch {
-    clearTimeout(timeout);
-    return [];
-  }
-}
-
-function nominatimToDescription(r: NominatimResult): string {
-  const addr = r.address || {};
-  const parts: string[] = [];
-  if (addr.city) parts.push(addr.city);
-  else if (addr.town) parts.push(addr.town);
-  else if (addr.village) parts.push(addr.village);
-  if (addr.state) parts.push(addr.state);
-  if (addr.country && addr.country !== "United States") parts.push(addr.country);
-  const typeLabel = r.type !== "yes" ? r.type.replace(/_/g, " ") : r.class.replace(/_/g, " ");
-  if (typeLabel && parts.length > 0) {
-    return `${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} in ${parts.join(", ")}`;
-  }
-  return parts.join(", ") || r.display_name.split(",").slice(0, 3).join(",").trim();
-}
-
 router.post("/explore/suggest-locations", async (req, res) => {
   const parsed = SuggestLocationsBody.safeParse(req.body);
   if (!parsed.success) {
@@ -576,14 +573,37 @@ router.post("/explore/suggest-locations", async (req, res) => {
 
   // Try Nominatim first — it returns real coordinates we can embed in the suggestion,
   // so walk-plan can skip the separate geocode round-trip when the user picks one.
-  // Only use Nominatim when we have enough city context to avoid vague global results:
-  //  • nearLocation is present (biases the query toward a known city), OR
-  //  • the raw query is long enough to contain a city name itself (>= 15 chars).
-  const nominatimQuery = nearTrimmed ? `${query}, ${nearTrimmed}` : query;
+  // When nearLocation is provided, geocode it to get coordinates and bias Nominatim
+  // results using a viewbox + bounded=1 so that queries like "53rd and 6th" without
+  // an explicit city name still return local results rather than random global ones.
+  // Fallback: free-text query with nearLocation appended (original behaviour).
   const shouldTryNominatim = nearTrimmed.length > 0 || query.trim().length >= 15;
-  const nominatimResults = shouldTryNominatim
-    ? await nominatimSearch(nominatimQuery, 5, 4000)
-    : [];
+
+  let nominatimResults: NominatimResult[] = [];
+  if (shouldTryNominatim) {
+    if (nearTrimmed.length > 0) {
+      const nearCoords = await geocodeNearLocation(nearTrimmed);
+      if (nearCoords) {
+        // Build a viewbox ~0.15 degrees (~17 km) around the near-location coordinates.
+        const delta = 0.15;
+        const viewbox = [
+          nearCoords.lon - delta,
+          nearCoords.lat + delta,
+          nearCoords.lon + delta,
+          nearCoords.lat - delta,
+        ].join(",");
+        nominatimResults = await nominatimSearch(query, 5, { viewbox, bounded: "1" });
+        // If viewbox search yields nothing useful, fall back to free-text with city context.
+        if (nominatimResults.length === 0) {
+          nominatimResults = await nominatimSearch(`${query}, ${nearTrimmed}`, 5);
+        }
+      } else {
+        nominatimResults = await nominatimSearch(`${query}, ${nearTrimmed}`, 5);
+      }
+    } else {
+      nominatimResults = await nominatimSearch(query, 5);
+    }
+  }
 
   const nominatimSuggestions = nominatimResults.map((r) => ({
     name: formatNominatimDisplayName(r.display_name),
@@ -675,7 +695,7 @@ router.post("/explore/geocode", async (req, res) => {
   }
 
   // Nominatim first — more reliable than LLM for real addresses/intersections.
-  const nominatimResults = await nominatimSearch(query.trim(), 1, 5000);
+  const nominatimResults = await nominatimSearch(query.trim(), 1);
   if (nominatimResults.length > 0) {
     const r = nominatimResults[0];
     const data = {
