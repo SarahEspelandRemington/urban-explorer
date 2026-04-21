@@ -164,7 +164,13 @@ overrides:
   "@expo/ngrok-bin>@expo/ngrok-bin-win32-x64": "-"
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
-  esbuild: "0.27.3"
+  # Pinned to 0.25.8 to satisfy esbuild-plugin-pino's peer range (>=0.25.0 <=0.25.8)
+  esbuild: "0.25.8"
   # CVE fixes: force patched versions of vulnerable transitive dependencies
   "brace-expansion@2.0.2": "2.0.3"
   "yaml@2.8.2": "2.8.3"
+  # Replace deprecated `uuid` v3/v7 (used by xcode and @expo/ngrok for
+  # generating IDs via uuid.v4 only) with the maintained v11. The .v4()
+  # API is unchanged across these majors, so this is API-safe.
+  "uuid@^3": "^11"
+  "uuid@^7": "^11"
