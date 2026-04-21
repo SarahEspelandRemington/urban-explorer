@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { StyleSheet, View } from "react-native";
 import MapView, { Circle, LatLng, Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 
@@ -36,10 +36,13 @@ export function WalkModeMap({
   const mapRef = useRef<MapView>(null);
   const didFitRef = useRef(false);
 
-  const polyline: LatLng[] =
-    routeGeometry && routeGeometry.length > 0
-      ? routeGeometry.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
-      : [];
+  const polyline = useMemo<LatLng[]>(
+    () =>
+      routeGeometry && routeGeometry.length > 0
+        ? routeGeometry.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
+        : [],
+    [routeGeometry],
+  );
 
   useEffect(() => {
     if (didFitRef.current) return;

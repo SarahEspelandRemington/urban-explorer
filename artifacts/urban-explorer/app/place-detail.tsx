@@ -69,6 +69,9 @@ export default function PlaceDetailScreen() {
         },
       });
     }
+    // Re-fetch only when the place identity changes. lat/lng can drift slightly
+    // for the same place; we don't want to re-narrate on every GPS jitter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.name]);
 
   const detail = detailMutation.data;

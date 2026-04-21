@@ -1,10 +1,8 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -141,6 +139,10 @@ export function PlaceMapView({
         mapInstanceRef.current = null;
       }
     };
+    // Map instance is created once when Leaflet loads. User location updates
+    // are handled by a separate marker-update effect below — re-running this
+    // would tear down the entire map on every GPS tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leafletReady]);
 
   useEffect(() => {

@@ -62,6 +62,9 @@ export default function WalkModeScreen() {
       walk.startWalk();
     }
     return () => {};
+    // Run once on mount. `walk` is a context value that changes every render;
+    // depending on it would re-trigger startWalk() in an infinite loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleStop = () => {

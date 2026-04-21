@@ -18,6 +18,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 - **Mobile**: Expo (React Native)
+- **Lint**: ESLint v9 flat config at root (`eslint.config.mjs`); run via `pnpm run lint`. Targets `urban-explorer` + `api-server`. Includes `typescript-eslint` + `eslint-plugin-react-hooks`.
 - **AI**: OpenAI via Replit AI Integrations (no API key needed)
 
 ## Architecture

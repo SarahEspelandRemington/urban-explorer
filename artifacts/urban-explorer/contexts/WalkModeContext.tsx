@@ -359,7 +359,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       watchRef.current = sub;
     } catch {
     }
-  }, [handleLocationUpdate, narration]);
+  }, [handleLocationUpdate]);
 
   const stopWalk = useCallback(() => {
     setIsWalking(false);

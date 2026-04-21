@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,

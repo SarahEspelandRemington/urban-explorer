@@ -1,11 +1,8 @@
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef } from "react";
 import {
   ActivityIndicator,
-  Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
@@ -18,7 +15,6 @@ import MapView, {
 } from "react-native-maps";
 
 import { getCategoryIcon } from "@/constants/categories";
-import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
 
 interface Place {
@@ -67,7 +63,6 @@ export function PlaceMapView({
   const colors = useColors();
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
-  const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
   const lastFetchCenter = useRef({ lat: userLatitude, lng: userLongitude });
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 

@@ -11,7 +11,7 @@ interface PlaceDetailMapProps {
   address?: string;
 }
 
-export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDetailMapProps) {
+export function PlaceDetailMap({ name, address }: PlaceDetailMapProps) {
   const colors = useColors();
 
   const handleOpenMaps = () => {

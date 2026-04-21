@@ -322,14 +322,10 @@ export default function ExploreScreen() {
     if (location && !manualCoords && !discoverMutation.data && !discoverMutation.isPending) {
       discoverAt(location.coords.latitude, location.coords.longitude, location.coords.accuracy);
     }
+    // Only re-run on `location` change. Adding mutation state would cause an
+    // infinite loop because discoverAt() sets discoverMutation.data itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
-
-  const toggleViewMode = () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
-    setViewMode((prev) => (prev === "list" ? "map" : "list"));
-  };
 
   if ((!permission?.granted && !manualCoords) || showLocationSearch) {
     return (
