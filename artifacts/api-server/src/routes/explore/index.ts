@@ -806,7 +806,42 @@ Rules for natural-sounding speech:
   res.json(result);
 });
 
-const OSRM_API = "https://router.project-osrm.org";
+// Public OSRM endpoints. The official demo (`router.project-osrm.org`) has
+// been unreliable (frequent timeouts as of 2026-04-21), so we try the FOSSGIS
+// foot router first, then fall back to the demo, then to a generic OSRM
+// instance. Each provider gets a short timeout so a single failure can't stall
+// the whole request — total worst-case is ~3 * PROVIDER_TIMEOUT_MS.
+const OSRM_PROVIDERS = [
+  { name: "fossgis-foot", base: "https://routing.openstreetmap.de/routed-foot" },
+  { name: "osrm-demo", base: "https://router.project-osrm.org" },
+] as const;
+const PROVIDER_TIMEOUT_MS = 4500;
+
+interface OsrmResponse {
+  routes?: Array<{
+    geometry: { coordinates: [number, number][] };
+    distance: number;
+    duration: number;
+  }>;
+}
+
+async function fetchRouteFromProvider(
+  base: string,
+  coords: string,
+): Promise<OsrmResponse | null> {
+  const url = `${base}/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    if (!resp.ok) return null;
+    return (await resp.json()) as OsrmResponse;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 router.post("/explore/route", async (req, res) => {
   const parsed = GetRouteBody.safeParse(req.body);
@@ -824,46 +859,38 @@ router.post("/explore/route", async (req, res) => {
   ];
 
   const coords = points.map((p) => `${p.lng},${p.lat}`).join(";");
-  const url = `${OSRM_API}/route/v1/foot/${coords}?overview=full&geometries=geojson`;
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  try {
-    const resp = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!resp.ok) {
-      res.status(502).json({ error: "Routing service unavailable" });
-      return;
+  let json: OsrmResponse | null = null;
+  let providerUsed: string | null = null;
+  for (const provider of OSRM_PROVIDERS) {
+    json = await fetchRouteFromProvider(provider.base, coords);
+    if (json?.routes?.[0]) {
+      providerUsed = provider.name;
+      break;
     }
-
-    const json = (await resp.json()) as {
-      routes?: Array<{
-        geometry: { coordinates: [number, number][] };
-        distance: number;
-        duration: number;
-      }>;
-    };
-    const route = json.routes?.[0];
-    if (!route) {
-      res.status(404).json({ error: "No walking route could be found between those points" });
-      return;
-    }
-
-    const geometry = route.geometry.coordinates.map(
-      ([lng, lat]) => [lat, lng] as [number, number],
-    );
-
-    res.json({
-      geometry,
-      distanceMeters: route.distance,
-      durationSeconds: route.duration,
-    });
-  } catch {
-    clearTimeout(timeout);
-    res.status(502).json({ error: "Routing failed" });
   }
+
+  if (!json) {
+    res.status(502).json({ error: "Routing service unavailable" });
+    return;
+  }
+
+  const route = json.routes?.[0];
+  if (!route) {
+    res.status(404).json({ error: "No walking route could be found between those points" });
+    return;
+  }
+
+  const geometry = route.geometry.coordinates.map(
+    ([lng, lat]) => [lat, lng] as [number, number],
+  );
+
+  res.setHeader("X-Routing-Provider", providerUsed ?? "unknown");
+  res.json({
+    geometry,
+    distanceMeters: route.distance,
+    durationSeconds: route.duration,
+  });
 });
 
 function projectToMeters(
