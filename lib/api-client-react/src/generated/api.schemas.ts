@@ -74,6 +74,11 @@ export interface DiscoverResponse {
 export interface SuggestLocationsRequest {
   /** Partial location text the user has typed so far */
   query: string;
+  /**
+   * Optional hint describing where the user is searching near, used to bias results
+   * @maxLength 200
+   */
+  nearLocation?: string;
 }
 
 export interface LocationSuggestion {
@@ -166,7 +171,10 @@ export interface LatLng {
 export interface RouteRequest {
   start: LatLng;
   end: LatLng;
-  /** Optional intermediate waypoints, in order, between start and end */
+  /**
+   * Optional intermediate waypoints, in order, between start and end (max 10)
+   * @maxItems 10
+   */
   waypoints?: LatLng[];
 }
 
@@ -178,11 +186,23 @@ export interface RouteResponse {
 }
 
 export interface PlacesAlongRouteRequest {
-  /** Route polyline as ordered [latitude, longitude] pairs */
+  /**
+   * Route polyline as ordered [latitude, longitude] pairs (max 500 points)
+   * @minItems 2
+   * @maxItems 500
+   */
   geometry: number[][];
-  /** Maximum number of places to return (default 8) */
+  /**
+   * Maximum number of places to return (default 8, max 20)
+   * @minimum 1
+   * @maximum 20
+   */
   maxPlaces?: number;
-  /** How far from the route to look for places, in meters (default 120) */
+  /**
+   * How far from the route to look for places, in meters (default 120, range 10–300)
+   * @minimum 10
+   * @maximum 300
+   */
   corridorMeters?: number;
 }
 
@@ -206,3 +226,56 @@ export interface RoutePlace {
 export interface PlacesAlongRouteResponse {
   places: RoutePlace[];
 }
+
+export interface AuthUser {
+  id: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  firstName: string | null;
+  /** @nullable */
+  lastName: string | null;
+  /** @nullable */
+  profileImageUrl: string | null;
+}
+
+export interface AuthUserEnvelope {
+  user: AuthUser | null;
+}
+
+export interface MobileTokenExchangeRequest {
+  /** @minLength 1 */
+  code: string;
+  /** @minLength 1 */
+  code_verifier: string;
+  /** @minLength 1 */
+  redirect_uri: string;
+  /** @minLength 1 */
+  state: string;
+  /** @minLength 1 */
+  nonce?: string;
+}
+
+export interface MobileTokenExchangeSuccess {
+  token: string;
+}
+
+export interface LogoutSuccess {
+  success: boolean;
+}
+
+export interface ErrorEnvelope {
+  error: string;
+}
+
+/**
+ * Opaque session token — `Bearer <sid>`.
+ */
+export type AuthorizationSessionHeaderParameter = string;
+
+export type BeginBrowserLoginParams = {
+  /**
+   * Relative path to redirect to after login (must start with `/`). Defaults to `/`.
+   */
+  returnTo?: string;
+};

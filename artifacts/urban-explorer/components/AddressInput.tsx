@@ -12,6 +12,7 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { authHeaders } from "@/lib/apiToken";
 
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -65,7 +66,7 @@ export function AddressInput({
     };
   }, []);
 
-  const fetchSuggestions = (text: string) => {
+  const fetchSuggestions = async (text: string) => {
     if (abortRef.current) {
       try { abortRef.current.abort(); } catch {}
     }
@@ -73,28 +74,27 @@ export function AddressInput({
     abortRef.current = controller;
     setIsLoading(true);
     const near = (nearLocation ?? "").trim();
-    fetch(`${API_BASE}/api/explore/suggest-locations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(near ? { query: text, nearLocation: near } : { query: text }),
-      signal: controller.signal,
-    })
-      .then((r) => (r.ok ? r.json() : { suggestions: [] }))
-      .then((data: { suggestions?: Suggestion[] }) => {
-        if (controller.signal.aborted) return;
-        const list = Array.isArray(data?.suggestions) ? data.suggestions : [];
-        setSuggestions(list);
-        setIsOpen(list.length > 0);
-      })
-      .catch(() => {
-        if (controller.signal.aborted) return;
-        setSuggestions([]);
-        setIsOpen(false);
-      })
-      .finally(() => {
-        if (controller.signal.aborted) return;
-        setIsLoading(false);
+    try {
+      const headers = await authHeaders();
+      const r = await fetch(`${API_BASE}/api/explore/suggest-locations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...headers },
+        body: JSON.stringify(near ? { query: text, nearLocation: near } : { query: text }),
+        signal: controller.signal,
       });
+      if (controller.signal.aborted) return;
+      const data: { suggestions?: Suggestion[] } = r.ok ? await r.json() : { suggestions: [] };
+      if (controller.signal.aborted) return;
+      const list = Array.isArray(data?.suggestions) ? data.suggestions : [];
+      setSuggestions(list);
+      setIsOpen(list.length > 0);
+    } catch {
+      if (controller.signal.aborted) return;
+      setSuggestions([]);
+      setIsOpen(false);
+    } finally {
+      if (!controller.signal.aborted) setIsLoading(false);
+    }
   };
 
   const handleChangeText = (text: string) => {

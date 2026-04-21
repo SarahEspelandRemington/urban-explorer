@@ -13,6 +13,7 @@ import React, {
 import { Platform } from "react-native";
 
 import { unlockWebSpeech, useNarration } from "@/hooks/useNarration";
+import { authHeaders } from "@/lib/apiToken";
 
 export interface HeadingTarget {
   id: string;
@@ -159,7 +160,7 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch(`${API_BASE}/api/explore/deep-narration`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...await authHeaders() },
           body: JSON.stringify({
             placeName: place.name,
             category: place.category,

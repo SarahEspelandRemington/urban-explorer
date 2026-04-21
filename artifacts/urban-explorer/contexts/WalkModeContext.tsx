@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Platform } from "react-native";
 
 import { unlockWebSpeech, useNarration } from "@/hooks/useNarration";
+import { authHeaders } from "@/lib/apiToken";
 
 interface WalkPlace {
   id: string;
@@ -169,7 +170,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
       const res = await fetch(`${API_BASE}/api/explore/discover`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify(body),
       });
       if (res.ok) {
@@ -190,7 +191,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`${API_BASE}/api/explore/walk-narration`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({
           placeName: place.name,
           category: place.category,

@@ -812,9 +812,10 @@ router.post("/explore/route", async (req, res) => {
   }
   const { start, end, waypoints } = parsed.data;
 
+  const safeWaypoints = (waypoints || []).slice(0, 10);
   const points = [
     { lat: start.latitude, lng: start.longitude },
-    ...(waypoints || []).map((w: { latitude: number; longitude: number }) => ({ lat: w.latitude, lng: w.longitude })),
+    ...safeWaypoints.map((w: { latitude: number; longitude: number }) => ({ lat: w.latitude, lng: w.longitude })),
     { lat: end.latitude, lng: end.longitude },
   ];
 
@@ -1017,14 +1018,18 @@ router.post("/explore/places-along-route", async (req, res) => {
   }
   const { geometry, maxPlaces, corridorMeters } = parsed.data;
 
-  const geom = geometry as [number, number][];
-  if (!geom || geom.length < 2) {
-    res.status(400).json({ error: "Route geometry must have at least 2 points" });
+  const rawGeom = (geometry as unknown[]).slice(0, 500);
+  const geom = rawGeom.filter(
+    (c): c is [number, number] =>
+      Array.isArray(c) && c.length === 2 && typeof c[0] === "number" && typeof c[1] === "number",
+  );
+  if (geom.length < 2) {
+    res.status(400).json({ error: "Route geometry must have at least 2 valid coordinate pairs" });
     return;
   }
 
-  const corridor = corridorMeters ?? 70;
-  const cap = maxPlaces ?? 12;
+  const corridor = Math.min(corridorMeters ?? 70, 300);
+  const cap = Math.min(maxPlaces ?? 12, 20);
 
   const bbox = routeBoundingBox(geom, corridor);
   if (!bbox) {

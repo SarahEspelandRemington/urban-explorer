@@ -10,6 +10,9 @@ import type { LatLng } from "./latLng";
 export interface RouteRequest {
   start: LatLng;
   end: LatLng;
-  /** Optional intermediate waypoints, in order, between start and end */
+  /**
+   * Optional intermediate waypoints, in order, between start and end (max 10)
+   * @maxItems 10
+   */
   waypoints?: LatLng[];
 }

@@ -6,14 +6,22 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./authorizationSessionHeaderParameter";
+export * from "./authUser";
+export * from "./authUserEnvelope";
+export * from "./beginBrowserLoginParams";
 export * from "./discoverRequest";
 export * from "./discoverRequestMode";
 export * from "./discoverResponse";
+export * from "./errorEnvelope";
 export * from "./geocodeRequest";
 export * from "./geocodeResponse";
 export * from "./healthStatus";
 export * from "./latLng";
 export * from "./locationSuggestion";
+export * from "./logoutSuccess";
+export * from "./mobileTokenExchangeRequest";
+export * from "./mobileTokenExchangeSuccess";
 export * from "./place";
 export * from "./placeConfidence";
 export * from "./placeDetailRequest";

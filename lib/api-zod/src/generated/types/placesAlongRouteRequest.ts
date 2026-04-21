@@ -7,10 +7,22 @@
  */
 
 export interface PlacesAlongRouteRequest {
-  /** Route polyline as ordered [latitude, longitude] pairs */
+  /**
+   * Route polyline as ordered [latitude, longitude] pairs (max 500 points)
+   * @minItems 2
+   * @maxItems 500
+   */
   geometry: number[][];
-  /** Maximum number of places to return (default 8) */
+  /**
+   * Maximum number of places to return (default 8, max 20)
+   * @minimum 1
+   * @maximum 20
+   */
   maxPlaces?: number;
-  /** How far from the route to look for places, in meters (default 120) */
+  /**
+   * How far from the route to look for places, in meters (default 120, range 10–300)
+   * @minimum 10
+   * @maximum 300
+   */
   corridorMeters?: number;
 }

@@ -9,4 +9,9 @@
 export interface SuggestLocationsRequest {
   /** Partial location text the user has typed so far */
   query: string;
+  /**
+   * Optional hint describing where the user is searching near, used to bias results
+   * @maxLength 200
+   */
+  nearLocation?: string;
 }

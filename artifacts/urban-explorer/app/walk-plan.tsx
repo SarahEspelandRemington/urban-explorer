@@ -18,6 +18,7 @@ import { AddressInput } from "@/components/AddressInput";
 import { RoutePlanMap } from "@/components/RoutePlanMap";
 import { useWalkMode, type PlannedRoute } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
+import { authHeaders } from "@/lib/apiToken";
 
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -90,7 +91,7 @@ export default function WalkPlanScreen() {
     try {
       const res = await fetch(`${API_BASE}/api/explore/geocode`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({ query: trimmed }),
       });
       if (!res.ok) return null;
@@ -144,7 +145,7 @@ export default function WalkPlanScreen() {
     try {
       const routeRes = await fetch(`${API_BASE}/api/explore/route`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({
           start: { latitude: s.latitude, longitude: s.longitude },
           end: { latitude: e.latitude, longitude: e.longitude },
@@ -171,7 +172,7 @@ export default function WalkPlanScreen() {
       if (geom.length >= 2) {
         const placesRes = await fetch(`${API_BASE}/api/explore/places-along-route`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...await authHeaders() },
           body: JSON.stringify({ geometry: geom, maxPlaces: 12, corridorMeters: 70 }),
           signal: controller.signal,
         });
@@ -187,7 +188,7 @@ export default function WalkPlanScreen() {
           for (const p of placesList) {
             fetch(`${API_BASE}/api/explore/walk-narration`, {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json", ...await authHeaders() },
               body: JSON.stringify({
                 placeName: p.name,
                 category: p.category,

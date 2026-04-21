@@ -5,7 +5,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { setBaseUrl } from "@workspace/api-client-react";
+import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+import { getApiToken } from "@/lib/apiToken";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -14,6 +15,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AuthProvider } from "@/lib/auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HeadingBanner } from "@/components/HeadingBanner";
 import { DiscoveryProvider } from "@/contexts/DiscoveryContext";
@@ -21,6 +23,7 @@ import { HeadingProvider } from "@/contexts/HeadingContext";
 import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+setAuthTokenGetter(getApiToken);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -62,20 +65,22 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <DiscoveryProvider>
-            <WalkModeProvider>
-              <HeadingProvider>
-                <GestureHandlerRootView>
-                  <KeyboardProvider>
-                    <RootLayoutNav />
-                    <HeadingBanner />
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </HeadingProvider>
-            </WalkModeProvider>
-          </DiscoveryProvider>
-        </QueryClientProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <DiscoveryProvider>
+              <WalkModeProvider>
+                <HeadingProvider>
+                  <GestureHandlerRootView>
+                    <KeyboardProvider>
+                      <RootLayoutNav />
+                      <HeadingBanner />
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </HeadingProvider>
+              </WalkModeProvider>
+            </DiscoveryProvider>
+          </QueryClientProvider>
+        </AuthProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

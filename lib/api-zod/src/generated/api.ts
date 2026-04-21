@@ -76,15 +76,18 @@ export const DiscoverPlacesResponse = zod.object({
  * Returns a list of location suggestions matching a partial query
  * @summary Get location suggestions as user types
  */
+export const suggestLocationsBodyNearLocationMax = 200;
+
 export const SuggestLocationsBody = zod.object({
   query: zod
     .string()
     .describe("Partial location text the user has typed so far"),
   nearLocation: zod
     .string()
+    .max(suggestLocationsBodyNearLocationMax)
     .optional()
     .describe(
-      "Optional context location (e.g. another address the user already entered) used to bias suggestions toward the same city/region",
+      "Optional hint describing where the user is searching near, used to bias results",
     ),
 });
 
@@ -208,6 +211,8 @@ export const GetWalkNarrationResponse = zod.object({
  * Returns a pedestrian walking route between a start and end point with optional intermediate waypoints, using OpenStreetMap-based routing.
  * @summary Get a pedestrian walking route
  */
+export const getRouteBodyWaypointsMax = 10;
+
 export const GetRouteBody = zod.object({
   start: zod.object({
     latitude: zod.number(),
@@ -224,9 +229,10 @@ export const GetRouteBody = zod.object({
         longitude: zod.number(),
       }),
     )
+    .max(getRouteBodyWaypointsMax)
     .optional()
     .describe(
-      "Optional intermediate waypoints, in order, between start and end",
+      "Optional intermediate waypoints, in order, between start and end (max 10)",
     ),
 });
 
@@ -242,19 +248,43 @@ export const GetRouteResponse = zod.object({
  * Given a route geometry, finds interesting historical places near the route and returns them in walking order with progress along the route.
  * @summary Find historical places along a planned route
  */
+export const getPlacesAlongRouteBodyGeometryItemMin = 2;
+export const getPlacesAlongRouteBodyGeometryItemMax = 2;
+
+export const getPlacesAlongRouteBodyGeometryMin = 2;
+export const getPlacesAlongRouteBodyGeometryMax = 500;
+
+export const getPlacesAlongRouteBodyMaxPlacesMax = 20;
+
+export const getPlacesAlongRouteBodyCorridorMetersMin = 10;
+export const getPlacesAlongRouteBodyCorridorMetersMax = 300;
+
 export const GetPlacesAlongRouteBody = zod.object({
   geometry: zod
-    .array(zod.array(zod.number()))
-    .describe("Route polyline as ordered [latitude, longitude] pairs"),
+    .array(
+      zod
+        .array(zod.number())
+        .min(getPlacesAlongRouteBodyGeometryItemMin)
+        .max(getPlacesAlongRouteBodyGeometryItemMax),
+    )
+    .min(getPlacesAlongRouteBodyGeometryMin)
+    .max(getPlacesAlongRouteBodyGeometryMax)
+    .describe(
+      "Route polyline as ordered [latitude, longitude] pairs (max 500 points)",
+    ),
   maxPlaces: zod
     .number()
+    .min(1)
+    .max(getPlacesAlongRouteBodyMaxPlacesMax)
     .optional()
-    .describe("Maximum number of places to return (default 8)"),
+    .describe("Maximum number of places to return (default 8, max 20)"),
   corridorMeters: zod
     .number()
+    .min(getPlacesAlongRouteBodyCorridorMetersMin)
+    .max(getPlacesAlongRouteBodyCorridorMetersMax)
     .optional()
     .describe(
-      "How far from the route to look for places, in meters (default 120)",
+      "How far from the route to look for places, in meters (default 120, range 10–300)",
     ),
 });
 
@@ -283,4 +313,79 @@ export const GetPlacesAlongRouteResponse = zod.object({
         ),
     }),
   ),
+});
+
+/**
+ * @summary Get the currently authenticated user
+ */
+export const GetCurrentAuthUserHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Opaque session token — `Bearer <sid>`."),
+});
+
+export const GetCurrentAuthUserResponse = zod.object({
+  user: zod.union([
+    zod.object({
+      id: zod.string(),
+      email: zod.string().nullable(),
+      firstName: zod.string().nullable(),
+      lastName: zod.string().nullable(),
+      profileImageUrl: zod.string().nullable(),
+    }),
+    zod.null(),
+  ]),
+});
+
+/**
+ * @summary Start the browser OIDC login flow
+ */
+export const BeginBrowserLoginQueryParams = zod.object({
+  returnTo: zod.coerce
+    .string()
+    .optional()
+    .describe(
+      "Relative path to redirect to after login (must start with `\/`). Defaults to `\/`.",
+    ),
+});
+
+/**
+ * @summary Clear the session and begin OIDC logout
+ */
+export const LogoutBrowserSessionHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Opaque session token — `Bearer <sid>`."),
+});
+
+/**
+ * @summary Exchange a mobile OIDC code for a session token
+ */
+
+export const ExchangeMobileAuthorizationCodeBody = zod.object({
+  code: zod.string().min(1),
+  code_verifier: zod.string().min(1),
+  redirect_uri: zod.string().min(1),
+  state: zod.string().min(1),
+  nonce: zod.string().min(1).optional(),
+});
+
+export const ExchangeMobileAuthorizationCodeResponse = zod.object({
+  token: zod.string(),
+});
+
+/**
+ * @summary Delete a mobile session token
+ */
+export const LogoutMobileSessionHeader = zod.object({
+  Authorization: zod
+    .string()
+    .optional()
+    .describe("Opaque session token — `Bearer <sid>`."),
+});
+
+export const LogoutMobileSessionResponse = zod.object({
+  success: zod.boolean(),
 });
