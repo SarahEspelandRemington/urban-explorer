@@ -85,21 +85,27 @@ export default function WalkPlanScreen() {
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
-  const resolveAddress = async (query: string): Promise<{ lat: number; lng: number; label: string } | null> => {
+  type ResolveResult =
+    | { ok: true; lat: number; lng: number; label: string }
+    | { ok: false; status: number | null };
+
+  const resolveAddress = async (query: string): Promise<ResolveResult> => {
     const trimmed = query.trim();
-    if (!trimmed) return null;
+    if (!trimmed) return { ok: false, status: null };
     try {
       const res = await fetch(`${API_BASE}/api/explore/geocode`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...await authHeaders() },
         body: JSON.stringify({ query: trimmed }),
       });
-      if (!res.ok) return null;
+      if (!res.ok) return { ok: false, status: res.status };
       const data = await res.json();
-      if (typeof data.latitude !== "number" || typeof data.longitude !== "number") return null;
-      return { lat: data.latitude, lng: data.longitude, label: data.displayName || trimmed };
+      if (typeof data.latitude !== "number" || typeof data.longitude !== "number") {
+        return { ok: false, status: null };
+      }
+      return { ok: true, lat: data.latitude, lng: data.longitude, label: data.displayName || trimmed };
     } catch {
-      return null;
+      return { ok: false, status: null };
     }
   };
 
@@ -155,9 +161,13 @@ export default function WalkPlanScreen() {
       });
       if (planVersionRef.current !== myVersion) return;
       if (!routeRes.ok) {
-        const errBody = await routeRes.json().catch(() => ({}));
-        if (planVersionRef.current !== myVersion) return;
-        setError(errBody.error || "Couldn't find a walking route.");
+        if (routeRes.status === 429 || routeRes.status === 503) {
+          setError("We're busy right now — try again in a moment.");
+        } else {
+          const errBody = await routeRes.json().catch(() => ({}));
+          if (planVersionRef.current !== myVersion) return;
+          setError(errBody.error || "Couldn't find a walking route.");
+        }
         clearRouteState();
         return;
       }
@@ -220,8 +230,12 @@ export default function WalkPlanScreen() {
       setIsResolving("start");
       const r = await resolveAddress(startQuery);
       setIsResolving(null);
-      if (!r) {
-        setError("Couldn't find the start address.");
+      if (!r.ok) {
+        setError(
+          r.status === 429 || r.status === 503
+            ? "We're busy right now — try again in a moment."
+            : "Couldn't find the start address.",
+        );
         return;
       }
       s = { latitude: r.lat, longitude: r.lng };
@@ -236,8 +250,12 @@ export default function WalkPlanScreen() {
       setIsResolving("end");
       const r = await resolveAddress(endQuery);
       setIsResolving(null);
-      if (!r) {
-        setError("Couldn't find the end address.");
+      if (!r.ok) {
+        setError(
+          r.status === 429 || r.status === 503
+            ? "We're busy right now — try again in a moment."
+            : "Couldn't find the end address.",
+        );
         return;
       }
       e = { latitude: r.lat, longitude: r.lng };

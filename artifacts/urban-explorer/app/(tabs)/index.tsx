@@ -330,8 +330,12 @@ export default function ExploreScreen() {
               setGeocodeError("Couldn't find that location. Try being more specific.");
             }
           },
-          onError: () => {
-            setGeocodeError("Something went wrong. Please try again.");
+          onError: (err: any) => {
+            setGeocodeError(
+              err?.status === 429 || err?.status === 503
+                ? "Location service is temporarily unavailable — try again in a moment."
+                : "Something went wrong. Please try again.",
+            );
           },
         },
       );
@@ -775,12 +779,16 @@ export default function ExploreScreen() {
                 <Text
                   style={[styles.emptyTitle, { color: colors.foreground }]}
                 >
-                  Something went wrong
+                  {(discoverMutation.error as any)?.status === 429 || (discoverMutation.error as any)?.status === 503
+                    ? "We're a bit busy"
+                    : "Something went wrong"}
                 </Text>
                 <Text
                   style={[styles.emptyText, { color: colors.mutedForeground }]}
                 >
-                  We couldn't find places nearby. Try again.
+                  {(discoverMutation.error as any)?.status === 429 || (discoverMutation.error as any)?.status === 503
+                    ? "We're busy right now — try again in a moment."
+                    : "We couldn't find places nearby. Try again."}
                 </Text>
                 <Pressable
                   onPress={handleDiscover}
