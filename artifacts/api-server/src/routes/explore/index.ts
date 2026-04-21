@@ -450,9 +450,9 @@ Respond in JSON format:
 
 Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
 
-  let discoverResponse: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    discoverResponse = await openai.chat.completions.create({
+    response = await openai.chat.completions.create({
       model: modelName,
       max_completion_tokens: maxTokens,
       messages: [
@@ -468,12 +468,12 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
       response_format: { type: "json_object" },
     });
   } catch (err: any) {
-    const httpStatus = err?.status === 429 ? 429 : 503;
-    res.status(httpStatus).json({ error: "AI service temporarily unavailable. Try again in a moment." });
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Discovery service temporarily unavailable. Please try again." });
     return;
   }
 
-  const content = discoverResponse.choices[0]?.message?.content;
+  const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate discoveries" });
     return;
@@ -494,6 +494,63 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
   setLLMCache(discoverCacheKey, data);
   res.json(data);
 });
+
+const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
+const NOMINATIM_USER_AGENT = "UrbanExplorer/1.0 (walking-tour app; contact@urbanexplorer.app)";
+
+interface NominatimResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+  type: string;
+  class: string;
+  address?: Record<string, string>;
+}
+
+async function nominatimSearch(
+  query: string,
+  limit: number,
+): Promise<NominatimResult[]> {
+  const params = new URLSearchParams({
+    q: query,
+    format: "jsonv2",
+    limit: String(limit),
+    addressdetails: "1",
+  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+  try {
+    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, {
+      headers: {
+        "User-Agent": NOMINATIM_USER_AGENT,
+        "Accept": "application/json",
+      },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return [];
+    const json = await resp.json();
+    return Array.isArray(json) ? json : [];
+  } catch {
+    clearTimeout(timeout);
+    return [];
+  }
+}
+
+function nominatimToDescription(r: NominatimResult): string {
+  const addr = r.address || {};
+  const parts: string[] = [];
+  if (addr.city) parts.push(addr.city);
+  else if (addr.town) parts.push(addr.town);
+  else if (addr.village) parts.push(addr.village);
+  if (addr.state) parts.push(addr.state);
+  if (addr.country && addr.country !== "United States") parts.push(addr.country);
+  const typeLabel = r.type !== "yes" ? r.type.replace(/_/g, " ") : r.class.replace(/_/g, " ");
+  if (typeLabel && parts.length > 0) {
+    return `${typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} in ${parts.join(", ")}`;
+  }
+  return parts.join(", ") || r.display_name.split(",").slice(0, 3).join(",").trim();
+}
 
 router.post("/explore/suggest-locations", async (req, res) => {
   const parsed = SuggestLocationsBody.safeParse(req.body);
@@ -517,10 +574,6 @@ router.post("/explore/suggest-locations", async (req, res) => {
     return;
   }
 
-  const nearClause = nearTrimmed
-    ? `\n\nIMPORTANT — LOCATION CONTEXT: The user has already entered another address: "${nearTrimmed}". Strongly prefer suggestions in the SAME city / metropolitan area as that address, unless the user's query explicitly references a different city or country. Walking routes only make sense within one city.`
-    : "";
-
   // Try Nominatim first — it returns real coordinates we can embed in the suggestion,
   // so walk-plan can skip the separate geocode round-trip when the user picks one.
   // Only use Nominatim when we have enough city context to avoid vague global results:
@@ -532,20 +585,26 @@ router.post("/explore/suggest-locations", async (req, res) => {
     ? await nominatimSearch(nominatimQuery, 5, 4000)
     : [];
 
-  if (nominatimResults.length >= 2) {
-    const suggestions = nominatimResults.map((r) => ({
-      name: formatNominatimDisplayName(r.display_name),
-      description: nominatimTypeLabel(r),
-      latitude: parseFloat(r.lat),
-      longitude: parseFloat(r.lon),
-    }));
-    const data = { suggestions };
+  const nominatimSuggestions = nominatimResults.map((r) => ({
+    name: formatNominatimDisplayName(r.display_name),
+    description: nominatimTypeLabel(r),
+    latitude: parseFloat(r.lat),
+    longitude: parseFloat(r.lon),
+  }));
+
+  if (nominatimSuggestions.length >= 2) {
+    const data = { suggestions: nominatimSuggestions };
     setLLMCache(suggestCacheKey, data);
     res.json(data);
     return;
   }
 
   // LLM fallback (no coordinates) when Nominatim returns < 2 results.
+  const nearClause = nearTrimmed
+    ? `\n\nIMPORTANT — LOCATION CONTEXT: The user has already entered another address: "${nearTrimmed}". Strongly prefer suggestions in the SAME city / metropolitan area as that address, unless the user's query explicitly references a different city or country. Walking routes only make sense within one city.`
+    : "";
+
+  let llmData: any = { suggestions: [] };
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4.1-nano",
@@ -579,23 +638,24 @@ Return exactly 5 suggestions. Each name should be specific enough to geocode. Ke
     });
 
     const content = response.choices[0]?.message?.content;
-    if (!content) {
-      res.json({ suggestions: [] });
-      return;
+    if (content) {
+      try {
+        llmData = JSON.parse(content);
+      } catch {
+        // keep existing llmData with any nominatim results
+      }
     }
-
-    let data: any;
-    try {
-      data = JSON.parse(content);
-    } catch {
-      res.json({ suggestions: [] });
-      return;
-    }
-    setLLMCache(suggestCacheKey, data);
-    res.json(data);
   } catch {
-    res.json({ suggestions: [] });
+    // fall through with any nominatim results already collected
   }
+
+  const merged = [
+    ...nominatimSuggestions,
+    ...(Array.isArray(llmData?.suggestions) ? llmData.suggestions : []).slice(0, 5 - nominatimSuggestions.length),
+  ];
+  const result = { suggestions: merged };
+  setLLMCache(suggestCacheKey, result);
+  res.json(result);
 });
 
 router.post("/explore/geocode", async (req, res) => {
@@ -615,7 +675,7 @@ router.post("/explore/geocode", async (req, res) => {
   }
 
   // Nominatim first — more reliable than LLM for real addresses/intersections.
-  const nominatimResults = await nominatimSearch(query, 1, 5000);
+  const nominatimResults = await nominatimSearch(query.trim(), 1, 5000);
   if (nominatimResults.length > 0) {
     const r = nominatimResults[0];
     const data = {
@@ -629,6 +689,7 @@ router.post("/explore/geocode", async (req, res) => {
   }
 
   // LLM fallback — handles ambiguous or obscure queries Nominatim can't resolve.
+  let data: any;
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-4.1-nano",
@@ -660,19 +721,20 @@ Be as accurate as possible with coordinates. For neighborhoods, use the center p
       res.status(500).json({ error: "Failed to geocode location" });
       return;
     }
-
-    let data: any;
     try {
       data = JSON.parse(content);
     } catch {
       res.status(500).json({ error: "Failed to parse geocode results" });
       return;
     }
-    setLLMCache(geocodeCacheKey, data);
-    res.json(data);
   } catch (err: any) {
-    res.status(503).json({ error: "Geocoding service temporarily unavailable." });
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Geocoding service temporarily unavailable. Please try again." });
+    return;
   }
+
+  setLLMCache(geocodeCacheKey, data);
+  res.json(data);
 });
 
 router.post("/explore/place-detail", async (req, res) => {
@@ -691,9 +753,9 @@ router.post("/explore/place-detail", async (req, res) => {
     return;
   }
 
-  let detailResponse: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    detailResponse = await openai.chat.completions.create({
+    response = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       max_completion_tokens: 2048,
       messages: [
@@ -731,12 +793,12 @@ Every detail should feel like a local secret worth knowing.`,
       response_format: { type: "json_object" },
     });
   } catch (err: any) {
-    const httpStatus = err?.status === 429 ? 429 : 503;
-    res.status(httpStatus).json({ error: "AI service temporarily unavailable." });
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Place detail service temporarily unavailable. Please try again." });
     return;
   }
 
-  const content = detailResponse.choices[0]?.message?.content;
+  const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate place details" });
     return;
@@ -770,15 +832,15 @@ router.post("/explore/place-timeline", async (req, res) => {
     return;
   }
 
-  let timelineResponse: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    timelineResponse = await openai.chat.completions.create({
-    model: "gpt-4.1-mini",
-    max_completion_tokens: 3000,
-    messages: [
-      {
-        role: "system",
-        content: `You are a vivid urban historian who specializes in bringing places to life across different time periods. Given a place, create a chronological timeline showing how it transformed through history — what someone standing on this exact spot would have seen, heard, and experienced in each era.
+    response = await openai.chat.completions.create({
+      model: "gpt-4.1-mini",
+      max_completion_tokens: 3000,
+      messages: [
+        {
+          role: "system",
+          content: `You are a vivid urban historian who specializes in bringing places to life across different time periods. Given a place, create a chronological timeline showing how it transformed through history — what someone standing on this exact spot would have seen, heard, and experienced in each era.
 
 For each era, paint a vivid picture:
 - What did the building/space physically look like? Materials, colors, signage, condition
@@ -812,21 +874,21 @@ Respond in JSON format:
 }
 
 Create 4-6 eras spanning the full history. Each era should feel distinct and alive.`,
-      },
-      {
-        role: "user",
-        content: `Create a historical timeline for "${placeName}" (${category || "place"}) located near ${latitude}, ${longitude}.${yearContext} Show me how this exact spot transformed through time.`,
-      },
-    ],
-    response_format: { type: "json_object" },
+        },
+        {
+          role: "user",
+          content: `Create a historical timeline for "${placeName}" (${category || "place"}) located near ${latitude}, ${longitude}.${yearContext} Show me how this exact spot transformed through time.`,
+        },
+      ],
+      response_format: { type: "json_object" },
     });
   } catch (err: any) {
-    const httpStatus = err?.status === 429 ? 429 : 503;
-    res.status(httpStatus).json({ error: "AI service temporarily unavailable." });
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Timeline service temporarily unavailable. Please try again." });
     return;
   }
 
-  const content = timelineResponse.choices[0]?.message?.content;
+  const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate timeline" });
     return;
@@ -865,9 +927,9 @@ router.post("/explore/walk-narration", async (req, res) => {
     return;
   }
 
-  let narrationResponse: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    narrationResponse = await openai.chat.completions.create({
+    response = await openai.chat.completions.create({
       model: "gpt-4.1-nano",
       max_completion_tokens: 256,
       messages: [
@@ -893,12 +955,12 @@ Rules for natural-sounding speech:
       ],
     });
   } catch (err: any) {
-    const httpStatus = err?.status === 429 ? 429 : 503;
-    res.status(httpStatus).json({ error: "AI service temporarily unavailable." });
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Narration service temporarily unavailable. Please try again." });
     return;
   }
 
-  const content = narrationResponse.choices[0]?.message?.content;
+  const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate narration" });
     return;
@@ -925,9 +987,9 @@ router.post("/explore/deep-narration", async (req, res) => {
     return;
   }
 
-  let deepResponse: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    deepResponse = await openai.chat.completions.create({
+    response = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       max_completion_tokens: 700,
       messages: [
@@ -952,12 +1014,12 @@ Rules for natural-sounding speech:
       ],
     });
   } catch (err: any) {
-    const httpStatus = err?.status === 429 ? 429 : 503;
-    res.status(httpStatus).json({ error: "AI service temporarily unavailable." });
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Deep narration service temporarily unavailable. Please try again." });
     return;
   }
 
-  const content = deepResponse.choices[0]?.message?.content;
+  const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate deep narration" });
     return;

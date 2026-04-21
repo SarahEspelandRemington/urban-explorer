@@ -114,6 +114,8 @@ export const SuggestLocationsResponse = zod.object({
     zod.object({
       name: zod.string().describe("Full location name"),
       description: zod.string().describe("Short context about the location"),
+      latitude: zod.number().optional().describe("Latitude coordinate (present when resolved via Nominatim)"),
+      longitude: zod.number().optional().describe("Longitude coordinate (present when resolved via Nominatim)"),
     }),
   ),
 });

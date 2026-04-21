@@ -11,4 +11,8 @@ export interface LocationSuggestion {
   name: string;
   /** Short context about the location */
   description: string;
+  /** Latitude coordinate (present when resolved via Nominatim) */
+  latitude?: number;
+  /** Longitude coordinate (present when resolved via Nominatim) */
+  longitude?: number;
 }
