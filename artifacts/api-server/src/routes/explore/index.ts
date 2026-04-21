@@ -279,16 +279,10 @@ router.post("/explore/discover", async (req, res) => {
   }
 
   const { latitude, longitude, radius, mode } = parsed.data;
-  const rawHint = typeof req.body.addressHint === "string" ? req.body.addressHint.trim() : "";
-  const addressHint = rawHint ? sanitizeOSMText(rawHint, 200) : "";
   const isQuick = mode === "quick";
   const searchRadius = radius ?? (isQuick ? 500 : 300);
 
   const radiusFeet = Math.round(searchRadius * 3.281);
-
-  const locationContext = addressHint
-    ? `\nThe user's device reports they are near: ${addressHint}. Use this as a geographic anchor.`
-    : "";
 
   const discoverCacheKey = `${mode}:${searchRadius}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDiscover = getLLMCache(discoverCacheKey);
@@ -383,7 +377,7 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
       },
       {
         role: "user",
-        content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?${locationContext}${osmContext}`,
+        content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?${osmContext}`,
       },
     ],
     response_format: { type: "json_object" },
