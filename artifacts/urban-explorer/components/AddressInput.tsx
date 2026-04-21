@@ -19,6 +19,8 @@ const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 interface Suggestion {
   name: string;
   description: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface AddressInputProps {

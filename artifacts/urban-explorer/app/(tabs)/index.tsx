@@ -68,7 +68,7 @@ export default function ExploreScreen() {
   const [location, setLocation] = useState<Location.LocationObject | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationCalibrating, setLocationCalibrating] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [searchRadius, setSearchRadius] = useState<150 | 300 | 500>(300);
 
   const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);

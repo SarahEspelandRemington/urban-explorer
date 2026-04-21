@@ -313,8 +313,13 @@ export default function WalkPlanScreen() {
           }}
           onSelectSuggestion={(s) => {
             setStartQuery(s.name);
-            setStart(null);
-            setStartLabel(null);
+            if (typeof s.latitude === "number" && typeof s.longitude === "number") {
+              setStart({ latitude: s.latitude, longitude: s.longitude });
+              setStartLabel(s.name);
+            } else {
+              setStart(null);
+              setStartLabel(null);
+            }
           }}
           placeholder="Start address"
           dotColor="#22c55e"
@@ -346,8 +351,13 @@ export default function WalkPlanScreen() {
           }}
           onSelectSuggestion={(s) => {
             setEndQuery(s.name);
-            setEnd(null);
-            setEndLabel(null);
+            if (typeof s.latitude === "number" && typeof s.longitude === "number") {
+              setEnd({ latitude: s.latitude, longitude: s.longitude });
+              setEndLabel(s.name);
+            } else {
+              setEnd(null);
+              setEndLabel(null);
+            }
           }}
           onSubmitEditing={handlePlanWalk}
           placeholder="End address"

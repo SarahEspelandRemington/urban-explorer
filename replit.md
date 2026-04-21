@@ -43,14 +43,16 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - **Glanceable card layout**: Hero card for nearest place (22px bold name, walk-time badge, summary) + compact single-row cards for the rest (icon + name + walk time). Optimized for walking users who need quick identification without stopping. Distances shown as walk time ("2 min", "< 1 min") instead of raw meters.
 
 - **API server** (`artifacts/api-server`): Express backend
-  - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses, confidence levels). Supports `mode: "quick"` for faster map panning discovery (gpt-4.1-mini, 500m radius, 8-12 places) vs default `"full"` mode (gpt-5.2, 300m, 5-7 places). OSM Overpass results are cached (5min TTL, 200m distance match) to speed up nearby queries.
-  - `POST /api/explore/geocode` - Converts location name to lat/lng coordinates via AI
+  - `POST /api/explore/discover` - Takes lat/lng, returns AI-generated facts about nearby places (with tags, addresses, confidence levels). Supports `mode: "quick"` for faster map panning discovery (gpt-4.1-mini, 500m radius, 8-12 places) vs default full mode (gpt-4.1, 300m, 5-7 places). OSM Overpass results are cached (5min TTL, 200m distance match) to speed up nearby queries.
+  - `POST /api/explore/geocode` - Converts location name to lat/lng coordinates. **Nominatim (OpenStreetMap) is primary**; LLM (gpt-4.1-nano) is fallback for queries Nominatim can't resolve. Returns `{ latitude, longitude, displayName }`.
+  - `POST /api/explore/suggest-locations` - Location autocomplete. **Nominatim primary** (when `nearLocation` is present or query ≥ 15 chars); returns suggestions with embedded `latitude`/`longitude` so the client can skip a separate geocode round-trip. LLM fallback for short/ambiguous queries. Returns `{ name, description, latitude?, longitude? }[]`.
   - `POST /api/explore/place-detail` - Returns detailed history for a specific place
   - `POST /api/explore/place-timeline` - "Time Travel" feature: generates 4-6 historical eras showing how a place transformed through time (gpt-4.1-mini)
   - `POST /api/explore/walk-narration` - Generates brief tour-guide-style narrations for TTS (gpt-4.1-nano)
-  - `POST /api/explore/suggest-locations` - AI-powered location autocomplete (gpt-4.1-nano)
+  - **All OpenAI calls are wrapped in try/catch** — returns 503 on AI service errors instead of unhandled 500, so the client can distinguish and retry. Rate-limit (429) is propagated as-is.
+  - **`trust proxy 1`** set so express-rate-limit reads `X-Forwarded-For` correctly through Replit's reverse proxy and per-IP rate limiting works correctly.
   - **LLM result caching**: In-memory cache (15min TTL, 200 entry max) for all AI-backed endpoints (discover, place-detail, place-timeline, geocode, suggest-locations). Cache keys include all prompt-shaping inputs (place name, category, yearBuilt, coordinates, radius, mode) to prevent stale data. Coordinates rounded to 4 decimal places (~11m precision).
-  - Uses OpenAI GPT-5.2 for discover, gpt-4.1-mini for detail, gpt-4.1-nano for narration/geocode/suggest
+  - Uses OpenAI gpt-4.1 for discover, gpt-4.1-mini for detail/timeline/deep-narration, gpt-4.1-nano for walk-narration/geocode-fallback/suggest-fallback
   - Discover prompt includes numbered priority list, BAD/GOOD examples, quality standards, and HONESTY RULE
   - **OpenStreetMap grounding**: `fetchNearbyOSMPlaces()` queries Overpass API for historic sites, heritage, tourism, notable buildings, cemeteries, and memorials nearby; results are sanitized and injected into the user message so the AI attaches history to verified locations. Overpass query is optimized with targeted building type filters (not broad `amenity`), 25-result limit at source, 4-5s query timeouts, and a competitive `Promise.race` timeout (3-4s) so discovery proceeds without OSM data if the external API is slow
   - `postProcessPlaces()` validates fields, enforces 1.25x radius tolerance, deduplicates by name/coords, filters vague content, validates confidence enum, sorts by distance

@@ -9,6 +9,12 @@ import { authMiddleware } from "./middlewares/authMiddleware";
 
 const app: Express = express();
 
+// Trust the Replit / reverse-proxy `X-Forwarded-For` header so that
+// express-rate-limit can identify individual clients correctly. Without this,
+// every request appears to come from the same loopback IP and the rate limiter
+// treats the entire server as a single client.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
