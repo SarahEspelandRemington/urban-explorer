@@ -1,13 +1,21 @@
 import { Feather } from "@expo/vector-icons";
-import { AudioModule, RecordingPresets, useAudioRecorder, useAudioRecorderState } from "expo-audio";
+import {
+  getRecordingPermissionsAsync,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  useAudioRecorder,
+  useAudioRecorderState,
+} from "expo-audio";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -42,26 +50,17 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
 
   const recorder = useAudioRecorder(RecordingPresets.LOW_QUALITY);
   const recorderState = useAudioRecorderState(recorder);
-  // Mirror recording state in a ref so abort paths (close, unmount) can stop
-  // the mic without depending on possibly-stale React state.
   const isRecordingRef = useRef(false);
   isRecordingRef.current = recorderState.isRecording;
 
-  // Force-stop the recorder without touching React state — used by abort paths
-  // (modal dismissal, component unmount) where setting state is unsafe.
   const abortRecording = React.useCallback(async () => {
     if (!isRecordingRef.current) return;
-    try {
-      await recorder.stop();
-    } catch {
-      // best effort — we just want the mic off
-    }
+    try { await recorder.stop(); } catch { /* best-effort mic release */ }
     recordStartRef.current = null;
   }, [recorder]);
 
   useEffect(() => {
     if (!visible) {
-      // Modal hidden: kill the mic if we were still recording, then reset form.
       void abortRecording();
       setNote("");
       setSeverity("bug");
@@ -72,22 +71,24 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
     }
   }, [visible, abortRecording]);
 
-  // Last-resort safety net: if the sheet ever unmounts while recording (app
-  // backgrounded, navigation, hot reload), make sure the mic is released.
-  useEffect(() => {
-    return () => {
-      void abortRecording();
-    };
-  }, [abortRecording]);
+  useEffect(() => () => { void abortRecording(); }, [abortRecording]);
 
   const startRecord = async () => {
     setRecordError(null);
     try {
       if (Platform.OS !== "web") {
-        const perm = await AudioModule.requestRecordingPermissionsAsync();
-        if (!perm.granted) {
-          setRecordError("Microphone permission denied");
-          return;
+        // Check current status first — if already granted, skip the prompt.
+        // If undecided, request it (shows system dialog). If denied, iOS will
+        // never show the dialog again; guide the user to Settings instead.
+        const current = await getRecordingPermissionsAsync();
+        if (!current.granted) {
+          const requested = await requestRecordingPermissionsAsync();
+          if (!requested.granted) {
+            setRecordError(
+              "Microphone access was denied.\nGo to Settings → Privacy → Microphone and enable it for Expo Go.",
+            );
+            return;
+          }
         }
       }
       await recorder.prepareToRecordAsync();
@@ -101,8 +102,6 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
     }
   };
 
-  // Returns the freshly-recorded clip's uri/duration so callers can use them
-  // immediately without waiting for React state to settle.
   const stopRecord = async (): Promise<{ uri: string | null; durationMs: number | null }> => {
     try {
       await recorder.stop();
@@ -113,9 +112,7 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
         setAudioUri(uri);
         if (durationMs != null) setAudioDurationMs(durationMs);
       }
-      if (Platform.OS !== "web") {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
+      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       return { uri, durationMs };
     } catch (e: any) {
       setRecordError(e?.message || "Could not stop recording");
@@ -127,16 +124,11 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
     if (saving) return;
     setSaving(true);
     try {
-      // If user hits Save while still recording, finalize the clip first and
-      // use the returned values — React state may not have flushed yet.
       let finalUri = audioUri;
       let finalDuration = audioDurationMs;
       if (recorderState.isRecording) {
         const result = await stopRecord();
-        if (result.uri) {
-          finalUri = result.uri;
-          finalDuration = result.durationMs;
-        }
+        if (result.uri) { finalUri = result.uri; finalDuration = result.durationMs; }
       }
 
       if (!note.trim() && !finalUri) {
@@ -145,15 +137,8 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
         return;
       }
 
-      await feedback.saveReport({
-        severity,
-        note: note.trim(),
-        audioUri: finalUri,
-        audioDurationMs: finalDuration,
-      });
-      if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
+      await feedback.saveReport({ severity, note: note.trim(), audioUri: finalUri, audioDurationMs: finalDuration });
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       onSaved?.();
       onClose();
     } catch (e: any) {
@@ -164,15 +149,20 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable
-          style={[
-            styles.sheet,
-            { backgroundColor: colors.background, paddingBottom: insets.bottom + 16 },
-          ]}
-          onPress={(e) => e.stopPropagation()}
-        >
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {/* KeyboardAvoidingView wraps the whole modal so iOS keyboard pushes the
+          sheet up cleanly. behavior="padding" adds padding equal to keyboard
+          height, keeping the bottom of the sheet above the keyboard. */}
+      <KeyboardAvoidingView
+        style={styles.kavWrapper}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
+        <Pressable style={styles.backdrop} onPress={onClose}>
+          <Pressable
+            style={[styles.sheet, { backgroundColor: colors.background }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {/* ── Fixed header ── */}
             <View style={styles.handle} />
             <View style={styles.headerRow}>
               <Text style={[styles.title, { color: colors.text }]}>Capture</Text>
@@ -181,117 +171,117 @@ export function FeedbackCaptureSheet({ visible, onClose, onSaved }: Props) {
               </Pressable>
             </View>
 
-            <View style={styles.severityRow}>
-              {SEVERITIES.map((s) => {
-                const meta = SEVERITY_META[s];
-                const active = s === severity;
-                return (
-                  <Pressable
-                    key={s}
-                    onPress={() => setSeverity(s)}
-                    style={[
-                      styles.severityChip,
-                      {
-                        backgroundColor: active ? meta.color : colors.card,
-                        borderColor: active ? meta.color : colors.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[styles.severityEmoji]}>{meta.emoji}</Text>
-                    <Text
+            {/* ── Scrollable form body — chips, note, mic ── */}
+            <ScrollView
+              style={styles.scrollBody}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.severityRow}>
+                {SEVERITIES.map((s) => {
+                  const meta = SEVERITY_META[s];
+                  const active = s === severity;
+                  return (
+                    <Pressable
+                      key={s}
+                      onPress={() => setSeverity(s)}
                       style={[
-                        styles.severityLabel,
-                        { color: active ? "#fff" : colors.text },
+                        styles.severityChip,
+                        {
+                          backgroundColor: active ? meta.color : colors.card,
+                          borderColor: active ? meta.color : colors.border,
+                        },
                       ]}
                     >
-                      {meta.label}
+                      <Text style={styles.severityEmoji}>{meta.emoji}</Text>
+                      <Text style={[styles.severityLabel, { color: active ? "#fff" : colors.text }]}>
+                        {meta.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <TextInput
+                style={[styles.input, { color: colors.text, backgroundColor: colors.card, borderColor: colors.border }]}
+                placeholder="What happened? (or just hit record)"
+                placeholderTextColor={colors.mutedForeground}
+                multiline
+                value={note}
+                onChangeText={setNote}
+                autoFocus={false}
+              />
+
+              <View style={styles.audioRow}>
+                {recorderState.isRecording ? (
+                  <Pressable onPress={stopRecord} style={[styles.recordBtn, { backgroundColor: "#dc2626" }]}>
+                    <Feather name="square" size={18} color="#fff" />
+                    <Text style={styles.recordBtnText}>Stop recording</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={startRecord}
+                    style={[styles.recordBtn, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
+                  >
+                    <Feather name="mic" size={18} color={colors.text} />
+                    <Text style={[styles.recordBtnText, { color: colors.text }]}>
+                      {audioUri ? "Re-record voice memo" : "Record voice memo"}
                     </Text>
                   </Pressable>
-                );
-              })}
-            </View>
-
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: colors.text,
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                },
-              ]}
-              placeholder="What happened? (or just hit record)"
-              placeholderTextColor={colors.mutedForeground}
-              multiline
-              value={note}
-              onChangeText={setNote}
-              autoFocus={false}
-            />
-
-            <View style={styles.audioRow}>
-              {recorderState.isRecording ? (
-                <Pressable
-                  onPress={stopRecord}
-                  style={[styles.recordBtn, { backgroundColor: "#dc2626" }]}
-                >
-                  <Feather name="square" size={18} color="#fff" />
-                  <Text style={styles.recordBtnText}>Stop recording</Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  onPress={startRecord}
-                  style={[
-                    styles.recordBtn,
-                    { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
-                  ]}
-                >
-                  <Feather name="mic" size={18} color={colors.text} />
-                  <Text style={[styles.recordBtnText, { color: colors.text }]}>
-                    {audioUri ? "Re-record voice memo" : "Record voice memo"}
+                )}
+                {audioUri && !recorderState.isRecording ? (
+                  <Text style={[styles.audioMeta, { color: colors.mutedForeground }]}>
+                    ✓ {audioDurationMs ? `${Math.round(audioDurationMs / 1000)}s saved` : "saved"}
                   </Text>
-                </Pressable>
-              )}
-              {audioUri && !recorderState.isRecording ? (
-                <Text style={[styles.audioMeta, { color: colors.mutedForeground }]}>
-                  ✓ {audioDurationMs ? `${Math.round(audioDurationMs / 1000)}s saved` : "saved"}
-                </Text>
+                ) : null}
+              </View>
+
+              {recordError ? (
+                <View>
+                  <Text style={styles.errorText}>{recordError}</Text>
+                  {recordError.includes("denied") && Platform.OS === "ios" ? (
+                    <Pressable onPress={() => Linking.openSettings()} style={styles.settingsLink}>
+                      <Text style={[styles.settingsLinkText, { color: colors.accent }]}>
+                        Open Settings →
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               ) : null}
+            </ScrollView>
+
+            {/* ── Fixed footer — Save button always visible above keyboard ── */}
+            <View style={[styles.footer, { paddingBottom: insets.bottom + 8 }]}>
+              <Pressable
+                onPress={handleSave}
+                disabled={saving}
+                style={[styles.saveBtn, { backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 }]}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Feather name="check" size={18} color="#fff" />
+                    <Text style={styles.saveBtnText}>Save report</Text>
+                  </>
+                )}
+              </Pressable>
             </View>
-
-            {recordError ? (
-              <Text style={styles.errorText}>{recordError}</Text>
-            ) : null}
-
-            <Pressable
-              onPress={handleSave}
-              disabled={saving}
-              style={[
-                styles.saveBtn,
-                { backgroundColor: colors.accent, opacity: saving ? 0.6 : 1 },
-              ]}
-            >
-              {saving ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Feather name="check" size={18} color="#fff" />
-                  <Text style={styles.saveBtnText}>Save report</Text>
-                </>
-              )}
-            </Pressable>
-          </KeyboardAvoidingView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  kavWrapper: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: 20,
+    maxHeight: "90%",
   },
   handle: {
     width: 40,
@@ -299,10 +289,19 @@ const styles = StyleSheet.create({
     backgroundColor: "#aaa",
     borderRadius: 2,
     alignSelf: "center",
+    marginTop: 12,
     marginBottom: 12,
   },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
   title: { fontSize: 20, fontFamily: "Inter_600SemiBold" },
+  scrollBody: { flexGrow: 0 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 8 },
   severityRow: { flexDirection: "row", gap: 8, marginBottom: 16, flexWrap: "wrap" },
   severityChip: {
     flexDirection: "row",
@@ -322,11 +321,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     minHeight: 80,
-    maxHeight: 140,
+    maxHeight: 120,
     textAlignVertical: "top",
     marginBottom: 12,
   },
-  audioRow: { gap: 6, marginBottom: 12 },
+  audioRow: { gap: 6, marginBottom: 8 },
   recordBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -337,7 +336,15 @@ const styles = StyleSheet.create({
   },
   recordBtnText: { fontSize: 14, fontFamily: "Inter_500Medium", color: "#fff" },
   audioMeta: { fontSize: 12, textAlign: "center" },
-  errorText: { color: "#dc2626", fontSize: 13, marginBottom: 8, textAlign: "center" },
+  errorText: { color: "#dc2626", fontSize: 13, marginBottom: 4, textAlign: "center" },
+  settingsLink: { alignItems: "center", paddingVertical: 4 },
+  settingsLinkText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  footer: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(0,0,0,0.08)",
+  },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -345,7 +352,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 12,
-    marginTop: 4,
   },
   saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
 });
