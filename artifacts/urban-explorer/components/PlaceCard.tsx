@@ -165,6 +165,12 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
               "You've rated a lot of places recently — try again in a few minutes.",
               [{ text: "OK" }],
             );
+          } else {
+            Alert.alert(
+              "Couldn't save your rating",
+              "Something went wrong — check your connection and try again.",
+              [{ text: "OK" }],
+            );
           }
           setUserRating(previousRating);
           if (previousRating === null) {
