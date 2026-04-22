@@ -469,25 +469,31 @@ async function postProcessPlaces(
 // Lightweight rating enrichment + sort — called on both fresh and cached results
 // ---------------------------------------------------------------------------
 
+function placeIdFor(place: { name: string; latitude: number; longitude: number }): string {
+  return `${place.name}-${place.latitude}-${place.longitude}`;
+}
+
 const RATING_BOOST_M = 80;
 const MAX_BOOST_M = 400;
 
+interface PlaceRatingEntry { up: number; down: number; netScore: number }
+
 /**
  * Batch-fetch ratings from the database for a set of places.
- * Returns a Map of placeId -> netScore (up - down).
+ * Returns a Map of placeId -> { up, down, netScore }.
  * Silently returns an empty Map on database errors so discovery still works.
  */
-async function fetchRatingsMap(places: any[]): Promise<Map<string, number>> {
+async function fetchRatingsMap(places: any[]): Promise<Map<string, PlaceRatingEntry>> {
   if (places.length === 0) return new Map();
-  const ids = places.map((p: any) => `${p.name}-${p.latitude}-${p.longitude}`);
+  const ids = places.map(placeIdFor);
   try {
     const rows = await db
       .select({ placeId: placeRatings.placeId, up: placeRatings.up, down: placeRatings.down })
       .from(placeRatings)
       .where(inArray(placeRatings.placeId, ids));
-    const map = new Map<string, number>();
+    const map = new Map<string, PlaceRatingEntry>();
     for (const row of rows) {
-      map.set(row.placeId, row.up - row.down);
+      map.set(row.placeId, { up: row.up, down: row.down, netScore: row.up - row.down });
     }
     return map;
   } catch {
@@ -496,14 +502,16 @@ async function fetchRatingsMap(places: any[]): Promise<Map<string, number>> {
 }
 
 /**
- * Annotates each place with its current `netScore` (from the pre-fetched ratingsMap),
- * then sorts the array in-place by effective distance (distance minus rating boost).
- * Callers must pass a cloned array when the source is a cached object.
+ * Annotates each place with its current `netScore` and `communityRating` (from the
+ * pre-fetched ratingsMap), then sorts the array in-place by effective distance
+ * (distance minus rating boost). Callers must pass a cloned array when the source
+ * is a cached object.
  */
-function applyRatingSortWithMap(places: any[], ratingsMap: Map<string, number>): void {
+function applyRatingSortWithMap(places: any[], ratingsMap: Map<string, PlaceRatingEntry>): void {
   for (const p of places) {
-    const ratingKey = `${p.name}-${p.latitude}-${p.longitude}`;
-    p.netScore = ratingsMap.get(ratingKey) ?? 0;
+    const rating = ratingsMap.get(placeIdFor(p)) ?? { up: 0, down: 0, netScore: 0 };
+    p.netScore = rating.netScore;
+    p.communityRating = rating;
   }
   places.sort((a: any, b: any) => {
     const aBoost = Math.max(-MAX_BOOST_M, Math.min(MAX_BOOST_M, (a.netScore ?? 0) * RATING_BOOST_M));
@@ -535,8 +543,8 @@ router.post("/explore/discover", async (req, res) => {
   const cachedDiscover = getLLMCache(discoverCacheKey);
   if (cachedDiscover) {
     // Re-apply current ratings on every cache hit so newly-submitted ratings
-    // immediately affect the sort order without waiting for cache expiry.
-    // Clone the places array (and each element) so we never mutate the cached object.
+    // immediately affect the sort order and communityRating display without
+    // waiting for cache expiry. Clone places so we never mutate the cached object.
     if (Array.isArray(cachedDiscover.places) && cachedDiscover.places.length > 0) {
       const refreshedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
       const ratingsMap = await fetchRatingsMap(refreshedPlaces);
@@ -749,6 +757,11 @@ Return ${placeCount} places. Quality beats quantity — if you can only find 6 p
     });
   } else {
     setLLMCache(discoverCacheKey, data);
+  }
+
+  if (Array.isArray(data.places) && data.places.length > 0) {
+    const ratingsMap = await fetchRatingsMap(data.places);
+    applyRatingSortWithMap(data.places, ratingsMap);
   }
   res.json(data);
 

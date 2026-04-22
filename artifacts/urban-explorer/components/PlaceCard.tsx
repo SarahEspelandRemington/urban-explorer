@@ -10,7 +10,7 @@ import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
-import { useRatePlace } from "@workspace/api-client-react";
+import { useRatePlace, type RatePlaceResponse } from "@workspace/api-client-react";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -29,6 +29,12 @@ function formatWalkDistance(meters?: number): string {
   return `${miles.toFixed(2)} mi`;
 }
 
+interface CommunityRating {
+  up: number;
+  down: number;
+  netScore: number;
+}
+
 interface PlaceCardProps {
   place: {
     id: string;
@@ -43,6 +49,7 @@ interface PlaceCardProps {
     address?: string;
     distanceMeters?: number;
     netScore?: number;
+    communityRating?: CommunityRating;
   };
   index: number;
   expanded?: boolean;
@@ -58,6 +65,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const saved = isPlaceSaved(placeId);
 
   const [userRating, setUserRating] = useState<"up" | "down" | null>(null);
+  const [communityRating, setCommunityRating] = useState<CommunityRating | undefined>(place.communityRating);
   const rateMutation = useRatePlace();
 
   const storageKey = `place_rating:${placeId}`;
@@ -118,7 +126,6 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-
     setUserRating(newRating);
     if (newRating === null) {
       AsyncStorage.removeItem(storageKey);
@@ -127,17 +134,24 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     }
     onRate?.(placeId, newRating, previousRating);
 
-    rateMutation.mutate({
-      data: {
-        placeId,
-        placeName: place.name,
-        category: place.category,
-        latitude: place.latitude,
-        longitude: place.longitude,
-        rating: newRating ?? "none",
-        ...(previousRating != null ? { previousRating } : {}),
+    rateMutation.mutate(
+      {
+        data: {
+          placeId,
+          placeName: place.name,
+          category: place.category,
+          latitude: place.latitude,
+          longitude: place.longitude,
+          rating: newRating ?? "none",
+          ...(previousRating != null ? { previousRating } : {}),
+        },
       },
-    });
+      {
+        onSuccess: (result: RatePlaceResponse) => {
+          setCommunityRating({ up: result.up, down: result.down, netScore: result.up - result.down });
+        },
+      },
+    );
   };
 
   const navigateToDetail = () => {
@@ -209,6 +223,24 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
                   style={{ opacity: userRating === "up" ? 1 : 0.45 }}
                 />
               </Pressable>
+              {communityRating != null ? (
+                <Text
+                  style={[
+                    styles.communityScore,
+                    {
+                      color:
+                        communityRating.netScore > 0
+                          ? "#22c55e"
+                          : communityRating.netScore < 0
+                          ? "#ef4444"
+                          : colors.mutedForeground,
+                    },
+                  ]}
+                  accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
+                >
+                  {communityRating.netScore > 0 ? "+" : ""}{communityRating.netScore}
+                </Text>
+              ) : null}
               <Pressable
                 onPress={(e) => { e.stopPropagation?.(); handleRate("down"); }}
                 hitSlop={16}
@@ -363,6 +395,24 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
               style={{ opacity: userRating === "up" ? 1 : 0.35 }}
             />
           </Pressable>
+          {communityRating != null ? (
+            <Text
+              style={[
+                styles.compactScore,
+                {
+                  color:
+                    communityRating.netScore > 0
+                      ? "#22c55e"
+                      : communityRating.netScore < 0
+                      ? "#ef4444"
+                      : colors.mutedForeground,
+                },
+              ]}
+              accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
+            >
+              {communityRating.netScore > 0 ? "+" : ""}{communityRating.netScore}
+            </Text>
+          ) : null}
           <Pressable
             onPress={(e) => { e.stopPropagation?.(); handleRate("down"); }}
             hitSlop={12}
@@ -507,6 +557,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     marginRight: 4,
+  },
+  communityScore: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    minWidth: 22,
+    textAlign: "center",
+  },
+  compactScore: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    minWidth: 18,
+    textAlign: "center",
   },
   compactRatingRow: {
     flexDirection: "row",
