@@ -232,12 +232,14 @@ export default function ExploreScreen() {
     [discoverMutation, searchRadius],
   );
 
-  const mapLoadingRef = useRef(false);
+  const mapRegionRequestRef = useRef(0);
 
   const handleMapRegionDiscover = useCallback(
     (lat: number, lng: number) => {
-      if (mapLoadingRef.current) return;
-      mapLoadingRef.current = true;
+      // Invalidate any pending auto-discover so its slow result can't
+      // overwrite the map after the user has already panned away.
+      discoverRequestRef.current++;
+      const requestId = ++mapRegionRequestRef.current;
       setMapLoading(true);
       mapDiscoverMutation.mutate(
         {
@@ -250,6 +252,8 @@ export default function ExploreScreen() {
         },
         {
           onSuccess: (data: any) => {
+            // Drop result if a newer pan fired while this one was in-flight.
+            if (requestId !== mapRegionRequestRef.current) return;
             const newPlaces = (data?.places as DiscoveredPlace[] | undefined) ?? [];
             if (newPlaces.length > 0) {
               const existing = new Set(
@@ -265,11 +269,10 @@ export default function ExploreScreen() {
               mapPlacesRef.current = updated;
               setMapPlaces(updated);
             }
-            mapLoadingRef.current = false;
             setMapLoading(false);
           },
           onError: () => {
-            mapLoadingRef.current = false;
+            if (requestId !== mapRegionRequestRef.current) return;
             setMapLoading(false);
           },
         },
