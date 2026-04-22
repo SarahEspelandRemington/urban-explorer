@@ -173,10 +173,11 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
             );
           }
           setUserRating(previousRating);
+          setLocalRating(placeId, previousRating);
           if (previousRating === null) {
-            AsyncStorage.removeItem(storageKey);
+            AsyncStorage.removeItem(ratingStorageKey);
           } else {
-            AsyncStorage.setItem(storageKey, previousRating);
+            AsyncStorage.setItem(ratingStorageKey, previousRating);
           }
           onRate?.(placeId, previousRating, newRating);
         },
