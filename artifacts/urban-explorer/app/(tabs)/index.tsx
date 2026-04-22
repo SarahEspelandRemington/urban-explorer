@@ -447,6 +447,25 @@ export default function ExploreScreen() {
             <Feather name="search" size={18} color={colors.foreground} />
           </Pressable>
           <Pressable
+            onPress={() => {
+              unlockWebSpeech();
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/walk-plan");
+            }}
+            style={({ pressed }) => [
+              styles.searchButton,
+              {
+                backgroundColor: colors.muted,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Walk Mode"
+            accessibilityHint="Start an audio walking tour"
+          >
+            <Feather name="headphones" size={18} color={colors.foreground} />
+          </Pressable>
+          <Pressable
             onPress={handleDiscover}
             disabled={discoverMutation.isPending || locationLoading}
             style={({ pressed }) => [
