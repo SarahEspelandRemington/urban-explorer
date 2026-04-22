@@ -346,7 +346,35 @@ async function geocodeNearLocation(address: string): Promise<{ lat: number; lon:
 
 // ---------------------------------------------------------------------------
 
-function postProcessPlaces(places: any[], userLat: number, userLng: number, searchRadius: number): any[] {
+async function verifyPlaceCoordinates(places: any[]): Promise<void> {
+  const COORD_CORRECTION_THRESHOLD_M = 50;
+
+  const candidates = places.filter(
+    (p) => p.confidence !== "high" && typeof p.address === "string" && p.address.trim().length > 5,
+  );
+
+  await Promise.all(
+    candidates.map(async (p) => {
+      try {
+        const results = await nominatimSearch(p.address.trim(), 1, { countrycodes: "us" });
+        if (results.length === 0) return;
+        const { lat, lon } = results[0];
+        const geocodedLat = parseFloat(lat);
+        const geocodedLon = parseFloat(lon);
+        if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) return;
+        const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
+        if (dist > COORD_CORRECTION_THRESHOLD_M) {
+          p.latitude = geocodedLat;
+          p.longitude = geocodedLon;
+        }
+      } catch {
+        // keep AI coordinates on any failure
+      }
+    }),
+  );
+}
+
+async function postProcessPlaces(places: any[], userLat: number, userLng: number, searchRadius: number): Promise<any[]> {
   const validConfidence = new Set(["high", "medium", "low"]);
   const maxDist = searchRadius * 1.10;
 
@@ -360,6 +388,8 @@ function postProcessPlaces(places: any[], userLat: number, userLng: number, sear
     }
     return true;
   });
+
+  await verifyPlaceCoordinates(processed);
 
   processed = processed.filter((p: any) => {
     const dist = haversineDistance(userLat, userLng, p.latitude, p.longitude);
@@ -456,6 +486,7 @@ PRIORITIZE these kinds of places (in rough order of interest):
 4. Local stories with names, dates, and specifics — not "there was a neighborhood feud" but "in 1923, the building owner John Rinaldi refused to sell to the subway authority, forcing the tunnel to curve around his basement"
 5. Odd infrastructure — old hitching posts, embedded trolley tracks, mysterious plaques, sealed-off subway entrances, converted buildings with visible remnants of their past use
 6. Small parks, alleys, or pocket spaces with hidden histories
+7. Community power and social fabric — the human history of who controlled, organized, and fought over specific streets: ethnic mutual aid societies and social clubs, union halls and labor organizing, gang territories and crew headquarters, political machine clubhouses, community figures (bosses, organizers, fixers) who shaped daily life on specific blocks. Example discoveries at this level of specificity: "596 10th Ave (now Mr. Biggs Bar) was the Westies gang's headquarters in the 1970s — Jimmy Coonan ran Hell's Kitchen's Irish mob from this corner"; "The building at 43 E 4th St housed the United Hebrew Trades, whose 1888 organizing drive pulled 10,000 garment workers off the job in one week"; "This storefront was Tammany Hall's 17th Ward clubhouse, where district captain 'Big Tim' Sullivan handed out turkeys and coal to tenants in exchange for their votes every November"
 
 AVOID these:
 - Major tourist landmarks that appear in guidebooks (e.g., Statue of Liberty, Golden Gate Bridge, Empire State Building, Times Square as a destination)
@@ -463,6 +494,8 @@ AVOID these:
 - Generic descriptions that could apply to any old building in any city. BAD: "This building has a rich history." GOOD: "The carved stone face above the third-floor window is a portrait of the building's architect, who hid his own likeness in all his projects."
 - Well-known museums, famous monuments, or top-10 lists
 - Descriptions that are mostly about the neighborhood in general rather than the specific place
+- Collective area descriptions without a specific anchor point. BAD: "A row of tenement houses on 41st Street that housed immigrant families in the 1900s." GOOD: "317 W 41st St — one of the few survivors from when this entire block was dense immigrant housing; note the fire escape ironwork pattern unique to pre-1910 tenements."
+- Social history claims without a specific address or intersection. BAD: "The Westies controlled Hell's Kitchen in the 1970s." GOOD: "596 10th Ave was the Westies' base of operations — Jimmy Coonan ran the crew from this corner through the late 1970s."
 
 QUALITY STANDARDS FOR FACTS:
 - Every fact MUST include at least one of: a specific year/decade, a person's name, a verifiable detail (address, building material, style name), or a concrete event
@@ -472,9 +505,9 @@ QUALITY STANDARDS FOR FACTS:
 
 COORDINATE ACCURACY IS CRITICAL:
 - Use precise coordinates to 5 decimal places (±1 meter accuracy)
+- Every discovery MUST be anchored to a single specific, locatable point — one building entrance, one intersection, one wall, one doorway. Never describe a phenomenon that spans many buildings without picking one surviving example and telling the story through that lens.
 - For known addresses, use the exact building coordinates
 - For intersections, use the exact intersection point
-- For blocks or stretches, use the midpoint of that stretch
 - Always include a real street address or intersection in the "address" field — this helps users navigate
 - The coordinates and address MUST agree with each other. Do not give coordinates in one location and an address in a different location.
 
@@ -491,7 +524,7 @@ Respond in JSON format:
       "name": "Place Name — use the real or historical name, not a generic label",
       "category": "building|storefront|alley|corner|mural|infrastructure|former site|architectural detail|park|church|residential",
       "yearBuilt": "1920s" or "circa 1850" or "unknown",
-      "tags": ["2-4 descriptive tags like: ghost sign, speakeasy, art deco, industrial, immigrant history, prohibition era, jazz age, tenement, waterfront, transit, religious, commercial, residential, demolished, converted, landmarked"],
+      "tags": ["2-4 descriptive tags like: ghost sign, speakeasy, art deco, industrial, immigrant history, prohibition era, jazz age, tenement, waterfront, transit, religious, commercial, residential, demolished, converted, landmarked, labor history, ethnic community, gang territory, political machine, immigrant organization, working class, displacement"],
       "summary": "One captivating sentence that makes this specific place sound like a secret worth knowing. Include the most surprising or vivid detail.",
       "facts": ["Fact with a specific year, name, or verifiable detail", "A second distinct fact", "A third distinct fact"],
       "latitude": precise_lat_to_5_decimal_places,
@@ -542,7 +575,7 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
   }
 
   if (data.places && Array.isArray(data.places)) {
-    data.places = postProcessPlaces(data.places, latitude, longitude, searchRadius);
+    data.places = await postProcessPlaces(data.places, latitude, longitude, searchRadius);
   }
 
   setLLMCache(discoverCacheKey, data);
