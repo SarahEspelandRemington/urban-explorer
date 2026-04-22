@@ -79,6 +79,8 @@ export default function WalkPlanScreen() {
   const [isResolving, setIsResolving] = useState<"start" | "end" | null>(null);
   const [isPlanning, setIsPlanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectingPoint, setSelectingPoint] = useState<"start" | "end" | null>(null);
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState<"start" | "end" | null>(null);
 
   const planVersionRef = useRef(0);
   const planAbortRef = useRef<AbortController | null>(null);
@@ -126,6 +128,45 @@ export default function WalkPlanScreen() {
       setError("Couldn't get your current location.");
     } finally {
       setIsResolving(null);
+    }
+  };
+
+  const reverseGeocode = async (lat: number, lng: number): Promise<string | null> => {
+    try {
+      const res = await fetch(`${API_BASE}/api/explore/reverse-geocode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
+        body: JSON.stringify({ latitude: lat, longitude: lng }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return typeof data.displayName === "string" ? data.displayName : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const handleMapPress = async (coord: { latitude: number; longitude: number }) => {
+    if (!selectingPoint) return;
+    const which = selectingPoint;
+    setSelectingPoint(null);
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsReverseGeocoding(which);
+    try {
+      const label =
+        (await reverseGeocode(coord.latitude, coord.longitude)) ||
+        `${coord.latitude.toFixed(5)}, ${coord.longitude.toFixed(5)}`;
+      if (which === "start") {
+        setStart({ latitude: coord.latitude, longitude: coord.longitude });
+        setStartLabel(label);
+        setStartQuery(label);
+      } else {
+        setEnd({ latitude: coord.latitude, longitude: coord.longitude });
+        setEndLabel(label);
+        setEndQuery(label);
+      }
+    } finally {
+      setIsReverseGeocoding(null);
     }
   };
 
@@ -344,19 +385,38 @@ export default function WalkPlanScreen() {
           editable={!isPlanning}
           returnKeyType="next"
           rightAdornment={
-            <Pressable
-              onPress={useMyCurrentLocationForStart}
-              accessibilityRole="button"
-              accessibilityLabel="Use my current location for start"
-              hitSlop={8}
-              disabled={isPlanning || isResolving === "start"}
-            >
-              {isResolving === "start" ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <Feather name="crosshair" size={18} color={colors.primary} />
-              )}
-            </Pressable>
+            <View style={styles.inputActions}>
+              <Pressable
+                onPress={() => setSelectingPoint(selectingPoint === "start" ? null : "start")}
+                accessibilityRole="button"
+                accessibilityLabel="Pin start location on map"
+                hitSlop={8}
+                disabled={isPlanning || !!isReverseGeocoding}
+              >
+                {isReverseGeocoding === "start" ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Feather
+                    name="map-pin"
+                    size={18}
+                    color={selectingPoint === "start" ? colors.primary : colors.mutedForeground}
+                  />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={useMyCurrentLocationForStart}
+                accessibilityRole="button"
+                accessibilityLabel="Use my current location for start"
+                hitSlop={8}
+                disabled={isPlanning || isResolving === "start"}
+              >
+                {isResolving === "start" ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Feather name="crosshair" size={18} color={colors.primary} />
+                )}
+              </Pressable>
+            </View>
           }
         />
 
@@ -386,7 +446,23 @@ export default function WalkPlanScreen() {
           rightAdornment={
             isResolving === "end" ? (
               <ActivityIndicator size="small" color={colors.primary} />
-            ) : undefined
+            ) : isReverseGeocoding === "end" ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Pressable
+                onPress={() => setSelectingPoint(selectingPoint === "end" ? null : "end")}
+                accessibilityRole="button"
+                accessibilityLabel="Pin end location on map"
+                hitSlop={8}
+                disabled={isPlanning || !!isReverseGeocoding}
+              >
+                <Feather
+                  name="map-pin"
+                  size={18}
+                  color={selectingPoint === "end" ? colors.primary : colors.mutedForeground}
+                />
+              </Pressable>
+            )
           }
         />
 
@@ -438,6 +514,7 @@ export default function WalkPlanScreen() {
           geometry={geometry}
           places={places}
           excludedPlaceIds={excluded}
+          selectingPoint={selectingPoint}
           onMoveStart={(next) => {
             setStart(next);
             if (end) fetchRouteAndPlaces(next, end, bendPoint);
@@ -451,6 +528,7 @@ export default function WalkPlanScreen() {
             if (start && end) fetchRouteAndPlaces(start, end, next);
           }}
           onTogglePlace={togglePlace}
+          onMapPress={handleMapPress}
         />
       </View>
 
@@ -475,7 +553,7 @@ export default function WalkPlanScreen() {
           <Text style={[styles.summaryHint, { color: colors.mutedForeground }]}>
             {Platform.OS === "web"
               ? "Tap a place to skip or include it."
-              : "Drag the green or red pin to adjust the start or end. Drag the small handle on the route to bend it. Tap a marker to skip a story."}
+              : "Tap the pin icon next to an address to select it on the map. Drag the green or red pin to fine-tune. Drag the route handle to bend it. Tap a marker to skip a story."}
           </Text>
         </View>
       )}
@@ -530,6 +608,7 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5 },
   input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", paddingVertical: 0 },
   errorText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
+  inputActions: { flexDirection: "row", alignItems: "center", gap: 12 },
   planButton: {
     flexDirection: "row",
     alignItems: "center",

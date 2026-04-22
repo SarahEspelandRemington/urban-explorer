@@ -788,6 +788,59 @@ Be as accurate as possible with coordinates. For neighborhoods, use the center p
   res.json(data);
 });
 
+router.post("/explore/reverse-geocode", async (req, res) => {
+  const { latitude, longitude } = req.body;
+  if (typeof latitude !== "number" || typeof longitude !== "number") {
+    res.status(400).json({ error: "latitude and longitude are required" });
+    return;
+  }
+
+  const cacheKey = `revgeo:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cached = getLLMCache(cacheKey);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
+  const params = new URLSearchParams({
+    lat: String(latitude),
+    lon: String(longitude),
+    format: "jsonv2",
+    addressdetails: "1",
+    zoom: "18",
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const resp = await fetch(`${NOMINATIM_BASE}/reverse?${params.toString()}`, {
+      signal: controller.signal,
+      headers: NOMINATIM_HEADERS,
+    });
+    clearTimeout(timer);
+    if (!resp.ok) throw new Error("Nominatim error");
+    const data = await resp.json();
+    const addr = data.address || {};
+    const parts: string[] = [];
+    if (addr.house_number && addr.road) {
+      parts.push(`${addr.house_number} ${addr.road}`);
+    } else if (addr.road) {
+      parts.push(addr.road);
+    } else {
+      parts.push((data.display_name || "").split(",")[0].trim());
+    }
+    const neighborhood =
+      addr.neighbourhood || addr.suburb || addr.city_district || addr.quarter;
+    if (neighborhood) parts.push(neighborhood);
+    const displayName = parts.filter(Boolean).join(", ");
+    const result = { displayName: displayName || data.display_name };
+    setLLMCache(cacheKey, result);
+    res.json(result);
+  } catch {
+    clearTimeout(timer);
+    res.status(503).json({ error: "Reverse geocode temporarily unavailable" });
+  }
+});
+
 router.post("/explore/place-detail", async (req, res) => {
   const parsed = GetPlaceDetailBody.safeParse(req.body);
   if (!parsed.success) {
