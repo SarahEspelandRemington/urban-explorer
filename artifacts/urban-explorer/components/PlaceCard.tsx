@@ -1,7 +1,8 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
@@ -57,6 +58,18 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const [userRating, setUserRating] = useState<"up" | "down" | null>(null);
   const rateMutation = useRatePlace();
 
+  const storageKey = `place_rating:${placeId}`;
+
+  useEffect(() => {
+    AsyncStorage.getItem(storageKey).then((stored) => {
+      if (stored === "up" || stored === "down") {
+        setUserRating(stored);
+      } else {
+        setUserRating(null);
+      }
+    });
+  }, [storageKey]);
+
   const iconName = getCategoryIcon(place.category);
   const categoryColor = getCategoryColor(place.category, colors);
   const walkTime = formatWalkDistance(place.distanceMeters);
@@ -78,6 +91,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     setUserRating(rating);
+    AsyncStorage.setItem(storageKey, rating);
     rateMutation.mutate({
       data: {
         placeId,

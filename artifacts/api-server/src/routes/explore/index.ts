@@ -12,25 +12,10 @@ import {
   RatePlaceBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
+import { db, placeRatings } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 const router = Router();
-
-// ---------------------------------------------------------------------------
-// In-memory ratings store
-// ---------------------------------------------------------------------------
-
-interface RatingEntry {
-  placeId: string;
-  placeName: string;
-  category: string;
-  latitude: number;
-  longitude: number;
-  up: number;
-  down: number;
-  lastRatedAt: string;
-}
-
-const ratingsStore = new Map<string, RatingEntry>();
 
 interface OSMPlace {
   name: string;
@@ -1875,7 +1860,7 @@ Return one entry per input place, in the same order. Be concise — these blurbs
 // POST /explore/rate-place — submit a thumbs-up or thumbs-down for a place
 // ---------------------------------------------------------------------------
 
-router.post("/explore/rate-place", (req, res) => {
+router.post("/explore/rate-place", async (req, res) => {
   const parsed = RatePlaceBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -1884,28 +1869,40 @@ router.post("/explore/rate-place", (req, res) => {
 
   const { placeId, placeName, category, latitude, longitude, rating } = parsed.data;
 
-  let entry = ratingsStore.get(placeId);
-  if (!entry) {
-    entry = { placeId, placeName, category, latitude, longitude, up: 0, down: 0, lastRatedAt: new Date().toISOString() };
-    ratingsStore.set(placeId, entry);
-  }
+  const upIncrement = rating === "up" ? 1 : 0;
+  const downIncrement = rating === "down" ? 1 : 0;
 
-  if (rating === "up") {
-    entry.up += 1;
-  } else {
-    entry.down += 1;
-  }
-  entry.lastRatedAt = new Date().toISOString();
+  const [updated] = await db
+    .insert(placeRatings)
+    .values({
+      placeId,
+      placeName,
+      category,
+      latitude,
+      longitude,
+      up: upIncrement,
+      down: downIncrement,
+    })
+    .onConflictDoUpdate({
+      target: placeRatings.placeId,
+      set: {
+        up: sql`${placeRatings.up} + ${upIncrement}`,
+        down: sql`${placeRatings.down} + ${downIncrement}`,
+        lastRatedAt: new Date(),
+      },
+    })
+    .returning();
 
-  res.json({ ok: true, placeId, up: entry.up, down: entry.down });
+  res.json({ ok: true, placeId, up: updated.up, down: updated.down });
 });
 
 // ---------------------------------------------------------------------------
 // GET /explore/ratings — retrieve aggregate rating data (sorted by net score)
 // ---------------------------------------------------------------------------
-router.get("/explore/ratings", (_req, res) => {
-  const entries = Array.from(ratingsStore.values())
-    .map((e) => ({ ...e, netScore: e.up - e.down }))
+router.get("/explore/ratings", async (_req, res) => {
+  const rows = await db.select().from(placeRatings);
+  const entries = rows
+    .map((e) => ({ ...e, lastRatedAt: e.lastRatedAt.toISOString(), netScore: e.up - e.down }))
     .sort((a, b) => b.netScore - a.netScore);
 
   res.json({ ratings: entries, total: entries.length });
