@@ -13,7 +13,7 @@ import {
   SuggestLocationsBody,
 } from "@workspace/api-zod";
 import { db, placeRatings } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -458,9 +458,57 @@ async function postProcessPlaces(
     return true;
   });
 
-  processed.sort((a: any, b: any) => a.distanceMeters - b.distanceMeters);
+  const ratingsMap = await fetchRatingsMap(processed);
+  applyRatingSortWithMap(processed, ratingsMap);
 
   return processed;
+}
+
+// ---------------------------------------------------------------------------
+// Lightweight rating enrichment + sort — called on both fresh and cached results
+// ---------------------------------------------------------------------------
+
+const RATING_BOOST_M = 80;
+const MAX_BOOST_M = 400;
+
+/**
+ * Batch-fetch ratings from the database for a set of places.
+ * Returns a Map of placeId -> netScore (up - down).
+ * Silently returns an empty Map on database errors so discovery still works.
+ */
+async function fetchRatingsMap(places: any[]): Promise<Map<string, number>> {
+  if (places.length === 0) return new Map();
+  const ids = places.map((p: any) => `${p.name}-${p.latitude}-${p.longitude}`);
+  try {
+    const rows = await db
+      .select({ placeId: placeRatings.placeId, up: placeRatings.up, down: placeRatings.down })
+      .from(placeRatings)
+      .where(inArray(placeRatings.placeId, ids));
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      map.set(row.placeId, row.up - row.down);
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * Annotates each place with its current `netScore` (from the pre-fetched ratingsMap),
+ * then sorts the array in-place by effective distance (distance minus rating boost).
+ * Callers must pass a cloned array when the source is a cached object.
+ */
+function applyRatingSortWithMap(places: any[], ratingsMap: Map<string, number>): void {
+  for (const p of places) {
+    const ratingKey = `${p.name}-${p.latitude}-${p.longitude}`;
+    p.netScore = ratingsMap.get(ratingKey) ?? 0;
+  }
+  places.sort((a: any, b: any) => {
+    const aBoost = Math.max(-MAX_BOOST_M, Math.min(MAX_BOOST_M, (a.netScore ?? 0) * RATING_BOOST_M));
+    const bBoost = Math.max(-MAX_BOOST_M, Math.min(MAX_BOOST_M, (b.netScore ?? 0) * RATING_BOOST_M));
+    return (a.distanceMeters - aBoost) - (b.distanceMeters - bBoost);
+  });
 }
 
 router.post("/explore/discover", async (req, res) => {
@@ -485,7 +533,17 @@ router.post("/explore/discover", async (req, res) => {
   const discoverCacheKey = `${modeKey}:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}`;
   const cachedDiscover = getLLMCache(discoverCacheKey);
   if (cachedDiscover) {
-    res.json(cachedDiscover);
+    // Re-apply current ratings on every cache hit so newly-submitted ratings
+    // immediately affect the sort order without waiting for cache expiry.
+    // Clone the places array (and each element) so we never mutate the cached object.
+    if (Array.isArray(cachedDiscover.places) && cachedDiscover.places.length > 0) {
+      const refreshedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
+      const ratingsMap = await fetchRatingsMap(refreshedPlaces);
+      applyRatingSortWithMap(refreshedPlaces, ratingsMap);
+      res.json({ ...cachedDiscover, places: refreshedPlaces });
+    } else {
+      res.json(cachedDiscover);
+    }
     return;
   }
 

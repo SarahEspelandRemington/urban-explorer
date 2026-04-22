@@ -42,6 +42,7 @@ interface PlaceCardProps {
     longitude: number;
     address?: string;
     distanceMeters?: number;
+    netScore?: number;
   };
   index: number;
   expanded?: boolean;
@@ -73,6 +74,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const iconName = getCategoryIcon(place.category);
   const categoryColor = getCategoryColor(place.category, colors);
   const walkTime = formatWalkDistance(place.distanceMeters);
+  const isLowRated = (place.netScore ?? 0) < -1;
 
   const handleSave = () => {
     if (Platform.OS !== "web") {
@@ -133,7 +135,10 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
   if (expanded) {
     return (
-      <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index === 0 ? 0 : index * 60).springify() : undefined}>
+      <Animated.View
+        entering={Platform.OS !== "web" ? FadeInDown.delay(index === 0 ? 0 : index * 60).springify() : undefined}
+        style={isLowRated ? { opacity: 0.55 } : undefined}
+      >
         <Pressable
           onPress={toggleExpand}
           accessibilityRole="button"
@@ -255,7 +260,10 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   }
 
   return (
-    <Animated.View entering={Platform.OS !== "web" ? FadeInDown.delay(index * 60).springify() : undefined}>
+    <Animated.View
+      entering={Platform.OS !== "web" ? FadeInDown.delay(index * 60).springify() : undefined}
+      style={isLowRated ? { opacity: 0.55 } : undefined}
+    >
       <Pressable
         onPress={toggleExpand}
         accessibilityRole="button"

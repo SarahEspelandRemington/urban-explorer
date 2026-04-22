@@ -38,6 +38,7 @@ interface DiscoveredPlace {
   longitude: number;
   address?: string;
   distanceMeters?: number;
+  netScore?: number;
 }
 
 function getEra(yearBuilt?: string): string | null {
