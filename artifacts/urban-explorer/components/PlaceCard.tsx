@@ -2,9 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
 import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
@@ -77,6 +77,28 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const walkTime = formatWalkDistance(place.distanceMeters);
   const isLowRated = (place.netScore ?? 0) < -1;
   const isTopPick = (place.netScore ?? 0) > 2;
+
+  const prevIsTopPick = useRef(isTopPick);
+  const badgeScale = useSharedValue(isTopPick ? 1 : 0);
+  const badgeOpacity = useSharedValue(isTopPick ? 1 : 0);
+
+  useEffect(() => {
+    if (isTopPick && !prevIsTopPick.current) {
+      badgeScale.value = 0;
+      badgeOpacity.value = 0;
+      badgeScale.value = withSpring(1, { damping: 10, stiffness: 200 });
+      badgeOpacity.value = withTiming(1, { duration: 180 });
+    } else if (!isTopPick) {
+      badgeScale.value = 0;
+      badgeOpacity.value = 0;
+    }
+    prevIsTopPick.current = isTopPick;
+  }, [isTopPick]);
+
+  const badgeAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: badgeScale.value }],
+    opacity: badgeOpacity.value,
+  }));
 
   const handleSave = () => {
     if (Platform.OS !== "web") {
@@ -235,13 +257,13 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
           <View style={styles.heroMeta}>
             {isTopPick ? (
-              <View
-                style={[styles.topPickBadge]}
+              <Animated.View
+                style={[styles.topPickBadge, badgeAnimStyle]}
                 accessibilityLabel="Top pick"
               >
                 <Feather name="star" size={11} color="#f59e0b" />
                 <Text style={styles.topPickBadgeText}>Top pick</Text>
-              </View>
+              </Animated.View>
             ) : null}
             {walkTime ? (
               <View
@@ -308,7 +330,9 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
               {place.name}
             </Text>
             {isTopPick ? (
-              <Feather name="star" size={12} color="#f59e0b" style={styles.compactTopStar} />
+              <Animated.View style={[styles.compactTopStarWrapper, badgeAnimStyle]}>
+                <Feather name="star" size={12} color="#f59e0b" />
+              </Animated.View>
             ) : null}
           </View>
           <Text style={[styles.compactCategory, { color: colors.mutedForeground }]} numberOfLines={1}>
@@ -539,7 +563,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
   },
-  compactTopStar: {
+  compactTopStarWrapper: {
     flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
