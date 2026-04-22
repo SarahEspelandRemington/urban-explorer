@@ -17,11 +17,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { FeedbackBridges } from "@/components/FeedbackBridges";
-import { FeedbackButton } from "@/components/FeedbackButton";
 import { HeadingBanner } from "@/components/HeadingBanner";
 import { DiscoveryProvider } from "@/contexts/DiscoveryContext";
-import { FeedbackProvider } from "@/contexts/FeedbackContext";
 import { HeadingProvider } from "@/contexts/HeadingContext";
 import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
@@ -62,7 +59,6 @@ function RootLayoutNav() {
         name="walk-mode"
         options={{ headerShown: false, gestureEnabled: false, animation: "slide_from_bottom" }}
       />
-      <Stack.Screen name="feedback-debug" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen
         name="investigate"
         options={{ headerShown: false, animation: "slide_from_right" }}
@@ -97,12 +93,8 @@ export default function RootLayout() {
                 <HeadingProvider>
                   <GestureHandlerRootView>
                     <KeyboardProvider>
-                      <FeedbackProvider>
-                        <FeedbackBridges />
-                        <RootLayoutNav />
-                        <HeadingBanner />
-                        <FeedbackButton />
-                      </FeedbackProvider>
+                      <RootLayoutNav />
+                      <HeadingBanner />
                     </KeyboardProvider>
                   </GestureHandlerRootView>
                 </HeadingProvider>

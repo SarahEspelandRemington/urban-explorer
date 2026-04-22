@@ -5,7 +5,6 @@ import { Platform } from "react-native";
 
 import { unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
-import { logEvent } from "@/lib/feedback";
 
 interface WalkPlace {
   id: string;
@@ -208,30 +207,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           }
           setStats((prev) => ({ ...prev, placesNarrated: prev.placesNarrated + 1 }));
-          logEvent("narration_start", { place: place.name, category: place.category });
         }
-      } else {
-        logEvent("narration_error", { place: place.name, status: res.status });
       }
-    } catch (e: any) {
-      logEvent("narration_error", { place: place.name, error: e?.message ?? "unknown" });
+    } catch {
     }
   }, [narration]);
 
-  const gpsTickRef = useRef(0);
   const handleLocationUpdate = useCallback(
     (location: Location.LocationObject) => {
-      const { latitude, longitude, accuracy } = location.coords;
+      const { latitude, longitude } = location.coords;
       setCurrentLocation({ latitude, longitude });
-      gpsTickRef.current += 1;
-      // Log every 5th fix to keep the buffer useful but not flooded.
-      if (gpsTickRef.current % 5 === 1) {
-        logEvent("gps", {
-          lat: +latitude.toFixed(5),
-          lng: +longitude.toFixed(5),
-          acc: accuracy != null ? Math.round(accuracy) : null,
-        });
-      }
 
       if (prevLocationRef.current) {
         const dist = haversineDistance(
@@ -335,11 +320,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const startWalk = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") {
-      logEvent("walk_start_denied", { permission: status });
       return;
     }
 
-    logEvent("walk_start", { planned: !!plannedRouteRef.current });
     setIsWalking(true);
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
     setNarratedIds(new Set());
@@ -382,10 +365,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
   const stopWalk = useCallback(() => {
     setIsWalking(false);
-    setStats((s) => {
-      logEvent("walk_stop", { placesNarrated: s.placesNarrated, distanceWalked: Math.round(s.distanceWalked) });
-      return s;
-    });
     narration.stop();
     if (watchRef.current) {
       try {
