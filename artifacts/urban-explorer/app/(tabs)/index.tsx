@@ -13,7 +13,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
@@ -24,6 +24,7 @@ import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceMapView } from "@/components/PlaceMapView";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
+import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
 import { useDiscoverPlaces, useGeocodeLocation } from "@workspace/api-client-react";
 
 interface DiscoveredPlace {
@@ -134,10 +135,15 @@ export default function ExploreScreen() {
     return [...filtered].sort((a, b) => (b.netScore ?? 0) - (a.netScore ?? 0));
   }, [places, activeFilters]);
 
+  const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } = useRatingPaceWarning();
+
   const handlePlaceRated = useCallback(
     (placeId: string, newRating: "up" | "down" | null, prevRating: "up" | "down" | null) => {
       const delta = (newRating === "up" ? 1 : newRating === "down" ? -1 : 0) - (prevRating === "up" ? 1 : prevRating === "down" ? -1 : 0);
       if (delta === 0) return;
+      if (newRating !== null) {
+        recordRating();
+      }
       setPlaces((prev) =>
         prev.map((p) => {
           const id = `${p.name}-${p.latitude}-${p.longitude}`;
@@ -146,7 +152,7 @@ export default function ExploreScreen() {
         }),
       );
     },
-    [],
+    [recordRating],
   );
 
   const effectiveLatitude = manualCoords?.latitude ?? location?.coords.latitude ?? 0;
@@ -794,6 +800,29 @@ export default function ExploreScreen() {
                     <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
                   </View>
                 </Pressable>
+
+                {showRatingPaceWarning ? (
+                  <Animated.View
+                    entering={FadeIn.duration(250)}
+                    exiting={FadeOut.duration(200)}
+                    style={styles.ratingPaceWarning}
+                    accessibilityRole="alert"
+                    accessibilityLabel="You're rating quickly — pace yourself"
+                  >
+                    <Feather name="clock" size={14} color="#92400e" />
+                    <Text style={styles.ratingPaceWarningText}>
+                      You're rating quickly — pace yourself
+                    </Text>
+                    <Pressable
+                      onPress={dismissWarning}
+                      hitSlop={12}
+                      accessibilityRole="button"
+                      accessibilityLabel="Dismiss warning"
+                    >
+                      <Feather name="x" size={14} color="#92400e" style={{ opacity: 0.7 }} />
+                    </Pressable>
+                  </Animated.View>
+                ) : null}
               </View>
             ) : null
           }
@@ -1120,5 +1149,23 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+  },
+  ratingPaceWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fef3c7",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#fde68a",
+  },
+  ratingPaceWarningText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "#92400e",
   },
 });
