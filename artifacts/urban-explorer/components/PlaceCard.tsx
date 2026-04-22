@@ -47,9 +47,10 @@ interface PlaceCardProps {
   index: number;
   expanded?: boolean;
   onToggleExpand?: () => void;
+  onRate?: (placeId: string, newRating: "up" | "down" | null, prevRating: "up" | "down" | null) => void;
 }
 
-export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded, onToggleExpand }: PlaceCardProps) {
+export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded, onToggleExpand, onRate }: PlaceCardProps) {
   const colors = useColors();
   const router = useRouter();
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
@@ -101,6 +102,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     } else {
       AsyncStorage.setItem(storageKey, newRating);
     }
+    onRate?.(placeId, newRating, previousRating);
 
     rateMutation.mutate({
       data: {

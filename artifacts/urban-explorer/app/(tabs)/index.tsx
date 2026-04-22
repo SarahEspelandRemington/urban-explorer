@@ -117,20 +117,37 @@ export default function ExploreScreen() {
   ], [filterGroups]);
 
   const filteredPlaces = useMemo(() => {
-    if (activeFilters.size === 0) return places;
-    return places.filter((p) => {
-      const placeEra = getEra(p.yearBuilt);
-      const placeTags = new Set([
-        p.category,
-        ...(placeEra ? [placeEra] : []),
-        ...(p.tags || []),
-      ]);
-      for (const f of activeFilters) {
-        if (placeTags.has(f)) return true;
-      }
-      return false;
-    });
+    const filtered = activeFilters.size === 0
+      ? places
+      : places.filter((p) => {
+          const placeEra = getEra(p.yearBuilt);
+          const placeTags = new Set([
+            p.category,
+            ...(placeEra ? [placeEra] : []),
+            ...(p.tags || []),
+          ]);
+          for (const f of activeFilters) {
+            if (placeTags.has(f)) return true;
+          }
+          return false;
+        });
+    return [...filtered].sort((a, b) => (b.netScore ?? 0) - (a.netScore ?? 0));
   }, [places, activeFilters]);
+
+  const handlePlaceRated = useCallback(
+    (placeId: string, newRating: "up" | "down" | null, prevRating: "up" | "down" | null) => {
+      const delta = (newRating === "up" ? 1 : newRating === "down" ? -1 : 0) - (prevRating === "up" ? 1 : prevRating === "down" ? -1 : 0);
+      if (delta === 0) return;
+      setPlaces((prev) =>
+        prev.map((p) => {
+          const id = `${p.name}-${p.latitude}-${p.longitude}`;
+          if (id !== placeId) return p;
+          return { ...p, netScore: (p.netScore ?? 0) + delta };
+        }),
+      );
+    },
+    [],
+  );
 
   const effectiveLatitude = manualCoords?.latitude ?? location?.coords.latitude ?? 0;
   const effectiveLongitude = manualCoords?.longitude ?? location?.coords.longitude ?? 0;
@@ -702,6 +719,7 @@ export default function ExploreScreen() {
                 onToggleExpand={() => {
                   setExpandedId(isExpanded ? null : item.id);
                 }}
+                onRate={handlePlaceRated}
               />
             );
           }}
