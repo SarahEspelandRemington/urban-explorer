@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import {
   DiscoverPlacesBody,
@@ -1918,7 +1919,37 @@ Return one entry per input place, in the same order. Be concise — these blurbs
 // POST /explore/rate-place — submit a thumbs-up or thumbs-down for a place
 // ---------------------------------------------------------------------------
 
-router.post("/explore/rate-place", async (req, res) => {
+const RATE_PLACE_WINDOW_MS = 15 * 60 * 1000;
+const RATE_PLACE_LIMIT = 20;
+const RATE_PLACE_MESSAGE = { error: "Too many rating requests. Please wait a few minutes before trying again." };
+
+const ratePlaceIpLimiter = rateLimit({
+  windowMs: RATE_PLACE_WINDOW_MS,
+  limit: RATE_PLACE_LIMIT,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: RATE_PLACE_MESSAGE,
+  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
+});
+
+const ratePlaceDeviceLimiter = rateLimit({
+  windowMs: RATE_PLACE_WINDOW_MS,
+  limit: RATE_PLACE_LIMIT,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: RATE_PLACE_MESSAGE,
+  skip: (req) => {
+    const deviceId = req.headers["x-device-id"];
+    return typeof deviceId !== "string" || deviceId.trim().length === 0;
+  },
+  keyGenerator: (req) => {
+    const deviceId = req.headers["x-device-id"] as string;
+    return `device:${deviceId.trim()}`;
+  },
+  validate: { keyGeneratorIpFallback: false },
+});
+
+router.post("/explore/rate-place", ratePlaceIpLimiter, ratePlaceDeviceLimiter, async (req, res) => {
   const parsed = RatePlaceBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
