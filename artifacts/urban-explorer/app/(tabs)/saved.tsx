@@ -1,17 +1,31 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useState } from "react";
-import { FlatList, Platform, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useState } from "react";
+import { FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PlaceCard } from "@/components/PlaceCard";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
+import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
 
 export default function SavedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { savedPlaces } = useDiscovery();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } =
+    useRatingPaceWarning();
+
+  const handlePlaceRated = useCallback(
+    (_placeId: string, newRating: "up" | "down" | null) => {
+      if (newRating !== null) {
+        recordRating();
+      }
+    },
+    [recordRating],
+  );
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
@@ -45,6 +59,7 @@ export default function SavedScreen() {
               index={index}
               expanded={isExpanded}
               onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
+              onRate={handlePlaceRated}
             />
           );
         }}
@@ -53,6 +68,30 @@ export default function SavedScreen() {
           { paddingBottom: insets.bottom + webBottomInset + 90 },
         ]}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          showRatingPaceWarning ? (
+            <Animated.View
+              entering={FadeIn.duration(250)}
+              exiting={FadeOut.duration(200)}
+              style={styles.ratingPaceWarning}
+              accessibilityRole="alert"
+              accessibilityLabel="You're rating quickly — pace yourself"
+            >
+              <Feather name="clock" size={14} color="#92400e" />
+              <Text style={styles.ratingPaceWarningText}>
+                You're rating quickly — pace yourself
+              </Text>
+              <Pressable
+                onPress={dismissWarning}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss warning"
+              >
+                <Feather name="x" size={14} color="#92400e" style={{ opacity: 0.7 }} />
+              </Pressable>
+            </Animated.View>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Feather name="bookmark" size={40} color={colors.mutedForeground} />
@@ -108,5 +147,23 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
     lineHeight: 20,
+  },
+  ratingPaceWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fef3c7",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#fde68a",
+  },
+  ratingPaceWarningText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: "#92400e",
   },
 });

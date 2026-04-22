@@ -26,8 +26,28 @@ async function fetchRateLimitConfig(): Promise<RateLimitConfig> {
   }
 }
 
+// Module-level shared timestamps so ratings accumulate across all screens.
+const sharedTimestamps: number[] = [];
+type Listener = () => void;
+const listeners = new Set<Listener>();
+
+function recordSharedRating(): void {
+  const now = Date.now();
+  sharedTimestamps.push(now);
+  // Prune using the fallback (largest) window to keep enough data for all instances.
+  const cutoff = now - FALLBACK_WINDOW_MS;
+  while (sharedTimestamps.length > 0 && sharedTimestamps[0] < cutoff) {
+    sharedTimestamps.shift();
+  }
+  listeners.forEach((fn) => fn());
+}
+
+function getRecentCount(windowMs: number): number {
+  const now = Date.now();
+  return sharedTimestamps.filter((t) => now - t <= windowMs).length;
+}
+
 export function useRatingPaceWarning() {
-  const timestamps = useRef<number[]>([]);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showWarning, setShowWarning] = useState(false);
 
@@ -62,28 +82,30 @@ export function useRatingPaceWarning() {
     }, AUTO_HIDE_MS);
   }, [clearHideTimer]);
 
-  const recordRating = useCallback(() => {
+  const checkAndWarn = useCallback(() => {
     const { windowMs, limit } = configRef.current;
     const warningThreshold = Math.max(2, Math.ceil(limit * WARNING_FRACTION));
-    const now = Date.now();
-    timestamps.current.push(now);
-    timestamps.current = timestamps.current.filter((t) => now - t <= windowMs);
-
-    if (timestamps.current.length >= warningThreshold) {
+    if (getRecentCount(windowMs) >= warningThreshold) {
       setShowWarning(true);
       scheduleHide();
     }
   }, [scheduleHide]);
 
+  useEffect(() => {
+    listeners.add(checkAndWarn);
+    return () => {
+      listeners.delete(checkAndWarn);
+      clearHideTimer();
+    };
+  }, [checkAndWarn, clearHideTimer]);
+
+  const recordRating = useCallback(() => {
+    recordSharedRating();
+  }, []);
+
   const dismissWarning = useCallback(() => {
     clearHideTimer();
     setShowWarning(false);
-  }, [clearHideTimer]);
-
-  useEffect(() => {
-    return () => {
-      clearHideTimer();
-    };
   }, [clearHideTimer]);
 
   return { showWarning, recordRating, dismissWarning };
