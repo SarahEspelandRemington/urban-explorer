@@ -76,7 +76,7 @@ const expensiveEndpoints = [
   "/api/explore/places-along-route",
 ];
 
-const REQUIRE_AUTH_ON_EXPLORE = true;
+const REQUIRE_AUTH_ON_EXPLORE = false;
 
 app.use("/api", generalLimiter);
 

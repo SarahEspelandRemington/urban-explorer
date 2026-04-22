@@ -40,9 +40,8 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
     const onLoginScreen = segments[0] === "login";
-    if (!isAuthenticated && !onLoginScreen) {
-      router.replace("/login");
-    } else if (isAuthenticated && onLoginScreen) {
+    // Auth disabled for testing — skip login redirect
+    if (isAuthenticated && onLoginScreen) {
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isLoading, segments, router]);
