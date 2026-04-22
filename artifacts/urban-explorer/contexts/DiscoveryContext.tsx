@@ -13,6 +13,7 @@ export interface SavedPlace {
   longitude: number;
   address?: string;
   distanceMeters?: number;
+  netScore?: number;
   savedAt: string;
 }
 
