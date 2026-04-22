@@ -1,0 +1,469 @@
+import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Keyboard,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { AddressInput } from "@/components/AddressInput";
+import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
+import { LoadingMessages } from "@/components/LoadingMessages";
+import { useColors } from "@/hooks/useColors";
+import { useInvestigateAddress } from "@workspace/api-client-react";
+
+interface Suggestion {
+  name: string;
+  description: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export default function InvestigateScreen() {
+  const colors = useColors();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ nearLocation?: string }>();
+
+  const [address, setAddress] = useState("");
+  const [pickedCoords, setPickedCoords] = useState<{
+    lat: number;
+    lng: number;
+    name: string;
+  } | null>(null);
+
+  const investigate = useInvestigateAddress();
+  const result = investigate.data;
+  const error = investigate.error as { status?: number; message?: string } | null;
+
+  const handleSelectSuggestion = useCallback((s: Suggestion) => {
+    if (typeof s.latitude === "number" && typeof s.longitude === "number") {
+      setPickedCoords({ lat: s.latitude, lng: s.longitude, name: s.name });
+    } else {
+      setPickedCoords(null);
+    }
+  }, []);
+
+  const handleChangeAddress = useCallback((text: string) => {
+    setAddress(text);
+    // Only invalidate picked coords if the text has truly diverged from the
+    // suggestion the user picked. Tolerates trailing edits like adding a unit
+    // number or zip while preserving the precise coords.
+    setPickedCoords((prev) => {
+      if (!prev) return null;
+      const t = text.trim();
+      if (t === prev.name || t.startsWith(prev.name)) return prev;
+      return null;
+    });
+  }, []);
+
+  const handleSubmit = useCallback(() => {
+    const trimmed = address.trim();
+    if (trimmed.length < 3) return;
+    Keyboard.dismiss();
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    investigate.mutate({
+      data: {
+        address: trimmed,
+        ...(pickedCoords ? { latitude: pickedCoords.lat, longitude: pickedCoords.lng } : {}),
+      },
+    });
+  }, [address, pickedCoords, investigate]);
+
+  const canSubmit = address.trim().length >= 3 && !investigate.isPending;
+
+  const errorMessage = useMemo(() => {
+    if (!error) return null;
+    if (error.status === 404) {
+      return "Couldn't find that address. Try including a city or zip (e.g., '538 W 38th St, New York, NY').";
+    }
+    if (error.status === 429 || error.status === 503) {
+      return "We're a bit busy — give it a moment and try again.";
+    }
+    return "Something went wrong. Try again in a moment.";
+  }, [error]);
+
+  // Pre-populate the input if the caller provided a near location (used as default city context).
+  useEffect(() => {
+    if (params.nearLocation && !address) {
+      // Don't auto-fill the address (user types the building); just keep nearLocation
+      // available to bias suggestions.
+    }
+  }, [params.nearLocation, address]);
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + 8,
+            backgroundColor: colors.background,
+            borderBottomColor: colors.border,
+          },
+        ]}
+      >
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={12}
+          style={styles.backButton}
+          accessibilityLabel="Go back"
+        >
+          <Feather name="chevron-left" size={26} color={colors.foreground} />
+        </Pressable>
+        <View style={styles.headerTextWrap}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+            Investigate an Address
+          </Text>
+          <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+            Curious about a specific building? Ask the historian.
+          </Text>
+        </View>
+      </View>
+
+      <KeyboardAwareScrollViewCompat
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 80 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={20}
+      >
+        <View style={styles.inputBlock}>
+          <AddressInput
+            value={address}
+            onChangeText={handleChangeAddress}
+            onSelectSuggestion={handleSelectSuggestion}
+            onSubmitEditing={handleSubmit}
+            placeholder="e.g., 538 W 38th St, New York, NY"
+            dotColor={colors.primary}
+            returnKeyType="search"
+            nearLocation={params.nearLocation ?? null}
+            testID="investigate-address-input"
+          />
+
+          <Pressable
+            onPress={handleSubmit}
+            disabled={!canSubmit}
+            style={({ pressed }) => [
+              styles.submitButton,
+              {
+                backgroundColor: canSubmit ? colors.primary : colors.muted,
+                opacity: pressed && canSubmit ? 0.9 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Investigate this address"
+          >
+            {investigate.isPending ? (
+              <ActivityIndicator color={colors.primaryForeground} />
+            ) : (
+              <>
+                <Feather
+                  name="search"
+                  size={16}
+                  color={canSubmit ? colors.primaryForeground : colors.mutedForeground}
+                />
+                <Text
+                  style={[
+                    styles.submitText,
+                    {
+                      color: canSubmit ? colors.primaryForeground : colors.mutedForeground,
+                    },
+                  ]}
+                >
+                  Investigate
+                </Text>
+              </>
+            )}
+          </Pressable>
+
+          <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+            Best for older or non-landmark buildings you've noticed in person — the AI
+            will reason from the architecture and neighborhood when records are sparse.
+          </Text>
+        </View>
+
+        {errorMessage && (
+          <Animated.View
+            entering={Platform.OS !== "web" ? FadeInUp : undefined}
+            style={[
+              styles.errorCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Feather name="alert-circle" size={18} color={colors.mutedForeground} />
+            <Text style={[styles.errorText, { color: colors.foreground }]}>
+              {errorMessage}
+            </Text>
+          </Animated.View>
+        )}
+
+        {investigate.isPending && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <LoadingMessages variant="discovery" />
+          </View>
+        )}
+
+        {result && !investigate.isPending && (
+          <Animated.View
+            entering={Platform.OS !== "web" ? FadeInDown : undefined}
+            style={[
+              styles.resultCard,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.resultAddress, { color: colors.mutedForeground }]}>
+              {result.address}
+            </Text>
+
+            {result.buildingName ? (
+              <Text style={[styles.resultName, { color: colors.foreground }]}>
+                {result.buildingName}
+              </Text>
+            ) : null}
+
+            <View style={styles.metaRow}>
+              {result.yearBuilt ? (
+                <View style={[styles.chip, { backgroundColor: colors.muted }]}>
+                  <Feather name="clock" size={12} color={colors.mutedForeground} />
+                  <Text style={[styles.chipText, { color: colors.foreground }]}>
+                    {result.yearBuilt}
+                  </Text>
+                </View>
+              ) : null}
+              {result.originalUse ? (
+                <View style={[styles.chip, { backgroundColor: colors.muted }]}>
+                  <Feather name="home" size={12} color={colors.mutedForeground} />
+                  <Text
+                    style={[styles.chipText, { color: colors.foreground }]}
+                    numberOfLines={1}
+                  >
+                    Originally: {summarize(result.originalUse, 40)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+
+            <Section title="Originally" colors={colors} body={result.originalUse} />
+            <Section title="Today" colors={colors} body={result.currentUse} />
+            <Section
+              title="What to look for"
+              colors={colors}
+              body={result.architecturalStyle}
+            />
+            <Section title="History" colors={colors} body={result.history} />
+
+            {result.facts && result.facts.length > 0 ? (
+              <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+                  Facts & details
+                </Text>
+                {result.facts.map((f: string, i: number) => (
+                  <View key={i} style={styles.factRow}>
+                    <View
+                      style={[styles.factDot, { backgroundColor: colors.primary }]}
+                    />
+                    <Text style={[styles.factText, { color: colors.foreground }]}>
+                      {f}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            <Section
+              title="Block context"
+              colors={colors}
+              body={result.neighborhoodContext}
+            />
+
+            {result.uncertainty ? (
+              <View
+                style={[
+                  styles.uncertaintyBox,
+                  { borderColor: colors.border, backgroundColor: colors.muted },
+                ]}
+              >
+                <Feather name="info" size={14} color={colors.mutedForeground} />
+                <Text style={[styles.uncertaintyText, { color: colors.mutedForeground }]}>
+                  {result.uncertainty}
+                </Text>
+              </View>
+            ) : null}
+          </Animated.View>
+        )}
+      </KeyboardAwareScrollViewCompat>
+    </View>
+  );
+}
+
+function Section({
+  title,
+  body,
+  colors,
+}: {
+  title: string;
+  body?: string;
+  colors: ReturnType<typeof useColors>;
+}) {
+  if (!body) return null;
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{title}</Text>
+      <Text style={[styles.sectionBody, { color: colors.foreground }]}>{body}</Text>
+    </View>
+  );
+}
+
+function summarize(text: string, max: number): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1).trimEnd() + "…";
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: 6,
+  },
+  backButton: { padding: 4, marginTop: 2 },
+  headerTextWrap: { flex: 1, paddingLeft: 4 },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.4,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 16, gap: 16 },
+  inputBlock: { gap: 10 },
+  submitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  submitText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.2,
+  },
+  hint: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+    paddingHorizontal: 2,
+  },
+  errorCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 20,
+  },
+  loadingContainer: {
+    paddingVertical: 36,
+    alignItems: "center",
+    gap: 14,
+  },
+  resultCard: {
+    padding: 18,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 14,
+  },
+  resultAddress: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  resultName: {
+    fontSize: 22,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.4,
+    marginTop: -6,
+  },
+  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    maxWidth: "100%",
+  },
+  chipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  section: { gap: 6 },
+  sectionTitle: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  sectionBody: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 22,
+  },
+  factRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 4,
+  },
+  factDot: { width: 6, height: 6, borderRadius: 3, marginTop: 9 },
+  factText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 21,
+  },
+  uncertaintyBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  uncertaintyText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+    fontStyle: "italic",
+  },
+});

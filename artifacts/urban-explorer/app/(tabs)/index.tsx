@@ -724,37 +724,71 @@ export default function ExploreScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             showContent ? (
-              <Pressable
-                onPress={() => {
-                  unlockWebSpeech();
-                  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  router.push("/walk-plan");
-                }}
-                style={({ pressed }) => [
-                  styles.walkCard,
-                  {
-                    backgroundColor: colors.primary,
-                    opacity: pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Walk Mode"
-                accessibilityHint="Start an audio walking tour with headphones or speaker"
-              >
-                <View style={styles.walkCardContent}>
-                  <Feather name="headphones" size={22} color={colors.primaryForeground} />
-                  <View style={styles.walkCardText}>
-                    <Text style={[styles.walkCardTitle, { color: colors.primaryForeground }]}>
-                      Walk Mode
-                    </Text>
-                    <Text style={[styles.walkCardSubtitle, { color: colors.primaryForeground + "cc" }]}>
-                      Audio tour guide — headphones or speaker
-                    </Text>
+              <View>
+                <Pressable
+                  onPress={() => {
+                    unlockWebSpeech();
+                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    router.push("/walk-plan");
+                  }}
+                  style={({ pressed }) => [
+                    styles.walkCard,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Walk Mode"
+                  accessibilityHint="Start an audio walking tour with headphones or speaker"
+                >
+                  <View style={styles.walkCardContent}>
+                    <Feather name="headphones" size={22} color={colors.primaryForeground} />
+                    <View style={styles.walkCardText}>
+                      <Text style={[styles.walkCardTitle, { color: colors.primaryForeground }]}>
+                        Walk Mode
+                      </Text>
+                      <Text style={[styles.walkCardSubtitle, { color: colors.primaryForeground + "cc" }]}>
+                        Audio tour guide — headphones or speaker
+                      </Text>
+                    </View>
+                    <Feather name="chevron-right" size={20} color={colors.primaryForeground + "aa"} />
                   </View>
-                  <Feather name="chevron-right" size={20} color={colors.primaryForeground + "aa"} />
-                </View>
-              </Pressable>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push("/investigate");
+                  }}
+                  style={({ pressed }) => [
+                    styles.investigateCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Investigate an Address"
+                  accessibilityHint="Look up the history of a specific building by address"
+                >
+                  <View style={styles.walkCardContent}>
+                    <Feather name="search" size={20} color={colors.foreground} />
+                    <View style={styles.walkCardText}>
+                      <Text style={[styles.investigateCardTitle, { color: colors.foreground }]}>
+                        Investigate an Address
+                      </Text>
+                      <Text style={[styles.investigateCardSubtitle, { color: colors.mutedForeground }]}>
+                        Curious about a specific building? Look it up.
+                      </Text>
+                    </View>
+                    <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                  </View>
+                </Pressable>
+              </View>
             ) : null
           }
           refreshControl={
@@ -1014,6 +1048,22 @@ const styles = StyleSheet.create({
   },
   walkCardSubtitle: {
     fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
+  },
+  investigateCard: {
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  investigateCardTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.2,
+  },
+  investigateCardSubtitle: {
+    fontSize: 12,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
   },

@@ -114,6 +114,44 @@ export interface GeocodeResponse {
   displayName: string;
 }
 
+export interface AddressInvestigationRequest {
+  /**
+   * Free-text street address the user wants to investigate (e.g., '538 W 38th St, New York, NY')
+   * @minLength 3
+   * @maxLength 250
+   */
+  address: string;
+  /** Optional pre-resolved latitude. If absent, the server geocodes the address. */
+  latitude?: number;
+  /** Optional pre-resolved longitude. */
+  longitude?: number;
+}
+
+export interface AddressInvestigationResponse {
+  /** Canonical address as resolved (may include neighborhood, city) */
+  address: string;
+  latitude: number;
+  longitude: number;
+  /** Common name if the building has one (e.g., 'Hewitt Stables'). Empty string if unknown. */
+  buildingName?: string;
+  /** Approximate year or era (e.g., '1887' or 'late 1880s'). Empty string if unknown. */
+  yearBuilt?: string;
+  /** Architectural style + specific details to look for. Empty string if unclear. */
+  architecturalStyle?: string;
+  /** What the building was originally constructed for */
+  originalUse: string;
+  /** What it appears to be used for today */
+  currentUse?: string;
+  /** Rich 2-3 paragraph narrative about this specific building */
+  history: string;
+  /** 4-6 specific, verifiable-feeling facts about this building */
+  facts: string[];
+  /** How this building fits the historical fabric of the immediate block */
+  neighborhoodContext?: string;
+  /** Honest disclosure of what's speculative vs documented. Empty string if fully confident. */
+  uncertainty?: string;
+}
+
 export interface PlaceDetailRequest {
   placeName: string;
   latitude: number;

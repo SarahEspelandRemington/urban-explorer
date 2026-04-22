@@ -17,6 +17,8 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AddressInvestigationRequest,
+  AddressInvestigationResponse,
   AuthUserEnvelope,
   BeginBrowserLoginParams,
   DiscoverRequest,
@@ -386,6 +388,94 @@ export const useGeocodeLocation = <
   TContext
 > => {
   return useMutation(getGeocodeLocationMutationOptions(options));
+};
+
+/**
+ * Geocodes a user-supplied address and returns a focused historical investigation of that specific building (architecture, era, original use, neighborhood context). Use this for buildings the user notices that aren't surfaced by GPS Discover.
+ * @summary Deep-dive investigation of a specific street address
+ */
+export const getInvestigateAddressUrl = () => {
+  return `/api/explore/investigate-address`;
+};
+
+export const investigateAddress = async (
+  addressInvestigationRequest: AddressInvestigationRequest,
+  options?: RequestInit,
+): Promise<AddressInvestigationResponse> => {
+  return customFetch<AddressInvestigationResponse>(getInvestigateAddressUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addressInvestigationRequest),
+  });
+};
+
+export const getInvestigateAddressMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof investigateAddress>>,
+    TError,
+    { data: BodyType<AddressInvestigationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof investigateAddress>>,
+  TError,
+  { data: BodyType<AddressInvestigationRequest> },
+  TContext
+> => {
+  const mutationKey = ["investigateAddress"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof investigateAddress>>,
+    { data: BodyType<AddressInvestigationRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return investigateAddress(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InvestigateAddressMutationResult = NonNullable<
+  Awaited<ReturnType<typeof investigateAddress>>
+>;
+export type InvestigateAddressMutationBody =
+  BodyType<AddressInvestigationRequest>;
+export type InvestigateAddressMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Deep-dive investigation of a specific street address
+ */
+export const useInvestigateAddress = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof investigateAddress>>,
+    TError,
+    { data: BodyType<AddressInvestigationRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof investigateAddress>>,
+  TError,
+  { data: BodyType<AddressInvestigationRequest> },
+  TContext
+> => {
+  return useMutation(getInvestigateAddressMutationOptions(options));
 };
 
 /**

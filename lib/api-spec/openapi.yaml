@@ -85,6 +85,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GeocodeResponse"
+  /explore/investigate-address:
+    post:
+      operationId: investigateAddress
+      tags: [explore]
+      summary: Deep-dive investigation of a specific street address
+      description: Geocodes a user-supplied address and returns a focused historical investigation of that specific building (architecture, era, original use, neighborhood context). Use this for buildings the user notices that aren't surfaced by GPS Discover.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddressInvestigationRequest"
+      responses:
+        "200":
+          description: Investigation result for the specific address
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressInvestigationResponse"
   /explore/place-detail:
     post:
       operationId: getPlaceDetail
@@ -444,6 +463,68 @@ components:
         - latitude
         - longitude
         - displayName
+    AddressInvestigationRequest:
+      type: object
+      properties:
+        address:
+          type: string
+          minLength: 3
+          maxLength: 250
+          description: "Free-text street address the user wants to investigate (e.g., '538 W 38th St, New York, NY')"
+        latitude:
+          type: number
+          description: "Optional pre-resolved latitude. If absent, the server geocodes the address."
+        longitude:
+          type: number
+          description: "Optional pre-resolved longitude."
+      required:
+        - address
+    AddressInvestigationResponse:
+      type: object
+      properties:
+        address:
+          type: string
+          description: "Canonical address as resolved (may include neighborhood, city)"
+        latitude:
+          type: number
+        longitude:
+          type: number
+        buildingName:
+          type: string
+          description: "Common name if the building has one (e.g., 'Hewitt Stables'). Empty string if unknown."
+        yearBuilt:
+          type: string
+          description: "Approximate year or era (e.g., '1887' or 'late 1880s'). Empty string if unknown."
+        architecturalStyle:
+          type: string
+          description: "Architectural style + specific details to look for. Empty string if unclear."
+        originalUse:
+          type: string
+          description: "What the building was originally constructed for"
+        currentUse:
+          type: string
+          description: "What it appears to be used for today"
+        history:
+          type: string
+          description: "Rich 2-3 paragraph narrative about this specific building"
+        facts:
+          type: array
+          items:
+            type: string
+          description: "4-6 specific, verifiable-feeling facts about this building"
+        neighborhoodContext:
+          type: string
+          description: "How this building fits the historical fabric of the immediate block"
+        uncertainty:
+          type: string
+          description: "Honest disclosure of what's speculative vs documented. Empty string if fully confident."
+      required:
+        - address
+        - latitude
+        - longitude
+        - history
+        - facts
+        - originalUse
     PlaceDetailRequest:
       type: object
       properties:

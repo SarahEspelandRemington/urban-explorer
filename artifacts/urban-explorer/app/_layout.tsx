@@ -63,6 +63,10 @@ function RootLayoutNav() {
         options={{ headerShown: false, gestureEnabled: false, animation: "slide_from_bottom" }}
       />
       <Stack.Screen name="feedback-debug" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen
+        name="investigate"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
     </Stack>
   );
 }

@@ -8,6 +8,7 @@ import {
   GetPlacesAlongRouteBody,
   GetRouteBody,
   GetWalkNarrationBody,
+  InvestigateAddressBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
 
@@ -870,6 +871,150 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     clearTimeout(timer);
     res.status(503).json({ error: "Reverse geocode temporarily unavailable" });
   }
+});
+
+router.post("/explore/investigate-address", async (req, res) => {
+  const parsed = InvestigateAddressBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+  const { address, latitude: providedLat, longitude: providedLng } = parsed.data;
+  const trimmedAddress = address.trim();
+
+  // Geocode if no coords supplied. Use Nominatim — authoritative for real addresses.
+  let lat = providedLat;
+  let lng = providedLng;
+  let canonicalAddress = trimmedAddress;
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    // Respect Nominatim's 1 req/sec rate limit (shared global counter).
+    const now = Date.now();
+    const wait = NOMINATIM_MIN_INTERVAL_MS - (now - lastNominatimCallAt);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastNominatimCallAt = Date.now();
+    const results = await nominatimSearch(trimmedAddress, 1, { addressdetails: "1" });
+    if (results.length === 0) {
+      res.status(404).json({
+        error:
+          "Couldn't find that address. Try including a city or zip (e.g., '538 W 38th St, New York, NY').",
+      });
+      return;
+    }
+    const r = results[0];
+    lat = parseFloat(r.lat);
+    lng = parseFloat(r.lon);
+    canonicalAddress = formatNominatimDisplayName(r.display_name) || trimmedAddress;
+  }
+
+  // Cache key: normalized address + coord bucket. Investigations are deterministic
+  // per-building so a longer TTL is fine; share the LLM cache.
+  const investigateCacheKey = `investigate:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const cached = getLLMCache(investigateCacheKey);
+  if (cached) {
+    res.json(cached);
+    return;
+  }
+
+  // Pull a small ring of nearby OSM landmarks for neighborhood context.
+  // Keep the radius tight (120m) so the AI doesn't drift to famous landmarks
+  // a few blocks away — the whole point is to focus on THIS building.
+  let osmContext = "";
+  try {
+    const nearby = await fetchNearbyOSMPlaces(lat, lng, 120);
+    if (nearby.length > 0) {
+      osmContext = nearby
+        .slice(0, 8)
+        .map((p) => {
+          const dist = Math.round(haversineDistance(lat, lng, p.lat, p.lon));
+          const built = p.tags["start_date"] || p.tags["construction_date"] || "";
+          return `- ${p.name} (${p.type}${built ? `, built ${built}` : ""}, ${dist}m away)`;
+        })
+        .join("\n");
+    }
+  } catch {
+    // Non-fatal — proceed without OSM context.
+  }
+
+  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+  try {
+    response = await openai.chat.completions.create({
+      model: "gpt-4.1",
+      max_completion_tokens: 2400,
+      messages: [
+        {
+          role: "system",
+          content: `You are a meticulous urban historian investigating ONE SPECIFIC building at the user's request. The user is standing in front of this building and wants to know its story.
+
+CRITICAL RULES — these override everything else:
+1. FOCUS ON THE EXACT ADDRESS PROVIDED. Do NOT drift to famous landmarks nearby. Do NOT substitute a more famous building from a few blocks away. If the user asks about 538 W 38th St, your answer is about 538 W 38th St — not the Javits Center, not Hudson Yards, not the Lincoln Tunnel.
+2. BE HONEST ABOUT UNCERTAINTY. If you don't know specific details about THIS building, say so in the "uncertainty" field. Use phrases like "based on the era and neighborhood" or "typical for this block" rather than inventing names, dates, or owners. NEVER invent a person's name (e.g. "Samuel Hewitt") to make a story sound authoritative.
+3. PRIORITIZE PHYSICAL EVIDENCE the user could verify by looking: brick patterns, ghost signs, segmental arch windows, corbeled cornices, loading bay openings, hayloft doors, horse-stall ventilation, original signage, etc. Tell them what to LOOK FOR.
+4. Use neighborhood and era to reason about likely original use. A wide ground-floor opening with a hayloft door above on a side street between 10th and 11th in the 1880s-1890s = almost certainly a livery stable. Be confident about TYPE inferences from physical/contextual evidence; be cautious about specific NAMES, OWNERS, and DATES.
+5. If the building is currently a livery stable for Central Park horses, NYC carriage horse stables, or similar working horse facility, MENTION THAT — it's a continuity worth highlighting.
+
+Respond in JSON:
+{
+  "buildingName": "Common name if known, else empty string",
+  "yearBuilt": "Year/era like '1887' or 'late 1880s', or empty string if unknown",
+  "architecturalStyle": "Style + concrete details to look for (e.g., 'Romanesque Revival brick — segmental-arch windows, corbeled cornice, wide ground-floor stable doorway')",
+  "originalUse": "What it was originally built for (1-2 sentences, evidence-based)",
+  "currentUse": "What it appears to be today (1 sentence)",
+  "history": "2-3 paragraph rich narrative about THIS specific building. Tie to neighborhood history. If you must speculate, frame it ('Buildings like this typically...', 'Records from the era suggest...').",
+  "facts": ["4-6 specific facts. Mark speculation with 'likely' / 'typical of'. Each fact should be something the user could verify or look for."],
+  "neighborhoodContext": "How this building fits into the historical fabric of THIS block (1-2 sentences)",
+  "uncertainty": "Honest disclosure of what's unknown vs documented. Empty string only if you have high confidence in everything stated."
+}`,
+        },
+        {
+          role: "user",
+          content: `Investigate this specific building for a curious pedestrian standing in front of it.
+
+ADDRESS: ${canonicalAddress}
+COORDINATES: ${lat.toFixed(6)}, ${lng.toFixed(6)}
+
+${osmContext ? `Nearby landmarks for neighborhood context (do NOT make these the focus of your answer):\n${osmContext}\n` : "No named landmarks within 120m — this is likely a vernacular/non-landmark building, so focus extra hard on architectural and contextual reasoning.\n"}
+What is this building? What was it originally? What should I look at?`,
+        },
+      ],
+      response_format: { type: "json_object" },
+    });
+  } catch (err: any) {
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Investigation service temporarily unavailable. Please try again." });
+    return;
+  }
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    res.status(500).json({ error: "Failed to generate investigation" });
+    return;
+  }
+
+  let data: any;
+  try {
+    data = JSON.parse(content);
+  } catch {
+    res.status(500).json({ error: "Failed to parse investigation results" });
+    return;
+  }
+
+  const result = {
+    address: canonicalAddress,
+    latitude: lat,
+    longitude: lng,
+    buildingName: typeof data.buildingName === "string" ? data.buildingName : "",
+    yearBuilt: typeof data.yearBuilt === "string" ? data.yearBuilt : "",
+    architecturalStyle: typeof data.architecturalStyle === "string" ? data.architecturalStyle : "",
+    originalUse: typeof data.originalUse === "string" ? data.originalUse : "",
+    currentUse: typeof data.currentUse === "string" ? data.currentUse : "",
+    history: typeof data.history === "string" ? data.history : "",
+    facts: Array.isArray(data.facts) ? data.facts.filter((f: unknown) => typeof f === "string") : [],
+    neighborhoodContext: typeof data.neighborhoodContext === "string" ? data.neighborhoodContext : "",
+    uncertainty: typeof data.uncertainty === "string" ? data.uncertainty : "",
+  };
+
+  setLLMCache(investigateCacheKey, result);
+  res.json(result);
 });
 
 router.post("/explore/place-detail", async (req, res) => {

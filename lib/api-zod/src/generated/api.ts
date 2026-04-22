@@ -114,8 +114,6 @@ export const SuggestLocationsResponse = zod.object({
     zod.object({
       name: zod.string().describe("Full location name"),
       description: zod.string().describe("Short context about the location"),
-      latitude: zod.number().optional().describe("Latitude coordinate (present when resolved via Nominatim)"),
-      longitude: zod.number().optional().describe("Longitude coordinate (present when resolved via Nominatim)"),
     }),
   ),
 });
@@ -136,6 +134,84 @@ export const GeocodeLocationResponse = zod.object({
   displayName: zod
     .string()
     .describe("Human-readable name of the resolved location"),
+});
+
+/**
+ * Geocodes a user-supplied address and returns a focused historical investigation of that specific building (architecture, era, original use, neighborhood context). Use this for buildings the user notices that aren't surfaced by GPS Discover.
+ * @summary Deep-dive investigation of a specific street address
+ */
+export const investigateAddressBodyAddressMin = 3;
+export const investigateAddressBodyAddressMax = 250;
+
+export const InvestigateAddressBody = zod.object({
+  address: zod
+    .string()
+    .min(investigateAddressBodyAddressMin)
+    .max(investigateAddressBodyAddressMax)
+    .describe(
+      "Free-text street address the user wants to investigate (e.g., '538 W 38th St, New York, NY')",
+    ),
+  latitude: zod
+    .number()
+    .optional()
+    .describe(
+      "Optional pre-resolved latitude. If absent, the server geocodes the address.",
+    ),
+  longitude: zod
+    .number()
+    .optional()
+    .describe("Optional pre-resolved longitude."),
+});
+
+export const InvestigateAddressResponse = zod.object({
+  address: zod
+    .string()
+    .describe("Canonical address as resolved (may include neighborhood, city)"),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  buildingName: zod
+    .string()
+    .optional()
+    .describe(
+      "Common name if the building has one (e.g., 'Hewitt Stables'). Empty string if unknown.",
+    ),
+  yearBuilt: zod
+    .string()
+    .optional()
+    .describe(
+      "Approximate year or era (e.g., '1887' or 'late 1880s'). Empty string if unknown.",
+    ),
+  architecturalStyle: zod
+    .string()
+    .optional()
+    .describe(
+      "Architectural style + specific details to look for. Empty string if unclear.",
+    ),
+  originalUse: zod
+    .string()
+    .describe("What the building was originally constructed for"),
+  currentUse: zod
+    .string()
+    .optional()
+    .describe("What it appears to be used for today"),
+  history: zod
+    .string()
+    .describe("Rich 2-3 paragraph narrative about this specific building"),
+  facts: zod
+    .array(zod.string())
+    .describe("4-6 specific, verifiable-feeling facts about this building"),
+  neighborhoodContext: zod
+    .string()
+    .optional()
+    .describe(
+      "How this building fits the historical fabric of the immediate block",
+    ),
+  uncertainty: zod
+    .string()
+    .optional()
+    .describe(
+      "Honest disclosure of what's speculative vs documented. Empty string if fully confident.",
+    ),
 });
 
 /**
