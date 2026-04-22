@@ -1937,6 +1937,12 @@ const RATE_PLACE_WINDOW_MS = 15 * 60 * 1000;
 const RATE_PLACE_LIMIT = 20;
 const RATE_PLACE_MESSAGE = { error: "Too many rating requests. Please wait a few minutes before trying again." };
 
+// Expose the rate-limit config so the client can derive its warning threshold
+// dynamically without hardcoding constants that may drift from the server.
+router.get("/explore/rate-limit-config", (_req, res) => {
+  res.json({ windowMs: RATE_PLACE_WINDOW_MS, limit: RATE_PLACE_LIMIT });
+});
+
 const ratePlaceIpLimiter = rateLimit({
   windowMs: RATE_PLACE_WINDOW_MS,
   limit: RATE_PLACE_LIMIT,
