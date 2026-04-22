@@ -3,7 +3,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
+import { Alert, LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
 import { PlaceActions } from "@/components/PlaceActions";
@@ -156,6 +156,23 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
       {
         onSuccess: (result: RatePlaceResponse) => {
           setCommunityRating({ up: result.up, down: result.down, netScore: result.up - result.down });
+        },
+        onError: (error: unknown) => {
+          const status = (error as { status?: number })?.status;
+          if (status === 429) {
+            Alert.alert(
+              "Slow down a bit",
+              "You've rated a lot of places recently — try again in a few minutes.",
+              [{ text: "OK" }],
+            );
+          }
+          setUserRating(previousRating);
+          if (previousRating === null) {
+            AsyncStorage.removeItem(storageKey);
+          } else {
+            AsyncStorage.setItem(storageKey, previousRating);
+          }
+          onRate?.(placeId, previousRating, newRating);
         },
       },
     );
