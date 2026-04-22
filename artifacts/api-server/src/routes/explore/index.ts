@@ -392,7 +392,13 @@ async function verifyPlaceCoordinates(places: any[]): Promise<void> {
   }
 }
 
-async function postProcessPlaces(places: any[], userLat: number, userLng: number, searchRadius: number): Promise<any[]> {
+async function postProcessPlaces(
+  places: any[],
+  userLat: number,
+  userLng: number,
+  searchRadius: number,
+  options: { skipVerification?: boolean } = {},
+): Promise<any[]> {
   const validConfidence = new Set(["high", "medium", "low"]);
   const maxDist = searchRadius * 1.10;
 
@@ -407,7 +413,9 @@ async function postProcessPlaces(places: any[], userLat: number, userLng: number
     return true;
   });
 
-  await verifyPlaceCoordinates(processed);
+  if (!options.skipVerification) {
+    await verifyPlaceCoordinates(processed);
+  }
 
   processed = processed.filter((p: any) => {
     const dist = haversineDistance(userLat, userLng, p.latitude, p.longitude);
@@ -466,10 +474,12 @@ router.post("/explore/discover", async (req, res) => {
 
   const radiusFeet = Math.round(searchRadius * 3.281);
 
-  const accuracyBucket = typeof accuracy === "number" && Number.isFinite(accuracy)
-    ? Math.min(500, Math.round(accuracy / 25) * 25)
-    : 0;
-  const discoverCacheKey = `${mode}:${searchRadius}:${latitude.toFixed(4)},${longitude.toFixed(4)}:acc${accuracyBucket}`;
+  // ±55m cache grid (toFixed(3) ≈ 111m per unit → 0.5 unit = ~55m).
+  // This means any two queries within ~55m of each other share the same
+  // cache entry, which is correct — the historical places on the same block
+  // are the same regardless of exactly where you stood.
+  const modeKey = isQuick ? "quick" : "full";
+  const discoverCacheKey = `${modeKey}:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}`;
   const cachedDiscover = getLLMCache(discoverCacheKey);
   if (cachedDiscover) {
     res.json(cachedDiscover);
@@ -491,7 +501,9 @@ router.post("/explore/discover", async (req, res) => {
   const placeCount = isQuick ? "8-12" : "5-7";
   const factCount = isQuick ? 2 : 3;
   const modelName = isQuick ? "gpt-4.1-mini" : "gpt-4.1";
-  const maxTokens = isQuick ? 3000 : 4096;
+  // Full mode: typical response is ~1500 tokens for 5-7 places; 2500 gives comfortable
+  // headroom without letting the model over-generate.
+  const maxTokens = isQuick ? 3000 : 2500;
 
   const systemPrompt = `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 
@@ -593,14 +605,20 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
   }
 
   if (data.places && Array.isArray(data.places)) {
-    data.places = await postProcessPlaces(data.places, latitude, longitude, searchRadius);
+    // Skip Nominatim verification on the critical path — it adds ~1 s per place
+    // sequentially. Process synchronously (validate, distance-filter, dedup, vague-
+    // filter), respond to the client immediately, then verify coordinates in the
+    // background and update the cache so the NEXT request for this area gets corrected
+    // pins. For the current caller the coordinates from GPT-4.1 are accurate enough.
+    data.places = await postProcessPlaces(data.places, latitude, longitude, searchRadius, {
+      skipVerification: true,
+    });
   }
 
   // Cache zero-result responses for only 2 min so the user can retry after moving slightly.
   // Normal results get the full 15-min TTL.
   const isEmpty = !Array.isArray(data.places) || data.places.length === 0;
   if (isEmpty) {
-    // Use a short-lived entry — insert with a backdated timestamp so it expires in 2 min.
     const SHORT_TTL_MS = 2 * 60 * 1000;
     llmCache.set(discoverCacheKey, {
       data,
@@ -610,6 +628,25 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
     setLLMCache(discoverCacheKey, data);
   }
   res.json(data);
+
+  // Background: run Nominatim verification and silently update the cache so the
+  // next request for this block gets corrected pin positions. We only do this for
+  // non-empty results — no point verifying an empty set.
+  if (!isEmpty) {
+    (async () => {
+      try {
+        await verifyPlaceCoordinates(data.places);
+        // Re-filter: a corrected coordinate might have moved a place outside radius.
+        const maxDist = searchRadius * 1.10;
+        data.places = data.places.filter(
+          (p: any) => haversineDistance(latitude, longitude, p.latitude, p.longitude) <= maxDist,
+        );
+        setLLMCache(discoverCacheKey, data);
+      } catch {
+        // Verification failure is non-fatal — cached unverified result is still valid.
+      }
+    })();
+  }
 });
 
 router.post("/explore/suggest-locations", async (req, res) => {
