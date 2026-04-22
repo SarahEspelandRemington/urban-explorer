@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -16,6 +17,9 @@ import MapView, {
 
 import { getCategoryIcon } from "@/constants/categories";
 import { useColors } from "@/hooks/useColors";
+
+// Module-level cache so geocoded addresses survive across re-renders.
+const geocodeCache = new Map<string, { latitude: number; longitude: number }>();
 
 interface Place {
   id: string;
@@ -65,6 +69,50 @@ export function PlaceMapView({
   const mapRef = useRef<MapView>(null);
   const lastFetchCenter = useRef({ lat: userLatitude, lng: userLongitude });
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Geocoded coordinates keyed by place id. Pins start at the AI-provided
+  // lat/lng and silently snap to the geocoded position once it resolves.
+  const [geocodedCoords, setGeocodedCoords] = useState<
+    Record<string, { latitude: number; longitude: number }>
+  >({});
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const geocodePlaces = async () => {
+      for (const place of places) {
+        if (!place.address || cancelled) continue;
+        const cacheKey = place.address.toLowerCase().trim();
+
+        // Use cached result immediately to avoid re-geocoding on re-renders.
+        const cached = geocodeCache.get(cacheKey);
+        if (cached) {
+          setGeocodedCoords((prev) => ({ ...prev, [place.id]: cached }));
+          continue;
+        }
+
+        try {
+          const results = await Location.geocodeAsync(place.address);
+          if (cancelled) break;
+          if (results.length > 0) {
+            const coords = {
+              latitude: results[0].latitude,
+              longitude: results[0].longitude,
+            };
+            geocodeCache.set(cacheKey, coords);
+            setGeocodedCoords((prev) => ({ ...prev, [place.id]: coords }));
+          }
+        } catch {
+          // Keep AI coordinates if geocoding fails.
+        }
+      }
+    };
+
+    geocodePlaces();
+    return () => { cancelled = true; };
+    // Re-run only when the set of places changes (not on every object identity change).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [places.map((p) => p.id).join(",")]);
 
   const navigateToDetail = useCallback(
     (place: Place) => {
@@ -129,13 +177,17 @@ export function PlaceMapView({
         provider={PROVIDER_DEFAULT}
         onRegionChangeComplete={handleRegionChangeComplete}
       >
-        {places.map((place) => (
+        {places.map((place) => {
+          // Prefer the geocoded coordinate (Apple/Google Maps native geocoder)
+          // over the raw AI-provided lat/lng, which can be off by a block or more.
+          const markerCoord = geocodedCoords[place.id] ?? {
+            latitude: place.latitude,
+            longitude: place.longitude,
+          };
+          return (
           <Marker
             key={place.id}
-            coordinate={{
-              latitude: place.latitude,
-              longitude: place.longitude,
-            }}
+            coordinate={markerCoord}
             pinColor={colors.primary}
           >
             <Callout
@@ -175,7 +227,8 @@ export function PlaceMapView({
               </View>
             </Callout>
           </Marker>
-        ))}
+          );
+        })}
       </MapView>
 
       {isLoadingMore && (
