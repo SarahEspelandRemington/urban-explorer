@@ -13,7 +13,7 @@ import {
   SuggestLocationsBody,
 } from "@workspace/api-zod";
 import { db, placeRatings } from "@workspace/db";
-import { inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -1925,10 +1925,29 @@ router.post("/explore/rate-place", async (req, res) => {
     return;
   }
 
-  const { placeId, placeName, category, latitude, longitude, rating } = parsed.data;
+  const { placeId, placeName, category, latitude, longitude, rating, previousRating } = parsed.data;
 
-  const upIncrement = rating === "up" ? 1 : 0;
-  const downIncrement = rating === "down" ? 1 : 0;
+  const upDelta = (rating === "up" ? 1 : 0) - (previousRating === "up" ? 1 : 0);
+  const downDelta = (rating === "down" ? 1 : 0) - (previousRating === "down" ? 1 : 0);
+
+  if (rating === "none") {
+    const [updated] = await db
+      .update(placeRatings)
+      .set({
+        up: sql`GREATEST(0, ${placeRatings.up} + ${upDelta})`,
+        down: sql`GREATEST(0, ${placeRatings.down} + ${downDelta})`,
+        lastRatedAt: new Date(),
+      })
+      .where(eq(placeRatings.placeId, placeId))
+      .returning();
+
+    if (!updated) {
+      res.json({ ok: true, placeId, up: 0, down: 0 });
+      return;
+    }
+    res.json({ ok: true, placeId, up: updated.up, down: updated.down });
+    return;
+  }
 
   const [updated] = await db
     .insert(placeRatings)
@@ -1938,14 +1957,14 @@ router.post("/explore/rate-place", async (req, res) => {
       category,
       latitude,
       longitude,
-      up: upIncrement,
-      down: downIncrement,
+      up: rating === "up" ? 1 : 0,
+      down: rating === "down" ? 1 : 0,
     })
     .onConflictDoUpdate({
       target: placeRatings.placeId,
       set: {
-        up: sql`${placeRatings.up} + ${upIncrement}`,
-        down: sql`${placeRatings.down} + ${downIncrement}`,
+        up: sql`GREATEST(0, ${placeRatings.up} + ${upDelta})`,
+        down: sql`GREATEST(0, ${placeRatings.down} + ${downDelta})`,
         lastRatedAt: new Date(),
       },
     })

@@ -199,6 +199,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PlacesAlongRouteResponse"
+  /explore/rate-place:
+    post:
+      operationId: ratePlace
+      tags: [explore]
+      summary: Rate a place
+      description: Submit a thumbs-up or thumbs-down rating for a discovered place. Supports toggling off an existing rating (rating="none") and switching between ratings via the optional previousRating field.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RatePlaceRequest"
+      responses:
+        "200":
+          description: Updated vote counts for the place
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatePlaceResponse"
+  /explore/ratings:
+    get:
+      operationId: getRatings
+      tags: [explore]
+      summary: Get aggregate rating data
+      description: Returns all rated places sorted by net score (up minus down)
+      responses:
+        "200":
+          description: Sorted list of place ratings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RatingsResponse"
   /auth/user:
     get:
       tags: [Auth]
@@ -828,3 +860,82 @@ components:
       properties:
         error:
           type: string
+    RatePlaceRating:
+      type: string
+      enum: [up, down, none]
+      description: "'up' or 'down' to cast a vote; 'none' to remove an existing vote"
+    RatePlaceRequest:
+      type: object
+      required: [placeId, placeName, category, latitude, longitude, rating]
+      properties:
+        placeId:
+          type: string
+          minLength: 1
+          maxLength: 500
+        placeName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        category:
+          type: string
+          minLength: 1
+          maxLength: 100
+        latitude:
+          type: number
+        longitude:
+          type: number
+        rating:
+          $ref: "#/components/schemas/RatePlaceRating"
+        previousRating:
+          type: string
+          enum: [up, down]
+          description: "The user's prior rating for this place, used to compute accurate deltas (decrement old, increment new)"
+    RatePlaceResponse:
+      type: object
+      required: [ok, placeId, up, down]
+      properties:
+        ok:
+          type: boolean
+        placeId:
+          type: string
+        up:
+          type: integer
+          description: "Total up votes after this action"
+        down:
+          type: integer
+          description: "Total down votes after this action"
+    PlaceRatingEntry:
+      type: object
+      required: [placeId, placeName, category, latitude, longitude, up, down, lastRatedAt, netScore]
+      properties:
+        placeId:
+          type: string
+        placeName:
+          type: string
+        category:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        up:
+          type: integer
+        down:
+          type: integer
+        lastRatedAt:
+          type: string
+          format: date-time
+        netScore:
+          type: integer
+          description: "up minus down"
+    RatingsResponse:
+      type: object
+      required: [ratings, total]
+      properties:
+        ratings:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlaceRatingEntry"
+          description: "Places sorted by netScore descending"
+        total:
+          type: integer

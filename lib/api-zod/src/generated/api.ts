@@ -487,7 +487,7 @@ export const LogoutMobileSessionResponse = zod.object({
 });
 
 /**
- * @summary Rate a discovered place (thumbs up or down)
+ * @summary Rate a discovered place (thumbs up or down) or remove an existing rating
  */
 export const RatePlaceBody = zod.object({
   placeId: zod.string().min(1).max(500),
@@ -495,5 +495,6 @@ export const RatePlaceBody = zod.object({
   category: zod.string().min(1).max(100),
   latitude: zod.number(),
   longitude: zod.number(),
-  rating: zod.enum(["up", "down"]),
+  rating: zod.enum(["up", "down", "none"]),
+  previousRating: zod.enum(["up", "down"]).optional(),
 });

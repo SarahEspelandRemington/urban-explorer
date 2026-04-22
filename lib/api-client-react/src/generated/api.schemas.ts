@@ -316,7 +316,7 @@ export interface ErrorEnvelope {
   error: string;
 }
 
-export type RatePlaceRating = "up" | "down";
+export type RatePlaceRating = "up" | "down" | "none";
 
 export interface RatePlaceRequest {
   placeId: string;
@@ -325,6 +325,7 @@ export interface RatePlaceRequest {
   latitude: number;
   longitude: number;
   rating: RatePlaceRating;
+  previousRating?: "up" | "down";
 }
 
 export interface RatePlaceResponse {

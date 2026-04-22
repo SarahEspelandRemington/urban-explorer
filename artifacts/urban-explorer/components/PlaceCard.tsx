@@ -87,13 +87,21 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     }
   };
 
-  const handleRate = (rating: "up" | "down") => {
-    if (userRating === rating) return;
+  const handleRate = (tapped: "up" | "down") => {
+    const previousRating = userRating;
+    const newRating: "up" | "down" | null = previousRating === tapped ? null : tapped;
+
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
-    setUserRating(rating);
-    AsyncStorage.setItem(storageKey, rating);
+
+    setUserRating(newRating);
+    if (newRating === null) {
+      AsyncStorage.removeItem(storageKey);
+    } else {
+      AsyncStorage.setItem(storageKey, newRating);
+    }
+
     rateMutation.mutate({
       data: {
         placeId,
@@ -101,7 +109,8 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
         category: place.category,
         latitude: place.latitude,
         longitude: place.longitude,
-        rating,
+        rating: newRating ?? "none",
+        ...(previousRating != null ? { previousRating } : {}),
       },
     });
   };
