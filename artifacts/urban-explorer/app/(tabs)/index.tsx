@@ -42,6 +42,18 @@ interface DiscoveredPlace {
   netScore?: number;
 }
 
+const DRIFT_THRESHOLD_METERS = 150;
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function getEra(yearBuilt?: string): string | null {
   if (!yearBuilt || yearBuilt === "unknown") return null;
   const match = yearBuilt.match(/\d{4}|\d{3}0s/);
@@ -221,11 +233,56 @@ export default function ExploreScreen() {
     }
   }, [permission?.granted, location, manualCoords, getLocation]);
 
+  const lastDiscoverCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const [driftMeters, setDriftMeters] = useState(0);
+
+  // Continuously watch GPS so the location stays fresh as the user walks.
+  // Only active when using real GPS (not a manually typed address).
+  useEffect(() => {
+    if (!permission?.granted || manualCoords) return;
+    let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        sub = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 20,
+            timeInterval: 15000,
+          },
+          (loc) => {
+            if (cancelled) return;
+            setLocation(loc);
+            if (lastDiscoverCoordsRef.current) {
+              const d = haversineMeters(
+                loc.coords.latitude,
+                loc.coords.longitude,
+                lastDiscoverCoordsRef.current.latitude,
+                lastDiscoverCoordsRef.current.longitude,
+              );
+              setDriftMeters(d);
+            }
+          },
+        );
+      } catch {
+        // Silently ignore errors starting the watcher (e.g. permissions revoked mid-session).
+      }
+    })();
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+  // Re-run only when permission changes or the user toggles manual coords.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permission?.granted, !!manualCoords]);
+
   const discoverRequestRef = useRef(0);
   const discoverAt = useCallback(
     (lat: number, lng: number, accuracy?: number | null, radiusOverride?: 150 | 300 | 500) => {
       const requestId = ++discoverRequestRef.current;
       const r = radiusOverride ?? searchRadius;
+      lastDiscoverCoordsRef.current = { latitude: lat, longitude: lng };
+      setDriftMeters(0);
       setActiveFilters(new Set());
       setExpandedId(null);
       setMapPlaces([]);
@@ -388,6 +445,12 @@ export default function ExploreScreen() {
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
 
   const showContent = places.length > 0 && !discoverMutation.isPending;
+
+  const showDriftBanner =
+    driftMeters >= DRIFT_THRESHOLD_METERS &&
+    !discoverMutation.isPending &&
+    places.length > 0 &&
+    !manualCoords;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -701,6 +764,26 @@ export default function ExploreScreen() {
             })}
           </ScrollView>
         </View>
+      )}
+
+      {showDriftBanner && (
+        <Animated.View
+          entering={FadeIn.duration(300)}
+          exiting={FadeOut.duration(200)}
+        >
+          <Pressable
+            onPress={handleDiscover}
+            style={[styles.driftBanner, { backgroundColor: colors.primary }]}
+            accessibilityRole="button"
+            accessibilityLabel={`You've moved ${Math.round(driftMeters)}m — tap to refresh results for this area`}
+          >
+            <Feather name="navigation" size={14} color={colors.primaryForeground} />
+            <Text style={[styles.driftBannerText, { color: colors.primaryForeground }]}>
+              You've moved — tap to refresh this area
+            </Text>
+            <Feather name="refresh-cw" size={14} color={colors.primaryForeground} />
+          </Pressable>
+        </Animated.View>
       )}
 
       {showContent && viewMode === "map" ? (
@@ -1149,6 +1232,19 @@ const styles = StyleSheet.create({
   retryText: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+  },
+  driftBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  driftBannerText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.1,
   },
   ratingPaceWarning: {
     flexDirection: "row",
