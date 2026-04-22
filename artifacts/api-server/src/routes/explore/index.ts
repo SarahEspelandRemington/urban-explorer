@@ -13,8 +13,8 @@ import {
   RatePlaceBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
-import { db, placeRatings } from "@workspace/db";
-import { eq, inArray, sql } from "drizzle-orm";
+import { db, placeRatings, userPlaceRatings } from "@workspace/db";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -1970,6 +1970,7 @@ router.post("/explore/rate-place", ratePlaceIpLimiter, ratePlaceDeviceLimiter, a
   }
 
   const { placeId, placeName, category, latitude, longitude, rating, previousRating } = parsed.data;
+  const userId = req.isAuthenticated() ? req.user.id : null;
 
   const upDelta = (rating === "up" ? 1 : 0) - (previousRating === "up" ? 1 : 0);
   const downDelta = (rating === "down" ? 1 : 0) - (previousRating === "down" ? 1 : 0);
@@ -1984,6 +1985,17 @@ router.post("/explore/rate-place", ratePlaceIpLimiter, ratePlaceDeviceLimiter, a
       })
       .where(eq(placeRatings.placeId, placeId))
       .returning();
+
+    if (userId) {
+      await db
+        .delete(userPlaceRatings)
+        .where(
+          and(
+            eq(userPlaceRatings.userId, userId),
+            eq(userPlaceRatings.placeId, placeId),
+          ),
+        );
+    }
 
     if (!updated) {
       res.json({ ok: true, placeId, up: 0, down: 0 });
@@ -2014,7 +2026,41 @@ router.post("/explore/rate-place", ratePlaceIpLimiter, ratePlaceDeviceLimiter, a
     })
     .returning();
 
+  if (userId) {
+    await db
+      .insert(userPlaceRatings)
+      .values({ userId, placeId, rating, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: [userPlaceRatings.userId, userPlaceRatings.placeId],
+        set: { rating, updatedAt: new Date() },
+      });
+  }
+
   res.json({ ok: true, placeId, up: updated.up, down: updated.down });
+});
+
+// ---------------------------------------------------------------------------
+// GET /explore/user-ratings — fetch all ratings submitted by the current user
+// ---------------------------------------------------------------------------
+
+router.get("/explore/user-ratings", async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  const userId = req.user.id;
+  const rows = await db
+    .select({ placeId: userPlaceRatings.placeId, rating: userPlaceRatings.rating })
+    .from(userPlaceRatings)
+    .where(eq(userPlaceRatings.userId, userId));
+
+  const ratings: Record<string, string> = {};
+  for (const row of rows) {
+    ratings[row.placeId] = row.rating;
+  }
+
+  res.json({ ratings });
 });
 
 // ---------------------------------------------------------------------------

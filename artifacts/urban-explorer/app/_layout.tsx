@@ -21,6 +21,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HeadingBanner } from "@/components/HeadingBanner";
 import { DiscoveryProvider } from "@/contexts/DiscoveryContext";
 import { HeadingProvider } from "@/contexts/HeadingContext";
+import { UserRatingsProvider } from "@/contexts/UserRatingsContext";
 import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
@@ -91,6 +92,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
+            <UserRatingsProvider>
             <DiscoveryProvider>
               <WalkModeProvider>
                 <HeadingProvider>
@@ -103,6 +105,7 @@ export default function RootLayout() {
                 </HeadingProvider>
               </WalkModeProvider>
             </DiscoveryProvider>
+            </UserRatingsProvider>
           </QueryClientProvider>
         </AuthProvider>
       </ErrorBoundary>

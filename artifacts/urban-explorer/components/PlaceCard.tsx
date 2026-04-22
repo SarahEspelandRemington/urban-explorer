@@ -9,6 +9,7 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, wit
 import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
+import { storageKey, useUserRatings } from "@/contexts/UserRatingsContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatePlace, type RatePlaceResponse } from "@workspace/api-client-react";
 
@@ -64,21 +65,26 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
   const saved = isPlaceSaved(placeId);
 
+  const { getRating, setLocalRating, isLoaded, userId } = useUserRatings();
   const [userRating, setUserRating] = useState<"up" | "down" | null>(null);
   const [communityRating, setCommunityRating] = useState<CommunityRating | undefined>(place.communityRating);
   const rateMutation = useRatePlace();
 
-  const storageKey = `place_rating:${placeId}`;
+  const ratingStorageKey = storageKey(userId, placeId);
 
   useEffect(() => {
-    AsyncStorage.getItem(storageKey).then((stored) => {
+    if (isLoaded) {
+      setUserRating(getRating(placeId));
+      return;
+    }
+    AsyncStorage.getItem(ratingStorageKey).then((stored) => {
       if (stored === "up" || stored === "down") {
         setUserRating(stored);
       } else {
         setUserRating(null);
       }
     });
-  }, [storageKey]);
+  }, [ratingStorageKey, placeId, getRating, isLoaded]);
 
   const iconName = getCategoryIcon(place.category);
   const categoryColor = getCategoryColor(place.category, colors);
@@ -127,10 +133,11 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     setUserRating(newRating);
+    setLocalRating(placeId, newRating);
     if (newRating === null) {
-      AsyncStorage.removeItem(storageKey);
+      AsyncStorage.removeItem(ratingStorageKey);
     } else {
-      AsyncStorage.setItem(storageKey, newRating);
+      AsyncStorage.setItem(ratingStorageKey, newRating);
     }
     onRate?.(placeId, newRating, previousRating);
 
