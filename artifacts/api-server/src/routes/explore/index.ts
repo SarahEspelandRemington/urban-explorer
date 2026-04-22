@@ -498,12 +498,12 @@ router.post("/explore/discover", async (req, res) => {
   }
   const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
-  const placeCount = isQuick ? "8-12" : "5-7";
+  const placeCount = isQuick ? "8-12" : "8-12";
   const factCount = isQuick ? 2 : 3;
   const modelName = isQuick ? "gpt-4.1-mini" : "gpt-4.1";
-  // Full mode: typical response is ~1500 tokens for 5-7 places; 2500 gives comfortable
-  // headroom without letting the model over-generate.
-  const maxTokens = isQuick ? 3000 : 2500;
+  // Full mode now targets 8-12 places; ~300 tokens/place × 12 = ~3600. Cap at 4500
+  // to give comfortable headroom without runaway generation.
+  const maxTokens = isQuick ? 3000 : 4500;
 
   const systemPrompt = `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 
@@ -517,9 +517,11 @@ PRIORITIZE these kinds of places (in rough order of interest):
 5. Odd infrastructure — old hitching posts, embedded trolley tracks, mysterious plaques, sealed-off subway entrances, converted buildings with visible remnants of their past use
 6. Small parks, alleys, or pocket spaces with hidden histories
 7. Community power and social fabric — the human history of who controlled, organized, and fought over specific streets: ethnic mutual aid societies and social clubs, union halls and labor organizing, gang territories and crew headquarters, political machine clubhouses, community figures (bosses, organizers, fixers) who shaped daily life on specific blocks. Example discoveries at this level of specificity: "596 10th Ave (now Mr. Biggs Bar) was the Westies gang's headquarters in the 1970s — Jimmy Coonan ran Hell's Kitchen's Irish mob from this corner"; "The building at 43 E 4th St housed the United Hebrew Trades, whose 1888 organizing drive pulled 10,000 garment workers off the job in one week"; "This storefront was Tammany Hall's 17th Ward clubhouse, where district captain 'Big Tim' Sullivan handed out turkeys and coal to tenants in exchange for their votes every November"
+8. Buildings or sites that have lived multiple lives across eras — the use-transition itself is the story. A stable that became a speakeasy that became a bodega that became a luxury condo reveals more about a city's social history than any single-era fact. Name the most surprising transition and the people behind it.
+9. Hidden infrastructure and subsurface remnants — vault sidewalks (glass-block or iron-grate footpaths over coal cellars, still visible underfoot on many older blocks), buried streams converted to storm sewers running beneath the current street, repurposed streetcar poles and trolley-track fragments embedded in asphalt, filled-in shorelines where water ran until the 19th century. These are among the most surprising discoveries for anyone standing on a city sidewalk.
 
 AVOID these:
-- Major tourist landmarks that appear in guidebooks (e.g., Statue of Liberty, Golden Gate Bridge, Empire State Building, Times Square as a destination)
+- Major tourist landmarks whose primary fame IS as a visitor destination (e.g., Statue of Liberty, Empire State Building as a skyscraper, Times Square as a spectacle). You MAY include a famous address when the specific story is genuinely non-obvious — not the building's celebrity, but something surprising that guidebooks omit. Example: the Empire State Building's observation deck is off-limits; but its mooring mast was designed for transatlantic dirigibles and actually docked one airship in 1931 — that story is fair game if you are near it.
 - Places more than ${radiusFeet} feet away — stay extremely local
 - Generic descriptions that could apply to any old building in any city. BAD: "This building has a rich history." GOOD: "The carved stone face above the third-floor window is a portrait of the building's architect, who hid his own likeness in all his projects."
 - Well-known museums, famous monuments, or top-10 lists
@@ -545,6 +547,8 @@ HONESTY RULE: If you are uncertain whether a place or fact is real, say so in th
 
 If you genuinely cannot identify specific obscure places at these exact coordinates, focus on the immediate block or intersection: the architectural style of the buildings right there, what the neighborhood looked like 50 or 100 years ago, what businesses or residents occupied the exact spot historically.
 
+USING THE OSM DATA: The user message will include a list of nearby features from OpenStreetMap. For each named OSM feature, ask yourself: is there a non-obvious story behind this specific building, business, or structure that a guidebook would miss? Treat every OSM entry as a prompt for historical investigation — a building that OSM simply lists as "commercial" may have been a union hall, a speak-easy, or a political clubhouse. Do not just re-describe what the OSM data already says. Use it as a starting point to surface the obscure layer underneath.
+
 Respond in JSON format:
 {
   "location": "Very specific area description (e.g., 'Corner of Bleecker & MacDougal, Greenwich Village' or '400 block of S Main St, downtown')",
@@ -552,9 +556,9 @@ Respond in JSON format:
     {
       "id": "unique-kebab-case-id",
       "name": "Place Name — use the real or historical name, not a generic label",
-      "category": "building|storefront|alley|corner|mural|infrastructure|former site|architectural detail|park|church|residential",
+      "category": "building|storefront|alley|corner|mural|infrastructure|former site|architectural detail|park|church|residential|vault sidewalk|subsurface|waterway remnant|transportation remnant",
       "yearBuilt": "1920s" or "circa 1850" or "unknown",
-      "tags": ["2-4 descriptive tags like: ghost sign, speakeasy, art deco, industrial, immigrant history, prohibition era, jazz age, tenement, waterfront, transit, religious, commercial, residential, demolished, converted, landmarked, labor history, ethnic community, gang territory, political machine, immigrant organization, working class, displacement"],
+      "tags": ["2-4 descriptive tags like: ghost sign, speakeasy, art deco, industrial, immigrant history, prohibition era, jazz age, tenement, waterfront, transit, religious, commercial, residential, demolished, converted, landmarked, labor history, ethnic community, gang territory, political machine, immigrant organization, working class, displacement, multi-era, vault sidewalk, buried waterway, streetcar, subsurface"],
       "summary": "One captivating sentence that makes this specific place sound like a secret worth knowing. Include the most surprising or vivid detail.",
       "facts": ["Fact with a specific year, name, or verifiable detail", "A second distinct fact", "A third distinct fact"],
       "latitude": precise_lat_to_5_decimal_places,
@@ -565,7 +569,26 @@ Respond in JSON format:
   ]
 }
 
-Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
+Here is one PERFECT example entry — use it as your quality benchmark for every place you return:
+{
+  "id": "pomander-walk-94th",
+  "name": "Pomander Walk",
+  "category": "alley",
+  "yearBuilt": "1921",
+  "tags": ["hidden enclave", "tudor revival", "theatrical history", "arts colony"],
+  "summary": "A secret Tudor village of 16 rowhouses hidden behind an unmarked iron gate — built as a full-scale replica of a stage set, completely invisible from the street.",
+  "facts": [
+    "Developer Thomas Healy — owner of the Hotel Astor — commissioned the complex in 1921, modelling it precisely on the English village backdrop used in Louis Parker's 1910 Broadway play 'Pomander Walk', which Healy had seen and loved.",
+    "Humphrey Bogart lived here in the mid-1920s alongside silent-film stars Lillian Gish, Gloria Swanson, and Rosalind Russell — the lane became an unofficial actors' colony because the cheap rents and total seclusion suited performers who worked nights.",
+    "The complex is accessed only through two unmarked iron gates (one on W 94th St, one on W 95th St); there is no street signage of any kind, and most people who have lived on the block for years have never seen inside."
+  ],
+  "latitude": 40.79385,
+  "longitude": -73.97419,
+  "address": "261 W 94th St, Manhattan",
+  "confidence": "high"
+}
+
+Return ${placeCount} places. Quality beats quantity — if you can only find 6 places with genuinely strong, specific stories, return 6 rather than padding with weak entries. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
 
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
