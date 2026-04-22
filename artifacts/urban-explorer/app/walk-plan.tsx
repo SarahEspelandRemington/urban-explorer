@@ -84,6 +84,8 @@ export default function WalkPlanScreen() {
 
   const planVersionRef = useRef(0);
   const planAbortRef = useRef<AbortController | null>(null);
+  const lastGoodEndRef = useRef<Waypoint | null>(null);
+  const lastGoodStartRef = useRef<Waypoint | null>(null);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
@@ -121,7 +123,9 @@ export default function WalkPlanScreen() {
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      setStart({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+      const currentCoords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      setStart(currentCoords);
+      lastGoodStartRef.current = currentCoords;
       setStartLabel("Current location");
       setStartQuery("Current location");
     } catch {
@@ -157,11 +161,15 @@ export default function WalkPlanScreen() {
         (await reverseGeocode(coord.latitude, coord.longitude)) ||
         `${coord.latitude.toFixed(5)}, ${coord.longitude.toFixed(5)}`;
       if (which === "start") {
-        setStart({ latitude: coord.latitude, longitude: coord.longitude });
+        const coords = { latitude: coord.latitude, longitude: coord.longitude };
+        setStart(coords);
+        lastGoodStartRef.current = coords;
         setStartLabel(label);
         setStartQuery(label);
       } else {
-        setEnd({ latitude: coord.latitude, longitude: coord.longitude });
+        const coords = { latitude: coord.latitude, longitude: coord.longitude };
+        setEnd(coords);
+        lastGoodEndRef.current = coords;
         setEndLabel(label);
         setEndQuery(label);
       }
@@ -189,72 +197,90 @@ export default function WalkPlanScreen() {
       setDurationSeconds(0);
       setPlaces([]);
     };
+
     try {
-      const routeRes = await fetch(`${API_BASE}/api/explore/route`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...await authHeaders() },
-        body: JSON.stringify({
-          start: { latitude: s.latitude, longitude: s.longitude },
-          end: { latitude: e.latitude, longitude: e.longitude },
-          waypoints: bend ? [{ latitude: bend.latitude, longitude: bend.longitude }] : [],
-        }),
-        signal: controller.signal,
-      });
-      if (planVersionRef.current !== myVersion) return;
-      if (!routeRes.ok) {
-        if (routeRes.status === 429 || routeRes.status === 503) {
-          setError("We're busy right now — try again in a moment.");
-        } else {
-          const errBody = await routeRes.json().catch(() => ({}));
-          if (planVersionRef.current !== myVersion) return;
-          setError(errBody.error || "Couldn't find a walking route.");
-        }
-        clearRouteState();
-        return;
-      }
-      const routeData = await routeRes.json();
-      if (planVersionRef.current !== myVersion) return;
-      const geom: [number, number][] = routeData.geometry || [];
-      setGeometry(geom);
-      setDistanceMeters(routeData.distanceMeters || 0);
-      setDurationSeconds(routeData.durationSeconds || 0);
-      setPlaces([]);
-
-      if (geom.length >= 2) {
-        const placesRes = await fetch(`${API_BASE}/api/explore/places-along-route`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...await authHeaders() },
-          body: JSON.stringify({ geometry: geom, maxPlaces: 12, corridorMeters: 70 }),
-          signal: controller.signal,
-        });
+      let succeeded = false;
+      for (let attempt = 0; attempt < 2 && !succeeded; attempt++) {
         if (planVersionRef.current !== myVersion) return;
-        if (placesRes.ok) {
-          const placesData = await placesRes.json();
+        if (attempt > 0) {
+          setError("Retrying…");
+          await new Promise<void>((r) => setTimeout(r, 2500));
           if (planVersionRef.current !== myVersion) return;
-          const placesList = Array.isArray(placesData.places) ? placesData.places : [];
-          setPlaces(placesList);
+          setError(null);
+        }
+        try {
+          const routeRes = await fetch(`${API_BASE}/api/explore/route`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...await authHeaders() },
+            body: JSON.stringify({
+              start: { latitude: s.latitude, longitude: s.longitude },
+              end: { latitude: e.latitude, longitude: e.longitude },
+              waypoints: bend ? [{ latitude: bend.latitude, longitude: bend.longitude }] : [],
+            }),
+            signal: controller.signal,
+          });
+          if (planVersionRef.current !== myVersion) return;
+          if (!routeRes.ok) {
+            if (routeRes.status === 429 || routeRes.status === 503) {
+              setError("We're busy right now — try again in a moment.");
+            } else {
+              const errBody = await routeRes.json().catch(() => ({}));
+              if (planVersionRef.current !== myVersion) return;
+              setError(errBody.error || "Couldn't find a walking route.");
+            }
+            clearRouteState();
+            return;
+          }
+          const routeData = await routeRes.json();
+          if (planVersionRef.current !== myVersion) return;
+          const geom: [number, number][] = routeData.geometry || [];
+          setGeometry(geom);
+          setDistanceMeters(routeData.distanceMeters || 0);
+          setDurationSeconds(routeData.durationSeconds || 0);
+          setPlaces([]);
+          succeeded = true;
 
-          // Pre-warm the narration cache on the server in the background so that
-          // when the user starts the walk, narration responses are instant.
-          for (const p of placesList) {
-            fetch(`${API_BASE}/api/explore/walk-narration`, {
+          if (geom.length >= 2) {
+            const placesRes = await fetch(`${API_BASE}/api/explore/places-along-route`, {
               method: "POST",
               headers: { "Content-Type": "application/json", ...await authHeaders() },
-              body: JSON.stringify({
-                placeName: p.name,
-                category: p.category,
-                summary: p.summary,
-                fact: Array.isArray(p.facts) ? p.facts[0] : undefined,
-              }),
+              body: JSON.stringify({ geometry: geom, maxPlaces: 12, corridorMeters: 70 }),
               signal: controller.signal,
-            }).catch(() => {});
+            });
+            if (planVersionRef.current !== myVersion) return;
+            if (placesRes.ok) {
+              const placesData = await placesRes.json();
+              if (planVersionRef.current !== myVersion) return;
+              const placesList = Array.isArray(placesData.places) ? placesData.places : [];
+              setPlaces(placesList);
+
+              // Pre-warm the narration cache on the server in the background so that
+              // when the user starts the walk, narration responses are instant.
+              // Uses its own fire-and-forget fetches (no shared AbortController) so that
+              // re-planning the route doesn't cancel in-flight narration requests.
+              const narrationHeaders = { "Content-Type": "application/json", ...await authHeaders() };
+              for (const p of placesList) {
+                fetch(`${API_BASE}/api/explore/walk-narration`, {
+                  method: "POST",
+                  headers: narrationHeaders,
+                  body: JSON.stringify({
+                    placeName: p.name,
+                    category: p.category,
+                    summary: p.summary,
+                    fact: Array.isArray(p.facts) ? p.facts[0] : undefined,
+                  }),
+                }).catch(() => {});
+              }
+            }
+          }
+        } catch (err: any) {
+          if (err?.name === "AbortError" || planVersionRef.current !== myVersion) return;
+          if (attempt === 1) {
+            setError("Couldn't plan the route. Check your connection.");
+            clearRouteState();
           }
         }
       }
-    } catch (err: any) {
-      if (err?.name === "AbortError" || planVersionRef.current !== myVersion) return;
-      setError("Couldn't plan the route. Check your connection.");
-      clearRouteState();
     } finally {
       if (planVersionRef.current === myVersion) {
         setIsPlanning(false);
@@ -272,17 +298,25 @@ export default function WalkPlanScreen() {
       const r = await resolveAddress(startQuery);
       setIsResolving(null);
       if (!r.ok) {
-        setError(
-          r.status === 429 || r.status === 503
-            ? "We're busy right now — try again in a moment."
-            : "Couldn't find the start address.",
-        );
-        return;
+        if (lastGoodStartRef.current && geometry.length > 0) {
+          s = lastGoodStartRef.current;
+          sLabel = startLabel || startQuery;
+          setStart(s);
+        } else {
+          setError(
+            r.status === 429 || r.status === 503
+              ? "We're busy right now — try again in a moment."
+              : "Couldn't find the start address.",
+          );
+          return;
+        }
+      } else {
+        s = { latitude: r.lat, longitude: r.lng };
+        sLabel = r.label;
+        setStart(s);
+        setStartLabel(sLabel);
+        lastGoodStartRef.current = s;
       }
-      s = { latitude: r.lat, longitude: r.lng };
-      sLabel = r.label;
-      setStart(s);
-      setStartLabel(sLabel);
     }
 
     let e = end;
@@ -292,18 +326,29 @@ export default function WalkPlanScreen() {
       const r = await resolveAddress(endQuery);
       setIsResolving(null);
       if (!r.ok) {
-        setError(
-          r.status === 429 || r.status === 503
-            ? "We're busy right now — try again in a moment."
-            : "Couldn't find the end address.",
-        );
-        return;
+        if (lastGoodEndRef.current && geometry.length > 0) {
+          e = lastGoodEndRef.current;
+          eLabel = endLabel || endQuery;
+          setEnd(e);
+        } else {
+          setError(
+            r.status === 429 || r.status === 503
+              ? "We're busy right now — try again in a moment."
+              : "Couldn't find the end address.",
+          );
+          return;
+        }
+      } else {
+        e = { latitude: r.lat, longitude: r.lng };
+        eLabel = r.label;
+        setEnd(e);
+        setEndLabel(eLabel);
+        lastGoodEndRef.current = e;
       }
-      e = { latitude: r.lat, longitude: r.lng };
-      eLabel = r.label;
-      setEnd(e);
-      setEndLabel(eLabel);
     }
+
+    if (s) lastGoodStartRef.current = s;
+    if (e) lastGoodEndRef.current = e;
 
     if (!s || !e) {
       setError("Please enter both a start and end address.");
@@ -373,7 +418,9 @@ export default function WalkPlanScreen() {
           onSelectSuggestion={(s) => {
             setStartQuery(s.name);
             if (typeof s.latitude === "number" && typeof s.longitude === "number") {
-              setStart({ latitude: s.latitude, longitude: s.longitude });
+              const coords = { latitude: s.latitude, longitude: s.longitude };
+              setStart(coords);
+              lastGoodStartRef.current = coords;
               setStartLabel(s.name);
             } else {
               setStart(null);
@@ -430,7 +477,9 @@ export default function WalkPlanScreen() {
           onSelectSuggestion={(s) => {
             setEndQuery(s.name);
             if (typeof s.latitude === "number" && typeof s.longitude === "number") {
-              setEnd({ latitude: s.latitude, longitude: s.longitude });
+              const coords = { latitude: s.latitude, longitude: s.longitude };
+              setEnd(coords);
+              lastGoodEndRef.current = coords;
               setEndLabel(s.name);
             } else {
               setEnd(null);
@@ -517,10 +566,12 @@ export default function WalkPlanScreen() {
           selectingPoint={selectingPoint}
           onMoveStart={(next) => {
             setStart(next);
+            lastGoodStartRef.current = next;
             if (end) fetchRouteAndPlaces(next, end, bendPoint);
           }}
           onMoveEnd={(next) => {
             setEnd(next);
+            lastGoodEndRef.current = next;
             if (start) fetchRouteAndPlaces(start, next, bendPoint);
           }}
           onBendRoute={(next) => {
