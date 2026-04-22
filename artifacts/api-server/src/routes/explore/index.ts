@@ -348,9 +348,12 @@ async function geocodeNearLocation(address: string): Promise<{ lat: number; lon:
 
 async function verifyPlaceCoordinates(places: any[]): Promise<void> {
   const COORD_CORRECTION_THRESHOLD_M = 50;
-  // Nominatim requires max 1 request/second — process sequentially, not in parallel.
+  const COORD_REJECT_THRESHOLD_M = 400;
+  // Verify ALL places that include an address — even "high" confidence ones, because
+  // the AI sometimes labels famous places as "high" while hallucinating their coordinates
+  // near the user's current location. Nominatim requires max 1 req/sec — process sequentially.
   const candidates = places.filter(
-    (p) => p.confidence !== "high" && typeof p.address === "string" && p.address.trim().length > 5,
+    (p) => typeof p.address === "string" && p.address.trim().length > 5,
   );
 
   for (const p of candidates) {
@@ -362,9 +365,17 @@ async function verifyPlaceCoordinates(places: any[]): Promise<void> {
       const geocodedLon = parseFloat(lon);
       if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) continue;
       const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
-      if (dist > COORD_CORRECTION_THRESHOLD_M) {
+      if (dist > COORD_REJECT_THRESHOLD_M) {
+        // Wildly off — almost certainly hallucinated. Replace with geocoded coords
+        // and demote confidence so downstream consumers know it's lower-trust.
         p.latitude = geocodedLat;
         p.longitude = geocodedLon;
+        p.confidence = "low";
+        p.coordSource = "nominatim-corrected";
+      } else if (dist > COORD_CORRECTION_THRESHOLD_M) {
+        p.latitude = geocodedLat;
+        p.longitude = geocodedLon;
+        p.coordSource = "nominatim-corrected";
       }
     } catch {
       // keep AI coordinates on any failure
