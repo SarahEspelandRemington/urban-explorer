@@ -1,5 +1,6 @@
 import { Router } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { PgRateLimitStore } from "../../lib/pgRateLimitStore";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import {
   DiscoverPlacesBody,
@@ -1942,7 +1943,8 @@ const ratePlaceIpLimiter = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
   message: RATE_PLACE_MESSAGE,
-  keyGenerator: (req) => ipKeyGenerator(req.ip ?? ""),
+  keyGenerator: (req) => `ip:${ipKeyGenerator(req.ip ?? "")}`,
+  store: new PgRateLimitStore(),
 });
 
 const ratePlaceDeviceLimiter = rateLimit({
@@ -1960,6 +1962,7 @@ const ratePlaceDeviceLimiter = rateLimit({
     return `device:${deviceId.trim()}`;
   },
   validate: { keyGeneratorIpFallback: false },
+  store: new PgRateLimitStore(),
 });
 
 router.post("/explore/rate-place", ratePlaceIpLimiter, ratePlaceDeviceLimiter, async (req, res) => {
