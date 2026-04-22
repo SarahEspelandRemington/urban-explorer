@@ -348,30 +348,28 @@ async function geocodeNearLocation(address: string): Promise<{ lat: number; lon:
 
 async function verifyPlaceCoordinates(places: any[]): Promise<void> {
   const COORD_CORRECTION_THRESHOLD_M = 50;
-
+  // Nominatim requires max 1 request/second — process sequentially, not in parallel.
   const candidates = places.filter(
     (p) => p.confidence !== "high" && typeof p.address === "string" && p.address.trim().length > 5,
   );
 
-  await Promise.all(
-    candidates.map(async (p) => {
-      try {
-        const results = await nominatimSearch(p.address.trim(), 1, { countrycodes: "us" });
-        if (results.length === 0) return;
-        const { lat, lon } = results[0];
-        const geocodedLat = parseFloat(lat);
-        const geocodedLon = parseFloat(lon);
-        if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) return;
-        const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
-        if (dist > COORD_CORRECTION_THRESHOLD_M) {
-          p.latitude = geocodedLat;
-          p.longitude = geocodedLon;
-        }
-      } catch {
-        // keep AI coordinates on any failure
+  for (const p of candidates) {
+    try {
+      const results = await nominatimSearch(p.address.trim(), 1, { countrycodes: "us" });
+      if (results.length === 0) continue;
+      const { lat, lon } = results[0];
+      const geocodedLat = parseFloat(lat);
+      const geocodedLon = parseFloat(lon);
+      if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) continue;
+      const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
+      if (dist > COORD_CORRECTION_THRESHOLD_M) {
+        p.latitude = geocodedLat;
+        p.longitude = geocodedLon;
       }
-    }),
-  );
+    } catch {
+      // keep AI coordinates on any failure
+    }
+  }
 }
 
 async function postProcessPlaces(places: any[], userLat: number, userLng: number, searchRadius: number): Promise<any[]> {
@@ -1452,45 +1450,52 @@ Return one entry per input place, in the same order. Be concise — these blurbs
   // Pre-allocate the slot array so each chunk writes into the right candidate
   // index even if the LLM returns fewer items than requested for some chunks.
   const llmPlaces: any[] = new Array(finalCandidates.length).fill(null);
-  try {
-    await Promise.all(
-      chunks.map(async ({ offset, items }) => {
-        const ctx = items.map((c, j) => formatCandidateLine(c, j)).join("\n");
-        const resp = await openai.chat.completions.create({
-          model: "gpt-4.1-mini",
-          max_completion_tokens: 1400,
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `Generate brief walking-tour blurbs for these places along my route:\n${ctx}`,
-            },
-          ],
-          response_format: { type: "json_object" },
-        });
-        const c = resp.choices[0]?.message?.content;
-        if (!c) return;
-        let chunkPlaces: any[] = [];
-        try {
-          const parsedChunk = JSON.parse(c);
-          chunkPlaces = Array.isArray(parsedChunk.places) ? parsedChunk.places : [];
-        } catch {
-          return;
-        }
-        // Write each returned place into its corresponding global slot. If the
-        // LLM short-returned, leftover slots stay null and the candidate falls
-        // back to OSM defaults below.
-        for (let j = 0; j < items.length && j < chunkPlaces.length; j++) {
-          llmPlaces[offset + j] = chunkPlaces[j];
-        }
-      }),
-    );
-  } catch (e: any) {
-    console.error("[places-along-route] OpenAI error:", e?.message || e);
-    res.status(500).json({ error: "LLM call failed", detail: e?.message || String(e) });
+
+  // Use allSettled so a single chunk failure doesn't wipe out the entire response —
+  // successful chunks still contribute their places; failed chunks fall back to OSM defaults.
+  const chunkResults = await Promise.allSettled(
+    chunks.map(async ({ offset, items }) => {
+      const ctx = items.map((c, j) => formatCandidateLine(c, j)).join("\n");
+      const resp = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        max_completion_tokens: 1400,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Generate brief walking-tour blurbs for these places along my route:\n${ctx}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+      });
+      const c = resp.choices[0]?.message?.content;
+      if (!c) return;
+      let chunkPlaces: any[] = [];
+      try {
+        const parsedChunk = JSON.parse(c);
+        chunkPlaces = Array.isArray(parsedChunk.places) ? parsedChunk.places : [];
+      } catch {
+        return;
+      }
+      // Write each returned place into its corresponding global slot. If the
+      // LLM short-returned, leftover slots stay null and the candidate falls
+      // back to OSM defaults below.
+      for (let j = 0; j < items.length && j < chunkPlaces.length; j++) {
+        llmPlaces[offset + j] = chunkPlaces[j];
+      }
+    }),
+  );
+
+  const failedChunks = chunkResults.filter((r) => r.status === "rejected").length;
+  if (failedChunks > 0) {
+    console.warn(`[places-along-route] ${failedChunks}/${chunks.length} LLM chunks failed — those places will use OSM fallback names`);
+  }
+  // If every chunk failed, return a graceful error rather than an empty/fallback-only list
+  if (failedChunks === chunks.length && chunks.length > 0) {
+    res.status(503).json({ error: "Route narration temporarily unavailable. Please try again." });
     return;
   }
-  console.log(`[places-along-route] ${chunks.length} parallel LLM chunks in ${Date.now() - t0}ms`);
+  console.log(`[places-along-route] ${chunks.length} parallel LLM chunks in ${Date.now() - t0}ms (${failedChunks} failed)`);
 
   // Match LLM output back to candidates by position (same order); fall back to nearest by name
   const enriched = finalCandidates.map((c, i) => {
