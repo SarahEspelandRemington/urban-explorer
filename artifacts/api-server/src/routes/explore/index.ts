@@ -505,6 +505,44 @@ router.post("/explore/discover", async (req, res) => {
   // to give comfortable headroom without runaway generation.
   const maxTokens = isQuick ? 3000 : 4500;
 
+  // Two-step discovery for full mode: first brainstorm freely, then format.
+  // Brainstorming without schema constraints lets the model recall more obscure
+  // knowledge before it commits to JSON structure.
+  let brainstormContext = "";
+  if (!isQuick) {
+    try {
+      const BRAINSTORM_TIMEOUT_MS = 9000;
+      const brainstormAbort = new AbortController();
+      const brainstormTimer = setTimeout(() => brainstormAbort.abort(), BRAINSTORM_TIMEOUT_MS);
+      try {
+        const brainstormResponse = await openai.chat.completions.create(
+          {
+            model: "gpt-4.1-mini",
+            max_completion_tokens: 500,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a hyper-local urban historian with encyclopedic knowledge of streets, buildings, and blocks. When given GPS coordinates, brainstorm freely — without worrying about format — everything you know about the immediate surroundings: historical occupants, architectural details, former uses, local figures, infrastructure oddities, buried waterways, ghost signs, community organizations, scandals, events, transitions. Include obscure and surprising facts. Name names and dates when you know them. This is an internal brainstorm; quality and specificity matter more than completeness.",
+              },
+              {
+                role: "user",
+                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?${osmContext}`,
+              },
+            ],
+          },
+          { signal: brainstormAbort.signal },
+        );
+        brainstormContext = brainstormResponse.choices[0]?.message?.content ?? "";
+      } finally {
+        clearTimeout(brainstormTimer);
+      }
+    } catch {
+      // Brainstorm failure or timeout is non-fatal — proceed with single-step generation.
+      brainstormContext = "";
+    }
+  }
+
   const systemPrompt = `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 
 Given GPS coordinates, identify real places WITHIN ${radiusFeet} FEET (roughly ${searchRadius} meters) of the exact coordinates. Think small and specific:
@@ -602,7 +640,7 @@ Return ${placeCount} places. Quality beats quantity — if you can only find 6 p
         },
         {
           role: "user",
-          content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?${osmContext}`,
+          content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?${osmContext}${brainstormContext ? `\n\n---\nPRE-RESEARCH (use this to surface deeper or more obscure facts — do not copy verbatim, but let it inform your selections):\n${brainstormContext}` : ""}`,
         },
       ],
       response_format: { type: "json_object" },
