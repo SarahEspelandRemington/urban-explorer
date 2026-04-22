@@ -1,7 +1,7 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
@@ -9,6 +9,7 @@ import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { useColors } from "@/hooks/useColors";
+import { useRatePlace } from "@workspace/api-client-react";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -53,6 +54,9 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
   const saved = isPlaceSaved(placeId);
 
+  const [userRating, setUserRating] = useState<"up" | "down" | null>(null);
+  const rateMutation = useRatePlace();
+
   const iconName = getCategoryIcon(place.category);
   const categoryColor = getCategoryColor(place.category, colors);
   const walkTime = formatWalkDistance(place.distanceMeters);
@@ -66,6 +70,24 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     } else {
       savePlace({ ...place, id: placeId } as Omit<SavedPlace, "savedAt">);
     }
+  };
+
+  const handleRate = (rating: "up" | "down") => {
+    if (userRating === rating) return;
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setUserRating(rating);
+    rateMutation.mutate({
+      data: {
+        placeId,
+        placeName: place.name,
+        category: place.category,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        rating,
+      },
+    });
   };
 
   const navigateToDetail = () => {
@@ -120,8 +142,38 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
             </View>
             <View style={styles.heroActions}>
               <Pressable
+                onPress={(e) => { e.stopPropagation?.(); handleRate("up"); }}
+                hitSlop={16}
+                style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Thumbs up for ${place.name}`}
+                accessibilityState={{ selected: userRating === "up" }}
+              >
+                <Feather
+                  name="thumbs-up"
+                  size={18}
+                  color={userRating === "up" ? "#22c55e" : colors.mutedForeground}
+                  style={{ opacity: userRating === "up" ? 1 : 0.45 }}
+                />
+              </Pressable>
+              <Pressable
+                onPress={(e) => { e.stopPropagation?.(); handleRate("down"); }}
+                hitSlop={16}
+                style={styles.actionButton}
+                accessibilityRole="button"
+                accessibilityLabel={`Thumbs down for ${place.name}`}
+                accessibilityState={{ selected: userRating === "down" }}
+              >
+                <Feather
+                  name="thumbs-down"
+                  size={18}
+                  color={userRating === "down" ? "#ef4444" : colors.mutedForeground}
+                  style={{ opacity: userRating === "down" ? 1 : 0.45 }}
+                />
+              </Pressable>
+              <Pressable
                 onPress={handleSave}
-                hitSlop={20}
+                hitSlop={16}
                 style={styles.actionButton}
                 accessibilityRole="button"
                 accessibilityLabel={saveLabel}
@@ -135,7 +187,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
               </Pressable>
               <Pressable
                 onPress={navigateToDetail}
-                hitSlop={20}
+                hitSlop={16}
                 style={styles.detailArrow}
                 accessibilityRole="button"
                 accessibilityLabel={`View full details for ${place.name}`}
@@ -223,9 +275,42 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           </Text>
         ) : null}
 
+        <View style={styles.compactRatingRow}>
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); handleRate("up"); }}
+            hitSlop={12}
+            style={styles.compactRatingBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`Thumbs up for ${place.name}`}
+            accessibilityState={{ selected: userRating === "up" }}
+          >
+            <Feather
+              name="thumbs-up"
+              size={13}
+              color={userRating === "up" ? "#22c55e" : colors.mutedForeground}
+              style={{ opacity: userRating === "up" ? 1 : 0.35 }}
+            />
+          </Pressable>
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); handleRate("down"); }}
+            hitSlop={12}
+            style={styles.compactRatingBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`Thumbs down for ${place.name}`}
+            accessibilityState={{ selected: userRating === "down" }}
+          >
+            <Feather
+              name="thumbs-down"
+              size={13}
+              color={userRating === "down" ? "#ef4444" : colors.mutedForeground}
+              style={{ opacity: userRating === "down" ? 1 : 0.35 }}
+            />
+          </Pressable>
+        </View>
+
         <Pressable
           onPress={handleSave}
-          hitSlop={20}
+          hitSlop={16}
           style={styles.compactSave}
           accessibilityRole="button"
           accessibilityLabel={saveLabel}
@@ -241,7 +326,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
         <Pressable
           onPress={navigateToDetail}
-          hitSlop={20}
+          hitSlop={16}
           style={styles.detailArrowCompact}
           accessibilityRole="button"
           accessibilityLabel={`View details for ${place.name}`}
@@ -276,7 +361,7 @@ const styles = StyleSheet.create({
   heroActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    gap: 12,
   },
   heroName: {
     fontSize: 22,
@@ -351,27 +436,38 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     marginRight: 4,
   },
+  compactRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  compactRatingBtn: {
+    width: 26,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   compactSave: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
   actionButton: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
   detailArrow: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
   detailArrowCompact: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
     marginRight: -10,

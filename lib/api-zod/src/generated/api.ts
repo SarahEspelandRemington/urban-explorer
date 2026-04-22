@@ -485,3 +485,15 @@ export const LogoutMobileSessionHeader = zod.object({
 export const LogoutMobileSessionResponse = zod.object({
   success: zod.boolean(),
 });
+
+/**
+ * @summary Rate a discovered place (thumbs up or down)
+ */
+export const RatePlaceBody = zod.object({
+  placeId: zod.string().min(1).max(500),
+  placeName: zod.string().min(1).max(200),
+  category: zod.string().min(1).max(100),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  rating: zod.enum(["up", "down"]),
+});

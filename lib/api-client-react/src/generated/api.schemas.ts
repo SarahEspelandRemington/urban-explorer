@@ -316,6 +316,24 @@ export interface ErrorEnvelope {
   error: string;
 }
 
+export type RatePlaceRating = "up" | "down";
+
+export interface RatePlaceRequest {
+  placeId: string;
+  placeName: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  rating: RatePlaceRating;
+}
+
+export interface RatePlaceResponse {
+  ok: boolean;
+  placeId: string;
+  up: number;
+  down: number;
+}
+
 /**
  * Opaque session token — `Bearer <sid>`.
  */

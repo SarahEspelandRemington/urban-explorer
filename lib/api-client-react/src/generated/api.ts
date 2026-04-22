@@ -36,6 +36,8 @@ import type {
   PlaceTimelineResponse,
   PlacesAlongRouteRequest,
   PlacesAlongRouteResponse,
+  RatePlaceRequest,
+  RatePlaceResponse,
   RouteRequest,
   RouteResponse,
   SuggestLocationsRequest,
@@ -1408,4 +1410,90 @@ export const useLogoutMobileSession = <
   TContext
 > => {
   return useMutation(getLogoutMobileSessionMutationOptions(options));
+};
+
+/**
+ * Submit a thumbs-up or thumbs-down rating for a discovered place
+ * @summary Rate a place
+ */
+export const getRatePlaceUrl = () => {
+  return `/api/explore/rate-place`;
+};
+
+export const ratePlace = async (
+  ratePlaceRequest: RatePlaceRequest,
+  options?: RequestInit,
+): Promise<RatePlaceResponse> => {
+  return customFetch<RatePlaceResponse>(getRatePlaceUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(ratePlaceRequest),
+  });
+};
+
+export const getRatePlaceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ratePlace>>,
+    TError,
+    { data: BodyType<RatePlaceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof ratePlace>>,
+  TError,
+  { data: BodyType<RatePlaceRequest> },
+  TContext
+> => {
+  const mutationKey = ["ratePlace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof ratePlace>>,
+    { data: BodyType<RatePlaceRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return ratePlace(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RatePlaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof ratePlace>>
+>;
+
+export type RatePlaceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Rate a discovered place (thumbs up or down)
+ */
+export const useRatePlace = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ratePlace>>,
+    TError,
+    { data: BodyType<RatePlaceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof ratePlace>>,
+  TError,
+  { data: BodyType<RatePlaceRequest> },
+  TContext
+> => {
+  return useMutation(getRatePlaceMutationOptions(options));
 };

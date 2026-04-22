@@ -9,10 +9,28 @@ import {
   GetRouteBody,
   GetWalkNarrationBody,
   InvestigateAddressBody,
+  RatePlaceBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
 
 const router = Router();
+
+// ---------------------------------------------------------------------------
+// In-memory ratings store
+// ---------------------------------------------------------------------------
+
+interface RatingEntry {
+  placeId: string;
+  placeName: string;
+  category: string;
+  latitude: number;
+  longitude: number;
+  up: number;
+  down: number;
+  lastRatedAt: string;
+}
+
+const ratingsStore = new Map<string, RatingEntry>();
 
 interface OSMPlace {
   name: string;
@@ -1851,6 +1869,46 @@ Return one entry per input place, in the same order. Be concise — these blurbs
   const result = { places: enriched };
   setLLMCache(cacheKey, result);
   res.json(result);
+});
+
+// ---------------------------------------------------------------------------
+// POST /explore/rate-place — submit a thumbs-up or thumbs-down for a place
+// ---------------------------------------------------------------------------
+
+router.post("/explore/rate-place", (req, res) => {
+  const parsed = RatePlaceBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
+
+  const { placeId, placeName, category, latitude, longitude, rating } = parsed.data;
+
+  let entry = ratingsStore.get(placeId);
+  if (!entry) {
+    entry = { placeId, placeName, category, latitude, longitude, up: 0, down: 0, lastRatedAt: new Date().toISOString() };
+    ratingsStore.set(placeId, entry);
+  }
+
+  if (rating === "up") {
+    entry.up += 1;
+  } else {
+    entry.down += 1;
+  }
+  entry.lastRatedAt = new Date().toISOString();
+
+  res.json({ ok: true, placeId, up: entry.up, down: entry.down });
+});
+
+// ---------------------------------------------------------------------------
+// GET /explore/ratings — retrieve aggregate rating data (sorted by net score)
+// ---------------------------------------------------------------------------
+router.get("/explore/ratings", (_req, res) => {
+  const entries = Array.from(ratingsStore.values())
+    .map((e) => ({ ...e, netScore: e.up - e.down }))
+    .sort((a, b) => b.netScore - a.netScore);
+
+  res.json({ ratings: entries, total: entries.length });
 });
 
 export default router;
