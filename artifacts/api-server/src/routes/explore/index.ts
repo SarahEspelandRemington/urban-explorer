@@ -346,17 +346,30 @@ async function geocodeNearLocation(address: string): Promise<{ lat: number; lon:
 
 // ---------------------------------------------------------------------------
 
+const NOMINATIM_MIN_INTERVAL_MS = 1100; // Nominatim ToS: max 1 req/sec
+let lastNominatimCallAt = 0;
+
 async function verifyPlaceCoordinates(places: any[]): Promise<void> {
-  const COORD_CORRECTION_THRESHOLD_M = 50;
-  const COORD_REJECT_THRESHOLD_M = 400;
+  // Only correct coords when the geocoded address is very far from the AI's claimed
+  // position — 250m catches clear hallucinations (e.g., famous church claimed to be
+  // near the user but actually 8 blocks away) while leaving minor block-level
+  // discrepancies alone so legitimate nearby places aren't filtered out.
+  const COORD_CORRECTION_THRESHOLD_M = 250;
+
   // Verify ALL places that include an address — even "high" confidence ones, because
   // the AI sometimes labels famous places as "high" while hallucinating their coordinates
-  // near the user's current location. Nominatim requires max 1 req/sec — process sequentially.
+  // near the user's current location. Nominatim requires max 1 req/sec — enforce delay.
   const candidates = places.filter(
     (p) => typeof p.address === "string" && p.address.trim().length > 5,
   );
 
   for (const p of candidates) {
+    // Respect Nominatim rate limit
+    const now = Date.now();
+    const wait = NOMINATIM_MIN_INTERVAL_MS - (now - lastNominatimCallAt);
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastNominatimCallAt = Date.now();
+
     try {
       const results = await nominatimSearch(p.address.trim(), 1, { countrycodes: "us" });
       if (results.length === 0) continue;
@@ -365,16 +378,11 @@ async function verifyPlaceCoordinates(places: any[]): Promise<void> {
       const geocodedLon = parseFloat(lon);
       if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) continue;
       const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
-      if (dist > COORD_REJECT_THRESHOLD_M) {
-        // Wildly off — almost certainly hallucinated. Replace with geocoded coords
-        // and demote confidence so downstream consumers know it's lower-trust.
+      if (dist > COORD_CORRECTION_THRESHOLD_M) {
+        // Coords don't match the address — replace and demote confidence.
         p.latitude = geocodedLat;
         p.longitude = geocodedLon;
         p.confidence = "low";
-        p.coordSource = "nominatim-corrected";
-      } else if (dist > COORD_CORRECTION_THRESHOLD_M) {
-        p.latitude = geocodedLat;
-        p.longitude = geocodedLon;
         p.coordSource = "nominatim-corrected";
       }
     } catch {
@@ -587,7 +595,19 @@ Return ${placeCount} places. Every place MUST be within ${radiusFeet} feet. Ever
     data.places = await postProcessPlaces(data.places, latitude, longitude, searchRadius);
   }
 
-  setLLMCache(discoverCacheKey, data);
+  // Cache zero-result responses for only 2 min so the user can retry after moving slightly.
+  // Normal results get the full 15-min TTL.
+  const isEmpty = !Array.isArray(data.places) || data.places.length === 0;
+  if (isEmpty) {
+    // Use a short-lived entry — insert with a backdated timestamp so it expires in 2 min.
+    const SHORT_TTL_MS = 2 * 60 * 1000;
+    llmCache.set(discoverCacheKey, {
+      data,
+      timestamp: Date.now() - (LLM_CACHE_TTL - SHORT_TTL_MS),
+    });
+  } else {
+    setLLMCache(discoverCacheKey, data);
+  }
   res.json(data);
 });
 

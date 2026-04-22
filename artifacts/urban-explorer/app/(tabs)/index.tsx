@@ -813,6 +813,52 @@ export default function ExploreScreen() {
                   </Text>
                 </Pressable>
               </View>
+            ) : discoverMutation.isSuccess ? (
+              <View style={styles.emptyContainer}>
+                <Feather name="map-pin" size={40} color={colors.mutedForeground} />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                  Nothing found nearby
+                </Text>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                  No stories found within this range. Try a wider range or move a little further down the block.
+                </Text>
+                <View style={styles.emptyActions}>
+                  {searchRadius < 500 && (
+                    <Pressable
+                      onPress={() => {
+                        const next = searchRadius === 150 ? 300 : 500;
+                        setSearchRadius(next);
+                        if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        const coords = manualCoords ?? (location ? { latitude: location.coords.latitude, longitude: location.coords.longitude } : null);
+                        if (coords) discoverAt(coords.latitude, coords.longitude, location?.coords.accuracy ?? null, next);
+                      }}
+                      style={({ pressed }) => [
+                        styles.retryButton,
+                        { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Try wider search range"
+                    >
+                      <Feather name="maximize" size={16} color={colors.primaryForeground} />
+                      <Text style={[styles.retryText, { color: colors.primaryForeground }]}>
+                        Try {searchRadius === 150 ? "300m" : "500m"} range
+                      </Text>
+                    </Pressable>
+                  )}
+                  <Pressable
+                    onPress={handleDiscover}
+                    style={({ pressed }) => [
+                      styles.retryButton,
+                      { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search again"
+                  >
+                    <Feather name="refresh-cw" size={16} color={colors.foreground} />
+                    <Text style={[styles.retryText, { color: colors.foreground }]}>Search again</Text>
+                  </Pressable>
+                </View>
+              </View>
             ) : (
               <View style={styles.emptyContainer}>
                 <Feather name="compass" size={40} color={colors.mutedForeground} />
@@ -987,6 +1033,13 @@ const styles = StyleSheet.create({
     paddingTop: 100,
     gap: 10,
     paddingHorizontal: 40,
+  },
+  emptyActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    justifyContent: "center",
+    marginTop: 4,
   },
   emptyTitle: {
     fontSize: 20,
