@@ -76,6 +76,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const categoryColor = getCategoryColor(place.category, colors);
   const walkTime = formatWalkDistance(place.distanceMeters);
   const isLowRated = (place.netScore ?? 0) < -1;
+  const isTopPick = (place.netScore ?? 0) > 2;
 
   const handleSave = () => {
     if (Platform.OS !== "web") {
@@ -233,6 +234,15 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           </Text>
 
           <View style={styles.heroMeta}>
+            {isTopPick ? (
+              <View
+                style={[styles.topPickBadge]}
+                accessibilityLabel="Top pick"
+              >
+                <Feather name="star" size={11} color="#f59e0b" />
+                <Text style={styles.topPickBadgeText}>Top pick</Text>
+              </View>
+            ) : null}
             {walkTime ? (
               <View
                 style={[styles.walkBadge, { backgroundColor: colors.primary + "18" }]}
@@ -293,9 +303,14 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
         </View>
 
         <View style={styles.compactInfo}>
-          <Text style={[styles.compactName, { color: colors.foreground }]} numberOfLines={1}>
-            {place.name}
-          </Text>
+          <View style={styles.compactNameRow}>
+            <Text style={[styles.compactName, { color: colors.foreground }]} numberOfLines={1}>
+              {place.name}
+            </Text>
+            {isTopPick ? (
+              <Feather name="star" size={12} color="#f59e0b" style={styles.compactTopStar} />
+            ) : null}
+          </View>
           <Text style={[styles.compactCategory, { color: colors.mutedForeground }]} numberOfLines={1}>
             {place.category}
             {place.yearBuilt && place.yearBuilt !== "unknown" ? ` · ${place.yearBuilt}` : ""}
@@ -504,5 +519,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: -10,
+  },
+  topPickBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: "#f59e0b1a",
+  },
+  topPickBadgeText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: "#f59e0b",
+  },
+  compactNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  compactTopStar: {
+    flexShrink: 0,
   },
 });
