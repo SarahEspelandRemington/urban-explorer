@@ -1820,10 +1820,23 @@ function routeBoundingBox(
   };
 }
 
-async function fetchOSMPlacesInBoundingBox(bbox: {
-  south: number; west: number; north: number; east: number;
-}): Promise<OSMPlace[]> {
+async function fetchOSMPlacesInBoundingBox(
+  bbox: { south: number; west: number; north: number; east: number },
+  corridorMeters: number = 70,
+): Promise<OSMPlace[]> {
   const { south, west, north, east } = bbox;
+
+  // Scale the Overpass result limit and candidate cap with corridor width.
+  // Narrow/packed corridors (≈70 m) benefit from a larger pool because many
+  // candidates are clustered close to the route centre-line.
+  // Wide/relaxed corridors (≈300 m) cast a broader geographic net so fewer
+  // results are needed to give good spacing coverage.
+  //   t = 0  →  corridor = 70 m  (narrow / packed)
+  //   t = 1  →  corridor = 300 m (wide  / relaxed)
+  const t = Math.min(1, Math.max(0, (corridorMeters - 70) / 230));
+  const overpassLimit = Math.round(300 - 150 * t);   // 300 → 150
+  const osmCandidatesCap = Math.round(100 - 60 * t); // 100 → 40
+
   const query = `
 [out:json][timeout:10];
 (
@@ -1836,7 +1849,7 @@ async function fetchOSMPlacesInBoundingBox(bbox: {
   nwr["memorial"](${south},${west},${north},${east});
   nwr["man_made"~"^(tower|bridge|obelisk|water_tower|lighthouse)$"]["name"](${south},${west},${north},${east});
 );
-out center body 250;
+out center body ${overpassLimit};
 `;
 
   const controller = new AbortController();
@@ -1902,10 +1915,9 @@ out center body 250;
       return 1;
     };
 
-    const OSM_CANDIDATES_CAP = 75;
-    if (results.length > OSM_CANDIDATES_CAP) {
+    if (results.length > osmCandidatesCap) {
       results.sort((a, b) => osmScore(b) - osmScore(a));
-      results.splice(OSM_CANDIDATES_CAP);
+      results.splice(osmCandidatesCap);
     }
 
     return results;
@@ -1959,7 +1971,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     return;
   }
 
-  const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox);
+  const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox, corridor);
   logger.info({ geomPoints: geom.length, corridorM: corridor, osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
 
   const candidates = osmPlaces
