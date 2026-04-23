@@ -1809,7 +1809,8 @@ async function fetchOSMPlacesInBoundingBox(bbox: {
   nwr["historic"](${south},${west},${north},${east});
   nwr["heritage"](${south},${west},${north},${east});
   nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint|hotel)$"](${south},${west},${north},${east});
-  nwr["name"]["building"~"^(church|cathedral|chapel|mosque|synagogue|temple|civic|public|commercial|industrial|warehouse|train_station|hotel|theatre|school|university|college|hospital|government|apartments|residential|office)$"](${south},${west},${north},${east});
+  nwr["name"]["building"](${south},${west},${north},${east});
+  nwr["name"]["landuse"~"^(industrial|railway)$"](${south},${west},${north},${east});
   nwr["amenity"~"^(theatre|library|cinema|townhall|courthouse|university|college|school|place_of_worship|marketplace)$"]["name"](${south},${west},${north},${east});
   nwr["memorial"](${south},${west},${north},${east});
   nwr["man_made"~"^(tower|bridge|obelisk|water_tower|lighthouse)$"]["name"](${south},${west},${north},${east});
