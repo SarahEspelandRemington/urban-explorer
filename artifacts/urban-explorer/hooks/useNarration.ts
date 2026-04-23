@@ -49,9 +49,14 @@ export function useNarration() {
   const queueRef = useRef<NarrationItem[]>([]);
   const speakingRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True while a system audio interruption (phone call, Siri, navigation
+  // prompt) is in effect. While set we pause any active utterance and refuse
+  // to start new ones; endInterruption resumes / drains the queue.
+  const interruptedRef = useRef(false);
 
   const processQueue = useCallback(() => {
     if (speakingRef.current || queueRef.current.length === 0) return;
+    if (interruptedRef.current) return;
 
     const item = queueRef.current.shift()!;
     speakingRef.current = true;
@@ -132,6 +137,7 @@ export function useNarration() {
       Speech.stop();
     }
     speakingRef.current = false;
+    interruptedRef.current = false;
     setIsSpeaking(false);
     setIsPaused(false);
     setCurrentPlace(null);
@@ -155,6 +161,39 @@ export function useNarration() {
     setIsPaused(false);
   }, []);
 
+  const beginInterruption = useCallback(() => {
+    if (interruptedRef.current) return;
+    interruptedRef.current = true;
+    if (!speakingRef.current) return;
+    try {
+      if (Platform.OS === "web") {
+        window.speechSynthesis.pause();
+      } else {
+        Speech.pause();
+      }
+    } catch {}
+    setIsPaused(true);
+  }, []);
+
+  const endInterruption = useCallback(() => {
+    if (!interruptedRef.current) return;
+    interruptedRef.current = false;
+    if (speakingRef.current) {
+      try {
+        if (Platform.OS === "web") {
+          window.speechSynthesis.resume();
+        } else {
+          Speech.resume();
+        }
+      } catch {}
+      setIsPaused(false);
+    } else {
+      // No active utterance — drain anything that landed in the queue while
+      // we were interrupted (or just no-op if empty).
+      processQueue();
+    }
+  }, [processQueue]);
+
   const skip = useCallback(() => {
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     if (Platform.OS === "web") {
@@ -175,6 +214,8 @@ export function useNarration() {
     pause,
     resume,
     skip,
+    beginInterruption,
+    endInterruption,
     isSpeaking,
     isPaused,
     currentPlace,

@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
+import { AppState, type AppStateStatus, Platform } from "react-native";
 
 import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
@@ -467,6 +467,31 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     maybeNarrateRef.current = maybeNarrate;
   }, [maybeNarrate]);
+
+  // System audio interruptions (incoming phone calls, Siri, turn-by-turn
+  // navigation prompts). On iOS these all transition the app from 'active'
+  // to 'inactive' without going to 'background' (background = screen lock,
+  // which we explicitly want to keep narrating through). When the
+  // interruption ends iOS bounces us back to 'active' and we resume.
+  //
+  // Android doesn't expose 'inactive' so this listener is a no-op there;
+  // the OS handles call-time ducking via the audio focus we already request
+  // through `interruptionMode: 'duckOthers'` in enableBackgroundAudio.
+  const { beginInterruption, endInterruption } = narration;
+  useEffect(() => {
+    if (!isWalking || Platform.OS !== "ios") return;
+    const appStateRef = { current: AppState.currentState as AppStateStatus };
+    const sub = AppState.addEventListener("change", (next) => {
+      const prev = appStateRef.current;
+      appStateRef.current = next;
+      if (prev === "active" && next === "inactive") {
+        beginInterruption();
+      } else if (prev === "inactive" && next === "active") {
+        endInterruption();
+      }
+    });
+    return () => sub.remove();
+  }, [isWalking, beginInterruption, endInterruption]);
 
   // Free-roam narration loop: belt-and-suspenders foreground tick. Background
   // narration is driven by the GPS callback above; this interval covers the
