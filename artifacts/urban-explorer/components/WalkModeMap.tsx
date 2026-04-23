@@ -35,7 +35,6 @@ interface Cluster {
 }
 
 const CLUSTER_GRID_SIZE = 60;
-const PREVIEW_MAX_NAMES = 6;
 
 function clusterPlaces(places: WalkPlace[], region: Region): Cluster[] {
   if (places.length === 0) return [];
@@ -413,7 +412,7 @@ export function WalkModeMap({
               {previewCluster.places.length} places here
             </Text>
             <ScrollView style={styles.previewList} keyboardShouldPersistTaps="handled">
-              {previewCluster.places.slice(0, PREVIEW_MAX_NAMES).map((p) => (
+              {previewCluster.places.map((p) => (
                 <View key={p.id} style={styles.previewRow}>
                   <Pressable
                     onPress={() => focusPlace(p)}
@@ -451,11 +450,6 @@ export function WalkModeMap({
                   ) : null}
                 </View>
               ))}
-              {previewCluster.places.length > PREVIEW_MAX_NAMES ? (
-                <Text style={[styles.previewMore, { color: colors.mutedForeground }]}>
-                  +{previewCluster.places.length - PREVIEW_MAX_NAMES} more
-                </Text>
-              ) : null}
             </ScrollView>
           </View>
         </>
@@ -495,7 +489,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 12,
     elevation: 6,
-    maxHeight: 260,
+    maxHeight: 420,
   },
   previewTitle: {
     fontSize: 13,
@@ -504,7 +498,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   previewList: {
-    maxHeight: 220,
+    maxHeight: 380,
   },
   previewRow: {
     flexDirection: "row",
@@ -524,11 +518,5 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 6,
     marginLeft: 2,
-  },
-  previewMore: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    paddingHorizontal: 4,
-    paddingTop: 6,
   },
 });
