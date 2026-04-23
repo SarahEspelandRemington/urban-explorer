@@ -1838,6 +1838,27 @@ out center body 250;
     const json = (await resp.json()) as { elements?: any[] };
     if (!json.elements) return [];
 
+    const BORING_BUILDING_TYPES = new Set([
+      "garage",
+      "garages",
+      "shed",
+      "hut",
+      "roof",
+      "carport",
+      "barn",
+      "storage_tank",
+      "silo",
+      "container",
+      "outhouse",
+      "greenhouse",
+      "service",
+      "kiosk",
+      "toilets",
+      "parking",
+      "garbage_shed",
+      "bicycle_parking",
+    ]);
+
     const seen = new Set<string>();
     const results: OSMPlace[] = [];
     for (const el of json.elements) {
@@ -1845,6 +1866,8 @@ out center body 250;
       if (!name) continue;
       const normKey = name.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (seen.has(normKey)) continue;
+      const buildingTag = el.tags?.building as string | undefined;
+      if (buildingTag && BORING_BUILDING_TYPES.has(buildingTag.toLowerCase())) continue;
       seen.add(normKey);
       const elLat = el.lat ?? el.center?.lat;
       const elLon = el.lon ?? el.center?.lon;
