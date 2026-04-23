@@ -28,6 +28,11 @@ interface Cluster {
 const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const CLUSTER_GRID_SIZE = 60;
+const COLLAPSE_DURATION = 420;
+
+function easeInCubic(t: number): number {
+  return t * t * t;
+}
 
 function clusterPlaces(
   places: WalkPlace[],
@@ -84,6 +89,10 @@ export function WalkModeMap({
   const placesRef = useRef<WalkPlace[]>(places);
   const narratedRef = useRef<Set<string>>(narratedIds);
   const colorsRef = useRef(colors);
+  const prevClustersRef = useRef<Cluster[]>([]);
+  const collapseRafRef = useRef<number | null>(null);
+  const collapseMarkersRef = useRef<any[]>([]);
+  const justZoomedRef = useRef(false);
   const [leafletReady, setLeafletReady] = useState(false);
 
   useEffect(() => {
@@ -129,24 +138,34 @@ export function WalkModeMap({
       fillOpacity: 1,
     }).addTo(map);
 
-    const renderClusters = () => {
+    const removeCollapseMarkers = () => {
+      const currentMap = mapInstanceRef.current;
+      collapseMarkersRef.current.forEach((m) => {
+        if (currentMap) currentMap.removeLayer(m);
+      });
+      collapseMarkersRef.current = [];
+    };
+
+    const cancelCollapseAnimation = () => {
+      if (collapseRafRef.current !== null) {
+        cancelAnimationFrame(collapseRafRef.current);
+        collapseRafRef.current = null;
+      }
+      removeCollapseMarkers();
+    };
+
+    const renderMarkers = (clusters: Cluster[], suppressedKeys: Set<string>) => {
       const currentMap = mapInstanceRef.current;
       if (!currentMap) return;
-      const b = currentMap.getBounds();
-      const bounds = {
-        minLat: b.getSouth(),
-        maxLat: b.getNorth(),
-        minLng: b.getWest(),
-        maxLng: b.getEast(),
-      };
       const c = colorsRef.current;
       const narrated = narratedRef.current;
 
       markersRef.current.forEach((m) => currentMap.removeLayer(m));
       markersRef.current = [];
 
-      const clusters = clusterPlaces(placesRef.current, bounds);
       for (const cluster of clusters) {
+        if (suppressedKeys.has(cluster.key)) continue;
+
         if (cluster.places.length === 1) {
           const place = cluster.places[0];
           const isNarrated = narrated.has(place.id);
@@ -201,18 +220,180 @@ export function WalkModeMap({
       }
     };
 
-    map.on("moveend", renderClusters);
-    map.on("zoomend", renderClusters);
+    const runCollapseAnimation = (
+      clusters: Cluster[],
+      groups: {
+        clusterKey: string;
+        center: { latitude: number; longitude: number };
+        places: WalkPlace[];
+      }[],
+    ) => {
+      const currentMap = mapInstanceRef.current;
+      if (!currentMap) return;
+
+      const c = colorsRef.current;
+      const narrated = narratedRef.current;
+
+      const suppressedKeys = new Set(groups.map((g) => g.clusterKey));
+
+      renderMarkers(clusters, suppressedKeys);
+
+      const animEntries: {
+        marker: any;
+        el: HTMLElement | null;
+        fromLat: number;
+        fromLng: number;
+        toLat: number;
+        toLng: number;
+      }[] = [];
+
+      for (const group of groups) {
+        for (const place of group.places) {
+          const fill = narrated.has(place.id) ? c.mutedForeground : c.primary;
+          const icon = L.divIcon({
+            className: "",
+            html: `<div style="
+              width: 22px; height: 22px; border-radius: 50%;
+              background: ${fill}; border: 2px solid white;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              transform-origin: center;
+            "></div>`,
+            iconSize: [22, 22],
+            iconAnchor: [11, 11],
+          });
+          const marker = L.marker([place.latitude, place.longitude], {
+            icon,
+            zIndexOffset: 1000,
+          }).addTo(currentMap);
+          const el: HTMLElement | null = marker.getElement ? marker.getElement() : null;
+          collapseMarkersRef.current.push(marker);
+          animEntries.push({
+            marker,
+            el,
+            fromLat: place.latitude,
+            fromLng: place.longitude,
+            toLat: group.center.latitude,
+            toLng: group.center.longitude,
+          });
+        }
+      }
+
+      const startedAt = Date.now();
+
+      const tick = () => {
+        const elapsed = Date.now() - startedAt;
+        const rawT = Math.min(1, elapsed / COLLAPSE_DURATION);
+        const t = easeInCubic(rawT);
+        const opacity = 1 - 0.55 * t;
+        const scale = 1 - 0.4 * t;
+
+        for (const entry of animEntries) {
+          const lat = entry.fromLat + (entry.toLat - entry.fromLat) * t;
+          const lng = entry.fromLng + (entry.toLng - entry.fromLng) * t;
+          entry.marker.setLatLng([lat, lng]);
+          if (entry.el) {
+            const inner = entry.el.firstElementChild as HTMLElement | null;
+            if (inner) {
+              inner.style.opacity = String(opacity);
+              inner.style.transform = `scale(${scale})`;
+            }
+          }
+        }
+
+        if (rawT < 1) {
+          collapseRafRef.current = requestAnimationFrame(tick);
+        } else {
+          collapseRafRef.current = null;
+          removeCollapseMarkers();
+          renderMarkers(clusters, new Set());
+        }
+      };
+
+      collapseRafRef.current = requestAnimationFrame(tick);
+    };
+
+    const computeBounds = () => {
+      const b = map.getBounds();
+      return {
+        minLat: b.getSouth(),
+        maxLat: b.getNorth(),
+        minLng: b.getWest(),
+        maxLng: b.getEast(),
+      };
+    };
+
+    const handleZoomEnd = () => {
+      justZoomedRef.current = true;
+      cancelCollapseAnimation();
+
+      const bounds = computeBounds();
+      const newClusters = clusterPlaces(placesRef.current, bounds);
+      const prev = prevClustersRef.current;
+      prevClustersRef.current = newClusters;
+
+      const prevSingleById = new Map<string, WalkPlace>();
+      for (const c of prev) {
+        if (c.places.length === 1) prevSingleById.set(c.places[0].id, c.places[0]);
+      }
+
+      if (prevSingleById.size > 0) {
+        const groups: {
+          clusterKey: string;
+          center: { latitude: number; longitude: number };
+          places: WalkPlace[];
+        }[] = [];
+
+        for (const cluster of newClusters) {
+          if (cluster.places.length <= 1) continue;
+          const merged = cluster.places.filter((p) => prevSingleById.has(p.id));
+          if (merged.length >= 1) {
+            groups.push({
+              clusterKey: cluster.key,
+              center: { latitude: cluster.latitude, longitude: cluster.longitude },
+              places: merged.map((p) => prevSingleById.get(p.id)!),
+            });
+          }
+        }
+
+        if (groups.length > 0) {
+          runCollapseAnimation(newClusters, groups);
+          return;
+        }
+      }
+
+      renderMarkers(newClusters, new Set());
+    };
+
+    const handleMoveEnd = () => {
+      if (justZoomedRef.current) {
+        justZoomedRef.current = false;
+        return;
+      }
+      cancelCollapseAnimation();
+      const bounds = computeBounds();
+      const newClusters = clusterPlaces(placesRef.current, bounds);
+      prevClustersRef.current = newClusters;
+      renderMarkers(newClusters, new Set());
+    };
+
+    map.on("zoomend", handleZoomEnd);
+    map.on("moveend", handleMoveEnd);
     mapInstanceRef.current = map;
-    renderClusters();
+
+    const bounds = computeBounds();
+    const initialClusters = clusterPlaces(placesRef.current, bounds);
+    prevClustersRef.current = initialClusters;
+    renderMarkers(initialClusters, new Set());
 
     return () => {
+      cancelCollapseAnimation();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
       markersRef.current = [];
       userMarkerRef.current = null;
+      prevClustersRef.current = [];
     };
     // Map is created once when Leaflet loads. Live updates are handled by
     // the user-marker effect and the places effect below.
