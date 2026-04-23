@@ -1405,6 +1405,10 @@ Every detail should feel like a local secret worth knowing.`,
     res.status(500).json({ error: "Failed to parse place detail results" });
     return;
   }
+  const photoUrl = await fetchWikipediaPhoto(placeName);
+  if (photoUrl) {
+    data.photoUrl = photoUrl;
+  }
   setLLMCache(detailCacheKey, data);
   res.json(data);
 });
@@ -1502,6 +1506,10 @@ Create 4-6 eras spanning the full history. Each era should feel distinct and ali
     );
   }
 
+  const timelinePhotoUrl = await fetchWikipediaPhoto(placeName);
+  if (timelinePhotoUrl) {
+    data.photoUrl = timelinePhotoUrl;
+  }
   setLLMCache(timelineCacheKey, data);
   res.json(data);
 });
