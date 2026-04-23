@@ -14,7 +14,7 @@ import {
   RatePlaceBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
-import { db, placeRatings, userPlaceRatings } from "@workspace/db";
+import { db, placeRatings, placePhotos, userPlaceRatings } from "@workspace/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 const router = Router();
@@ -477,21 +477,55 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
 /**
  * Attempt to find a representative photo for a place name via the Wikipedia
  * REST summary API. Returns the thumbnail URL or null when none is available.
- * Results are cached in-process for 1 hour to avoid redundant network calls.
+ *
+ * Cache hierarchy:
+ *   L1 — in-process Map (fast, lost on restart)
+ *   L2 — database `place_photos` table (survives restarts / new instances)
+ *
+ * On a cold L1 miss the DB is checked first. If the DB also misses, a fresh
+ * Wikipedia request is made and the result is written back to both layers.
+ * Negative results (null) are also persisted so repeated missing-photo lookups
+ * skip the network entirely after the first attempt.
  */
 async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
   const cacheKey = placeName.toLowerCase().trim();
+
+  // --- L1: in-process cache ---
   const cached = photoCache.get(cacheKey);
   if (cached) {
     const ttl = cached.url ? PHOTO_CACHE_HIT_TTL : PHOTO_CACHE_MISS_TTL;
     if (Date.now() - cached.ts < ttl) return cached.url;
   }
 
+  // --- L2: database cache ---
+  try {
+    const rows = await db
+      .select({ photoUrl: placePhotos.photoUrl, fetchedAt: placePhotos.fetchedAt })
+      .from(placePhotos)
+      .where(eq(placePhotos.placeKey, cacheKey))
+      .limit(1);
+
+    if (rows.length > 0) {
+      const row = rows[0];
+      const ageMs = Date.now() - new Date(row.fetchedAt).getTime();
+      const ttl = row.photoUrl ? PHOTO_CACHE_HIT_TTL : PHOTO_CACHE_MISS_TTL;
+      if (ageMs < ttl) {
+        // Warm the L1 cache from DB so subsequent calls in this process skip the DB too.
+        photoCache.set(cacheKey, { url: row.photoUrl, ts: Date.now() - ageMs });
+        return row.photoUrl;
+      }
+    }
+  } catch (err) {
+    // DB unavailable — fall through to live fetch.
+    console.warn("[photo-cache] DB read failed, falling back to live fetch:", err instanceof Error ? err.message : err);
+  }
+
+  // --- Live fetch from Wikipedia ---
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 3000);
 
+  let photoUrl: string | null = null;
   try {
-    // Wikipedia REST summary endpoint — returns thumbnail when an article exists.
     const encoded = encodeURIComponent(placeName.replace(/ /g, "_"));
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
     const resp = await fetch(url, {
@@ -502,19 +536,29 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
       },
     });
     clearTimeout(timer);
-    if (!resp.ok) {
-      photoCache.set(cacheKey, { url: null, ts: Date.now() });
-      return null;
+    if (resp.ok) {
+      const data = await resp.json() as { thumbnail?: { source?: string } };
+      photoUrl = data.thumbnail?.source ?? null;
     }
-    const data = await resp.json() as { thumbnail?: { source?: string } };
-    const photoUrl = data.thumbnail?.source ?? null;
-    photoCache.set(cacheKey, { url: photoUrl, ts: Date.now() });
-    return photoUrl;
   } catch {
     clearTimeout(timer);
-    photoCache.set(cacheKey, { url: null, ts: Date.now() });
-    return null;
   }
+
+  // Write back to L1.
+  photoCache.set(cacheKey, { url: photoUrl, ts: Date.now() });
+
+  // Write back to L2 (fire-and-forget — never delay the response on a DB write).
+  db.insert(placePhotos)
+    .values({ placeKey: cacheKey, photoUrl, fetchedAt: new Date() })
+    .onConflictDoUpdate({
+      target: placePhotos.placeKey,
+      set: { photoUrl, fetchedAt: new Date() },
+    })
+    .catch((err: unknown) => {
+      console.warn("[photo-cache] DB write failed:", err instanceof Error ? err.message : err);
+    });
+
+  return photoUrl;
 }
 
 /**
