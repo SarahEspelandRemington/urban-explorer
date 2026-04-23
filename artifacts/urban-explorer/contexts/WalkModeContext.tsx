@@ -107,6 +107,21 @@ const DENSITY_CONFIG: Record<
     // corridor to pack in many closely-spaced discoveries right along the
     // route centre-line.
     corridorMeters: number;
+    // --- Heading-aware scoring constants (used in pickNext) ---
+    // Maximum score reduction (metres) awarded to a place that is directly
+    // ahead (bearing == heading). At 90° off-axis the bonus reaches 0; at
+    // 180° it flips to a +forwardBiasMeters penalty.
+    // Raising this from the old 60 m to 200 m ensures an avenue place
+    // 200 m ahead (score = 200−200 = 0) always beats a side-street place
+    // 80 m away (score = 80).
+    forwardBiasMeters: number;
+    // Angular threshold (degrees) beyond which a place is considered
+    // "off-axis". Places past this threshold get an additional flat penalty
+    // so they become a genuine last resort rather than just slightly worse.
+    offAxisPenaltyDeg: number;
+    // Flat score penalty (metres) added to any place that is more than
+    // offAxisPenaltyDeg off the current heading.
+    offAxisPenaltyMeters: number;
   }
 > = {
   sparse: {
@@ -118,6 +133,9 @@ const DENSITY_CONFIG: Record<
     memoryRadius: 1000,
     minMetersBetweenPicks: 120,
     corridorMeters: 150,
+    forwardBiasMeters: 200,
+    offAxisPenaltyDeg: 70,
+    offAxisPenaltyMeters: 120,
   },
   dense: {
     refetchMeters: 60,
@@ -128,6 +146,9 @@ const DENSITY_CONFIG: Record<
     memoryRadius: 1000,
     minMetersBetweenPicks: 40,
     corridorMeters: 70,
+    forwardBiasMeters: 200,
+    offAxisPenaltyDeg: 70,
+    offAxisPenaltyMeters: 120,
   },
 };
 
@@ -438,12 +459,22 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
       // Scoring: lower is better. Distance is the base.
       let score = dist;
-      // Forward bias: subtract up to 60m bonus when place is in our direction of travel.
+      // Heading-aware bias: strongly favour places in the direction of travel.
+      //   forwardBiasMeters (200 m default) — cosine term gives the full bonus
+      //   when the place is straight ahead (diff=0) and 0 bonus at 90°. At 180°
+      //   it becomes a penalty. This overwhelms the Manhattan side-street effect:
+      //   a place 200 m ahead scores 200−200=0 vs 80 m perpendicular scoring 80.
+      //
+      //   offAxisPenaltyDeg / offAxisPenaltyMeters — additional flat penalty for
+      //   places more than ~70° off-heading, making them a genuine last resort
+      //   without hard-excluding them (queue never goes empty in bad GPS).
       if (heading !== null) {
         const placeBearing = bearingDeg(loc.latitude, loc.longitude, p.latitude, p.longitude);
         const diff = angularDiff(heading, placeBearing);
-        // diff=0 → cos=1 → -60m bonus; diff=90 → 0; diff=180 → +60m penalty.
-        score -= 60 * Math.cos((diff * Math.PI) / 180);
+        score -= cfg.forwardBiasMeters * Math.cos((diff * Math.PI) / 180);
+        if (diff > cfg.offAxisPenaltyDeg) {
+          score += cfg.offAxisPenaltyMeters;
+        }
       }
       // Rating bonus: each net upvote shaves up to 20m, capped at 80m.
       score -= Math.min(80, Math.max(-40, net * 20));
@@ -453,6 +484,21 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         best = p;
       }
     }
+
+    if (__DEV__ && best) {
+      const placeBearing = heading !== null
+        ? bearingDeg(loc.latitude, loc.longitude, best.latitude, best.longitude)
+        : null;
+      const diff = heading !== null && placeBearing !== null
+        ? angularDiff(heading, placeBearing)
+        : null;
+      console.log(
+        `[pickNext] selected="${best.name}" dist=${Math.round(haversineMeters(loc.latitude, loc.longitude, best.latitude, best.longitude))}m` +
+        (diff !== null ? ` headingDiff=${Math.round(diff)}°` : " (no heading)") +
+        ` finalScore=${Math.round(bestScore)}`
+      );
+    }
+
     return best;
   }, [currentLocation]);
 
