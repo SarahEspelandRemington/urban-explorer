@@ -433,6 +433,17 @@ export function WalkModeMap({
                     >
                       {p.name}
                     </Text>
+                    {(() => {
+                      const sub = (p.category?.trim() || p.summary?.split(/[.!?]/)[0]?.trim()) ?? "";
+                      return sub ? (
+                        <Text
+                          numberOfLines={1}
+                          style={[styles.previewItemSubtext, { color: colors.mutedForeground }]}
+                        >
+                          {sub}
+                        </Text>
+                      ) : null;
+                    })()}
                   </Pressable>
                   {onOpenPlace ? (
                     <Pressable
@@ -506,13 +517,18 @@ const styles = StyleSheet.create({
   },
   previewItem: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 4,
     borderRadius: 6,
   },
   previewItemText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+  previewItemSubtext: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
   },
   previewOpenBtn: {
     padding: 6,
