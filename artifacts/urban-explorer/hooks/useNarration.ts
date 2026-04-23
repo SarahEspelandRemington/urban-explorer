@@ -49,6 +49,15 @@ export function useNarration() {
   const queueRef = useRef<NarrationItem[]>([]);
   const speakingRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Monotonically increasing counter. Each call to processQueue that actually
+  // starts an utterance captures the current value. The onDone/onError
+  // callbacks ignore themselves if speechGenRef.current has moved past their
+  // captured value — this prevents stale iOS callbacks (which can fire after
+  // Speech.stop() or arrive out-of-order) from corrupting queue state and
+  // triggering simultaneous utterances, which causes a native crash.
+  const speechGenRef = useRef(0);
+
   // True while a system audio interruption (phone call, Siri, navigation
   // prompt) is in effect. While set we pause any active utterance and refuse
   // to start new ones; endInterruption resumes / drains the queue.
@@ -63,7 +72,13 @@ export function useNarration() {
     setIsSpeaking(true);
     setCurrentPlace(item.placeName);
 
+    // Capture the generation for this specific utterance. Any iOS callback
+    // (onDone/onError) that arrives after a newer utterance has started
+    // (speechGenRef.current > myGen) is silently ignored.
+    const myGen = ++speechGenRef.current;
+
     const onFinish = () => {
+      if (speechGenRef.current !== myGen) return;
       speakingRef.current = false;
       setIsSpeaking(false);
       setCurrentPlace(null);
@@ -109,6 +124,17 @@ export function useNarration() {
         rate: 0.9,
         pitch: 1.05,
         onDone: onFinish,
+        onStopped: () => {
+          // On iOS, Speech.stop() triggers onStopped (not onDone/onError).
+          // We still need to guard with the generation check so a stop() call
+          // that was issued for a previous utterance doesn't corrupt the new one.
+          if (speechGenRef.current !== myGen) return;
+          speakingRef.current = false;
+          setIsSpeaking(false);
+          setCurrentPlace(null);
+          // Do NOT call processQueue here — stop() and skip() handle that
+          // themselves after bumping the generation counter.
+        },
         onError: (err) => {
           console.warn("Speech error:", err);
           onFinish();
@@ -126,6 +152,9 @@ export function useNarration() {
   );
 
   const stop = useCallback(() => {
+    // Bump generation first so any in-flight onDone/onError/onStopped
+    // callbacks are immediately invalidated before Speech.stop() is called.
+    speechGenRef.current++;
     queueRef.current = [];
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     if (Platform.OS === "web") {
@@ -192,6 +221,10 @@ export function useNarration() {
   }, [processQueue]);
 
   const skip = useCallback(() => {
+    // Bump generation before stopping so the onStopped/onDone callback
+    // from the current utterance is ignored and doesn't race with the
+    // next processQueue() call below.
+    speechGenRef.current++;
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     if (Platform.OS === "web") {
       window.speechSynthesis.cancel();
