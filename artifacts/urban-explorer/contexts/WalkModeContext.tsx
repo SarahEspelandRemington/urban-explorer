@@ -72,6 +72,7 @@ interface WalkModeContextType {
   density: WalkDensity;
   setDensity: (d: WalkDensity) => void;
   currentNarrationPlace: WalkPlace | null;
+  fetchPlacesAlongRoute: (geometry: number[][], maxPlaces?: number) => Promise<WalkPlace[]>;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
@@ -96,6 +97,13 @@ const DENSITY_CONFIG: Record<
     // next story is allowed. This is what makes "Sparse" actually feel sparse
     // even when the user is walking fast — it gates on movement, not just time.
     minMetersBetweenPicks: number;
+    // Width of the search corridor used when pre-fetching places along a
+    // planned route (passed to POST /api/explore/places-along-route as
+    // `corridorMeters`). Sparse uses a wider corridor to surface quality
+    // hidden-gem places set back from the path; dense uses a narrower
+    // corridor to pack in many closely-spaced discoveries right along the
+    // route centre-line.
+    corridorMeters: number;
   }
 > = {
   sparse: {
@@ -106,6 +114,7 @@ const DENSITY_CONFIG: Record<
     discoverRadius: 300,
     memoryRadius: 1000,
     minMetersBetweenPicks: 120,
+    corridorMeters: 150,
   },
   dense: {
     refetchMeters: 60,
@@ -115,6 +124,7 @@ const DENSITY_CONFIG: Record<
     discoverRadius: 250,
     memoryRadius: 1000,
     minMetersBetweenPicks: 40,
+    corridorMeters: 70,
   },
 };
 
@@ -324,6 +334,29 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     } finally {
       fetchingRef.current = false;
       setIsLoading(false);
+    }
+  }, []);
+
+  const fetchPlacesAlongRoute = useCallback(async (
+    geometry: number[][],
+    maxPlaces?: number,
+  ): Promise<WalkPlace[]> => {
+    const cfg = DENSITY_CONFIG[densityRef.current];
+    try {
+      const res = await fetch(`${API_BASE}/api/explore/places-along-route`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...await authHeaders() },
+        body: JSON.stringify({
+          geometry,
+          ...(maxPlaces !== undefined ? { maxPlaces } : {}),
+          corridorMeters: cfg.corridorMeters,
+        }),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      return Array.isArray(data?.places) ? (data.places as WalkPlace[]) : [];
+    } catch {
+      return [];
     }
   }, []);
 
@@ -751,6 +784,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         density,
         setDensity,
         currentNarrationPlace,
+        fetchPlacesAlongRoute,
       }}
     >
       {children}
