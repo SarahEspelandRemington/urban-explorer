@@ -82,6 +82,11 @@ const DENSITY_CONFIG: Record<
     netScoreFloor: number;
     maxQueueDistance: number;
     discoverRadius: number;
+    // Hard cap on how far a place can be from the user's current location
+    // before it gets evicted from the in-memory queue. Without this the
+    // queue grows unbounded over a long walk, slowing pickNext and piling
+    // up stale map markers across the whole neighborhood.
+    memoryRadius: number;
     // Minimum distance the user must walk after a story finishes before the
     // next story is allowed. This is what makes "Sparse" actually feel sparse
     // even when the user is walking fast — it gates on movement, not just time.
@@ -94,6 +99,7 @@ const DENSITY_CONFIG: Record<
     netScoreFloor: 1,
     maxQueueDistance: 300,
     discoverRadius: 300,
+    memoryRadius: 1000,
     minMetersBetweenPicks: 120,
   },
   dense: {
@@ -102,6 +108,7 @@ const DENSITY_CONFIG: Record<
     netScoreFloor: -2,
     maxQueueDistance: 220,
     discoverRadius: 250,
+    memoryRadius: 1000,
     minMetersBetweenPicks: 40,
   },
 };
@@ -250,12 +257,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data?.places)) {
-          // Merge with existing — keep narrated entries so chips persist, dedupe by id.
+          // Merge with existing — dedupe by id, then evict anything farther
+          // than memoryRadius from the user's current location. Without the
+          // eviction the queue grows unbounded over a long walk, slowing
+          // pickNext and piling stale markers across the whole neighborhood.
           const incoming = data.places as WalkPlace[];
           const map = new Map<string, WalkPlace>();
           for (const p of placesRef.current) map.set(p.id, p);
           for (const p of incoming) map.set(p.id, p);
-          const merged = Array.from(map.values());
+          const merged: WalkPlace[] = [];
+          for (const p of map.values()) {
+            const d = haversineMeters(latitude, longitude, p.latitude, p.longitude);
+            if (d <= cfg.memoryRadius) merged.push(p);
+          }
           placesRef.current = merged;
           setNearbyPlaces(merged);
           lastFetchRef.current = { latitude, longitude };
