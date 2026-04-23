@@ -230,7 +230,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [narratedIds, setNarratedIds] = useState<Map<string, number>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
-  const [density, setDensityState] = useState<WalkDensity>("sparse");
+  const [density, setDensityState] = useState<WalkDensity>("dense");
   const [currentNarrationPlace, setCurrentNarrationPlace] = useState<WalkPlace | null>(null);
   const [enabledBuildingGroups, setEnabledBuildingGroupsState] = useState<Set<BuildingGroupKey>>(new Set());
   const enabledBuildingGroupsRef = useRef<Set<BuildingGroupKey>>(new Set());
@@ -819,8 +819,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     setIsWalking(true);
     // Density is per-walk: every new walk starts back at Sparse so the user
     // makes a fresh choice rather than inheriting last walk's setting.
-    densityRef.current = "sparse";
-    setDensityState("sparse");
+    densityRef.current = "dense";
+    setDensityState("dense");
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
     setNarratedIds(new Map());
     narratedIdsRef.current = new Map();
