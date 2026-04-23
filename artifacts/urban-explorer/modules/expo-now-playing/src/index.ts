@@ -11,7 +11,7 @@ type NowPlayingNativeModule = {
 };
 
 const native =
-  Platform.OS === "ios"
+  Platform.OS === "ios" || Platform.OS === "android"
     ? (requireOptionalNativeModule("NowPlayingModule") as NowPlayingNativeModule | null)
     : null;
 
