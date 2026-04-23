@@ -120,9 +120,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
   const narration = useNarration();
   const watchRef = useRef<Location.LocationSubscription | null>(null);
+  const headingWatchRef = useRef<Location.LocationSubscription | null>(null);
   const lastFetchRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const prevLocationRef = useRef<{ latitude: number; longitude: number; ts: number } | null>(null);
-  const headingRef = useRef<number | null>(null);
+  // Device compass heading from the magnetometer, when available.
+  const deviceHeadingRef = useRef<number | null>(null);
+  // Velocity-derived heading, as a fallback when the compass isn't available.
+  const velocityHeadingRef = useRef<number | null>(null);
   const fetchingRef = useRef(false);
   const narratedIdsRef = useRef<Set<string>>(new Set());
   const placesRef = useRef<WalkPlace[]>([]);
@@ -145,24 +149,30 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [narration.isSpeaking]);
 
+  const cachedAddressHintRef = useRef<string>("");
+
   const fetchNearbyPlaces = useCallback(async (latitude: number, longitude: number) => {
     if (fetchingRef.current) return;
     fetchingRef.current = true;
     setIsLoading(true);
     try {
       const cfg = DENSITY_CONFIG[densityRef.current];
-      let addressHint = "";
-      try {
-        const geocoded = await Location.reverseGeocodeAsync({ latitude, longitude });
-        if (geocoded.length > 0) {
-          const g = geocoded[0];
-          const parts = [g.streetNumber, g.street, g.district, g.subregion, g.city].filter(Boolean);
-          addressHint = parts.join(", ");
-        }
-      } catch {}
-
+      // Critical path: hit /discover IMMEDIATELY with lat/lng — never block on
+      // reverse-geocode. Use any cached addressHint from a previous tick if we
+      // happen to have one, but never wait.
       const body: Record<string, unknown> = { latitude, longitude, radius: cfg.discoverRadius };
-      if (addressHint) body.addressHint = addressHint;
+      if (cachedAddressHintRef.current) body.addressHint = cachedAddressHintRef.current;
+
+      // Kick off a non-blocking reverse-geocode for the NEXT fetch to use.
+      Location.reverseGeocodeAsync({ latitude, longitude })
+        .then((geocoded) => {
+          if (geocoded.length > 0) {
+            const g = geocoded[0];
+            const parts = [g.streetNumber, g.street, g.district, g.subregion, g.city].filter(Boolean);
+            cachedAddressHintRef.current = parts.join(", ");
+          }
+        })
+        .catch(() => {});
 
       const res = await fetch(`${API_BASE}/api/explore/discover`, {
         method: "POST",
@@ -223,7 +233,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     const loc = currentLocation;
     if (!loc) return null;
     const cfg = DENSITY_CONFIG[densityRef.current];
-    const heading = headingRef.current;
+    // Prefer the live device compass heading; fall back to the heading we
+    // derive from GPS velocity when the magnetometer is unavailable.
+    const heading = deviceHeadingRef.current ?? velocityHeadingRef.current;
 
     let best: WalkPlace | null = null;
     let bestScore = Infinity;
@@ -269,7 +281,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
         // Compute heading from velocity: only trust if moved enough recently.
         if (dist >= 8 && now - prev.ts < 30_000) {
-          headingRef.current = bearingDeg(prev.latitude, prev.longitude, latitude, longitude);
+          velocityHeadingRef.current = bearingDeg(
+            prev.latitude, prev.longitude, latitude, longitude,
+          );
         }
       }
       prevLocationRef.current = { latitude, longitude, ts: now };
@@ -324,7 +338,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     setNearbyPlaces([]);
     lastFetchRef.current = null;
     prevLocationRef.current = null;
-    headingRef.current = null;
+    deviceHeadingRef.current = null;
+    velocityHeadingRef.current = null;
+    cachedAddressHintRef.current = "";
     // Start cooldown so we don't fire instantly before the user has even moved.
     lastNarrationEndRef.current = Date.now() - DENSITY_CONFIG[densityRef.current].cooldownMs + 5000;
 
@@ -347,6 +363,23 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       );
       watchRef.current = sub;
     } catch {}
+
+    // Also subscribe to the device compass; it gives a true heading even when
+    // the user is standing still. We fall back to GPS-velocity heading when
+    // the platform doesn't support it (notably on web).
+    try {
+      const headingSub = await Location.watchHeadingAsync((h) => {
+        // trueHeading is preferred; -1 means unavailable. magHeading is the fallback.
+        const candidate =
+          typeof h.trueHeading === "number" && h.trueHeading >= 0
+            ? h.trueHeading
+            : typeof h.magHeading === "number" && h.magHeading >= 0
+              ? h.magHeading
+              : null;
+        if (candidate !== null) deviceHeadingRef.current = candidate;
+      });
+      headingWatchRef.current = headingSub;
+    } catch {}
   }, [handleLocationUpdate]);
 
   const stopWalk = useCallback(() => {
@@ -356,6 +389,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (watchRef.current) {
       try { watchRef.current.remove(); } catch {}
       watchRef.current = null;
+    }
+    if (headingWatchRef.current) {
+      try { headingWatchRef.current.remove(); } catch {}
+      headingWatchRef.current = null;
     }
   }, [narration]);
 
