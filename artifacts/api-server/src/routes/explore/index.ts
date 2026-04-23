@@ -1887,6 +1887,27 @@ out center body 250;
         tags: el.tags || {},
       });
     }
+
+    // Score each place by OSM tag richness so higher-quality entries
+    // are kept when we apply the cap.
+    //   4 – historic or heritage: highest cultural value
+    //   3 – tourism attraction/artwork/museum etc.
+    //   2 – civic amenity or man_made landmark with a name
+    //   1 – plain named building (lowest priority)
+    const osmScore = (p: OSMPlace): number => {
+      const t = p.tags;
+      if (t.historic || t.heritage) return 4;
+      if (t.tourism) return 3;
+      if (t.amenity || t.man_made || t.memorial) return 2;
+      return 1;
+    };
+
+    const OSM_CANDIDATES_CAP = 75;
+    if (results.length > OSM_CANDIDATES_CAP) {
+      results.sort((a, b) => osmScore(b) - osmScore(a));
+      results.splice(OSM_CANDIDATES_CAP);
+    }
+
     return results;
   } catch {
     clearTimeout(timeout);
