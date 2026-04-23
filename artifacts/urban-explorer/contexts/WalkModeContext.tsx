@@ -198,6 +198,31 @@ function angularDiff(a: number, b: number): number {
   return d > 180 ? 360 - d : d;
 }
 
+// Metres to project the discover-fetch centre ahead of the user's current
+// position in their direction of travel. This front-loads the Overpass result
+// set with places the user is approaching, so candidates are in the queue
+// well before the user reaches them.
+const LOOK_AHEAD_METERS = 150;
+
+// Compute a lat/lng that is `meters` ahead of (lat, lon) along `headingDeg`.
+function projectAhead(
+  lat: number,
+  lon: number,
+  headingDeg: number,
+  meters: number,
+): { latitude: number; longitude: number } {
+  const R = 6371000;
+  const radLat = (lat * Math.PI) / 180;
+  const dLat = (meters * Math.cos((headingDeg * Math.PI) / 180)) / R;
+  const dLon =
+    (meters * Math.sin((headingDeg * Math.PI) / 180)) /
+    (R * Math.cos(radLat));
+  return {
+    latitude: lat + (dLat * 180) / Math.PI,
+    longitude: lon + (dLon * 180) / Math.PI,
+  };
+}
+
 export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [isWalking, setIsWalking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -259,6 +284,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Until this timestamp, auto-density is suspended because the user just
   // made an explicit choice from the UI.
   const manualOverrideUntilRef = useRef<number>(0);
+  // Narration pipeline: after enqueuing place N, the app immediately fetches
+  // the AI narration for the best next candidate (N+1) in the background.
+  // When place N finishes and the movement gate clears, the pre-fetched text
+  // is used instantly instead of waiting for another round-trip.
+  const prefetchedNarrationRef = useRef<{
+    placeId: string;
+    narration: string;
+    place: WalkPlace;
+  } | null>(null);
+  // Ref to the latest prefetchNext callback — same ref-wrapping pattern as
+  // maybeNarrateRef, so fetchNarration can call it without being listed as a
+  // dependency (avoiding stale-closure re-creation on every location change).
+  const prefetchNextRef = useRef<(() => void) | null>(null);
 
   const applyDensity = useCallback((d: WalkDensity) => {
     if (densityRef.current === d) return;
@@ -323,7 +361,22 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // Critical path: hit /discover IMMEDIATELY with lat/lng — never block on
       // reverse-geocode. Use any cached addressHint from a previous tick if we
       // happen to have one, but never wait.
-      const body: Record<string, unknown> = { latitude, longitude, radius: cfg.discoverRadius };
+      // Project the discover fetch centre ahead of the user in their direction
+      // of travel. This front-loads the Overpass result set with places the
+      // user is about to walk toward, so candidates are ready in the queue
+      // well before the user reaches them. Fall back to GPS position when no
+      // heading is available (first fix, standing still, etc.).
+      const fetchHeading = deviceHeadingRef.current ?? velocityHeadingRef.current;
+      const fetchCenter =
+        fetchHeading !== null
+          ? projectAhead(latitude, longitude, fetchHeading, LOOK_AHEAD_METERS)
+          : { latitude, longitude };
+
+      const body: Record<string, unknown> = {
+        latitude: fetchCenter.latitude,
+        longitude: fetchCenter.longitude,
+        radius: cfg.discoverRadius,
+      };
       if (cachedAddressHintRef.current) body.addressHint = cachedAddressHintRef.current;
       const includedTypes = groupKeysToIncludedTypes(enabledBuildingGroupsRef.current);
       if (includedTypes.length > 0) body.includeBuildingTypes = includedTypes;
@@ -395,7 +448,36 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Enqueue a narration and update all associated state. Extracted so both the
+  // cache-hit path and the API path can share identical post-fetch side effects.
+  const enqueueNarration = useCallback((place: WalkPlace, text: string) => {
+    currentNarrationPlaceRef.current = place;
+    setCurrentNarrationPlace(place);
+    narration.enqueue(place.id, text, place.name);
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+    setStats((prev) => ({ ...prev, placesNarrated: prev.placesNarrated + 1 }));
+  }, [narration]);
+
   const fetchNarration = useCallback(async (place: WalkPlace) => {
+    // --- Narration pipeline: fast path ---
+    // Check if we already pre-fetched the narration for this place while the
+    // previous story was playing. If so, enqueue it immediately (no round-trip)
+    // and then start pre-fetching the one after that.
+    const prefetched = prefetchedNarrationRef.current;
+    prefetchedNarrationRef.current = null; // always consume / clear the cache
+    if (prefetched && prefetched.placeId === place.id) {
+      if (__DEV__) {
+        console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue`);
+      }
+      enqueueNarration(place, prefetched.narration);
+      // Keep the pipeline going: pre-fetch the next candidate.
+      prefetchNextRef.current?.();
+      return;
+    }
+
+    // --- Normal path (cache miss or stale) ---
     try {
       const res = await fetch(`${API_BASE}/api/explore/walk-narration`, {
         method: "POST",
@@ -412,17 +494,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         if (data.narration) {
           // Remember which place is now driving the lock-screen widget so the
           // artwork we send matches the story being spoken.
-          currentNarrationPlaceRef.current = place;
-          setCurrentNarrationPlace(place);
-          narration.enqueue(place.id, data.narration, place.name);
-          if (Platform.OS !== "web") {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }
-          setStats((prev) => ({ ...prev, placesNarrated: prev.placesNarrated + 1 }));
+          enqueueNarration(place, data.narration);
+          // Start pre-fetching the next candidate so it's ready when this
+          // narration finishes and the movement gate clears.
+          prefetchNextRef.current?.();
         }
       }
     } catch {}
-  }, [narration]);
+  }, [narration, enqueueNarration]);
 
   /**
    * Pick the best place to narrate next, given current location, heading, density.
@@ -501,6 +580,61 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
     return best;
   }, [currentLocation]);
+
+  // Pre-fetch the narration for the next best candidate while the current
+  // story is playing. Runs fire-and-forget in the background; failures are
+  // silently ignored so the normal fetchNarration path always acts as a safe
+  // fallback. By the time the user's movement gate clears for the next story,
+  // the text is already waiting in prefetchedNarrationRef.
+  //
+  // Design notes:
+  //   • place N is already in narratedIdsRef when this runs (marked by
+  //     maybeNarrate before fetchNarration was called), so pickNext() will
+  //     naturally skip N and return N+1.
+  //   • No movement-gate problem: the gate checks distance since the PREVIOUS
+  //     narration end, which was already cleared for the current pick.
+  //   • We skip the pre-fetch if the cache already holds the right candidate
+  //     to avoid redundant API calls on every location tick.
+  const prefetchNext = useCallback(() => {
+    if (!isWalkingRef.current) return;
+    const candidate = pickNext();
+    if (!candidate) return;
+    // Already cached — no need to re-fetch.
+    if (prefetchedNarrationRef.current?.placeId === candidate.id) return;
+    // Clear any stale entry so we don't serve the wrong place.
+    prefetchedNarrationRef.current = null;
+
+    const candidateId = candidate.id;
+    (async () => {
+      try {
+        const place = placesRef.current.find((p) => p.id === candidateId);
+        if (!place) return;
+        const res = await fetch(`${API_BASE}/api/explore/walk-narration`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...await authHeaders() },
+          body: JSON.stringify({
+            placeName: place.name,
+            category: place.category,
+            summary: place.summary,
+            fact: place.facts[0],
+          }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.narration) return;
+        // Guard: discard if the place was narrated while we were fetching
+        // (e.g. the user tapped Skip, or duplicate GPS ticks fired).
+        if (narratedIdsRef.current.has(candidateId)) return;
+        prefetchedNarrationRef.current = { placeId: candidateId, narration: data.narration, place };
+        if (__DEV__) {
+          console.log(`[prefetchNext] cached "${place.name}" for pipeline`);
+        }
+      } catch {}
+    })();
+  }, [pickNext]);
+  useEffect(() => {
+    prefetchNextRef.current = prefetchNext;
+  }, [prefetchNext]);
 
   const handleLocationUpdate = useCallback(
     (location: Location.LocationObject) => {
@@ -691,6 +825,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     paceSamplesRef.current = [];
     slowSinceRef.current = null;
     manualOverrideUntilRef.current = 0;
+    prefetchedNarrationRef.current = null;
     // Start cooldown so we don't fire instantly before the user has even moved.
     lastNarrationEndRef.current = Date.now() - DENSITY_CONFIG[densityRef.current].cooldownMs + 5000;
 
