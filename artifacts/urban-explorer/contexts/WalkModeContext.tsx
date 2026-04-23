@@ -297,6 +297,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // maybeNarrateRef, so fetchNarration can call it without being listed as a
   // dependency (avoiding stale-closure re-creation on every location change).
   const prefetchNextRef = useRef<(() => void) | null>(null);
+  // Tracks which place ID is currently being pre-fetched, so repeated calls
+  // to prefetchNext before the first resolves don't issue parallel duplicates.
+  const prefetchInFlightRef = useRef<string | null>(null);
 
   const applyDensity = useCallback((d: WalkDensity) => {
     if (densityRef.current === d) return;
@@ -599,12 +602,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (!isWalkingRef.current) return;
     const candidate = pickNext();
     if (!candidate) return;
-    // Already cached — no need to re-fetch.
+    // Already cached for this candidate — no need to re-fetch.
     if (prefetchedNarrationRef.current?.placeId === candidate.id) return;
+    // Another request for this candidate is already in flight — dedupe.
+    if (prefetchInFlightRef.current === candidate.id) return;
     // Clear any stale entry so we don't serve the wrong place.
     prefetchedNarrationRef.current = null;
 
     const candidateId = candidate.id;
+    prefetchInFlightRef.current = candidateId;
     (async () => {
       try {
         const place = placesRef.current.find((p) => p.id === candidateId);
@@ -629,7 +635,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         if (__DEV__) {
           console.log(`[prefetchNext] cached "${place.name}" for pipeline`);
         }
-      } catch {}
+      } catch {
+      } finally {
+        // Always clear the in-flight marker so a later call can retry if needed.
+        if (prefetchInFlightRef.current === candidateId) {
+          prefetchInFlightRef.current = null;
+        }
+      }
     })();
   }, [pickNext]);
   useEffect(() => {
@@ -826,6 +838,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     slowSinceRef.current = null;
     manualOverrideUntilRef.current = 0;
     prefetchedNarrationRef.current = null;
+    prefetchInFlightRef.current = null;
     // Start cooldown so we don't fire instantly before the user has even moved.
     lastNarrationEndRef.current = Date.now() - DENSITY_CONFIG[densityRef.current].cooldownMs + 5000;
 
