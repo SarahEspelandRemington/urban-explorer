@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -41,6 +42,7 @@ export default function PlaceDetailScreen() {
     summary: string;
     facts: string;
     address: string;
+    photoUrl: string;
   }>();
 
   const lat = parseFloat(params.latitude || "0");
@@ -151,9 +153,19 @@ export default function PlaceDetailScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
+        {params.photoUrl ? (
+          <Image
+            source={{ uri: params.photoUrl }}
+            style={styles.heroImage}
+            resizeMode="cover"
+            accessibilityLabel={`Photo of ${params.name}`}
+          />
+        ) : null}
+
+        <View style={styles.content}>
         <View style={[styles.iconContainer, { backgroundColor: categoryColor + "18" }]}>
           <MaterialCommunityIcons name={iconName as any} size={24} color={categoryColor} />
         </View>
@@ -352,6 +364,7 @@ export default function PlaceDetailScreen() {
             ) : null}
           </Animated.View>
         ) : null}
+        </View>
       </ScrollView>
     </View>
   );
@@ -360,6 +373,10 @@ export default function PlaceDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  heroImage: {
+    width: "100%",
+    height: 220,
   },
   topBar: {
     flexDirection: "row",

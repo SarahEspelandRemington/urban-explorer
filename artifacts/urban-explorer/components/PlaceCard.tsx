@@ -204,6 +204,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
         summary: place.summary,
         facts: JSON.stringify(place.facts),
         address: place.address || "",
+        photoUrl: place.photoUrl || "",
       },
     });
   };
