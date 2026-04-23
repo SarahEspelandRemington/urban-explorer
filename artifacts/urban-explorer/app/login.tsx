@@ -24,22 +24,22 @@ export default function LoginScreen() {
       style={[
         styles.container,
         {
-          backgroundColor: colors.background,
+          backgroundColor: "#2A2A2A",
           paddingTop: insets.top,
           paddingBottom: insets.bottom,
         },
       ]}
     >
       <View style={styles.content}>
-        <View style={[styles.iconWrap, { backgroundColor: colors.muted }]}>
-          <Feather name="compass" size={40} color={colors.primary} />
+        <View style={[styles.iconWrap, { backgroundColor: "#3A3A3A" }]}>
+          <Feather name="compass" size={40} color="#FFFFFF" />
         </View>
 
-        <Text style={[styles.title, { color: colors.foreground }]}>
+        <Text style={[styles.title, { color: "#FFFFFF" }]}>
           {t.login.title}
         </Text>
 
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+        <Text style={[styles.subtitle, { color: "rgba(255,255,255,0.78)" }]}>
           {t.login.subtitle}
         </Text>
       </View>
