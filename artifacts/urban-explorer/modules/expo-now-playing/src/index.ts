@@ -1,3 +1,13 @@
+/**
+ * JS wrapper for the NowPlaying native module.
+ *
+ * In a development or production build (EAS), add the native implementation files:
+ *   ios/NowPlayingModule.swift   — MPNowPlayingInfoCenter + MPRemoteCommandCenter
+ *   android/.../NowPlayingModule.kt — MediaSession / MediaNotification
+ *
+ * Without those files the module gracefully stubs every call (NowPlaying.isSupported
+ * will be false). The rest of the app continues to work normally.
+ */
 import { Platform } from "react-native";
 import { requireOptionalNativeModule } from "expo";
 

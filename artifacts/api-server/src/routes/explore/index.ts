@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { logger } from "../../lib/logger";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { PgRateLimitStore } from "../../lib/pgRateLimitStore";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -517,7 +518,7 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
     }
   } catch (err) {
     // DB unavailable — fall through to live fetch.
-    console.warn("[photo-cache] DB read failed, falling back to live fetch:", err instanceof Error ? err.message : err);
+    logger.warn({ err: err instanceof Error ? err.message : err }, "[photo-cache] DB read failed, falling back to live fetch");
   }
 
   // --- Live fetch from Wikipedia ---
@@ -555,7 +556,7 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
       set: { photoUrl, fetchedAt: new Date() },
     })
     .catch((err: unknown) => {
-      console.warn("[photo-cache] DB write failed:", err instanceof Error ? err.message : err);
+      logger.warn({ err: err instanceof Error ? err.message : err }, "[photo-cache] DB write failed");
     });
 
   return photoUrl;
@@ -1912,7 +1913,7 @@ router.post("/explore/places-along-route", async (req, res) => {
   }
 
   const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox);
-  console.log(`[places-along-route] geom=${geom.length} corridor=${corridor} bbox-osm=${osmPlaces.length}`);
+  logger.info({ geomPoints: geom.length, corridorM: corridor, osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
 
   const candidates = osmPlaces
     .map((p) => {
@@ -1936,7 +1937,7 @@ router.post("/explore/places-along-route", async (req, res) => {
   }
 
   const finalCandidates = spaced.slice(0, cap);
-  console.log(`[places-along-route] candidates=${candidates.length} spaced=${spaced.length} final=${finalCandidates.length}`);
+  logger.info({ candidates: candidates.length, spaced: spaced.length, final: finalCandidates.length }, "[places-along-route] filtered");
 
   if (finalCandidates.length === 0) {
     res.json({ places: [] });
@@ -2039,14 +2040,14 @@ Return one entry per input place, in the same order. Be concise — these blurbs
 
   const failedChunks = chunkResults.filter((r) => r.status === "rejected").length;
   if (failedChunks > 0) {
-    console.warn(`[places-along-route] ${failedChunks}/${chunks.length} LLM chunks failed — those places will use OSM fallback names`);
+    logger.warn({ failedChunks, total: chunks.length }, "[places-along-route] some LLM chunks failed — affected places will use OSM fallback names");
   }
   // If every chunk failed, return a graceful error rather than an empty/fallback-only list
   if (failedChunks === chunks.length && chunks.length > 0) {
     res.status(503).json({ error: "Route narration temporarily unavailable. Please try again." });
     return;
   }
-  console.log(`[places-along-route] ${chunks.length} parallel LLM chunks in ${Date.now() - t0}ms (${failedChunks} failed)`);
+  logger.info({ chunks: chunks.length, durationMs: Date.now() - t0, failedChunks }, "[places-along-route] LLM complete");
 
   // Match LLM output back to candidates by position (same order); fall back to nearest by name
   const enriched = finalCandidates.map((c, i) => {

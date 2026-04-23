@@ -108,9 +108,6 @@ export function useNarration() {
         language: "en-US",
         rate: 0.9,
         pitch: 1.05,
-        onStart: () => {
-          console.log("Speech started:", item.placeName);
-        },
         onDone: onFinish,
         onError: (err) => {
           console.warn("Speech error:", err);

@@ -7,7 +7,7 @@ import { AppState, type AppStateStatus, Platform } from "react-native";
 import { useLocale } from "@/contexts/LocaleContext";
 import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
-import { getNotificationLocale } from "@/lib/notificationLocales";
+import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
 
 // Background location task name. Defining the task at module scope (outside any
