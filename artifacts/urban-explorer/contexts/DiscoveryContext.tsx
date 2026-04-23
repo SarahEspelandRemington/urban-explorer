@@ -14,6 +14,7 @@ export interface SavedPlace {
   address?: string;
   distanceMeters?: number;
   netScore?: number;
+  photoUrl?: string;
   savedAt: string;
 }
 

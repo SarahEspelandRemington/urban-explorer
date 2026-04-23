@@ -432,6 +432,9 @@ components:
           type: string
           enum: [high, medium, low]
           description: "How confident the AI is about this place's existence and details"
+        photoUrl:
+          type: string
+          description: "URL of a representative photo for this place, when available (sourced from Wikipedia)"
       required:
         - id
         - name

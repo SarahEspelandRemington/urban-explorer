@@ -42,6 +42,7 @@ interface DiscoveredPlace {
   address?: string;
   distanceMeters?: number;
   netScore?: number;
+  photoUrl?: string;
 }
 
 const DRIFT_THRESHOLD_METERS = 150;

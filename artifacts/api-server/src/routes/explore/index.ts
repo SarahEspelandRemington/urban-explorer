@@ -467,6 +467,80 @@ async function postProcessPlaces(
 }
 
 // ---------------------------------------------------------------------------
+// Wikipedia / Wikimedia photo fetching
+// ---------------------------------------------------------------------------
+
+const photoCache = new Map<string, { url: string | null; ts: number }>();
+const PHOTO_CACHE_HIT_TTL = 60 * 60 * 1000; // 1 hour for successful lookups
+const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404 — retry sooner)
+
+/**
+ * Attempt to find a representative photo for a place name via the Wikipedia
+ * REST summary API. Returns the thumbnail URL or null when none is available.
+ * Results are cached in-process for 1 hour to avoid redundant network calls.
+ */
+async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
+  const cacheKey = placeName.toLowerCase().trim();
+  const cached = photoCache.get(cacheKey);
+  if (cached) {
+    const ttl = cached.url ? PHOTO_CACHE_HIT_TTL : PHOTO_CACHE_MISS_TTL;
+    if (Date.now() - cached.ts < ttl) return cached.url;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+
+  try {
+    // Wikipedia REST summary endpoint — returns thumbnail when an article exists.
+    const encoded = encodeURIComponent(placeName.replace(/ /g, "_"));
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
+    const resp = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+        "Accept": "application/json",
+      },
+    });
+    clearTimeout(timer);
+    if (!resp.ok) {
+      photoCache.set(cacheKey, { url: null, ts: Date.now() });
+      return null;
+    }
+    const data = await resp.json() as { thumbnail?: { source?: string } };
+    const photoUrl = data.thumbnail?.source ?? null;
+    photoCache.set(cacheKey, { url: photoUrl, ts: Date.now() });
+    return photoUrl;
+  } catch {
+    clearTimeout(timer);
+    photoCache.set(cacheKey, { url: null, ts: Date.now() });
+    return null;
+  }
+}
+
+/**
+ * Fetch photos for all places in parallel, annotating each with a `photoUrl`
+ * field. Races against a hard wall-clock timeout so slow Wikipedia responses
+ * never delay the discover reply significantly.
+ */
+async function fetchPhotosForPlaces(places: any[]): Promise<void> {
+  if (places.length === 0) return;
+  const WALL_TIMEOUT_MS = 4000;
+  try {
+    await Promise.race([
+      Promise.all(
+        places.map(async (p) => {
+          const url = await fetchWikipediaPhoto(p.name);
+          if (url) p.photoUrl = url;
+        }),
+      ),
+      new Promise<void>((resolve) => setTimeout(resolve, WALL_TIMEOUT_MS)),
+    ]);
+  } catch {
+    // Photo fetch is best-effort — never break discovery.
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Lightweight rating enrichment + sort — called on both fresh and cached results
 // ---------------------------------------------------------------------------
 
@@ -551,6 +625,24 @@ router.post("/explore/discover", async (req, res) => {
       const ratingsMap = await fetchRatingsMap(refreshedPlaces);
       applyRatingSortWithMap(refreshedPlaces, ratingsMap);
       res.json({ ...cachedDiscover, places: refreshedPlaces });
+
+      // Background: if any cached places are missing photos (e.g. the original
+      // request hit the wall-clock timeout before Wikipedia responded), try again
+      // now and update the cache so the next hit gets artwork.
+      const missingPhotos = cachedDiscover.places.filter((p: any) => !p.photoUrl);
+      if (missingPhotos.length > 0) {
+        (async () => {
+          try {
+            await fetchPhotosForPlaces(missingPhotos);
+            // Only update cache if we actually found any new photos.
+            if (missingPhotos.some((p: any) => p.photoUrl)) {
+              setLLMCache(discoverCacheKey, cachedDiscover);
+            }
+          } catch {
+            // Best-effort — never break the cached response.
+          }
+        })();
+      }
     } else {
       res.json(cachedDiscover);
     }
@@ -745,6 +837,10 @@ Return ${placeCount} places. Quality beats quantity — if you can only find 6 p
     data.places = await postProcessPlaces(data.places, latitude, longitude, searchRadius, {
       skipVerification: true,
     });
+    // Fetch Wikipedia photos in parallel for all places. Runs concurrently with
+    // ratings enrichment (below) and races a wall-clock timeout so it never
+    // materially slows down a response that's already taken time for LLM calls.
+    await fetchPhotosForPlaces(data.places);
   }
 
   // Cache zero-result responses for only 2 min so the user can retry after moving slightly.

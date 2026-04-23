@@ -3,7 +3,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
+import { Alert, Image, LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
 
 import { PlaceActions } from "@/components/PlaceActions";
@@ -55,6 +55,7 @@ interface PlaceCardProps {
     distanceMeters?: number;
     netScore?: number;
     communityRating?: CommunityRating;
+    photoUrl?: string;
   };
   index: number;
   expanded?: boolean;
@@ -236,6 +237,15 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
             },
           ]}
         >
+          {place.photoUrl ? (
+            <Image
+              source={{ uri: place.photoUrl }}
+              style={styles.heroPhoto}
+              resizeMode="cover"
+              accessibilityLabel={`Photo of ${place.name}`}
+            />
+          ) : null}
+          <View style={styles.heroContent}>
           <View style={styles.heroTop}>
             <View
               style={[styles.heroIconContainer, { backgroundColor: categoryColor + "20" }]}
@@ -365,6 +375,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
               longitude: place.longitude,
             }}
           />
+          </View>
         </Pressable>
       </Animated.View>
     );
@@ -388,9 +399,18 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           },
         ]}
       >
-        <View style={[styles.compactIcon, { backgroundColor: categoryColor + "18" }]}>
-          <MaterialCommunityIcons name={iconName as any} size={18} color={categoryColor} />
-        </View>
+        {place.photoUrl ? (
+          <Image
+            source={{ uri: place.photoUrl }}
+            style={[styles.compactThumb, { borderColor: categoryColor + "40" }]}
+            resizeMode="cover"
+            accessibilityLabel={`Photo of ${place.name}`}
+          />
+        ) : (
+          <View style={[styles.compactIcon, { backgroundColor: categoryColor + "18" }]}>
+            <MaterialCommunityIcons name={iconName as any} size={18} color={categoryColor} />
+          </View>
+        )}
 
         <View style={styles.compactInfo}>
           <View style={styles.compactNameRow}>
@@ -500,8 +520,23 @@ const styles = StyleSheet.create({
   heroCard: {
     borderRadius: 14,
     borderWidth: 1.5,
-    padding: 18,
+    overflow: "hidden",
     marginBottom: 8,
+  },
+  heroPhoto: {
+    width: "100%",
+    height: 160,
+    marginBottom: 0,
+  },
+  compactThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  heroContent: {
+    padding: 18,
   },
   heroTop: {
     flexDirection: "row",

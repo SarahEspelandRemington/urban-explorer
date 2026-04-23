@@ -27,4 +27,6 @@ export interface Place {
   distanceMeters?: number;
   /** How confident the AI is about this place's existence and details */
   confidence?: PlaceConfidence;
+  /** URL of a representative photo for this place, when available (sourced from Wikipedia) */
+  photoUrl?: string;
 }
