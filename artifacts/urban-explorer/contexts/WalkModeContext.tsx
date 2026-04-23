@@ -65,7 +65,7 @@ interface WalkModeContextType {
   stopWalk: () => void;
   currentLocation: { latitude: number; longitude: number } | null;
   nearbyPlaces: WalkPlace[];
-  narratedIds: Set<string>;
+  narratedIds: Map<string, number>;
   stats: WalkStats;
   narration: ReturnType<typeof useNarration>;
   isLoading: boolean;
@@ -167,7 +167,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [isWalking, setIsWalking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<WalkPlace[]>([]);
-  const [narratedIds, setNarratedIds] = useState<Set<string>>(new Set());
+  const [narratedIds, setNarratedIds] = useState<Map<string, number>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
   const [density, setDensityState] = useState<WalkDensity>("sparse");
@@ -188,7 +188,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Velocity-derived heading, as a fallback when the compass isn't available.
   const velocityHeadingRef = useRef<number | null>(null);
   const fetchingRef = useRef(false);
-  const narratedIdsRef = useRef<Set<string>>(new Set());
+  const narratedIdsRef = useRef<Map<string, number>>(new Map());
   const placesRef = useRef<WalkPlace[]>([]);
   const lastNarrationEndRef = useRef<number>(0);
   // Where the user was when the last narration ended, so we can require them
@@ -499,8 +499,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       if (Date.now() - lastNarrationEndRef.current < cfg.cooldownMs) return;
       const next = pickNext(loc);
       if (!next) return;
-      narratedIdsRef.current.add(next.id);
-      setNarratedIds(new Set(narratedIdsRef.current));
+      narratedIdsRef.current.set(next.id, Date.now());
+      setNarratedIds(new Map(narratedIdsRef.current));
       fetchNarration(next);
     },
     [pickNext, fetchNarration],
@@ -571,8 +571,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     densityRef.current = "sparse";
     setDensityState("sparse");
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
-    setNarratedIds(new Set());
-    narratedIdsRef.current = new Set();
+    setNarratedIds(new Map());
+    narratedIdsRef.current = new Map();
     placesRef.current = [];
     setNearbyPlaces([]);
     lastFetchRef.current = null;

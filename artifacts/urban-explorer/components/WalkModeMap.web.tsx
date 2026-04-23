@@ -14,8 +14,18 @@ interface WalkModeMapProps {
   userLatitude: number;
   userLongitude: number;
   places: WalkPlace[];
-  narratedIds: Set<string>;
+  narratedIds: Map<string, number>;
   followUser?: boolean;
+}
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+function visitedOpacity(narratedAt: number | undefined): number {
+  if (narratedAt === undefined) return 1;
+  const ageMs = Date.now() - narratedAt;
+  if (ageMs < ONE_HOUR_MS) return 1;
+  const hours = ageMs / ONE_HOUR_MS;
+  return Math.max(0.3, 1 - (hours - 1) * 0.1);
 }
 
 interface Cluster {
@@ -87,7 +97,7 @@ export function WalkModeMap({
   const userMarkerRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const placesRef = useRef<WalkPlace[]>(places);
-  const narratedRef = useRef<Set<string>>(narratedIds);
+  const narratedRef = useRef<Map<string, number>>(narratedIds);
   const colorsRef = useRef(colors);
   const prevClustersRef = useRef<Cluster[]>([]);
   const collapseRafRef = useRef<number | null>(null);
@@ -168,15 +178,17 @@ export function WalkModeMap({
 
         if (cluster.places.length === 1) {
           const place = cluster.places[0];
-          const isNarrated = narrated.has(place.id);
+          const narratedAt = narrated.get(place.id);
+          const isNarrated = narratedAt !== undefined;
           const fill = isNarrated ? c.mutedForeground : c.primary;
+          const pinOpacity = isNarrated ? visitedOpacity(narratedAt) * 0.6 : 1;
           const icon = L.divIcon({
             className: "walk-marker",
             html: `<div style="
               width: 22px; height: 22px; border-radius: 50%;
               background: ${fill}; border: 2px solid white;
               box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-              opacity: ${isNarrated ? 0.6 : 1};
+              opacity: ${pinOpacity};
             "></div>`,
             iconSize: [22, 22],
             iconAnchor: [11, 11],

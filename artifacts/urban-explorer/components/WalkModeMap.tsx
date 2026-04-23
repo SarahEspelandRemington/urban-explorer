@@ -22,9 +22,19 @@ interface WalkModeMapProps {
   userLatitude: number;
   userLongitude: number;
   places: WalkPlace[];
-  narratedIds: Set<string>;
+  narratedIds: Map<string, number>;
   followUser?: boolean;
   onOpenPlace?: (place: WalkPlace) => void;
+}
+
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+function visitedOpacity(narratedAt: number | undefined): number {
+  if (narratedAt === undefined) return 1;
+  const ageMs = Date.now() - narratedAt;
+  if (ageMs < ONE_HOUR_MS) return 1;
+  const hours = ageMs / ONE_HOUR_MS;
+  return Math.max(0.3, 1 - (hours - 1) * 0.1);
 }
 
 interface Cluster {
@@ -340,13 +350,16 @@ export function WalkModeMap({
           }
           if (cluster.places.length === 1) {
             const place = cluster.places[0];
+            const narratedAt = narratedIds.get(place.id);
+            const wasNarrated = narratedAt !== undefined;
+            const opacity = wasNarrated ? visitedOpacity(narratedAt) * 0.5 : 1;
             return (
               <Marker
                 key={cluster.key}
                 coordinate={{ latitude: place.latitude, longitude: place.longitude }}
                 title={place.name}
-                pinColor={narratedIds.has(place.id) ? colors.mutedForeground : colors.primary}
-                opacity={narratedIds.has(place.id) ? 0.5 : 1}
+                pinColor={wasNarrated ? colors.mutedForeground : colors.primary}
+                opacity={opacity}
               />
             );
           }
@@ -413,12 +426,14 @@ export function WalkModeMap({
             </Text>
             <ScrollView style={styles.previewList} keyboardShouldPersistTaps="handled">
               {previewCluster.places.map((p) => {
-                const visited = narratedIds.has(p.id);
+                const narratedAt = narratedIds.get(p.id);
+                const visited = narratedAt !== undefined;
+                const iconOpacity = visited ? visitedOpacity(narratedAt) : 1;
                 return (
                 <View key={p.id} style={styles.previewRow}>
                   <View style={styles.previewVisitedSlot}>
                     {visited ? (
-                      <Feather name="check-circle" size={13} color={colors.primary} />
+                      <Feather name="check-circle" size={13} color={colors.primary} style={{ opacity: iconOpacity }} />
                     ) : null}
                   </View>
                   <Pressable
