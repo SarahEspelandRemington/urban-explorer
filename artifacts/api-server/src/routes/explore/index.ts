@@ -79,6 +79,49 @@ function loadBoringBuildingTypes(): Set<string> {
 
 const BORING_BUILDING_TYPES = loadBoringBuildingTypes();
 
+// ---------------------------------------------------------------------------
+// Walk Mode heading-bias configuration
+// ---------------------------------------------------------------------------
+// These three constants control pickNext scoring on the mobile client.
+// They can be tuned without a mobile rebuild by setting environment variables
+// and restarting the server. The GET /api/explore/walk-config endpoint returns
+// the active values so the client can fetch and apply them at walk-start.
+
+interface WalkConfig {
+  forwardBiasMeters: number;
+  offAxisPenaltyDeg: number;
+  offAxisPenaltyMeters: number;
+}
+
+const WALK_CONFIG_DEFAULTS: WalkConfig = {
+  forwardBiasMeters: 200,
+  offAxisPenaltyDeg: 70,
+  offAxisPenaltyMeters: 120,
+};
+
+function loadWalkConfig(): WalkConfig {
+  const forwardBiasMeters = process.env.WALK_FORWARD_BIAS_METERS
+    ? parseFloat(process.env.WALK_FORWARD_BIAS_METERS)
+    : WALK_CONFIG_DEFAULTS.forwardBiasMeters;
+  const offAxisPenaltyDeg = process.env.WALK_OFF_AXIS_PENALTY_DEG
+    ? parseFloat(process.env.WALK_OFF_AXIS_PENALTY_DEG)
+    : WALK_CONFIG_DEFAULTS.offAxisPenaltyDeg;
+  const offAxisPenaltyMeters = process.env.WALK_OFF_AXIS_PENALTY_METERS
+    ? parseFloat(process.env.WALK_OFF_AXIS_PENALTY_METERS)
+    : WALK_CONFIG_DEFAULTS.offAxisPenaltyMeters;
+
+  const cfg: WalkConfig = {
+    forwardBiasMeters: isFinite(forwardBiasMeters) ? forwardBiasMeters : WALK_CONFIG_DEFAULTS.forwardBiasMeters,
+    offAxisPenaltyDeg: isFinite(offAxisPenaltyDeg) ? offAxisPenaltyDeg : WALK_CONFIG_DEFAULTS.offAxisPenaltyDeg,
+    offAxisPenaltyMeters: isFinite(offAxisPenaltyMeters) ? offAxisPenaltyMeters : WALK_CONFIG_DEFAULTS.offAxisPenaltyMeters,
+  };
+
+  logger.info(cfg, "Walk Mode heading-bias config loaded");
+  return cfg;
+}
+
+const WALK_CONFIG = loadWalkConfig();
+
 const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
 const OSM_CACHE_TTL = 5 * 60 * 1000;
 const OSM_CACHE_DISTANCE = 200;
@@ -2350,6 +2393,18 @@ router.get("/explore/ratings", async (_req, res) => {
     .sort((a, b) => b.netScore - a.netScore);
 
   res.json({ ratings: entries, total: entries.length });
+});
+
+// ---------------------------------------------------------------------------
+// GET /explore/walk-config — return the active Walk Mode heading-bias constants
+// ---------------------------------------------------------------------------
+// The three values are loaded from environment variables at startup so they
+// can be tuned in production without a mobile rebuild. The mobile client
+// fetches this endpoint at walk-start and overrides its local defaults.
+// Env vars: WALK_FORWARD_BIAS_METERS, WALK_OFF_AXIS_PENALTY_DEG,
+//           WALK_OFF_AXIS_PENALTY_METERS
+router.get("/explore/walk-config", (_req, res) => {
+  res.json(WALK_CONFIG);
 });
 
 export default router;

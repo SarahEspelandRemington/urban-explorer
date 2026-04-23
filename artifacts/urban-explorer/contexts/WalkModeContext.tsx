@@ -234,6 +234,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [currentNarrationPlace, setCurrentNarrationPlace] = useState<WalkPlace | null>(null);
   const [enabledBuildingGroups, setEnabledBuildingGroupsState] = useState<Set<BuildingGroupKey>>(new Set());
   const enabledBuildingGroupsRef = useRef<Set<BuildingGroupKey>>(new Set());
+  // Server-fetched heading-bias overrides. Null until the walk-config
+  // endpoint responds; the DENSITY_CONFIG defaults are used as fallback.
+  const walkConfigOverridesRef = useRef<{
+    forwardBiasMeters: number;
+    offAxisPenaltyDeg: number;
+    offAxisPenaltyMeters: number;
+  } | null>(null);
 
   const setEnabledBuildingGroups = useCallback((groups: Set<BuildingGroupKey>) => {
     enabledBuildingGroupsRef.current = groups;
@@ -551,11 +558,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       //   places more than ~70° off-heading, making them a genuine last resort
       //   without hard-excluding them (queue never goes empty in bad GPS).
       if (heading !== null) {
+        const overrides = walkConfigOverridesRef.current;
+        const fwdBias = overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
+        const penaltyDeg = overrides?.offAxisPenaltyDeg ?? cfg.offAxisPenaltyDeg;
+        const penaltyMeters = overrides?.offAxisPenaltyMeters ?? cfg.offAxisPenaltyMeters;
         const placeBearing = bearingDeg(loc.latitude, loc.longitude, p.latitude, p.longitude);
         const diff = angularDiff(heading, placeBearing);
-        score -= cfg.forwardBiasMeters * Math.cos((diff * Math.PI) / 180);
-        if (diff > cfg.offAxisPenaltyDeg) {
-          score += cfg.offAxisPenaltyMeters;
+        score -= fwdBias * Math.cos((diff * Math.PI) / 180);
+        if (diff > penaltyDeg) {
+          score += penaltyMeters;
         }
       }
       // Rating bonus: each net upvote shaves up to 20m, capped at 80m.
@@ -817,6 +828,47 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
     isWalkingRef.current = true;
     setIsWalking(true);
+
+    // Fetch server-side heading-bias config in the background. Reset first so
+    // any stale values from a previous walk are cleared. The fetch races
+    // against a 5 s wall-clock so it never blocks walk startup; if it wins
+    // before pickNext runs the server values override the hard-coded defaults.
+    walkConfigOverridesRef.current = null;
+    (async () => {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        let res: Response;
+        try {
+          res = await fetch(`${API_BASE}/api/explore/walk-config`, {
+            signal: controller.signal,
+            headers: { "Content-Type": "application/json", ...await authHeaders() },
+          });
+        } finally {
+          clearTimeout(timer);
+        }
+        if (res.ok) {
+          const data = await res.json() as {
+            forwardBiasMeters?: unknown;
+            offAxisPenaltyDeg?: unknown;
+            offAxisPenaltyMeters?: unknown;
+          };
+          const fwd = typeof data.forwardBiasMeters === "number" ? data.forwardBiasMeters : null;
+          const deg = typeof data.offAxisPenaltyDeg === "number" ? data.offAxisPenaltyDeg : null;
+          const m   = typeof data.offAxisPenaltyMeters === "number" ? data.offAxisPenaltyMeters : null;
+          if (fwd !== null && deg !== null && m !== null) {
+            walkConfigOverridesRef.current = {
+              forwardBiasMeters: fwd,
+              offAxisPenaltyDeg: deg,
+              offAxisPenaltyMeters: m,
+            };
+          }
+        }
+      } catch {
+        // Best-effort — DENSITY_CONFIG defaults are used when fetch fails.
+      }
+    })();
+
     // Density is per-walk: every new walk starts back at Sparse so the user
     // makes a fresh choice rather than inheriting last walk's setting.
     densityRef.current = "dense";
