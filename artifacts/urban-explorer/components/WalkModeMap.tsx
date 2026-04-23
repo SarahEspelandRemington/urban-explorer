@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MapView, { Circle, Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
@@ -9,6 +10,12 @@ interface WalkPlace {
   name: string;
   latitude: number;
   longitude: number;
+  category?: string;
+  yearBuilt?: string;
+  tags?: string[];
+  summary?: string;
+  facts?: string[];
+  address?: string;
 }
 
 interface WalkModeMapProps {
@@ -17,6 +24,7 @@ interface WalkModeMapProps {
   places: WalkPlace[];
   narratedIds: Set<string>;
   followUser?: boolean;
+  onOpenPlace?: (place: WalkPlace) => void;
 }
 
 interface Cluster {
@@ -79,6 +87,7 @@ export function WalkModeMap({
   places,
   narratedIds,
   followUser = true,
+  onOpenPlace,
 }: WalkModeMapProps) {
   const colors = useColors();
   const mapRef = useRef<MapView>(null);
@@ -405,26 +414,42 @@ export function WalkModeMap({
             </Text>
             <ScrollView style={styles.previewList} keyboardShouldPersistTaps="handled">
               {previewCluster.places.slice(0, PREVIEW_MAX_NAMES).map((p) => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => focusPlace(p)}
-                  style={({ pressed }) => [
-                    styles.previewItem,
-                    pressed && { backgroundColor: colors.muted },
-                  ]}
-                >
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.previewItemText,
-                      {
-                        color: narratedIds.has(p.id) ? colors.mutedForeground : colors.foreground,
-                      },
+                <View key={p.id} style={styles.previewRow}>
+                  <Pressable
+                    onPress={() => focusPlace(p)}
+                    style={({ pressed }) => [
+                      styles.previewItem,
+                      pressed && { backgroundColor: colors.muted },
                     ]}
+                    accessibilityLabel={`Centre map on ${p.name}`}
                   >
-                    {p.name}
-                  </Text>
-                </Pressable>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.previewItemText,
+                        {
+                          color: narratedIds.has(p.id) ? colors.mutedForeground : colors.foreground,
+                        },
+                      ]}
+                    >
+                      {p.name}
+                    </Text>
+                  </Pressable>
+                  {onOpenPlace ? (
+                    <Pressable
+                      onPress={() => onOpenPlace(p)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open ${p.name}`}
+                      style={({ pressed }) => [
+                        styles.previewOpenBtn,
+                        { backgroundColor: pressed ? colors.muted : "transparent" },
+                      ]}
+                    >
+                      <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                    </Pressable>
+                  ) : null}
+                </View>
               ))}
               {previewCluster.places.length > PREVIEW_MAX_NAMES ? (
                 <Text style={[styles.previewMore, { color: colors.mutedForeground }]}>
@@ -481,7 +506,12 @@ const styles = StyleSheet.create({
   previewList: {
     maxHeight: 220,
   },
+  previewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   previewItem: {
+    flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderRadius: 6,
@@ -489,6 +519,11 @@ const styles = StyleSheet.create({
   previewItemText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+  previewOpenBtn: {
+    padding: 6,
+    borderRadius: 6,
+    marginLeft: 2,
   },
   previewMore: {
     fontSize: 12,

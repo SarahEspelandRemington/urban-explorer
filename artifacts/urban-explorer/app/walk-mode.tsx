@@ -126,6 +126,22 @@ export default function WalkModeScreen() {
             userLongitude={walk.currentLocation.longitude}
             places={walk.nearbyPlaces}
             narratedIds={walk.narratedIds}
+            onOpenPlace={(place) => {
+              router.push({
+                pathname: "/place-detail",
+                params: {
+                  name: place.name,
+                  latitude: String(place.latitude),
+                  longitude: String(place.longitude),
+                  category: place.category ?? "",
+                  yearBuilt: place.yearBuilt ?? "",
+                  tags: JSON.stringify(place.tags ?? []),
+                  summary: place.summary ?? "",
+                  facts: JSON.stringify(place.facts ?? []),
+                  address: place.address ?? "",
+                },
+              });
+            }}
           />
         ) : (
           <View style={[styles.loadingMap, { backgroundColor: colors.muted }]}>
