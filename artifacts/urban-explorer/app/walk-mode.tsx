@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect } from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -164,9 +165,20 @@ export default function WalkModeScreen() {
             accessibilityLiveRegion="polite"
             accessibilityLabel={`Now playing: ${walk.narration.currentPlace}`}
           >
-            <View style={[styles.nowPlayingIcon, { backgroundColor: colors.primary + "18" }]}>
-              <Feather name="headphones" size={18} color={colors.primary} />
-            </View>
+            {(() => {
+              const photoUrl = walk.currentNarrationPlace?.photoUrl;
+              return photoUrl ? (
+                <Image
+                  source={{ uri: photoUrl }}
+                  style={styles.nowPlayingPhoto}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.nowPlayingIcon, { backgroundColor: colors.primary + "18" }]}>
+                  <Feather name="headphones" size={18} color={colors.primary} />
+                </View>
+              );
+            })()}
             <View style={styles.nowPlayingText}>
               <Text style={[styles.nowPlayingLabel, { color: colors.mutedForeground }]}>
                 {t.walkMode.nowPlaying}
@@ -305,6 +317,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  nowPlayingPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
   },
   nowPlayingText: { flex: 1, minWidth: 0 },
   nowPlayingLabel: {

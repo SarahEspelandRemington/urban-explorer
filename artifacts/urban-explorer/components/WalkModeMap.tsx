@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MapView, { Circle, Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
@@ -16,6 +16,7 @@ interface WalkPlace {
   summary?: string;
   facts?: string[];
   address?: string;
+  photoUrl?: string;
 }
 
 interface WalkModeMapProps {
@@ -436,6 +437,13 @@ export function WalkModeMap({
                       <Feather name="check-circle" size={13} color={colors.primary} style={{ opacity: iconOpacity }} />
                     ) : null}
                   </View>
+                  {p.photoUrl ? (
+                    <Image
+                      source={{ uri: p.photoUrl }}
+                      style={[styles.previewThumb, { opacity: visited ? 0.5 : 1 }]}
+                      resizeMode="cover"
+                    />
+                  ) : null}
                   <Pressable
                     onPress={() => focusPlace(p)}
                     style={({ pressed }) => [
@@ -542,6 +550,12 @@ const styles = StyleSheet.create({
     width: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  previewThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    marginRight: 6,
   },
   previewItem: {
     flex: 1,

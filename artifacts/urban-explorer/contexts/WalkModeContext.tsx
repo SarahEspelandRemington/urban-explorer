@@ -71,6 +71,7 @@ interface WalkModeContextType {
   isLoading: boolean;
   density: WalkDensity;
   setDensity: (d: WalkDensity) => void;
+  currentNarrationPlace: WalkPlace | null;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
@@ -171,6 +172,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
   const [density, setDensityState] = useState<WalkDensity>("sparse");
+  const [currentNarrationPlace, setCurrentNarrationPlace] = useState<WalkPlace | null>(null);
 
   const { localeRef } = useLocale();
   const narration = useNarration();
@@ -238,6 +240,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // Drop the artwork association so the next idle widget update doesn't
       // keep showing a photo from a place we've already moved past.
       currentNarrationPlaceRef.current = null;
+      setCurrentNarrationPlace(null);
     }
   }, [narration.isSpeaking, currentLocation]);
 
@@ -338,6 +341,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           // Remember which place is now driving the lock-screen widget so the
           // artwork we send matches the story being spoken.
           currentNarrationPlaceRef.current = place;
+          setCurrentNarrationPlace(place);
           narration.enqueue(place.id, data.narration, place.name);
           if (Platform.OS !== "web") {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -733,6 +737,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         density,
         setDensity,
+        currentNarrationPlace,
       }}
     >
       {children}
