@@ -76,6 +76,16 @@ export interface Strings {
     storiesOften: string;
     storiesAsYouGo: string;
     storiesSoFar: (n: number) => string;
+    buildingFilters: string;
+    buildingFiltersDescription: string;
+    buildingGroupResidential: string;
+    buildingGroupResidentialDesc: string;
+    buildingGroupAgricultural: string;
+    buildingGroupAgriculturalDesc: string;
+    buildingGroupParking: string;
+    buildingGroupParkingDesc: string;
+    buildingGroupUtility: string;
+    buildingGroupUtilityDesc: string;
   };
   walkPlan: {
     title: string;
@@ -240,6 +250,16 @@ const en: Strings = {
     storiesOften: "Stories will play often",
     storiesAsYouGo: "Stories will play as you go",
     storiesSoFar: (n) => `${n} ${n === 1 ? "story" : "stories"} so far`,
+    buildingFilters: "Building Filters",
+    buildingFiltersDescription: "Include these building types in walk stories",
+    buildingGroupResidential: "Residential",
+    buildingGroupResidentialDesc: "Huts, sheds, roof structures",
+    buildingGroupAgricultural: "Agricultural",
+    buildingGroupAgriculturalDesc: "Barns, greenhouses, silos",
+    buildingGroupParking: "Parking & Storage",
+    buildingGroupParkingDesc: "Garages, carports, containers",
+    buildingGroupUtility: "Utilities & Facilities",
+    buildingGroupUtilityDesc: "Service buildings, kiosks, toilets",
   },
   walkPlan: {
     title: "Plan a Walk",
@@ -425,6 +445,16 @@ const es: Strings = {
     storiesOften: "Las historias sonarán con frecuencia",
     storiesAsYouGo: "Las historias sonarán mientras avanzas",
     storiesSoFar: (n) => `${n} ${n === 1 ? "historia" : "historias"} hasta ahora`,
+    buildingFilters: "Filtros de edificios",
+    buildingFiltersDescription: "Incluir estos tipos de edificios en las historias",
+    buildingGroupResidential: "Residencial",
+    buildingGroupResidentialDesc: "Cabañas, cobertizos, cubiertas",
+    buildingGroupAgricultural: "Agrícola",
+    buildingGroupAgriculturalDesc: "Graneros, invernaderos, silos",
+    buildingGroupParking: "Aparcamiento y almacenamiento",
+    buildingGroupParkingDesc: "Garajes, cocheras, contenedores",
+    buildingGroupUtility: "Servicios e instalaciones",
+    buildingGroupUtilityDesc: "Edificios de servicio, quioscos, aseos",
   },
   walkPlan: {
     title: "Planificar un paseo",
@@ -611,6 +641,16 @@ const fr: Strings = {
     storiesOften: "Les histoires se déclencheront souvent",
     storiesAsYouGo: "Les histoires se déclencheront en chemin",
     storiesSoFar: (n) => `${n} ${n === 1 ? "histoire" : "histoires"} jusqu'ici`,
+    buildingFilters: "Filtres de bâtiments",
+    buildingFiltersDescription: "Inclure ces types de bâtiments dans les histoires",
+    buildingGroupResidential: "Résidentiel",
+    buildingGroupResidentialDesc: "Cabanes, remises, toits",
+    buildingGroupAgricultural: "Agricole",
+    buildingGroupAgriculturalDesc: "Granges, serres, silos",
+    buildingGroupParking: "Parking et stockage",
+    buildingGroupParkingDesc: "Garages, carports, conteneurs",
+    buildingGroupUtility: "Services et installations",
+    buildingGroupUtilityDesc: "Bâtiments de service, kiosques, toilettes",
   },
   walkPlan: {
     title: "Planifier une balade",
@@ -796,6 +836,16 @@ const de: Strings = {
     storiesOften: "Geschichten werden häufig abgespielt",
     storiesAsYouGo: "Geschichten kommen unterwegs",
     storiesSoFar: (n) => `${n} ${n === 1 ? "Geschichte" : "Geschichten"} bisher`,
+    buildingFilters: "Gebäudefilter",
+    buildingFiltersDescription: "Diese Gebäudetypen in Geschichten einschließen",
+    buildingGroupResidential: "Wohngebäude",
+    buildingGroupResidentialDesc: "Hütten, Schuppen, Dachaufbauten",
+    buildingGroupAgricultural: "Landwirtschaft",
+    buildingGroupAgriculturalDesc: "Scheunen, Gewächshäuser, Silos",
+    buildingGroupParking: "Parken & Lagerung",
+    buildingGroupParkingDesc: "Garagen, Carports, Container",
+    buildingGroupUtility: "Versorgung & Einrichtungen",
+    buildingGroupUtilityDesc: "Betriebsgebäude, Kioske, Toiletten",
   },
   walkPlan: {
     title: "Spaziergang planen",
@@ -981,6 +1031,16 @@ const it: Strings = {
     storiesOften: "Le storie partiranno spesso",
     storiesAsYouGo: "Le storie partiranno mentre cammini",
     storiesSoFar: (n) => `${n} ${n === 1 ? "storia" : "storie"} finora`,
+    buildingFilters: "Filtri edifici",
+    buildingFiltersDescription: "Includi questi tipi di edifici nelle storie",
+    buildingGroupResidential: "Residenziale",
+    buildingGroupResidentialDesc: "Capanne, rimesse, strutture sul tetto",
+    buildingGroupAgricultural: "Agricolo",
+    buildingGroupAgriculturalDesc: "Fienili, serre, silos",
+    buildingGroupParking: "Parcheggi e depositi",
+    buildingGroupParkingDesc: "Garage, carport, container",
+    buildingGroupUtility: "Servizi e strutture",
+    buildingGroupUtilityDesc: "Edifici di servizio, chioschi, bagni",
   },
   walkPlan: {
     title: "Pianifica una passeggiata",
@@ -1166,6 +1226,16 @@ const pt: Strings = {
     storiesOften: "As histórias virão com frequência",
     storiesAsYouGo: "As histórias virão enquanto você caminha",
     storiesSoFar: (n) => `${n} ${n === 1 ? "história" : "histórias"} até agora`,
+    buildingFilters: "Filtros de edifícios",
+    buildingFiltersDescription: "Incluir estes tipos de edifícios nas histórias",
+    buildingGroupResidential: "Residencial",
+    buildingGroupResidentialDesc: "Cabanas, galpões, telhados",
+    buildingGroupAgricultural: "Agrícola",
+    buildingGroupAgriculturalDesc: "Celeiros, estufas, silos",
+    buildingGroupParking: "Estacionamento e armazenagem",
+    buildingGroupParkingDesc: "Garagens, carports, contêineres",
+    buildingGroupUtility: "Serviços e instalações",
+    buildingGroupUtilityDesc: "Edificações de serviço, quiosques, banheiros",
   },
   walkPlan: {
     title: "Planejar passeio",
@@ -1350,6 +1420,16 @@ const nl: Strings = {
     storiesOften: "Verhalen spelen vaak af",
     storiesAsYouGo: "Verhalen spelen onderweg af",
     storiesSoFar: (n) => `${n} ${n === 1 ? "verhaal" : "verhalen"} tot nu toe`,
+    buildingFilters: "Gebouwfilters",
+    buildingFiltersDescription: "Neem deze gebouwtypes op in loopverhalen",
+    buildingGroupResidential: "Woningbouw",
+    buildingGroupResidentialDesc: "Hutten, schuren, dakstructuren",
+    buildingGroupAgricultural: "Agrarisch",
+    buildingGroupAgriculturalDesc: "Schuren, kassen, silo's",
+    buildingGroupParking: "Parkeren & opslag",
+    buildingGroupParkingDesc: "Garages, carports, containers",
+    buildingGroupUtility: "Nutsvoorzieningen & faciliteiten",
+    buildingGroupUtilityDesc: "Servicegebouwen, kiosken, toiletten",
   },
   walkPlan: {
     title: "Wandeling plannen",
@@ -1534,6 +1614,16 @@ const ja: Strings = {
     storiesOften: "頻繁に物語が再生されます",
     storiesAsYouGo: "歩きながら物語が再生されます",
     storiesSoFar: (n) => `これまでに${n}件の物語`,
+    buildingFilters: "建物フィルター",
+    buildingFiltersDescription: "ウォークストーリーに含める建物タイプを選択",
+    buildingGroupResidential: "住宅系",
+    buildingGroupResidentialDesc: "小屋、物置、屋根構造物",
+    buildingGroupAgricultural: "農業系",
+    buildingGroupAgriculturalDesc: "納屋、温室、サイロ",
+    buildingGroupParking: "駐車場・倉庫",
+    buildingGroupParkingDesc: "ガレージ、カーポート、コンテナ",
+    buildingGroupUtility: "設備・施設",
+    buildingGroupUtilityDesc: "サービス棟、キオスク、トイレ",
   },
   walkPlan: {
     title: "ウォーク計画",
@@ -1718,6 +1808,16 @@ const ko: Strings = {
     storiesOften: "이야기가 자주 재생됩니다",
     storiesAsYouGo: "걷는 동안 이야기가 재생됩니다",
     storiesSoFar: (n) => `지금까지 ${n}개의 이야기`,
+    buildingFilters: "건물 필터",
+    buildingFiltersDescription: "산책 이야기에 포함할 건물 유형 선택",
+    buildingGroupResidential: "주거 시설",
+    buildingGroupResidentialDesc: "오두막, 창고, 지붕 구조물",
+    buildingGroupAgricultural: "농업 시설",
+    buildingGroupAgriculturalDesc: "헛간, 온실, 사일로",
+    buildingGroupParking: "주차 및 보관",
+    buildingGroupParkingDesc: "차고, 카포트, 컨테이너",
+    buildingGroupUtility: "유틸리티 및 시설",
+    buildingGroupUtilityDesc: "서비스 건물, 키오스크, 화장실",
   },
   walkPlan: {
     title: "걷기 계획",
@@ -1901,6 +2001,16 @@ const zh: Strings = {
     storiesOften: "故事会经常播放",
     storiesAsYouGo: "走着走着会有故事",
     storiesSoFar: (n) => `已讲 ${n} 个故事`,
+    buildingFilters: "建筑过滤",
+    buildingFiltersDescription: "选择要纳入步行故事的建筑类型",
+    buildingGroupResidential: "住宅类",
+    buildingGroupResidentialDesc: "小屋、棚屋、屋顶结构",
+    buildingGroupAgricultural: "农业类",
+    buildingGroupAgriculturalDesc: "谷仓、温室、筒仓",
+    buildingGroupParking: "停车与储存",
+    buildingGroupParkingDesc: "车库、车棚、集装箱",
+    buildingGroupUtility: "公用设施",
+    buildingGroupUtilityDesc: "服务建筑、亭子、卫生间",
   },
   walkPlan: {
     title: "规划步行",

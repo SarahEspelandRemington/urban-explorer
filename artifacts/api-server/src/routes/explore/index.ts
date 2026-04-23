@@ -698,19 +698,28 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const { latitude, longitude, radius, mode, accuracy } = parsed.data;
+  const { latitude, longitude, radius, mode, accuracy, includeBuildingTypes } = parsed.data;
   const isQuick = mode === "quick";
   const requestedRadius = radius ?? (isQuick ? 500 : 300);
   const searchRadius = Math.max(50, Math.min(1000, requestedRadius));
 
   const radiusFeet = Math.round(searchRadius * 3.281);
 
+  // Compute the effective denylist: start from the module-level set and
+  // remove any types the user has opted into. Normalise to lowercase.
+  const userIncludes = new Set((includeBuildingTypes ?? []).map((t) => t.toLowerCase()));
+  const effectiveDenylist = new Set([...BORING_BUILDING_TYPES].filter((t: string) => !userIncludes.has(t)));
+
   // ±55m cache grid (toFixed(3) ≈ 111m per unit → 0.5 unit = ~55m).
   // This means any two queries within ~55m of each other share the same
   // cache entry, which is correct — the historical places on the same block
   // are the same regardless of exactly where you stood.
+  // When the user has unlocked specific building types we append a sorted
+  // suffix so their preference gets its own LLM-cache slot.
   const modeKey = isQuick ? "quick" : "full";
-  const discoverCacheKey = `${modeKey}:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}`;
+  const includesSuffix =
+    userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
+  const discoverCacheKey = `${modeKey}:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(discoverCacheKey);
   if (cachedDiscover) {
     // Re-apply current ratings on every cache hit so newly-submitted ratings
@@ -755,6 +764,15 @@ router.post("/explore/discover", async (req, res) => {
   } catch {
     osmPlaces = [];
   }
+
+  // Apply boring-building denylist now that we have the user's preferences.
+  if (effectiveDenylist.size > 0) {
+    osmPlaces = osmPlaces.filter((p) => {
+      const building = (p.tags["building"] ?? "").toLowerCase();
+      return !building || !effectiveDenylist.has(building);
+    });
+  }
+
   const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
   const placeCount = isQuick ? "8-12" : "8-12";

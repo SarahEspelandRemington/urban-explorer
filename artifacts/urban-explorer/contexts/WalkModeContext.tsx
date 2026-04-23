@@ -9,6 +9,7 @@ import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/us
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
+import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/buildingTypeGroups";
 
 // Background location task name. Defining the task at module scope (outside any
 // component) is required by expo-task-manager — the OS may invoke this task
@@ -73,6 +74,8 @@ interface WalkModeContextType {
   setDensity: (d: WalkDensity) => void;
   currentNarrationPlace: WalkPlace | null;
   fetchPlacesAlongRoute: (geometry: number[][], maxPlaces?: number) => Promise<WalkPlace[]>;
+  enabledBuildingGroups: Set<BuildingGroupKey>;
+  setEnabledBuildingGroups: (groups: Set<BuildingGroupKey>) => void;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
@@ -183,6 +186,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
   const [density, setDensityState] = useState<WalkDensity>("sparse");
   const [currentNarrationPlace, setCurrentNarrationPlace] = useState<WalkPlace | null>(null);
+  const [enabledBuildingGroups, setEnabledBuildingGroupsState] = useState<Set<BuildingGroupKey>>(new Set());
+  const enabledBuildingGroupsRef = useRef<Set<BuildingGroupKey>>(new Set());
+
+  const setEnabledBuildingGroups = useCallback((groups: Set<BuildingGroupKey>) => {
+    enabledBuildingGroupsRef.current = groups;
+    setEnabledBuildingGroupsState(groups);
+    // Reset the fetch anchor so the next GPS tick re-fetches with the new prefs.
+    lastFetchRef.current = null;
+  }, []);
 
   const { localeRef } = useLocale();
   const narration = useNarration();
@@ -292,6 +304,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // happen to have one, but never wait.
       const body: Record<string, unknown> = { latitude, longitude, radius: cfg.discoverRadius };
       if (cachedAddressHintRef.current) body.addressHint = cachedAddressHintRef.current;
+      const includedTypes = groupKeysToIncludedTypes(enabledBuildingGroupsRef.current);
+      if (includedTypes.length > 0) body.includeBuildingTypes = includedTypes;
 
       // Kick off a non-blocking reverse-geocode for the NEXT fetch to use.
       Location.reverseGeocodeAsync({ latitude, longitude })
@@ -788,6 +802,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         setDensity,
         currentNarrationPlace,
         fetchPlacesAlongRoute,
+        enabledBuildingGroups,
+        setEnabledBuildingGroups,
       }}
     >
       {children}

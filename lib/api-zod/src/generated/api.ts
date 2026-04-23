@@ -50,6 +50,12 @@ export const DiscoverPlacesBody = zod.object({
     .describe(
       "Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning",
     ),
+  includeBuildingTypes: zod
+    .array(zod.string())
+    .optional()
+    .describe(
+      "Building types from the default denylist to allow through — e.g. ['barn','greenhouse']. Unrecognised values are silently ignored.",
+    ),
 });
 
 export const DiscoverPlacesResponse = zod.object({
