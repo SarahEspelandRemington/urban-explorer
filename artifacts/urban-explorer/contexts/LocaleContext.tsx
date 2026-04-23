@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Localization from "expo-localization";
 import React, {
   createContext,
   useCallback,
@@ -28,12 +29,36 @@ interface LocaleContextType {
 
 const LocaleContext = createContext<LocaleContextType | null>(null);
 
+function matchDeviceLocale(
+  deviceLocales: ReadonlyArray<{ languageCode: string | null }>,
+): string | null {
+  for (const entry of deviceLocales) {
+    const code = entry.languageCode?.toLowerCase();
+    if (!code) continue;
+    if (NOTIFICATION_LOCALES.some((l) => l.code === code)) {
+      return code;
+    }
+  }
+  return null;
+}
+
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<string>(DEFAULT_NOTIFICATION_LOCALE);
-  // Mirror in a ref so non-reactive consumers (e.g. the WalkModeProvider's
-  // startWalk closure) can read the latest value without forcing a re-render
-  // on every locale change.
-  const localeRef = useRef<string>(DEFAULT_NOTIFICATION_LOCALE);
+  const deviceLocales = Localization.useLocales();
+  const deviceLocale = useMemo(
+    () => matchDeviceLocale(deviceLocales) ?? DEFAULT_NOTIFICATION_LOCALE,
+    [deviceLocales],
+  );
+
+  // null means "follow the device language". A string means the user has
+  // explicitly picked a language and that choice should win over the device.
+  const [override, setOverride] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  const locale = hydrated && override ? override : deviceLocale;
+  const localeRef = useRef<string>(locale);
+  useEffect(() => {
+    localeRef.current = locale;
+  }, [locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,11 +66,13 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       .then((stored) => {
         if (cancelled) return;
         if (stored && NOTIFICATION_LOCALES.some((l) => l.code === stored)) {
-          localeRef.current = stored;
-          setLocaleState(stored);
+          setOverride(stored);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setHydrated(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -53,8 +80,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   const setLocale = useCallback(async (code: string) => {
     if (!NOTIFICATION_LOCALES.some((l) => l.code === code)) return;
-    localeRef.current = code;
-    setLocaleState(code);
+    setOverride(code);
     try {
       await AsyncStorage.setItem(STORAGE_KEY, code);
     } catch {}
