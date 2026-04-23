@@ -17,6 +17,8 @@ import {
 } from "@workspace/api-zod";
 import { db, placeRatings, placePhotos, userPlaceRatings } from "@workspace/db";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 
 const router = Router();
 
@@ -30,7 +32,7 @@ interface OSMPlace {
 
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
 
-const BORING_BUILDING_TYPES = new Set([
+const DEFAULT_BORING_BUILDING_TYPES = [
   "garage",
   "garages",
   "shed",
@@ -49,7 +51,33 @@ const BORING_BUILDING_TYPES = new Set([
   "parking",
   "garbage_shed",
   "bicycle_parking",
-]);
+];
+
+function loadBoringBuildingTypes(): Set<string> {
+  if (process.env.BORING_BUILDING_TYPES) {
+    const types = process.env.BORING_BUILDING_TYPES.split(",").map((t) => t.trim()).filter(Boolean);
+    logger.info({ count: types.length }, "Loaded BORING_BUILDING_TYPES from environment variable");
+    return new Set(types);
+  }
+
+  const configPath = process.env.BORING_BUILDING_TYPES_FILE
+    ? resolve(process.env.BORING_BUILDING_TYPES_FILE)
+    : resolve(new URL("../config/boring-building-types.json", import.meta.url).pathname);
+
+  try {
+    const raw = readFileSync(configPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
+    const types = (parsed as unknown[]).filter((v): v is string => typeof v === "string" && v.trim() !== "").map((v) => v.toLowerCase().trim());
+    logger.info({ path: configPath, count: types.length }, "Loaded BORING_BUILDING_TYPES from config file");
+    return new Set(types);
+  } catch {
+    logger.info({ path: configPath }, "Config file not found or invalid, using default BORING_BUILDING_TYPES");
+    return new Set(DEFAULT_BORING_BUILDING_TYPES);
+  }
+}
+
+const BORING_BUILDING_TYPES = loadBoringBuildingTypes();
 
 const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
 const OSM_CACHE_TTL = 5 * 60 * 1000;
