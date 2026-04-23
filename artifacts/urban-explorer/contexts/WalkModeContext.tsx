@@ -106,6 +106,17 @@ const DENSITY_CONFIG: Record<
   },
 };
 
+// Auto-density tuning. We watch the user's rolling pace over a short window
+// and flip density when their behaviour clearly shifts between "browsing" and
+// "commuting". A manual pick from the user temporarily suspends auto-switching
+// so we don't immediately undo what they chose.
+const PACE_WINDOW_MS = 60_000;
+const PACE_MIN_WINDOW_MS = 15_000;
+const SLOW_PACE_MPS = 0.6;
+const FAST_PACE_MPS = 1.4;
+const SLOW_DWELL_MS = 30_000;
+const MANUAL_OVERRIDE_MS = 5 * 60_000;
+
 function haversineMeters(
   lat1: number, lon1: number,
   lat2: number, lon2: number,
@@ -169,11 +180,28 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const isSpeakingRef = useRef(false);
   const densityRef = useRef<WalkDensity>("sparse");
   const isWalkingRef = useRef(false);
+  // Rolling pace samples: each entry is (timestamp, meters travelled since
+  // the previous sample). Pruned to the last PACE_WINDOW_MS on every update.
+  const paceSamplesRef = useRef<{ ts: number; meters: number }[]>([]);
+  // When the user's pace first dropped below SLOW_PACE_MPS. Reset whenever
+  // they speed back up. Used to require sustained slowness before promoting.
+  const slowSinceRef = useRef<number | null>(null);
+  // Until this timestamp, auto-density is suspended because the user just
+  // made an explicit choice from the UI.
+  const manualOverrideUntilRef = useRef<number>(0);
 
-  const setDensity = useCallback((d: WalkDensity) => {
+  const applyDensity = useCallback((d: WalkDensity) => {
+    if (densityRef.current === d) return;
     densityRef.current = d;
     setDensityState(d);
   }, []);
+
+  const setDensity = useCallback((d: WalkDensity) => {
+    // A manual pick wins for a few minutes so auto-switching doesn't undo it.
+    manualOverrideUntilRef.current = Date.now() + MANUAL_OVERRIDE_MS;
+    slowSinceRef.current = null;
+    applyDensity(d);
+  }, [applyDensity]);
 
   // Track narration speaking state in a ref so the loop can react synchronously.
   useEffect(() => {
@@ -329,6 +357,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         const dist = haversineMeters(prev.latitude, prev.longitude, latitude, longitude);
         if (dist < 200) {
           setStats((s) => ({ ...s, distanceWalked: s.distanceWalked + dist }));
+          // Feed the rolling pace buffer with this segment. Skip giant jumps
+          // (>200m between fixes likely means a teleport / GPS glitch).
+          paceSamplesRef.current.push({ ts: now, meters: dist });
         }
         // Compute heading from velocity: only trust if moved enough recently.
         if (dist >= 8 && now - prev.ts < 30_000) {
@@ -338,6 +369,42 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
       }
       prevLocationRef.current = { latitude, longitude, ts: now };
+
+      // --- Auto-density switching ---------------------------------------
+      // Drop samples older than the rolling window.
+      const cutoff = now - PACE_WINDOW_MS;
+      while (
+        paceSamplesRef.current.length > 0 &&
+        paceSamplesRef.current[0].ts < cutoff
+      ) {
+        paceSamplesRef.current.shift();
+      }
+      if (now >= manualOverrideUntilRef.current && paceSamplesRef.current.length > 0) {
+        const oldest = paceSamplesRef.current[0].ts;
+        const spanMs = now - oldest;
+        if (spanMs >= PACE_MIN_WINDOW_MS) {
+          const totalMeters = paceSamplesRef.current.reduce((a, s) => a + s.meters, 0);
+          const pace = totalMeters / (spanMs / 1000); // m/s
+          if (pace > FAST_PACE_MPS) {
+            // Commuting — make sure we're in Sparse and reset slow timer.
+            slowSinceRef.current = null;
+            if (densityRef.current === "dense") applyDensity("sparse");
+          } else if (pace < SLOW_PACE_MPS) {
+            // Browsing — require sustained slowness before flipping to Dense.
+            if (slowSinceRef.current === null) {
+              slowSinceRef.current = now;
+            } else if (
+              densityRef.current === "sparse" &&
+              now - slowSinceRef.current >= SLOW_DWELL_MS
+            ) {
+              applyDensity("dense");
+            }
+          } else {
+            // In-between pace: reset the slow dwell timer but don't flip back.
+            slowSinceRef.current = null;
+          }
+        }
+      }
 
       // Refetch on movement.
       const cfg = DENSITY_CONFIG[densityRef.current];
@@ -434,6 +501,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     velocityHeadingRef.current = null;
     cachedAddressHintRef.current = "";
     lastNarrationEndLocationRef.current = null;
+    paceSamplesRef.current = [];
+    slowSinceRef.current = null;
+    manualOverrideUntilRef.current = 0;
     // Start cooldown so we don't fire instantly before the user has even moved.
     lastNarrationEndRef.current = Date.now() - DENSITY_CONFIG[densityRef.current].cooldownMs + 5000;
 
