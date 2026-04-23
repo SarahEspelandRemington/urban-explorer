@@ -29,7 +29,7 @@ export function HeadingBanner() {
   const heading = useHeading();
 
   // Hide on the immersive Walk Mode screens — they have their own narration UI.
-  if (pathname?.startsWith("/walk-mode") || pathname?.startsWith("/walk-plan")) {
+  if (pathname?.startsWith("/walk-mode")) {
     return null;
   }
   if (!heading.target && !heading.audioPlace) return null;

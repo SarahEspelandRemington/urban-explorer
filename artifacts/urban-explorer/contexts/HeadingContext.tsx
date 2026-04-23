@@ -232,7 +232,7 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
   // tear down any active heading so the two narration channels don't fight.
   useEffect(() => {
     if (
-      (pathname?.startsWith("/walk-mode") || pathname?.startsWith("/walk-plan")) &&
+      pathname?.startsWith("/walk-mode") &&
       (target || audioPlace)
     ) {
       cancel();

@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 
 import { unlockWebSpeech, useNarration } from "@/hooks/useNarration";
@@ -18,18 +18,10 @@ interface WalkPlace {
   longitude: number;
   address?: string;
   distanceMeters?: number;
-  progressMeters?: number;
-  offsetMeters?: number;
+  netScore?: number;
 }
 
-export interface PlannedRoute {
-  start: { latitude: number; longitude: number; label?: string };
-  end: { latitude: number; longitude: number; label?: string };
-  geometry: [number, number][];
-  distanceMeters: number;
-  durationSeconds: number;
-  places: WalkPlace[];
-}
+export type WalkDensity = "sparse" | "dense";
 
 interface WalkStats {
   startTime: number;
@@ -47,20 +39,42 @@ interface WalkModeContextType {
   stats: WalkStats;
   narration: ReturnType<typeof useNarration>;
   isLoading: boolean;
-  plannedRoute: PlannedRoute | null;
-  setPlannedRoute: (route: PlannedRoute | null) => void;
-  routeProgressMeters: number;
-  nextPlace: WalkPlace | null;
-  nextPlaceDistanceMeters: number | null;
+  density: WalkDensity;
+  setDensity: (d: WalkDensity) => void;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
 
-const PROXIMITY_RADIUS = 80;
-const REFETCH_DISTANCE = 200;
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
-function haversineDistance(
+// Density tuning
+const DENSITY_CONFIG: Record<
+  WalkDensity,
+  {
+    refetchMeters: number;
+    cooldownMs: number;
+    netScoreFloor: number;
+    maxQueueDistance: number;
+    discoverRadius: number;
+  }
+> = {
+  sparse: {
+    refetchMeters: 120,
+    cooldownMs: 75 * 1000,
+    netScoreFloor: 1,
+    maxQueueDistance: 300,
+    discoverRadius: 300,
+  },
+  dense: {
+    refetchMeters: 60,
+    cooldownMs: 25 * 1000,
+    netScoreFloor: -2,
+    maxQueueDistance: 220,
+    discoverRadius: 250,
+  },
+};
+
+function haversineMeters(
   lat1: number, lon1: number,
   lat2: number, lon2: number,
 ): number {
@@ -75,52 +89,24 @@ function haversineDistance(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function projectToMeters(
-  lat: number, lng: number,
-  originLat: number, originLng: number,
-): { x: number; y: number } {
-  const cosLat = Math.cos((originLat * Math.PI) / 180);
-  return {
-    x: (lng - originLng) * 111320 * cosLat,
-    y: (lat - originLat) * 111320,
-  };
+function bearingDeg(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number,
+): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const phi1 = toRad(lat1);
+  const phi2 = toRad(lat2);
+  const dLambda = toRad(lon2 - lon1);
+  const y = Math.sin(dLambda) * Math.cos(phi2);
+  const x =
+    Math.cos(phi1) * Math.sin(phi2) -
+    Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLambda);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
 
-function progressAlongRoute(
-  geometry: [number, number][],
-  lat: number, lng: number,
-): number {
-  if (!geometry || geometry.length < 2) return 0;
-  const [originLat, originLng] = geometry[0];
-  const projected = geometry.map(([la, ln]) => projectToMeters(la, ln, originLat, originLng));
-  const target = projectToMeters(lat, lng, originLat, originLng);
-
-  let bestDist = Infinity;
-  let bestProgress = 0;
-  let cumulative = 0;
-
-  for (let i = 0; i < projected.length - 1; i++) {
-    const a = projected[i];
-    const b = projected[i + 1];
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    const segLen2 = dx * dx + dy * dy;
-    let t = 0;
-    if (segLen2 > 0) {
-      t = ((target.x - a.x) * dx + (target.y - a.y) * dy) / segLen2;
-      t = Math.max(0, Math.min(1, t));
-    }
-    const closestX = a.x + t * dx;
-    const closestY = a.y + t * dy;
-    const dist = Math.sqrt((target.x - closestX) ** 2 + (target.y - closestY) ** 2);
-    const segLen = Math.sqrt(segLen2);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestProgress = cumulative + t * segLen;
-    }
-    cumulative += segLen;
-  }
-  return bestProgress;
+function angularDiff(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
 }
 
 export function WalkModeProvider({ children }: { children: React.ReactNode }) {
@@ -130,31 +116,41 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [narratedIds, setNarratedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
-  const [plannedRoute, setPlannedRouteState] = useState<PlannedRoute | null>(null);
-  const [routeProgressMeters, setRouteProgressMeters] = useState(0);
+  const [density, setDensityState] = useState<WalkDensity>("sparse");
 
   const narration = useNarration();
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const lastFetchRef = useRef<{ latitude: number; longitude: number } | null>(null);
-  const prevLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const prevLocationRef = useRef<{ latitude: number; longitude: number; ts: number } | null>(null);
+  const headingRef = useRef<number | null>(null);
   const fetchingRef = useRef(false);
   const narratedIdsRef = useRef<Set<string>>(new Set());
-  const plannedRouteRef = useRef<PlannedRoute | null>(null);
+  const placesRef = useRef<WalkPlace[]>([]);
+  const lastNarrationEndRef = useRef<number>(0);
+  const isSpeakingRef = useRef(false);
+  const densityRef = useRef<WalkDensity>("sparse");
+  const isWalkingRef = useRef(false);
 
-  const setPlannedRoute = useCallback((route: PlannedRoute | null) => {
-    plannedRouteRef.current = route;
-    setPlannedRouteState(route);
-    if (route) {
-      setNearbyPlaces(route.places);
-    }
+  const setDensity = useCallback((d: WalkDensity) => {
+    densityRef.current = d;
+    setDensityState(d);
   }, []);
+
+  // Track narration speaking state in a ref so the loop can react synchronously.
+  useEffect(() => {
+    const wasSpeaking = isSpeakingRef.current;
+    isSpeakingRef.current = narration.isSpeaking;
+    if (wasSpeaking && !narration.isSpeaking) {
+      lastNarrationEndRef.current = Date.now();
+    }
+  }, [narration.isSpeaking]);
 
   const fetchNearbyPlaces = useCallback(async (latitude: number, longitude: number) => {
     if (fetchingRef.current) return;
-    if (plannedRouteRef.current) return; // planned routes use their own pre-fetched places
     fetchingRef.current = true;
     setIsLoading(true);
     try {
+      const cfg = DENSITY_CONFIG[densityRef.current];
       let addressHint = "";
       try {
         const geocoded = await Location.reverseGeocodeAsync({ latitude, longitude });
@@ -165,7 +161,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {}
 
-      const body: Record<string, unknown> = { latitude, longitude, radius: 250 };
+      const body: Record<string, unknown> = { latitude, longitude, radius: cfg.discoverRadius };
       if (addressHint) body.addressHint = addressHint;
 
       const res = await fetch(`${API_BASE}/api/explore/discover`, {
@@ -175,8 +171,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.places) {
-          setNearbyPlaces(data.places);
+        if (Array.isArray(data?.places)) {
+          // Merge with existing — keep narrated entries so chips persist, dedupe by id.
+          const incoming = data.places as WalkPlace[];
+          const map = new Map<string, WalkPlace>();
+          for (const p of placesRef.current) map.set(p.id, p);
+          for (const p of incoming) map.set(p.id, p);
+          const merged = Array.from(map.values());
+          placesRef.current = merged;
+          setNearbyPlaces(merged);
           lastFetchRef.current = { latitude, longitude };
         }
       }
@@ -209,136 +212,124 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           setStats((prev) => ({ ...prev, placesNarrated: prev.placesNarrated + 1 }));
         }
       }
-    } catch {
-    }
+    } catch {}
   }, [narration]);
+
+  /**
+   * Pick the best place to narrate next, given current location, heading, density.
+   * Returns null if nothing qualifies right now.
+   */
+  const pickNext = useCallback((): WalkPlace | null => {
+    const loc = currentLocation;
+    if (!loc) return null;
+    const cfg = DENSITY_CONFIG[densityRef.current];
+    const heading = headingRef.current;
+
+    let best: WalkPlace | null = null;
+    let bestScore = Infinity;
+
+    for (const p of placesRef.current) {
+      if (narratedIdsRef.current.has(p.id)) continue;
+      const dist = haversineMeters(loc.latitude, loc.longitude, p.latitude, p.longitude);
+      if (dist > cfg.maxQueueDistance) continue;
+      const net = p.netScore ?? 0;
+      if (net < cfg.netScoreFloor) continue;
+
+      // Scoring: lower is better. Distance is the base.
+      let score = dist;
+      // Forward bias: subtract up to 60m bonus when place is in our direction of travel.
+      if (heading !== null) {
+        const placeBearing = bearingDeg(loc.latitude, loc.longitude, p.latitude, p.longitude);
+        const diff = angularDiff(heading, placeBearing);
+        // diff=0 → cos=1 → -60m bonus; diff=90 → 0; diff=180 → +60m penalty.
+        score -= 60 * Math.cos((diff * Math.PI) / 180);
+      }
+      // Rating bonus: each net upvote shaves up to 20m, capped at 80m.
+      score -= Math.min(80, Math.max(-40, net * 20));
+
+      if (score < bestScore) {
+        bestScore = score;
+        best = p;
+      }
+    }
+    return best;
+  }, [currentLocation]);
 
   const handleLocationUpdate = useCallback(
     (location: Location.LocationObject) => {
       const { latitude, longitude } = location.coords;
+      const now = Date.now();
       setCurrentLocation({ latitude, longitude });
 
       if (prevLocationRef.current) {
-        const dist = haversineDistance(
-          prevLocationRef.current.latitude,
-          prevLocationRef.current.longitude,
+        const prev = prevLocationRef.current;
+        const dist = haversineMeters(prev.latitude, prev.longitude, latitude, longitude);
+        if (dist < 200) {
+          setStats((s) => ({ ...s, distanceWalked: s.distanceWalked + dist }));
+        }
+        // Compute heading from velocity: only trust if moved enough recently.
+        if (dist >= 8 && now - prev.ts < 30_000) {
+          headingRef.current = bearingDeg(prev.latitude, prev.longitude, latitude, longitude);
+        }
+      }
+      prevLocationRef.current = { latitude, longitude, ts: now };
+
+      // Refetch on movement.
+      const cfg = DENSITY_CONFIG[densityRef.current];
+      if (!lastFetchRef.current) {
+        fetchNearbyPlaces(latitude, longitude);
+      } else {
+        const distFromLastFetch = haversineMeters(
+          lastFetchRef.current.latitude,
+          lastFetchRef.current.longitude,
           latitude,
           longitude,
         );
-        if (dist < 200) {
-          // ignore GPS jumps that suggest teleport
-          setStats((prev) => ({ ...prev, distanceWalked: prev.distanceWalked + dist }));
+        if (distFromLastFetch > cfg.refetchMeters) {
+          fetchNearbyPlaces(latitude, longitude);
         }
-      }
-      prevLocationRef.current = { latitude, longitude };
-
-      if (plannedRouteRef.current) {
-        const progress = progressAlongRoute(
-          plannedRouteRef.current.geometry, latitude, longitude,
-        );
-        setRouteProgressMeters(progress);
-        return;
-      }
-
-      if (!lastFetchRef.current) {
-        fetchNearbyPlaces(latitude, longitude);
-        return;
-      }
-
-      const distFromLastFetch = haversineDistance(
-        lastFetchRef.current.latitude,
-        lastFetchRef.current.longitude,
-        latitude,
-        longitude,
-      );
-      if (distFromLastFetch > REFETCH_DISTANCE) {
-        fetchNearbyPlaces(latitude, longitude);
       }
     },
     [fetchNearbyPlaces],
   );
 
-  const hasAutoNarratedRef = useRef(false);
-
+  // Free-roam narration loop: every second, see if we should start the next story.
   useEffect(() => {
-    if (!isWalking || !currentLocation || nearbyPlaces.length === 0) return;
-
-    const isPlanned = !!plannedRouteRef.current;
-
-    // For ad-hoc (non-planned) walks: kick off narration with the closest unnarrated
-    // place on the very first location update so the user hears something immediately.
-    // Planned walks rely on real proximity + route-progress ordering only.
-    if (!isPlanned && !hasAutoNarratedRef.current) {
-      hasAutoNarratedRef.current = true;
-      let closest: WalkPlace | null = null;
-      let closestDist = Infinity;
-      for (const place of nearbyPlaces) {
-        if (narratedIdsRef.current.has(place.id)) continue;
-        const dist = haversineDistance(
-          currentLocation.latitude,
-          currentLocation.longitude,
-          place.latitude,
-          place.longitude,
-        );
-        if (dist < closestDist) {
-          closestDist = dist;
-          closest = place;
-        }
-      }
-      if (closest) {
-        narratedIdsRef.current.add(closest.id);
-        setNarratedIds(new Set(narratedIdsRef.current));
-        fetchNarration(closest);
-      }
-    }
-
-    for (const place of nearbyPlaces) {
-      if (narratedIdsRef.current.has(place.id)) continue;
-      const dist = haversineDistance(
-        currentLocation.latitude,
-        currentLocation.longitude,
-        place.latitude,
-        place.longitude,
-      );
-      if (dist > PROXIMITY_RADIUS) continue;
-
-      // For planned walks, also enforce route-progress ordering so loopbacks /
-      // crossings don't trigger out-of-sequence narration.
-      if (isPlanned) {
-        const placeProgress = place.progressMeters ?? 0;
-        // Allow places within a window of where the user currently is along the route.
-        if (placeProgress < routeProgressMeters - 60) continue; // already passed
-        if (placeProgress > routeProgressMeters + 200) continue; // way ahead
-      }
-
-      narratedIdsRef.current.add(place.id);
+    if (!isWalking) return;
+    const tick = () => {
+      if (!isWalkingRef.current) return;
+      if (isSpeakingRef.current) return;
+      const cfg = DENSITY_CONFIG[densityRef.current];
+      if (Date.now() - lastNarrationEndRef.current < cfg.cooldownMs) return;
+      const next = pickNext();
+      if (!next) return;
+      narratedIdsRef.current.add(next.id);
       setNarratedIds(new Set(narratedIdsRef.current));
-      fetchNarration(place);
-    }
-  }, [isWalking, currentLocation, nearbyPlaces, fetchNarration, routeProgressMeters]);
+      fetchNarration(next);
+    };
+    const interval = setInterval(tick, 1500);
+    return () => clearInterval(interval);
+  }, [isWalking, pickNext, fetchNarration]);
 
   const startWalk = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      return;
-    }
+    if (status !== "granted") return;
 
+    isWalkingRef.current = true;
     setIsWalking(true);
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
     setNarratedIds(new Set());
     narratedIdsRef.current = new Set();
-    if (!plannedRouteRef.current) {
-      setNearbyPlaces([]);
-    }
+    placesRef.current = [];
+    setNearbyPlaces([]);
     lastFetchRef.current = null;
     prevLocationRef.current = null;
-    hasAutoNarratedRef.current = false;
-    setRouteProgressMeters(0);
+    headingRef.current = null;
+    // Start cooldown so we don't fire instantly before the user has even moved.
+    lastNarrationEndRef.current = Date.now() - DENSITY_CONFIG[densityRef.current].cooldownMs + 5000;
 
     if (Platform.OS === "web") {
-      try {
-        unlockWebSpeech();
-      } catch {}
+      try { unlockWebSpeech(); } catch {}
     }
 
     const accuracy =
@@ -351,45 +342,22 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const sub = await Location.watchPositionAsync(
-        {
-          accuracy,
-          distanceInterval: 5,
-          timeInterval: 2000,
-        },
+        { accuracy, distanceInterval: 5, timeInterval: 2000 },
         handleLocationUpdate,
       );
       watchRef.current = sub;
-    } catch {
-    }
+    } catch {}
   }, [handleLocationUpdate]);
 
   const stopWalk = useCallback(() => {
+    isWalkingRef.current = false;
     setIsWalking(false);
     narration.stop();
     if (watchRef.current) {
-      try {
-        watchRef.current.remove();
-      } catch {}
+      try { watchRef.current.remove(); } catch {}
       watchRef.current = null;
     }
   }, [narration]);
-
-  const { nextPlace, nextPlaceDistanceMeters } = useMemo(() => {
-    if (!plannedRoute || !currentLocation) {
-      return { nextPlace: null as WalkPlace | null, nextPlaceDistanceMeters: null as number | null };
-    }
-    const upcoming = plannedRoute.places
-      .filter((p) => !narratedIds.has(p.id))
-      .filter((p) => (p.progressMeters ?? 0) >= routeProgressMeters - 30)
-      .sort((a, b) => (a.progressMeters ?? 0) - (b.progressMeters ?? 0));
-    const next = upcoming[0] ?? null;
-    if (!next) return { nextPlace: null, nextPlaceDistanceMeters: null };
-    const dist = haversineDistance(
-      currentLocation.latitude, currentLocation.longitude,
-      next.latitude, next.longitude,
-    );
-    return { nextPlace: next, nextPlaceDistanceMeters: Math.round(dist) };
-  }, [plannedRoute, currentLocation, narratedIds, routeProgressMeters]);
 
   return (
     <WalkModeContext.Provider
@@ -403,11 +371,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         stats,
         narration,
         isLoading,
-        plannedRoute,
-        setPlannedRoute,
-        routeProgressMeters,
-        nextPlace,
-        nextPlaceDistanceMeters,
+        density,
+        setDensity,
       }}
     >
       {children}

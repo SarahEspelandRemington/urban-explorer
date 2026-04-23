@@ -435,7 +435,7 @@ export default function ExploreScreen() {
         onBack={() => setShowLocationSearch(false)}
         onWalkMode={() => {
           if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          router.push("/walk-plan");
+          router.push("/walk-mode");
         }}
       />
     );
@@ -537,7 +537,7 @@ export default function ExploreScreen() {
             onPress={() => {
               unlockWebSpeech();
               if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/walk-plan");
+              router.push("/walk-mode");
             }}
             style={({ pressed }) => [
               styles.searchButton,
@@ -824,7 +824,7 @@ export default function ExploreScreen() {
                   onPress={() => {
                     unlockWebSpeech();
                     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    router.push("/walk-plan");
+                    router.push("/walk-mode");
                   }}
                   style={({ pressed }) => [
                     styles.walkCard,
