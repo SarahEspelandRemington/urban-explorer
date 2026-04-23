@@ -30,6 +30,27 @@ interface OSMPlace {
 
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
 
+const BORING_BUILDING_TYPES = new Set([
+  "garage",
+  "garages",
+  "shed",
+  "hut",
+  "roof",
+  "carport",
+  "barn",
+  "storage_tank",
+  "silo",
+  "container",
+  "outhouse",
+  "greenhouse",
+  "service",
+  "kiosk",
+  "toilets",
+  "parking",
+  "garbage_shed",
+  "bicycle_parking",
+]);
+
 const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
 const OSM_CACHE_TTL = 5 * 60 * 1000;
 const OSM_CACHE_DISTANCE = 200;
@@ -1837,27 +1858,6 @@ out center body 250;
 
     const json = (await resp.json()) as { elements?: any[] };
     if (!json.elements) return [];
-
-    const BORING_BUILDING_TYPES = new Set([
-      "garage",
-      "garages",
-      "shed",
-      "hut",
-      "roof",
-      "carport",
-      "barn",
-      "storage_tank",
-      "silo",
-      "container",
-      "outhouse",
-      "greenhouse",
-      "service",
-      "kiosk",
-      "toilets",
-      "parking",
-      "garbage_shed",
-      "bicycle_parking",
-    ]);
 
     const seen = new Set<string>();
     const results: OSMPlace[] = [];
