@@ -1852,7 +1852,7 @@ async function fetchOSMPlacesInBoundingBox(
   bbox: { south: number; west: number; north: number; east: number },
   corridorMeters: number = 70,
   routeLengthKm?: number,
-): Promise<{ places: OSMPlace[]; osmCandidatesCap: number }> {
+): Promise<{ places: OSMPlace[]; osmCandidatesCap: number; corridorCap: number; lengthCap: number }> {
   const { south, west, north, east } = bbox;
 
   // Scale the Overpass result limit and candidate cap with corridor width.
@@ -1902,10 +1902,10 @@ out center body ${overpassLimit};
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!resp.ok) return { places: [], osmCandidatesCap };
+    if (!resp.ok) return { places: [], osmCandidatesCap, corridorCap, lengthCap };
 
     const json = (await resp.json()) as { elements?: any[] };
-    if (!json.elements) return { places: [], osmCandidatesCap };
+    if (!json.elements) return { places: [], osmCandidatesCap, corridorCap, lengthCap };
 
     const seen = new Set<string>();
     const results: OSMPlace[] = [];
@@ -1955,10 +1955,10 @@ out center body ${overpassLimit};
       results.splice(osmCandidatesCap);
     }
 
-    return { places: results, osmCandidatesCap };
+    return { places: results, osmCandidatesCap, corridorCap, lengthCap };
   } catch {
     clearTimeout(timeout);
-    return { places: [], osmCandidatesCap };
+    return { places: [], osmCandidatesCap, corridorCap, lengthCap };
   }
 }
 
@@ -2013,8 +2013,8 @@ router.post("/explore/places-along-route", async (req, res) => {
     routeLengthKm += haversineDistance(geom[i - 1][0], geom[i - 1][1], geom[i][0], geom[i][1]) / 1000;
   }
 
-  const { places: osmPlaces, osmCandidatesCap } = await fetchOSMPlacesInBoundingBox(bbox, corridor, routeLengthKm);
-  logger.info({ geomPoints: geom.length, corridorM: corridor, routeLengthKm: routeLengthKm.toFixed(2), osmCandidatesCap, osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
+  const { places: osmPlaces, osmCandidatesCap, corridorCap, lengthCap } = await fetchOSMPlacesInBoundingBox(bbox, corridor, routeLengthKm);
+  logger.info({ geomPoints: geom.length, corridorM: corridor, routeLengthKm: routeLengthKm.toFixed(2), corridorCap, lengthCap, osmCandidatesCap, osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
 
   const candidates = osmPlaces
     .map((p) => {
