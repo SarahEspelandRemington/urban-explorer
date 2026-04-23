@@ -8,6 +8,7 @@ import { useLocale } from "@/contexts/LocaleContext";
 import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
 import { getNotificationLocale } from "@/lib/notificationLocales";
+import { NowPlaying } from "@/modules/expo-now-playing/src";
 
 // Background location task name. Defining the task at module scope (outside any
 // component) is required by expo-task-manager — the OS may invoke this task
@@ -174,6 +175,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const narration = useNarration();
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const headingWatchRef = useRef<Location.LocationSubscription | null>(null);
+  const nowPlayingUnsubRef = useRef<(() => void) | null>(null);
+  // narration is recreated on each render; stash the latest in a ref so the
+  // remote command listener (registered once at startWalk) drives the live one.
+  const narrationRef = useRef(narration);
+  useEffect(() => { narrationRef.current = narration; }, [narration]);
   const lastFetchRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const prevLocationRef = useRef<{ latitude: number; longitude: number; ts: number } | null>(null);
   // Device compass heading from the magnetometer, when available.
@@ -226,6 +232,25 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         : null;
     }
   }, [narration.isSpeaking, currentLocation]);
+
+  // Mirror narration state into the iOS Now Playing widget so the lock screen
+  // shows "Urban Explorer — <place>" with working pause/play/skip controls.
+  // No-op on web/Android (the native module is iOS-only).
+  useEffect(() => {
+    if (!isWalking) return;
+    if (narration.isSpeaking && narration.currentPlace) {
+      NowPlaying.setNowPlaying(
+        narration.currentPlace,
+        "Urban Explorer",
+        narration.isPaused,
+      );
+    } else {
+      // Between stories the audio session is idle but the walk continues —
+      // keep the widget visible with a generic "listening" label so the user
+      // still sees Urban Explorer is the active audio app.
+      NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true);
+    }
+  }, [isWalking, narration.isSpeaking, narration.isPaused, narration.currentPlace]);
 
   const cachedAddressHintRef = useRef<string>("");
 
@@ -553,6 +578,24 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       try { unlockWebSpeech(); } catch {}
     }
 
+    // Bind lock-screen / Control Center commands to the narration queue.
+    if (nowPlayingUnsubRef.current) {
+      nowPlayingUnsubRef.current();
+      nowPlayingUnsubRef.current = null;
+    }
+    nowPlayingUnsubRef.current = NowPlaying.addRemoteCommandListener((cmd) => {
+      const n = narrationRef.current;
+      if (cmd === "play") n.resume();
+      else if (cmd === "pause") {
+        if (n.isPaused) n.resume();
+        else n.pause();
+      } else if (cmd === "next") n.skip();
+    });
+    // Seed the widget right away so the user sees Urban Explorer claim the
+    // Now Playing slot the moment Walk Mode starts, even before the first
+    // narration begins.
+    NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true);
+
     const accuracy =
       Platform.OS === "web" ? Location.Accuracy.High : Location.Accuracy.BestForNavigation;
 
@@ -634,6 +677,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     isWalkingRef.current = false;
     setIsWalking(false);
     narration.stop();
+    // Tear down the lock-screen widget and unbind remote commands so nothing
+    // is left in the Now Playing slot once Walk Mode ends.
+    if (nowPlayingUnsubRef.current) {
+      nowPlayingUnsubRef.current();
+      nowPlayingUnsubRef.current = null;
+    }
+    NowPlaying.clear();
     if (watchRef.current) {
       try { watchRef.current.remove(); } catch {}
       watchRef.current = null;

@@ -1,0 +1,7 @@
+{
+  "name": "expo-now-playing",
+  "version": "0.0.1",
+  "description": "Local Expo module that bridges MPNowPlayingInfoCenter and MPRemoteCommandCenter on iOS so Walk Mode narration appears in the lock-screen Now Playing widget.",
+  "main": "src/index.ts",
+  "private": true
+}
