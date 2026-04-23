@@ -1614,7 +1614,7 @@ Rules for natural-sounding speech:
 - Write how people actually talk: contractions (it's, don't, you'll), casual phrasing, little asides.
 - Add natural pause points with commas, dashes, and ellipses — the TTS engine uses these for breathing room.
 - Vary sentence length. Mix short "punchy" lines with slightly longer ones.
-- Start with something attention-grabbing — "So this building right here..." or "Okay, check this out..." or "See that detail up there?"
+- Start with something attention-grabbing, but avoid repeating "check this out" or starting too often with "oh". Use varied openings like "So this building right here..." or "See that detail up there?"
 - Avoid lists, bullet points, numbers, abbreviations, or anything that sounds weird read aloud (e.g., say "eighteen ninety" not "1890", "around nineteen twenty" not "circa 1920").
 - Never use quotes, asterisks, parentheses, or any formatting.
 - Keep it to 2-3 sentences. Like a friend nudging your arm and pointing something out.
