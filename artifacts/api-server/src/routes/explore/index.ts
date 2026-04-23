@@ -94,11 +94,13 @@ async function fetchNearbyOSMPlaces(
   nwr["historic"](around:${r},${lat},${lng});
   nwr["heritage"](around:${r},${lat},${lng});
   nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](around:${r},${lat},${lng});
-  nwr["name"]["building"~"^(church|cathedral|chapel|mosque|synagogue|temple|civic|public|commercial|industrial|warehouse|train_station|hotel)$"](around:${r},${lat},${lng});
-  nwr["name"]["landuse"~"^(religious|cemetery)$"](around:${r},${lat},${lng});
+  nwr["name"]["building"](around:${r},${lat},${lng});
+  nwr["name"]["amenity"~"^(place_of_worship|library|theatre|cinema|arts_centre|pub|bar|bank|post_office|police|fire_station|school|college|university|marketplace|townhall|courthouse|prison|hospital|community_centre|social_facility)$"](around:${r},${lat},${lng});
+  nwr["name"]["man_made"~"^(water_tower|chimney|bridge|lighthouse|monument|tower|pier|reservoir_covered|storage_tank|gasometer)$"](around:${r},${lat},${lng});
+  nwr["name"]["landuse"~"^(religious|cemetery|industrial|railway)$"](around:${r},${lat},${lng});
   nwr["memorial"](around:${r},${lat},${lng});
 );
-out center body 25;
+out center body 40;
 `;
   const controller = new AbortController();
   const abortTimeout = quickMode ? 5000 : 6000;
@@ -155,7 +157,7 @@ out center body 25;
       });
     }
 
-    const finalResults = results.slice(0, 25);
+    const finalResults = results.slice(0, 40);
     osmCache.set(`${lat},${lng}`, { places: finalResults, timestamp: Date.now() });
     return finalResults;
   } catch {
@@ -726,7 +728,7 @@ router.post("/explore/discover", async (req, res) => {
         const brainstormResponse = await openai.chat.completions.create(
           {
             model: "gpt-4.1-mini",
-            max_completion_tokens: 500,
+            max_completion_tokens: 900,
             messages: [
               {
                 role: "system",
@@ -753,7 +755,7 @@ router.post("/explore/discover", async (req, res) => {
 
   const systemPrompt = `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 
-Given GPS coordinates, identify real places WITHIN ${radiusFeet} FEET (roughly ${searchRadius} meters) of the exact coordinates. Think small and specific:
+Given GPS coordinates, identify real places near these coordinates — centered around a roughly ${radiusFeet}-foot (${searchRadius}-meter) radius. Think small and specific:
 
 PRIORITIZE these kinds of places (in rough order of interest):
 1. The specific building at or near the coordinates — who built it, who commissioned it, what was there before, any quirky history
@@ -768,7 +770,7 @@ PRIORITIZE these kinds of places (in rough order of interest):
 
 AVOID these:
 - Major tourist landmarks whose primary fame IS as a visitor destination (e.g., Statue of Liberty, Empire State Building as a skyscraper, Times Square as a spectacle). You MAY include a famous address when the specific story is genuinely non-obvious — not the building's celebrity, but something surprising that guidebooks omit. Example: the Empire State Building's observation deck is off-limits; but its mooring mast was designed for transatlantic dirigibles and actually docked one airship in 1931 — that story is fair game if you are near it.
-- Places more than ${radiusFeet} feet away — stay extremely local
+- Places far outside the immediate area — stay local to the block or intersection
 - Generic descriptions that could apply to any old building in any city. BAD: "This building has a rich history." GOOD: "The carved stone face above the third-floor window is a portrait of the building's architect, who hid his own likeness in all his projects."
 - Well-known museums, famous monuments, or top-10 lists
 - Descriptions that are mostly about the neighborhood in general rather than the specific place
@@ -834,7 +836,7 @@ Here is one PERFECT example entry — use it as your quality benchmark for every
   "confidence": "high"
 }
 
-Return ${placeCount} places. Quality beats quantity — if you can only find 6 places with genuinely strong, specific stories, return 6 rather than padding with weak entries. Every place MUST be within ${radiusFeet} feet. Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
+Return ${placeCount} places. Quality beats quantity — if you can only find 6 places with genuinely strong, specific stories, return 6 rather than padding with weak entries. Keep all results within the immediate area (geographic filtering is applied automatically). Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
 
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
