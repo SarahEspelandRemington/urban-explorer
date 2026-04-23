@@ -412,22 +412,29 @@ export function WalkModeMap({
               {previewCluster.places.length} places here
             </Text>
             <ScrollView style={styles.previewList} keyboardShouldPersistTaps="handled">
-              {previewCluster.places.map((p) => (
+              {previewCluster.places.map((p) => {
+                const visited = narratedIds.has(p.id);
+                return (
                 <View key={p.id} style={styles.previewRow}>
+                  <View style={styles.previewVisitedSlot}>
+                    {visited ? (
+                      <Feather name="check-circle" size={13} color={colors.primary} />
+                    ) : null}
+                  </View>
                   <Pressable
                     onPress={() => focusPlace(p)}
                     style={({ pressed }) => [
                       styles.previewItem,
                       pressed && { backgroundColor: colors.muted },
                     ]}
-                    accessibilityLabel={`Centre map on ${p.name}`}
+                    accessibilityLabel={`Centre map on ${p.name}${visited ? " (visited)" : ""}`}
                   >
                     <Text
                       numberOfLines={1}
                       style={[
                         styles.previewItemText,
                         {
-                          color: narratedIds.has(p.id) ? colors.mutedForeground : colors.foreground,
+                          color: visited ? colors.mutedForeground : colors.foreground,
                         },
                       ]}
                     >
@@ -460,7 +467,8 @@ export function WalkModeMap({
                     </Pressable>
                   ) : null}
                 </View>
-              ))}
+              );
+              })}
             </ScrollView>
           </View>
         </>
@@ -514,6 +522,11 @@ const styles = StyleSheet.create({
   previewRow: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  previewVisitedSlot: {
+    width: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   previewItem: {
     flex: 1,
