@@ -357,8 +357,8 @@ export function LocationPermission({
               style={({ pressed }) => [
                 styles.secondaryButton,
                 {
-                  borderColor: colors.border,
-                  backgroundColor: colors.card,
+                  borderColor: colors.primary,
+                  backgroundColor: "transparent",
                   opacity: pressed ? 0.85 : 1,
                 },
               ]}
@@ -366,8 +366,8 @@ export function LocationPermission({
               accessibilityLabel="Search by location"
               accessibilityHint="Enter a city or address to explore manually"
             >
-              <Feather name="search" size={18} color={colors.foreground} />
-              <Text style={[styles.secondaryButtonText, { color: colors.foreground }]}>
+              <Feather name="search" size={18} color={colors.primary} />
+              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
                 {t.locationPermission.searchByLocation}
               </Text>
             </Pressable>
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1.5,
     width: "100%",
     justifyContent: "center",
   },
