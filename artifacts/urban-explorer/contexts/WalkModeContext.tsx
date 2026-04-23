@@ -356,6 +356,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
     isWalkingRef.current = true;
     setIsWalking(true);
+    // Density is per-walk: every new walk starts back at Sparse so the user
+    // makes a fresh choice rather than inheriting last walk's setting.
+    densityRef.current = "sparse";
+    setDensityState("sparse");
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
     setNarratedIds(new Set());
     narratedIdsRef.current = new Set();
