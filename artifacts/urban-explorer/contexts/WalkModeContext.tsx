@@ -35,7 +35,7 @@ if (Platform.OS !== "web" && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK
   });
 }
 
-interface WalkPlace {
+export interface WalkPlace {
   id: string;
   name: string;
   category: string;
@@ -61,7 +61,7 @@ interface WalkStats {
 
 interface WalkModeContextType {
   isWalking: boolean;
-  startWalk: () => Promise<void>;
+  startWalk: (initialPlaces?: WalkPlace[]) => Promise<boolean>;
   stopWalk: () => void;
   currentLocation: { latitude: number; longitude: number } | null;
   nearbyPlaces: WalkPlace[];
@@ -585,13 +585,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [isWalking]);
 
-  const startWalk = useCallback(async () => {
+  const startWalk = useCallback(async (initialPlaces?: WalkPlace[]): Promise<boolean> => {
     // Guard against double-tap or re-entry before the walk is fully set up.
-    if (isWalkingRef.current || isStartingRef.current) return;
+    if (isWalkingRef.current || isStartingRef.current) return false;
     isStartingRef.current = true;
     try {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") { isStartingRef.current = false; return; }
+    if (status !== "granted") { isStartingRef.current = false; return false; }
 
     // Background permission is best-effort: if the user declines, Walk Mode
     // still works while the app is in the foreground. We never block the
@@ -618,8 +618,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
     setNarratedIds(new Map());
     narratedIdsRef.current = new Map();
-    placesRef.current = [];
-    setNearbyPlaces([]);
+    // Seed pre-fetched places so narration can fire as soon as GPS arrives,
+    // without waiting for the first GPS-driven discover call to complete.
+    placesRef.current = initialPlaces?.length ? [...initialPlaces] : [];
+    setNearbyPlaces(initialPlaces?.length ? [...initialPlaces] : []);
     lastFetchRef.current = null;
     prevLocationRef.current = null;
     deviceHeadingRef.current = null;
@@ -729,6 +731,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       });
       headingWatchRef.current = headingSub;
     } catch {}
+    return true;
     } finally {
       // Allow startWalk to be called again (e.g. after stopping and
       // restarting, or after an error during setup).

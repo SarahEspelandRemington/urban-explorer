@@ -475,6 +475,10 @@ export default function ExploreScreen() {
           if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           router.push("/walk-mode");
         }}
+        onWalkPlan={() => {
+          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push("/walk-plan");
+        }}
       />
     );
   }
@@ -583,6 +587,24 @@ export default function ExploreScreen() {
             accessibilityLabel="Search by location"
           >
             <Feather name="search" size={18} color={colors.foreground} />
+          </Pressable>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/walk-plan");
+            }}
+            style={({ pressed }) => [
+              styles.searchButton,
+              {
+                backgroundColor: colors.muted,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Plan a Walk"
+            accessibilityHint="Plan a walking route and pre-load stories"
+          >
+            <Feather name="map" size={18} color={colors.foreground} />
           </Pressable>
           <Pressable
             onPress={() => {

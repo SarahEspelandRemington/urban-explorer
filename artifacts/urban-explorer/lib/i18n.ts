@@ -77,6 +77,22 @@ export interface Strings {
     storiesAsYouGo: string;
     storiesSoFar: (n: number) => string;
   };
+  walkPlan: {
+    title: string;
+    subtitle: string;
+    startPlaceholder: string;
+    endPlaceholder: string;
+    findRoute: string;
+    startWalk: string;
+    searching: string;
+    fetchingStops: string;
+    stopsFound: (n: number) => string;
+    noRoute: string;
+    routeError: string;
+    geocodeError: string;
+    previewLabel: string;
+    emptyRouteNote: string;
+  };
   placeDetail: {
     quickFacts: string;
     history: string;
@@ -224,6 +240,22 @@ const en: Strings = {
     storiesOften: "Stories will play often",
     storiesAsYouGo: "Stories will play as you go",
     storiesSoFar: (n) => `${n} ${n === 1 ? "story" : "stories"} so far`,
+  },
+  walkPlan: {
+    title: "Plan a Walk",
+    subtitle: "Enter start and end to pre-load stories along your route",
+    startPlaceholder: "Starting point",
+    endPlaceholder: "Destination",
+    findRoute: "Find Route",
+    startWalk: "Start Walk",
+    searching: "Finding route…",
+    fetchingStops: "Loading stories along route…",
+    stopsFound: (n) => `${n} ${n === 1 ? "stop" : "stops"} loaded`,
+    noRoute: "No walking route found between those points.",
+    routeError: "Couldn't find a route. Check your addresses and try again.",
+    geocodeError: "Couldn't locate that address. Try being more specific.",
+    previewLabel: "Along your route",
+    emptyRouteNote: "No stops were pre-loaded — GPS discovery will find stories as you walk.",
   },
   placeDetail: {
     quickFacts: "Quick Facts",
@@ -393,6 +425,22 @@ const es: Strings = {
     storiesOften: "Las historias sonarán con frecuencia",
     storiesAsYouGo: "Las historias sonarán mientras avanzas",
     storiesSoFar: (n) => `${n} ${n === 1 ? "historia" : "historias"} hasta ahora`,
+  },
+  walkPlan: {
+    title: "Planificar un paseo",
+    subtitle: "Ingresa inicio y destino para precargar historias en tu ruta",
+    startPlaceholder: "Punto de partida",
+    endPlaceholder: "Destino",
+    findRoute: "Encontrar ruta",
+    startWalk: "Iniciar paseo",
+    searching: "Buscando ruta…",
+    fetchingStops: "Cargando historias en la ruta…",
+    stopsFound: (n) => `${n} ${n === 1 ? "parada" : "paradas"} cargadas`,
+    noRoute: "No se encontró una ruta a pie entre esos puntos.",
+    routeError: "No se pudo encontrar la ruta. Verifica las direcciones.",
+    geocodeError: "No se pudo localizar esa dirección. Sé más específico.",
+    previewLabel: "A lo largo de tu ruta",
+    emptyRouteNote: "No se precargaron paradas — el GPS encontrará historias mientras caminas.",
   },
   placeDetail: {
     quickFacts: "Datos rápidos",
@@ -564,6 +612,22 @@ const fr: Strings = {
     storiesAsYouGo: "Les histoires se déclencheront en chemin",
     storiesSoFar: (n) => `${n} ${n === 1 ? "histoire" : "histoires"} jusqu'ici`,
   },
+  walkPlan: {
+    title: "Planifier une balade",
+    subtitle: "Entrez départ et destination pour charger les histoires à l'avance",
+    startPlaceholder: "Point de départ",
+    endPlaceholder: "Destination",
+    findRoute: "Trouver l'itinéraire",
+    startWalk: "Démarrer la balade",
+    searching: "Recherche de l'itinéraire…",
+    fetchingStops: "Chargement des histoires sur le parcours…",
+    stopsFound: (n) => `${n} ${n === 1 ? "arrêt chargé" : "arrêts chargés"}`,
+    noRoute: "Aucun itinéraire piéton trouvé entre ces points.",
+    routeError: "Impossible de trouver un itinéraire. Vérifiez les adresses.",
+    geocodeError: "Impossible de localiser cette adresse. Soyez plus précis.",
+    previewLabel: "Sur votre parcours",
+    emptyRouteNote: "Aucun arrêt pré-chargé — le GPS trouvera des histoires pendant votre marche.",
+  },
   placeDetail: {
     quickFacts: "Faits rapides",
     history: "Histoire",
@@ -732,6 +796,22 @@ const de: Strings = {
     storiesOften: "Geschichten werden häufig abgespielt",
     storiesAsYouGo: "Geschichten kommen unterwegs",
     storiesSoFar: (n) => `${n} ${n === 1 ? "Geschichte" : "Geschichten"} bisher`,
+  },
+  walkPlan: {
+    title: "Spaziergang planen",
+    subtitle: "Start und Ziel eingeben, um Geschichten vorher zu laden",
+    startPlaceholder: "Startpunkt",
+    endPlaceholder: "Ziel",
+    findRoute: "Route finden",
+    startWalk: "Spaziergang starten",
+    searching: "Route suchen…",
+    fetchingStops: "Geschichten entlang der Route laden…",
+    stopsFound: (n) => `${n} ${n === 1 ? "Halt" : "Halte"} geladen`,
+    noRoute: "Keine Fußgängerroute zwischen diesen Punkten gefunden.",
+    routeError: "Route konnte nicht gefunden werden. Adressen prüfen.",
+    geocodeError: "Adresse konnte nicht gefunden werden. Präziser eingeben.",
+    previewLabel: "Entlang Ihrer Route",
+    emptyRouteNote: "Keine Haltestellen vorgeladen — GPS findet Geschichten während Sie laufen.",
   },
   placeDetail: {
     quickFacts: "Kurzfakten",
@@ -902,6 +982,22 @@ const it: Strings = {
     storiesAsYouGo: "Le storie partiranno mentre cammini",
     storiesSoFar: (n) => `${n} ${n === 1 ? "storia" : "storie"} finora`,
   },
+  walkPlan: {
+    title: "Pianifica una passeggiata",
+    subtitle: "Inserisci partenza e destinazione per caricare le storie in anticipo",
+    startPlaceholder: "Punto di partenza",
+    endPlaceholder: "Destinazione",
+    findRoute: "Trova percorso",
+    startWalk: "Inizia passeggiata",
+    searching: "Ricerca percorso…",
+    fetchingStops: "Caricamento storie lungo il percorso…",
+    stopsFound: (n) => `${n} ${n === 1 ? "tappa caricata" : "tappe caricate"}`,
+    noRoute: "Nessun percorso pedonale trovato tra questi punti.",
+    routeError: "Impossibile trovare il percorso. Controlla gli indirizzi.",
+    geocodeError: "Impossibile trovare quell'indirizzo. Sii più specifico.",
+    previewLabel: "Lungo il tuo percorso",
+    emptyRouteNote: "Nessuna tappa precaricata — il GPS troverà storie durante la passeggiata.",
+  },
   placeDetail: {
     quickFacts: "Fatti rapidi",
     history: "Storia",
@@ -1071,6 +1167,22 @@ const pt: Strings = {
     storiesAsYouGo: "As histórias virão enquanto você caminha",
     storiesSoFar: (n) => `${n} ${n === 1 ? "história" : "histórias"} até agora`,
   },
+  walkPlan: {
+    title: "Planejar passeio",
+    subtitle: "Insira início e destino para carregar histórias na rota",
+    startPlaceholder: "Ponto de partida",
+    endPlaceholder: "Destino",
+    findRoute: "Encontrar rota",
+    startWalk: "Iniciar passeio",
+    searching: "Buscando rota…",
+    fetchingStops: "Carregando histórias na rota…",
+    stopsFound: (n) => `${n} ${n === 1 ? "parada carregada" : "paradas carregadas"}`,
+    noRoute: "Nenhuma rota a pé encontrada entre esses pontos.",
+    routeError: "Não foi possível encontrar a rota. Verifique os endereços.",
+    geocodeError: "Não foi possível localizar esse endereço. Seja mais específico.",
+    previewLabel: "Ao longo da sua rota",
+    emptyRouteNote: "Nenhuma parada pré-carregada — o GPS encontrará histórias enquanto você caminha.",
+  },
   placeDetail: {
     quickFacts: "Fatos rápidos",
     history: "História",
@@ -1238,6 +1350,22 @@ const nl: Strings = {
     storiesOften: "Verhalen spelen vaak af",
     storiesAsYouGo: "Verhalen spelen onderweg af",
     storiesSoFar: (n) => `${n} ${n === 1 ? "verhaal" : "verhalen"} tot nu toe`,
+  },
+  walkPlan: {
+    title: "Wandeling plannen",
+    subtitle: "Voer start en bestemming in om verhalen vooraf te laden",
+    startPlaceholder: "Vertrekpunt",
+    endPlaceholder: "Bestemming",
+    findRoute: "Route zoeken",
+    startWalk: "Wandeling starten",
+    searching: "Route zoeken…",
+    fetchingStops: "Verhalen laden langs de route…",
+    stopsFound: (n) => `${n} ${n === 1 ? "stop geladen" : "stops geladen"}`,
+    noRoute: "Geen wandelroute gevonden tussen deze punten.",
+    routeError: "Route kon niet worden gevonden. Controleer de adressen.",
+    geocodeError: "Adres kon niet worden gevonden. Wees specifieker.",
+    previewLabel: "Langs uw route",
+    emptyRouteNote: "Geen stops voorgeladen — GPS vindt verhalen terwijl u loopt.",
   },
   placeDetail: {
     quickFacts: "Korte feiten",
@@ -1407,6 +1535,22 @@ const ja: Strings = {
     storiesAsYouGo: "歩きながら物語が再生されます",
     storiesSoFar: (n) => `これまでに${n}件の物語`,
   },
+  walkPlan: {
+    title: "ウォーク計画",
+    subtitle: "出発地と目的地を入力してルートのストーリーを事前に読み込む",
+    startPlaceholder: "出発地",
+    endPlaceholder: "目的地",
+    findRoute: "ルートを探す",
+    startWalk: "ウォーク開始",
+    searching: "ルートを検索中…",
+    fetchingStops: "ルート沿いのストーリーを読み込み中…",
+    stopsFound: (n) => `${n}件のストップを読み込みました`,
+    noRoute: "2地点間のルートが見つかりませんでした。",
+    routeError: "ルートが見つかりません。住所を確認してください。",
+    geocodeError: "住所が見つかりません。より具体的に入力してください。",
+    previewLabel: "ルート沿い",
+    emptyRouteNote: "ストップは事前に読み込まれませんでした — 歩きながらGPSが物語を見つけます。",
+  },
   placeDetail: {
     quickFacts: "簡単な事実",
     history: "歴史",
@@ -1575,6 +1719,22 @@ const ko: Strings = {
     storiesAsYouGo: "걷는 동안 이야기가 재생됩니다",
     storiesSoFar: (n) => `지금까지 ${n}개의 이야기`,
   },
+  walkPlan: {
+    title: "걷기 계획",
+    subtitle: "출발지와 목적지를 입력하여 경로의 이야기를 미리 불러오기",
+    startPlaceholder: "출발지",
+    endPlaceholder: "목적지",
+    findRoute: "경로 찾기",
+    startWalk: "걷기 시작",
+    searching: "경로 검색 중…",
+    fetchingStops: "경로 따라 이야기 불러오는 중…",
+    stopsFound: (n) => `${n}개 정류장 불러옴`,
+    noRoute: "두 지점 사이에 보행 경로를 찾을 수 없습니다.",
+    routeError: "경로를 찾을 수 없습니다. 주소를 확인하세요.",
+    geocodeError: "주소를 찾을 수 없습니다. 더 구체적으로 입력하세요.",
+    previewLabel: "경로를 따라",
+    emptyRouteNote: "정류장이 사전 로드되지 않았습니다 — GPS가 걸으면서 이야기를 찾습니다.",
+  },
   placeDetail: {
     quickFacts: "간단한 사실",
     history: "역사",
@@ -1741,6 +1901,22 @@ const zh: Strings = {
     storiesOften: "故事会经常播放",
     storiesAsYouGo: "走着走着会有故事",
     storiesSoFar: (n) => `已讲 ${n} 个故事`,
+  },
+  walkPlan: {
+    title: "规划步行",
+    subtitle: "输入起点和终点，提前加载沿途故事",
+    startPlaceholder: "出发地",
+    endPlaceholder: "目的地",
+    findRoute: "查找路线",
+    startWalk: "开始步行",
+    searching: "正在查找路线…",
+    fetchingStops: "正在加载沿途故事…",
+    stopsFound: (n) => `已加载 ${n} 个站点`,
+    noRoute: "未找到两点之间的步行路线。",
+    routeError: "无法找到路线。请检查地址。",
+    geocodeError: "无法找到该地址。请更具体地输入。",
+    previewLabel: "沿途",
+    emptyRouteNote: "未预加载站点 — GPS将在您步行时发现故事。",
   },
   placeDetail: {
     quickFacts: "速览",

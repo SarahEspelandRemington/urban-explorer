@@ -59,6 +59,10 @@ function RootLayoutNav() {
         options={{ headerShown: false, gestureEnabled: false, animation: "slide_from_bottom" }}
       />
       <Stack.Screen
+        name="walk-plan"
+        options={{ headerShown: false, animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
         name="investigate"
         options={{ headerShown: false, animation: "slide_from_right" }}
       />

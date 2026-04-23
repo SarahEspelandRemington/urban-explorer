@@ -34,6 +34,7 @@ interface LocationPermissionProps {
   showBackButton?: boolean;
   onBack?: () => void;
   onWalkMode?: () => void;
+  onWalkPlan?: () => void;
 }
 
 export function LocationPermission({
@@ -45,6 +46,7 @@ export function LocationPermission({
   showBackButton,
   onBack,
   onWalkMode,
+  onWalkPlan,
 }: LocationPermissionProps) {
   const colors = useColors();
   const t = useT();
@@ -405,6 +407,36 @@ export function LocationPermission({
                       {t.locationPermission.walkSubtext}
                     </Text>
                   </View>
+                </Pressable>
+              </>
+            )}
+
+            {onWalkPlan && (
+              <>
+                <View style={styles.dividerRow}>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                  <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t.common.or}</Text>
+                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                </View>
+
+                <Pressable
+                  onPress={onWalkPlan}
+                  style={({ pressed }) => [
+                    styles.secondaryButton,
+                    {
+                      borderColor: colors.primary,
+                      backgroundColor: "transparent",
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Plan a Walk"
+                  accessibilityHint="Pre-fetch stops along a planned route before walking"
+                >
+                  <Feather name="map" size={18} color={colors.primary} />
+                  <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+                    {t.walkPlan.title}
+                  </Text>
                 </Pressable>
               </>
             )}
