@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
+import { File, Paths } from "expo-file-system";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 
@@ -35,6 +36,15 @@ if (Platform.OS !== "web" && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK
     cb(locations[locations.length - 1]);
   });
 }
+
+// Two ways a narration can be delivered to the playback engine:
+//   - "audio": a pre-rendered MP3 file URI (natural-voice TTS, native only).
+//     Carries a cleanup() that deletes the temp file once playback ends.
+//   - "text":  raw text (web SpeechSynthesisUtterance, or a fallback on
+//     native when the audio endpoint failed).
+type NarrationPayload =
+  | { kind: "audio"; audioUri: string; cleanup?: () => void }
+  | { kind: "text"; text: string };
 
 export interface WalkPlace {
   id: string;
@@ -295,9 +305,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // the AI narration for the best next candidate (N+1) in the background.
   // When place N finishes and the movement gate clears, the pre-fetched text
   // is used instantly instead of waiting for another round-trip.
+  // A pending narration payload for the next place. On native this normally
+  // holds a pre-rendered MP3 file URI (so playback starts the instant the
+  // current narration finishes). On web — and as a graceful fallback when the
+  // audio endpoint failed — it can also hold raw narration text.
   const prefetchedNarrationRef = useRef<{
     placeId: string;
-    narration: string;
+    payload: NarrationPayload;
     place: WalkPlace;
   } | null>(null);
   // Ref to the latest prefetchNext callback — same ref-wrapping pattern as
@@ -458,17 +472,81 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Enqueue a narration and update all associated state. Extracted so both the
-  // cache-hit path and the API path can share identical post-fetch side effects.
-  const enqueueNarration = useCallback((place: WalkPlace, text: string) => {
+  // Enqueue a narration and update all associated state. Accepts a payload
+  // produced by fetchNarrationPayload — either a pre-rendered MP3 file (the
+  // natural-voice path on native) or plain text (web, or native fallback when
+  // the audio endpoint failed).
+  const enqueueNarration = useCallback((place: WalkPlace, payload: NarrationPayload) => {
     currentNarrationPlaceRef.current = place;
     setCurrentNarrationPlace(place);
-    narration.enqueue(place.id, text, place.name);
+    if (payload.kind === "audio") {
+      narration.enqueueAudio(place.id, payload.audioUri, place.name, payload.cleanup);
+    } else {
+      narration.enqueue(place.id, payload.text, place.name);
+    }
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     setStats((prev) => ({ ...prev, placesNarrated: prev.placesNarrated + 1 }));
   }, [narration]);
+
+  // Single source of truth for "go fetch a narration for this place". On web
+  // (and as a fallback when the audio endpoint errors) returns text. On native
+  // returns a path to a freshly-written MP3 file plus a cleanup that deletes
+  // the file once playback is done.
+  const fetchNarrationPayload = useCallback(async (place: WalkPlace): Promise<NarrationPayload | null> => {
+    const body = JSON.stringify({
+      placeName: place.name,
+      category: place.category,
+      summary: place.summary,
+      fact: place.facts[0],
+    });
+    const headers = { "Content-Type": "application/json", ...await authHeaders() };
+
+    // Native: try the natural-voice MP3 endpoint first.
+    if (Platform.OS !== "web") {
+      try {
+        if (__DEV__) console.log(`[fetchNarrationPayload] POST walk-narration-audio for "${place.name}"`);
+        const res = await fetch(`${API_BASE}/api/explore/walk-narration-audio`, { method: "POST", headers, body });
+        if (__DEV__) console.log(`[fetchNarrationPayload] audio response status=${res.status} for "${place.name}"`);
+        if (res.ok) {
+          const buf = await res.arrayBuffer();
+          if (buf.byteLength > 0) {
+            // Write the bytes to a unique cache file so concurrent prefetches
+            // never collide on the same path. Cleanup deletes the file when
+            // playback finishes (or is cancelled via stop/skip).
+            const fileName = `walk-narr-${place.id.replace(/[^a-zA-Z0-9_-]/g, "_")}-${Date.now()}.mp3`;
+            const file = new File(Paths.cache, fileName);
+            try {
+              file.write(new Uint8Array(buf));
+              if (__DEV__) console.log(`[fetchNarrationPayload] wrote ${buf.byteLength} bytes to ${file.uri}`);
+              const cleanup = () => { try { file.delete(); } catch {} };
+              return { kind: "audio", audioUri: file.uri, cleanup };
+            } catch (writeErr) {
+              if (__DEV__) console.log(`[fetchNarrationPayload] file.write failed, will fall back to text:`, writeErr);
+              // fall through to text endpoint below
+            }
+          }
+        }
+      } catch (err) {
+        if (__DEV__) console.log(`[fetchNarrationPayload] audio fetch threw, will fall back to text:`, err);
+      }
+    }
+
+    // Text path (web, or native fallback if audio failed).
+    try {
+      if (__DEV__) console.log(`[fetchNarrationPayload] POST walk-narration (text) for "${place.name}"`);
+      const res = await fetch(`${API_BASE}/api/explore/walk-narration`, { method: "POST", headers, body });
+      if (__DEV__) console.log(`[fetchNarrationPayload] text response status=${res.status} for "${place.name}"`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (typeof data?.narration !== "string" || !data.narration.trim()) return null;
+      return { kind: "text", text: data.narration };
+    } catch (err) {
+      if (__DEV__) console.log(`[fetchNarrationPayload] text fetch threw:`, err);
+      return null;
+    }
+  }, []);
 
   const fetchNarration = useCallback(async (place: WalkPlace) => {
     // --- Narration pipeline: fast path ---
@@ -479,44 +557,29 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     prefetchedNarrationRef.current = null; // always consume / clear the cache
     if (prefetched && prefetched.placeId === place.id) {
       if (__DEV__) {
-        console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue`);
+        console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue (${prefetched.payload.kind})`);
       }
-      enqueueNarration(place, prefetched.narration);
+      enqueueNarration(place, prefetched.payload);
       // Keep the pipeline going: pre-fetch the next candidate.
       prefetchNextRef.current?.();
       return;
     }
+    // Stale prefetch (different place won the pick) — discard its temp file.
+    if (prefetched && prefetched.payload.kind === "audio") {
+      try { prefetched.payload.cleanup?.(); } catch {}
+    }
 
     // --- Normal path (cache miss or stale) ---
-    try {
-      if (__DEV__) console.log(`[fetchNarration] POST walk-narration for "${place.name}"`);
-      const res = await fetch(`${API_BASE}/api/explore/walk-narration`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...await authHeaders() },
-        body: JSON.stringify({
-          placeName: place.name,
-          category: place.category,
-          summary: place.summary,
-          fact: place.facts[0],
-        }),
-      });
-      if (__DEV__) console.log(`[fetchNarration] response status=${res.status} for "${place.name}"`);
-      if (res.ok) {
-        const data = await res.json();
-        if (__DEV__) console.log(`[fetchNarration] narration length=${data.narration?.length ?? 0} for "${place.name}"`);
-        if (data.narration) {
-          // Remember which place is now driving the lock-screen widget so the
-          // artwork we send matches the story being spoken.
-          enqueueNarration(place, data.narration);
-          // Start pre-fetching the next candidate so it's ready when this
-          // narration finishes and the movement gate clears.
-          prefetchNextRef.current?.();
-        }
-      }
-    } catch (err) {
-      if (__DEV__) console.log(`[fetchNarration] CATCH for "${place.name}":`, err);
+    const payload = await fetchNarrationPayload(place);
+    if (payload) {
+      // Remember which place is now driving the lock-screen widget so the
+      // artwork we send matches the story being spoken.
+      enqueueNarration(place, payload);
+      // Start pre-fetching the next candidate so it's ready when this
+      // narration finishes and the movement gate clears.
+      prefetchNextRef.current?.();
     }
-  }, [narration, enqueueNarration]);
+  }, [enqueueNarration, fetchNarrationPayload]);
 
   /**
    * Pick the best place to narrate next, given current location, heading, density.
@@ -622,7 +685,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (prefetchedNarrationRef.current?.placeId === candidate.id) return;
     // Another request for this candidate is already in flight — dedupe.
     if (prefetchInFlightRef.current === candidate.id) return;
-    // Clear any stale entry so we don't serve the wrong place.
+    // Clear any stale entry so we don't serve the wrong place. If the stale
+    // entry was an audio payload we own the temp file, so delete it first.
+    const stale = prefetchedNarrationRef.current;
+    if (stale && stale.payload.kind === "audio") {
+      try { stale.payload.cleanup?.(); } catch {}
+    }
     prefetchedNarrationRef.current = null;
 
     const candidateId = candidate.id;
@@ -631,25 +699,18 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       try {
         const place = placesRef.current.find((p) => p.id === candidateId);
         if (!place) return;
-        const res = await fetch(`${API_BASE}/api/explore/walk-narration`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...await authHeaders() },
-          body: JSON.stringify({
-            placeName: place.name,
-            category: place.category,
-            summary: place.summary,
-            fact: place.facts[0],
-          }),
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!data.narration) return;
+        const payload = await fetchNarrationPayload(place);
+        if (!payload) return;
         // Guard: discard if the place was narrated while we were fetching
-        // (e.g. the user tapped Skip, or duplicate GPS ticks fired).
-        if (narratedIdsRef.current.has(candidateId)) return;
-        prefetchedNarrationRef.current = { placeId: candidateId, narration: data.narration, place };
+        // (e.g. the user tapped Skip, or duplicate GPS ticks fired). We own
+        // the audio temp file, so delete it before bailing out.
+        if (narratedIdsRef.current.has(candidateId)) {
+          if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
+          return;
+        }
+        prefetchedNarrationRef.current = { placeId: candidateId, payload, place };
         if (__DEV__) {
-          console.log(`[prefetchNext] cached "${place.name}" for pipeline`);
+          console.log(`[prefetchNext] cached "${place.name}" (${payload.kind}) for pipeline`);
         }
       } catch {
       } finally {
@@ -659,7 +720,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
       }
     })();
-  }, [pickNext]);
+  }, [pickNext, fetchNarrationPayload]);
   useEffect(() => {
     prefetchNextRef.current = prefetchNext;
   }, [prefetchNext]);
@@ -902,6 +963,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     paceSamplesRef.current = [];
     slowSinceRef.current = null;
     manualOverrideUntilRef.current = 0;
+    // Drop any pending prefetch and delete its temp file if we own one.
+    const stalePrefetch = prefetchedNarrationRef.current;
+    if (stalePrefetch && stalePrefetch.payload.kind === "audio") {
+      try { stalePrefetch.payload.cleanup?.(); } catch {}
+    }
     prefetchedNarrationRef.current = null;
     prefetchInFlightRef.current = null;
     // Start cooldown so we don't fire instantly before the user has even moved.

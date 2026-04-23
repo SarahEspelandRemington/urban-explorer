@@ -3,6 +3,7 @@ import { logger } from "../../lib/logger";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { PgRateLimitStore } from "../../lib/pgRateLimitStore";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { textToSpeech } from "@workspace/integrations-openai-ai-server/audio";
 import {
   DiscoverPlacesBody,
   GeocodeLocationBody,
@@ -1686,6 +1687,125 @@ How to write for speech:
   const result = { narration: content.trim() };
   setLLMCache(narrationCacheKey, result);
   res.json(result);
+});
+
+// --- Audio narration cache --------------------------------------------------
+// Audio bytes can be 50-200 KB each; cap at ~50 entries (~10 MB) to bound RAM.
+interface AudioCacheEntry { bytes: Buffer; timestamp: number; }
+const audioCache = new Map<string, AudioCacheEntry>();
+const AUDIO_CACHE_TTL = 30 * 60 * 1000; // 30 min — TTS is expensive, cache longer
+const AUDIO_CACHE_MAX_SIZE = 50;
+function getAudioCache(key: string): Buffer | null {
+  const entry = audioCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > AUDIO_CACHE_TTL) { audioCache.delete(key); return null; }
+  return entry.bytes;
+}
+function setAudioCache(key: string, bytes: Buffer): void {
+  if (audioCache.size >= AUDIO_CACHE_MAX_SIZE) {
+    const oldest = audioCache.keys().next().value;
+    if (oldest) audioCache.delete(oldest);
+  }
+  audioCache.set(key, { bytes, timestamp: Date.now() });
+}
+
+// POST /explore/walk-narration-audio — returns natural-voice MP3 audio for a place.
+// Generates the same narration text as /walk-narration (and shares its cache),
+// then runs it through OpenAI's gpt-audio TTS so the phone can play a real
+// human-sounding voice instead of the iOS robotic system speech engine.
+router.post("/explore/walk-narration-audio", async (req, res) => {
+  const parsed = GetWalkNarrationBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid request body" }); return; }
+  const { placeName, category, summary, fact } = parsed.data;
+
+  // Voice is configurable via query param so we can A/B test without redeploying.
+  // Defaults to "nova" — warm, conversational, energetic. Other good options for
+  // walking-tour narration: "shimmer" (calm female), "fable" (British storyteller).
+  const requestedVoice = typeof req.query["voice"] === "string" ? req.query["voice"] : "nova";
+  const allowedVoices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
+  type Voice = typeof allowedVoices[number];
+  const voice: Voice = (allowedVoices as readonly string[]).includes(requestedVoice)
+    ? (requestedVoice as Voice) : "nova";
+
+  // Re-use the text narration cache so we don't double-generate text + audio.
+  const narrationCacheKey = `narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
+
+  const cachedAudio = getAudioCache(audioCacheKey);
+  if (cachedAudio) {
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "private, max-age=900");
+    res.setHeader("X-Narration-Cache", "hit");
+    res.send(cachedAudio);
+    return;
+  }
+
+  // Step 1: get narration text (from cache if possible).
+  let narrationText: string | null = null;
+  const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
+  if (cachedNarration) {
+    narrationText = cachedNarration.narration;
+  } else {
+    let textResp: Awaited<ReturnType<typeof openai.chat.completions.create>>;
+    try {
+      textResp = await openai.chat.completions.create({
+        model: "gpt-4.1-nano",
+        max_completion_tokens: 256,
+        messages: [
+          {
+            role: "system",
+            content: `You are a warm, curious friend who happens to know a lot about cities and history. You're walking alongside someone and you just noticed something interesting. Speak naturally — the way you'd actually talk to a person, not the way you'd write a caption.
+
+Your words will be read aloud by a text-to-speech engine. That means every word choice affects how natural it sounds.
+
+How to write for speech:
+- Target 2 to 3 sentences. Roughly 30 to 45 words total. Short is better.
+- Write in fragments and incomplete thoughts the way people actually speak. "Built in the eighteen eighties. Went through three different owners before the city took it over." That rhythm is good.
+- Use contractions always: it's, don't, they'd, you'll, wasn't, couldn't.
+- Spell out every number and year as words: "eighteen eighty-two" not "1882", "around nineteen twenty" not "circa 1920", "three stories tall" not "3-story".
+- No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
+- Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
+- Vary how you open. Some options: lead with the place itself, lead with a surprising fact, lead with a person who was connected to it, lead with what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
+- End with something specific — a detail to notice, a question to sit with, a contrast between then and now. Not a generic "isn't that fascinating."
+- If you're not certain of a detail, say "supposedly" or "the story goes" rather than stating it as fact.`,
+          },
+          {
+            role: "user",
+            content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+          },
+        ],
+      });
+    } catch (err: any) {
+      const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+      res.status(status).json({ error: "Narration service temporarily unavailable. Please try again." });
+      return;
+    }
+    const content = textResp.choices[0]?.message?.content;
+    if (!content) { res.status(500).json({ error: "Failed to generate narration" }); return; }
+    narrationText = content.trim();
+    setLLMCache(narrationCacheKey, { narration: narrationText });
+  }
+
+  // Step 2: render narration text to natural-voice MP3 via OpenAI TTS.
+  let audioBytes: Buffer;
+  try {
+    audioBytes = await textToSpeech(narrationText, voice, "mp3");
+  } catch (err: any) {
+    logger.error({ err, placeName, voice }, "TTS generation failed");
+    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    res.status(status).json({ error: "Voice synthesis temporarily unavailable. Please try again." });
+    return;
+  }
+  if (!audioBytes || audioBytes.length === 0) {
+    res.status(500).json({ error: "TTS returned empty audio" });
+    return;
+  }
+
+  setAudioCache(audioCacheKey, audioBytes);
+  res.setHeader("Content-Type", "audio/mpeg");
+  res.setHeader("Cache-Control", "private, max-age=900");
+  res.setHeader("X-Narration-Cache", "miss");
+  res.send(audioBytes);
 });
 
 router.post("/explore/deep-narration", async (req, res) => {
