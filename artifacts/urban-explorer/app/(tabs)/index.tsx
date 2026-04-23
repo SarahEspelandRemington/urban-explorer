@@ -1116,11 +1116,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 7,
+    minWidth: 92,
+    alignItems: "center",
   },
   radiusChipText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
     letterSpacing: 0.2,
+    flexShrink: 0,
   },
   filterScroll: {
     paddingHorizontal: 16,
