@@ -15,12 +15,14 @@
     },
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "com.urbanexplorer.app",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Record voice memos to capture issues during a walk.",
         "UIBackgroundModes": ["location", "audio"]
       }
     },
     "android": {
+      "package": "com.urbanexplorer.app",
       "permissions": [
         "RECORD_AUDIO",
         "ACCESS_COARSE_LOCATION",
