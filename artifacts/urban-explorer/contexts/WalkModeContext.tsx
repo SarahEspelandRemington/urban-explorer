@@ -4,8 +4,10 @@ import * as TaskManager from "expo-task-manager";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 
+import { useLocale } from "@/contexts/LocaleContext";
 import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
+import { getNotificationLocale } from "@/lib/notificationLocales";
 
 // Background location task name. Defining the task at module scope (outside any
 // component) is required by expo-task-manager — the OS may invoke this task
@@ -168,6 +170,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
   const [density, setDensityState] = useState<WalkDensity>("sparse");
 
+  const { localeRef } = useLocale();
   const narration = useNarration();
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const headingWatchRef = useRef<Location.LocationSubscription | null>(null);
@@ -586,12 +589,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           activityType: Location.ActivityType.Fitness,
           pausesUpdatesAutomatically: false,
           showsBackgroundLocationIndicator: true,
-          foregroundService: {
-            notificationTitle: "Urban Explorer is exploring with you",
-            notificationBody:
-              "Listening for nearby places to narrate as you walk.",
-            notificationColor: "#1f2937",
-          },
+          foregroundService: (() => {
+            const strings = getNotificationLocale(localeRef.current);
+            return {
+              notificationTitle: strings.notificationTitle,
+              notificationBody: strings.notificationBody,
+              notificationColor: "#1f2937",
+            };
+          })(),
         });
       } catch {
         // If background updates fail to start (e.g. permission denied),

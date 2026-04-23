@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
 
+import { LanguagePickerModal } from "@/components/LanguagePickerModal";
 import { LoadingMessages } from "@/components/LoadingMessages";
 import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
@@ -85,6 +86,7 @@ export default function ExploreScreen() {
   const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [showLocationSearch, setShowLocationSearch] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -519,6 +521,23 @@ export default function ExploreScreen() {
               </Pressable>
             </View>
           )}
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowLanguagePicker(true);
+            }}
+            style={({ pressed }) => [
+              styles.searchButton,
+              {
+                backgroundColor: colors.muted,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Walk notification language"
+          >
+            <Feather name="globe" size={18} color={colors.foreground} />
+          </Pressable>
           <Pressable
             onPress={() => { setGeocodeError(null); setShowLocationSearch(true); }}
             style={({ pressed }) => [
@@ -1029,6 +1048,10 @@ export default function ExploreScreen() {
           }
         />
       )}
+      <LanguagePickerModal
+        visible={showLanguagePicker}
+        onClose={() => setShowLanguagePicker(false)}
+      />
     </View>
   );
 }

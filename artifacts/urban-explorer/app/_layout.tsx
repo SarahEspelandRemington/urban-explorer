@@ -21,6 +21,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HeadingBanner } from "@/components/HeadingBanner";
 import { DiscoveryProvider } from "@/contexts/DiscoveryContext";
 import { HeadingProvider } from "@/contexts/HeadingContext";
+import { LocaleProvider } from "@/contexts/LocaleContext";
 import { UserRatingsProvider } from "@/contexts/UserRatingsContext";
 import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
@@ -88,6 +89,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
+            <LocaleProvider>
             <UserRatingsProvider>
             <DiscoveryProvider>
               <WalkModeProvider>
@@ -102,6 +104,7 @@ export default function RootLayout() {
               </WalkModeProvider>
             </DiscoveryProvider>
             </UserRatingsProvider>
+            </LocaleProvider>
           </QueryClientProvider>
         </AuthProvider>
       </ErrorBoundary>
