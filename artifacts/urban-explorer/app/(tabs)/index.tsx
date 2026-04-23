@@ -57,6 +57,39 @@ function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number)
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const OSM_CATEGORY_LABELS: Record<string, string> = {
+  arts_centre: "Arts Center",
+  place_of_worship: "Place of Worship",
+  fast_food: "Fast Food",
+  fire_station: "Fire Station",
+  town_hall: "Town Hall",
+  water_tower: "Water Tower",
+  community_centre: "Community Center",
+  social_facility: "Social Facility",
+  parking_space: "Parking",
+  parking_entrance: "Parking",
+  bus_station: "Bus Station",
+  railway_station: "Train Station",
+  subway_entrance: "Subway",
+  toilets: "Public Restroom",
+  waste_basket: "Waste Bin",
+  bicycle_parking: "Bike Parking",
+  fuel: "Gas Station",
+  car_wash: "Car Wash",
+  charging_station: "Charging Station",
+  ice_cream: "Ice Cream",
+  food_court: "Food Court",
+};
+
+function formatCategoryLabel(cat: string): string {
+  if (!cat) return "";
+  const key = cat.toLowerCase().trim();
+  if (OSM_CATEGORY_LABELS[key]) return OSM_CATEGORY_LABELS[key];
+  return key
+    .replace(/_+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function getEra(yearBuilt?: string): string | null {
   if (!yearBuilt || yearBuilt === "unknown") return null;
   const match = yearBuilt.match(/\d{4}|\d{3}0s/);
@@ -469,7 +502,7 @@ export default function ExploreScreen() {
           },
         ]}
       >
-        <View style={styles.headerTextContainer}>
+        <View style={styles.headerTopRow}>
           <Text
             style={[styles.greeting, { color: colors.mutedForeground }]}
             numberOfLines={1}
@@ -483,11 +516,7 @@ export default function ExploreScreen() {
               ? `  ·  ±${Math.round(location.coords.accuracy)}m`
               : ""}
           </Text>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            {t.explore.discover}
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
+          <View style={styles.headerActions}>
           {showContent && (
             <View style={[styles.toggleContainer, { backgroundColor: colors.muted }]}>
               <Pressable
@@ -595,6 +624,10 @@ export default function ExploreScreen() {
             )}
           </Pressable>
         </View>
+        </View>
+        <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
+          {t.explore.discover}
+        </Text>
       </View>
 
       {(hasCoords || locationLoading) && (
@@ -693,7 +726,7 @@ export default function ExploreScreen() {
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel={`Filter by ${cat}`}
+                  accessibilityLabel={`Filter by ${formatCategoryLabel(cat)}`}
                   accessibilityState={{ selected: isActive }}
                 >
                   <Text
@@ -701,8 +734,9 @@ export default function ExploreScreen() {
                       styles.filterChipText,
                       { color: isActive ? colors.background : colors.mutedForeground },
                     ]}
+                    numberOfLines={1}
                   >
-                    {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    {formatCategoryLabel(cat)}
                   </Text>
                 </Pressable>
               );
@@ -1064,34 +1098,34 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
+    flexDirection: "column",
     paddingHorizontal: 20,
-    paddingBottom: 14,
+    paddingBottom: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerTextContainer: {
-    flex: 1,
-    marginRight: 12,
+  headerTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
   },
   greeting: {
     fontSize: 10,
     fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase",
     letterSpacing: 1.2,
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: -0.5,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 2,
+    gap: 8,
   },
   toggleContainer: {
     flexDirection: "row",
