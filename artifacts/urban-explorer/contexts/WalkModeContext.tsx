@@ -203,6 +203,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const currentNarrationPlaceRef = useRef<WalkPlace | null>(null);
   const densityRef = useRef<WalkDensity>("sparse");
   const isWalkingRef = useRef(false);
+  // Prevents double-tapping "Start Walking" from launching two concurrent
+  // setup flows. Set to true the moment startWalk begins and cleared when
+  // the walk is fully running or if it fails.
+  const isStartingRef = useRef(false);
   // Rolling pace samples: each entry is (timestamp, meters travelled since
   // the previous sample). Pruned to the last PACE_WINDOW_MS on every update.
   const paceSamplesRef = useRef<{ ts: number; meters: number }[]>([]);
@@ -549,8 +553,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   }, [isWalking]);
 
   const startWalk = useCallback(async () => {
+    // Guard against double-tap or re-entry before the walk is fully set up.
+    if (isWalkingRef.current || isStartingRef.current) return;
+    isStartingRef.current = true;
+    try {
     const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") return;
+    if (status !== "granted") { isStartingRef.current = false; return; }
 
     // Background permission is best-effort: if the user declines, Walk Mode
     // still works while the app is in the foreground. We never block the
@@ -688,6 +696,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       });
       headingWatchRef.current = headingSub;
     } catch {}
+    } finally {
+      // Allow startWalk to be called again (e.g. after stopping and
+      // restarting, or after an error during setup).
+      isStartingRef.current = false;
+    }
   }, [handleLocationUpdate]);
 
   const stopWalk = useCallback(() => {

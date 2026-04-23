@@ -659,7 +659,7 @@ router.post("/explore/discover", async (req, res) => {
   // are the same regardless of exactly where you stood.
   const modeKey = isQuick ? "quick" : "full";
   const discoverCacheKey = `${modeKey}:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}`;
-  const cachedDiscover = getLLMCache(discoverCacheKey);
+  const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(discoverCacheKey);
   if (cachedDiscover) {
     // Re-apply current ratings on every cache hit so newly-submitted ratings
     // immediately affect the sort order and communityRating display without
@@ -1164,7 +1164,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     });
     clearTimeout(timer);
     if (!resp.ok) throw new Error("Nominatim error");
-    const data = await resp.json();
+    const data = await resp.json() as Record<string, any>;
     const addr = data.address || {};
     const parts: string[] = [];
     if (addr.house_number && addr.road) {
