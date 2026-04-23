@@ -1852,7 +1852,7 @@ async function fetchOSMPlacesInBoundingBox(
   bbox: { south: number; west: number; north: number; east: number },
   corridorMeters: number = 70,
   routeLengthKm?: number,
-): Promise<OSMPlace[]> {
+): Promise<{ places: OSMPlace[]; osmCandidatesCap: number }> {
   const { south, west, north, east } = bbox;
 
   // Scale the Overpass result limit and candidate cap with corridor width.
@@ -1902,10 +1902,10 @@ out center body ${overpassLimit};
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!resp.ok) return [];
+    if (!resp.ok) return { places: [], osmCandidatesCap };
 
     const json = (await resp.json()) as { elements?: any[] };
-    if (!json.elements) return [];
+    if (!json.elements) return { places: [], osmCandidatesCap };
 
     const seen = new Set<string>();
     const results: OSMPlace[] = [];
@@ -1955,10 +1955,10 @@ out center body ${overpassLimit};
       results.splice(osmCandidatesCap);
     }
 
-    return results;
+    return { places: results, osmCandidatesCap };
   } catch {
     clearTimeout(timeout);
-    return [];
+    return { places: [], osmCandidatesCap };
   }
 }
 
@@ -2013,8 +2013,8 @@ router.post("/explore/places-along-route", async (req, res) => {
     routeLengthKm += haversineDistance(geom[i - 1][0], geom[i - 1][1], geom[i][0], geom[i][1]) / 1000;
   }
 
-  const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox, corridor, routeLengthKm);
-  logger.info({ geomPoints: geom.length, corridorM: corridor, routeLengthKm: routeLengthKm.toFixed(2), osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
+  const { places: osmPlaces, osmCandidatesCap } = await fetchOSMPlacesInBoundingBox(bbox, corridor, routeLengthKm);
+  logger.info({ geomPoints: geom.length, corridorM: corridor, routeLengthKm: routeLengthKm.toFixed(2), osmCandidatesCap, osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
 
   const candidates = osmPlaces
     .map((p) => {
