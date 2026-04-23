@@ -99,6 +99,18 @@ export function WalkModeMap({
   } | null>(null);
   const [expandProgress, setExpandProgress] = useState(0);
 
+  const [collapse, setCollapse] = useState<{
+    groups: {
+      clusterKey: string;
+      center: { latitude: number; longitude: number };
+      places: WalkPlace[];
+    }[];
+    startedAt: number;
+  } | null>(null);
+  const [collapseProgress, setCollapseProgress] = useState(0);
+
+  const prevClustersRef = useRef<Cluster[]>([]);
+
   useEffect(() => {
     if (!expansion) return;
     const duration = 420;
@@ -121,10 +133,68 @@ export function WalkModeMap({
     };
   }, [expansion]);
 
+  useEffect(() => {
+    const prev = prevClustersRef.current;
+    prevClustersRef.current = clusters;
+    if (expansion) return;
+    const prevSinglePlaceIds = new Set<string>();
+    for (const c of prev) {
+      if (c.places.length === 1) prevSinglePlaceIds.add(c.places[0].id);
+    }
+    if (prevSinglePlaceIds.size === 0) return;
+    const groups: {
+      clusterKey: string;
+      center: { latitude: number; longitude: number };
+      places: WalkPlace[];
+    }[] = [];
+    for (const c of clusters) {
+      if (c.places.length <= 1) continue;
+      const merged = c.places.filter((p) => prevSinglePlaceIds.has(p.id));
+      if (merged.length >= 1) {
+        groups.push({
+          clusterKey: c.key,
+          center: { latitude: c.latitude, longitude: c.longitude },
+          places: merged,
+        });
+      }
+    }
+    if (groups.length > 0) {
+      setCollapseProgress(0);
+      setCollapse({ groups, startedAt: Date.now() });
+    }
+  }, [clusters, expansion]);
+
+  useEffect(() => {
+    if (!collapse) return;
+    const duration = 420;
+    let raf: number;
+    let clearTimer: ReturnType<typeof setTimeout> | undefined;
+    const tick = () => {
+      const elapsed = Date.now() - collapse.startedAt;
+      const t = Math.min(1, elapsed / duration);
+      setCollapseProgress(Easing.in(Easing.cubic)(t));
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        clearTimer = setTimeout(() => setCollapse(null), 60);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (clearTimer) clearTimeout(clearTimer);
+    };
+  }, [collapse]);
+
   const expandingPlaceIds = useMemo(() => {
     if (!expansion) return null;
     return new Set(expansion.cluster.places.map((p) => p.id));
   }, [expansion]);
+
+  const collapsingClusterKeys = useMemo(() => {
+    if (!collapse) return null;
+    return new Set(collapse.groups.map((g) => g.clusterKey));
+  }, [collapse]);
 
   const handleClusterPress = (cluster: Cluster) => {
     if (cluster.places.length <= 1) return;
@@ -217,8 +287,42 @@ export function WalkModeMap({
             );
           })}
 
+        {collapse &&
+          collapse.groups.flatMap((group) =>
+            group.places.map((place) => {
+              const t = collapseProgress;
+              const lat =
+                place.latitude + (group.center.latitude - place.latitude) * t;
+              const lng =
+                place.longitude + (group.center.longitude - place.longitude) * t;
+              return (
+                <Marker
+                  key={`collapse:${group.clusterKey}:${place.id}`}
+                  coordinate={{ latitude: lat, longitude: lng }}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                  tracksViewChanges
+                  opacity={1 - 0.55 * t}
+                >
+                  <View
+                    style={[
+                      styles.expandPin,
+                      {
+                        backgroundColor: narratedIds.has(place.id)
+                          ? colors.mutedForeground
+                          : colors.primary,
+                        borderColor: colors.background,
+                        transform: [{ scale: 1 - 0.4 * t }],
+                      },
+                    ]}
+                  />
+                </Marker>
+              );
+            }),
+          )}
+
         {clusters.map((cluster) => {
           if (expansion && cluster.key === expansion.cluster.key) return null;
+          if (collapse && collapsingClusterKeys?.has(cluster.key)) return null;
           if (
             expandingPlaceIds &&
             cluster.places.length === 1 &&
