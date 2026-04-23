@@ -507,7 +507,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (Platform.OS !== "web") {
       try {
         if (__DEV__) console.log(`[fetchNarrationPayload] POST walk-narration-audio for "${place.name}"`);
-        const res = await fetch(`${API_BASE}/api/explore/walk-narration-audio`, { method: "POST", headers, body });
+        const audioController = new AbortController();
+        const audioTimeout = setTimeout(() => audioController.abort(), 15_000);
+        let res: Response;
+        try {
+          res = await fetch(`${API_BASE}/api/explore/walk-narration-audio`, { method: "POST", headers, body, signal: audioController.signal });
+        } finally {
+          clearTimeout(audioTimeout);
+        }
         if (__DEV__) console.log(`[fetchNarrationPayload] audio response status=${res.status} for "${place.name}"`);
         if (res.ok) {
           const buf = await res.arrayBuffer();
@@ -536,12 +543,18 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // Text path (web, or native fallback if audio failed).
     try {
       if (__DEV__) console.log(`[fetchNarrationPayload] POST walk-narration (text) for "${place.name}"`);
-      const res = await fetch(`${API_BASE}/api/explore/walk-narration`, { method: "POST", headers, body });
-      if (__DEV__) console.log(`[fetchNarrationPayload] text response status=${res.status} for "${place.name}"`);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (typeof data?.narration !== "string" || !data.narration.trim()) return null;
-      return { kind: "text", text: data.narration };
+      const textController = new AbortController();
+      const textTimeout = setTimeout(() => textController.abort(), 12_000);
+      try {
+        const res = await fetch(`${API_BASE}/api/explore/walk-narration`, { method: "POST", headers, body, signal: textController.signal });
+        if (__DEV__) console.log(`[fetchNarrationPayload] text response status=${res.status} for "${place.name}"`);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (typeof data?.narration !== "string" || !data.narration.trim()) return null;
+        return { kind: "text", text: data.narration };
+      } finally {
+        clearTimeout(textTimeout);
+      }
     } catch (err) {
       if (__DEV__) console.log(`[fetchNarrationPayload] text fetch threw:`, err);
       return null;
@@ -701,10 +714,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         if (!place) return;
         const payload = await fetchNarrationPayload(place);
         if (!payload) return;
-        // Guard: discard if the place was narrated while we were fetching
-        // (e.g. the user tapped Skip, or duplicate GPS ticks fired). We own
-        // the audio temp file, so delete it before bailing out.
-        if (narratedIdsRef.current.has(candidateId)) {
+        // Guard: discard if the walk ended, or if the place was already narrated
+        // while we were fetching (e.g. the user tapped Skip, or duplicate GPS
+        // ticks fired). We own the audio temp file so delete it before bailing.
+        if (!isWalkingRef.current || narratedIdsRef.current.has(candidateId)) {
           if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
           return;
         }
@@ -943,8 +956,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       }
     })();
 
-    // Density is per-walk: every new walk starts back at Sparse so the user
-    // makes a fresh choice rather than inheriting last walk's setting.
+    // Density is per-walk: every new walk starts at Dense (more results) as the
+    // default, so the user gets immediate story density without needing to configure
+    // anything. Auto-switching will move it to Sparse if they walk fast.
     densityRef.current = "dense";
     setDensityState("dense");
     setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
@@ -1088,6 +1102,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     isWalkingRef.current = false;
     setIsWalking(false);
     narration.stop();
+    // Discard any prefetch that was in-flight or cached when the walk ended.
+    // The in-flight guard (isWalkingRef.current check in the async closure) will
+    // handle the async case, but also clean up whatever already landed so we
+    // don't leave a stale MP3 sitting in the device cache.
+    const stalePrefetch = prefetchedNarrationRef.current;
+    if (stalePrefetch && stalePrefetch.payload.kind === "audio") {
+      try { stalePrefetch.payload.cleanup?.(); } catch {}
+    }
+    prefetchedNarrationRef.current = null;
+    prefetchInFlightRef.current = null;
     // Tear down the lock-screen widget and unbind remote commands so nothing
     // is left in the Now Playing slot once Walk Mode ends.
     if (nowPlayingUnsubRef.current) {
