@@ -48,6 +48,7 @@ interface WalkPlace {
   address?: string;
   distanceMeters?: number;
   netScore?: number;
+  photoUrl?: string;
 }
 
 export type WalkDensity = "sparse" | "dense";
@@ -194,6 +195,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // to physically walk a minimum distance before picking the next story.
   const lastNarrationEndLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const isSpeakingRef = useRef(false);
+  // The place whose narration is currently queued or playing. Used to thread
+  // the place's photo into the iOS Now Playing widget so the lock-screen pill
+  // shows artwork that matches the spoken story.
+  const currentNarrationPlaceRef = useRef<WalkPlace | null>(null);
   const densityRef = useRef<WalkDensity>("sparse");
   const isWalkingRef = useRef(false);
   // Rolling pace samples: each entry is (timestamp, meters travelled since
@@ -230,6 +235,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       lastNarrationEndLocationRef.current = currentLocation
         ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude }
         : null;
+      // Drop the artwork association so the next idle widget update doesn't
+      // keep showing a photo from a place we've already moved past.
+      currentNarrationPlaceRef.current = null;
     }
   }, [narration.isSpeaking, currentLocation]);
 
@@ -243,12 +251,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         narration.currentPlace,
         "Urban Explorer",
         narration.isPaused,
+        currentNarrationPlaceRef.current?.photoUrl ?? null,
       );
     } else {
       // Between stories the audio session is idle but the walk continues —
       // keep the widget visible with a generic "listening" label so the user
-      // still sees Urban Explorer is the active audio app.
-      NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true);
+      // still sees Urban Explorer is the active audio app. No artwork URL
+      // here means the native side falls back to the app icon.
+      NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true, null);
     }
   }, [isWalking, narration.isSpeaking, narration.isPaused, narration.currentPlace]);
 
@@ -325,6 +335,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data.narration) {
+          // Remember which place is now driving the lock-screen widget so the
+          // artwork we send matches the story being spoken.
+          currentNarrationPlaceRef.current = place;
           narration.enqueue(place.id, data.narration, place.name);
           if (Platform.OS !== "web") {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -594,7 +607,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // Seed the widget right away so the user sees Urban Explorer claim the
     // Now Playing slot the moment Walk Mode starts, even before the first
     // narration begins.
-    NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true);
+    NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true, null);
 
     const accuracy =
       Platform.OS === "web" ? Location.Accuracy.High : Location.Accuracy.BestForNavigation;

@@ -4,7 +4,12 @@ import { requireOptionalNativeModule } from "expo";
 type Subscription = { remove: () => void };
 
 type NowPlayingNativeModule = {
-  setNowPlaying(title: string, artist: string, isPaused: boolean): Promise<void>;
+  setNowPlaying(
+    title: string,
+    artist: string,
+    isPaused: boolean,
+    artworkUrl: string | null,
+  ): Promise<void>;
   setPlaybackState(isPaused: boolean): Promise<void>;
   clear(): Promise<void>;
   addListener(eventName: "onPlay" | "onPause" | "onNext", listener: () => void): Subscription;
@@ -22,8 +27,17 @@ const noop = () => Promise.resolve();
 export const NowPlaying = {
   isSupported: native != null,
 
-  setNowPlaying(title: string, artist: string, isPaused = false): Promise<void> {
-    return native ? native.setNowPlaying(title, artist, isPaused) : noop();
+  /**
+   * Update the iOS Now Playing widget. `artworkUrl` is the place's photo URL;
+   * pass `null` (or omit) to fall back to the app icon on the lock screen.
+   */
+  setNowPlaying(
+    title: string,
+    artist: string,
+    isPaused = false,
+    artworkUrl: string | null = null,
+  ): Promise<void> {
+    return native ? native.setNowPlaying(title, artist, isPaused, artworkUrl) : noop();
   },
 
   setPlaybackState(isPaused: boolean): Promise<void> {
