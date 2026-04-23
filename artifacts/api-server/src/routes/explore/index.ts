@@ -1851,6 +1851,7 @@ function routeBoundingBox(
 async function fetchOSMPlacesInBoundingBox(
   bbox: { south: number; west: number; north: number; east: number },
   corridorMeters: number = 70,
+  routeLengthKm?: number,
 ): Promise<OSMPlace[]> {
   const { south, west, north, east } = bbox;
 
@@ -1863,7 +1864,13 @@ async function fetchOSMPlacesInBoundingBox(
   //   t = 1  →  corridor = 300 m (wide  / relaxed)
   const t = Math.min(1, Math.max(0, (corridorMeters - 70) / 230));
   const overpassLimit = Math.round(300 - 150 * t);   // 300 → 150
-  const osmCandidatesCap = Math.round(100 - 60 * t); // 100 → 40
+  const corridorCap = Math.round(100 - 60 * t);      // 100 → 40
+  // Also constrain by route length: ~15 candidates per km, min 15, max 75.
+  // Take the minimum so both density and length constraints are respected.
+  const lengthCap = routeLengthKm !== undefined
+    ? Math.min(75, Math.max(15, Math.round(routeLengthKm * 15)))
+    : corridorCap;
+  const osmCandidatesCap = Math.min(corridorCap, lengthCap);
 
   const query = `
 [out:json][timeout:10];
@@ -1999,8 +2006,15 @@ router.post("/explore/places-along-route", async (req, res) => {
     return;
   }
 
-  const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox, corridor);
-  logger.info({ geomPoints: geom.length, corridorM: corridor, osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
+  // Compute total route length in km so fetchOSMPlacesInBoundingBox can
+  // scale the candidates cap proportionally alongside the corridor-based cap.
+  let routeLengthKm = 0;
+  for (let i = 1; i < geom.length; i++) {
+    routeLengthKm += haversineDistance(geom[i - 1][0], geom[i - 1][1], geom[i][0], geom[i][1]) / 1000;
+  }
+
+  const osmPlaces = await fetchOSMPlacesInBoundingBox(bbox, corridor, routeLengthKm);
+  logger.info({ geomPoints: geom.length, corridorM: corridor, routeLengthKm: routeLengthKm.toFixed(2), osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
 
   const candidates = osmPlaces
     .map((p) => {
