@@ -489,6 +489,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
     // --- Normal path (cache miss or stale) ---
     try {
+      if (__DEV__) console.log(`[fetchNarration] POST walk-narration for "${place.name}"`);
       const res = await fetch(`${API_BASE}/api/explore/walk-narration`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...await authHeaders() },
@@ -499,8 +500,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           fact: place.facts[0],
         }),
       });
+      if (__DEV__) console.log(`[fetchNarration] response status=${res.status} for "${place.name}"`);
       if (res.ok) {
         const data = await res.json();
+        if (__DEV__) console.log(`[fetchNarration] narration length=${data.narration?.length ?? 0} for "${place.name}"`);
         if (data.narration) {
           // Remember which place is now driving the lock-screen widget so the
           // artwork we send matches the story being spoken.
@@ -510,7 +513,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           prefetchNextRef.current?.();
         }
       }
-    } catch {}
+    } catch (err) {
+      if (__DEV__) console.log(`[fetchNarration] CATCH for "${place.name}":`, err);
+    }
   }, [narration, enqueueNarration]);
 
   /**
@@ -751,12 +756,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const maybeNarrateRef = useRef<((loc?: { latitude: number; longitude: number }) => void) | null>(null);
   const maybeNarrate = useCallback(
     (loc?: { latitude: number; longitude: number }) => {
-      if (!isWalkingRef.current) return;
-      if (isSpeakingRef.current) return;
+      if (!isWalkingRef.current) { if (__DEV__) console.log("[maybeNarrate] BLOCKED: not walking"); return; }
+      if (isSpeakingRef.current) { if (__DEV__) console.log("[maybeNarrate] BLOCKED: already speaking"); return; }
       const cfg = DENSITY_CONFIG[densityRef.current];
-      if (Date.now() - lastNarrationEndRef.current < cfg.cooldownMs) return;
+      const elapsed = Date.now() - lastNarrationEndRef.current;
+      if (elapsed < cfg.cooldownMs) {
+        if (__DEV__) console.log(`[maybeNarrate] BLOCKED: cooldown ${Math.round((cfg.cooldownMs - elapsed) / 1000)}s remaining (density=${densityRef.current})`);
+        return;
+      }
       const next = pickNext(loc);
-      if (!next) return;
+      if (!next) {
+        if (__DEV__) console.log(`[maybeNarrate] BLOCKED: pickNext=null (${placesRef.current.length} places, ${narratedIdsRef.current.size} narrated)`);
+        return;
+      }
+      if (__DEV__) console.log(`[maybeNarrate] PASSED — fetching narration for "${next.name}"`);
       narratedIdsRef.current.set(next.id, Date.now());
       setNarratedIds(new Map(narratedIdsRef.current));
       fetchNarration(next);

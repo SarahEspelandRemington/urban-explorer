@@ -119,23 +119,25 @@ export function useNarration() {
         }
       }, 500);
     } else {
+      if (__DEV__) console.log(`[Speech.speak] starting "${item.placeName}" (${item.text.length} chars, gen=${myGen})`);
       Speech.speak(item.text, {
         language: "en-US",
         rate: 0.9,
         pitch: 1.05,
-        onDone: onFinish,
+        onDone: () => { if (__DEV__) console.log(`[Speech.speak] onDone gen=${myGen}`); onFinish(); },
         onStopped: () => {
           // On iOS, Speech.stop() triggers onStopped (not onDone/onError).
-          // We still need to guard with the generation check so a stop() call
-          // that was issued for a previous utterance doesn't corrupt the new one.
+          // Guard with the generation check so a stop() for a previous utterance
+          // doesn't corrupt the new one. Do NOT call processQueue here —
+          // stop() and skip() handle that after bumping the generation counter.
+          if (__DEV__) console.log(`[Speech.speak] onStopped gen=${myGen} current=${speechGenRef.current}`);
           if (speechGenRef.current !== myGen) return;
           speakingRef.current = false;
           setIsSpeaking(false);
           setCurrentPlace(null);
-          // Do NOT call processQueue here — stop() and skip() handle that
-          // themselves after bumping the generation counter.
         },
         onError: (err) => {
+          if (__DEV__) console.log(`[Speech.speak] onError gen=${myGen}:`, err);
           console.warn("Speech error:", err);
           onFinish();
         },
