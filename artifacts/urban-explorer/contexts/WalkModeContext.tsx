@@ -892,7 +892,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     prefetchedNarrationRef.current = null;
     prefetchInFlightRef.current = null;
     // Start cooldown so we don't fire instantly before the user has even moved.
-    lastNarrationEndRef.current = Date.now() - DENSITY_CONFIG[densityRef.current].cooldownMs + 5000;
+    // Use the largest cooldown across all densities so the 5-second initial
+    // wait is preserved even if auto-density switches to a stricter tier right
+    // after walk start (e.g. dense → sparse when walking at normal pace).
+    const maxCooldownMs = Math.max(
+      ...Object.values(DENSITY_CONFIG).map((c) => c.cooldownMs),
+    );
+    lastNarrationEndRef.current = Date.now() - maxCooldownMs + 5000;
 
     if (Platform.OS === "web") {
       try { unlockWebSpeech(); } catch {}
