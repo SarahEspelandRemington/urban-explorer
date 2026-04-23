@@ -9,6 +9,7 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSpring, wit
 import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
+import { useT } from "@/contexts/LocaleContext";
 import { storageKey, useUserRatings } from "@/contexts/UserRatingsContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatePlace, type RatePlaceResponse } from "@workspace/api-client-react";
@@ -17,17 +18,20 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-function formatWalkDistance(meters?: number): string {
+function formatWalkDistance(
+  meters: number | undefined,
+  pc: { walkLessThan: string; walkMin: (n: number) => string; walkFt: (n: number) => string; walkMi: (s: string) => string },
+): string {
   if (meters == null) return "";
-  if (meters < 80) return "< 1 min";
+  if (meters < 80) return pc.walkLessThan;
   if (meters < 800) {
     const mins = Math.round(meters / 80);
-    return `${mins} min`;
+    return pc.walkMin(mins);
   }
   const feet = meters * 3.28084;
-  if (feet < 528) return `${Math.round(feet)} ft`;
+  if (feet < 528) return pc.walkFt(Math.round(feet));
   const miles = meters * 0.000621371;
-  return `${miles.toFixed(2)} mi`;
+  return pc.walkMi(miles.toFixed(2));
 }
 
 interface CommunityRating {
@@ -60,6 +64,7 @@ interface PlaceCardProps {
 
 export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded, onToggleExpand, onRate }: PlaceCardProps) {
   const colors = useColors();
+  const t = useT();
   const router = useRouter();
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
   const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
@@ -88,7 +93,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
   const iconName = getCategoryIcon(place.category);
   const categoryColor = getCategoryColor(place.category, colors);
-  const walkTime = formatWalkDistance(place.distanceMeters);
+  const walkTime = formatWalkDistance(place.distanceMeters, t.placeCard);
   const isLowRated = (place.netScore ?? 0) < -1;
   const isTopPick = (place.netScore ?? 0) > 2;
 
@@ -161,15 +166,15 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           const status = (error as { status?: number })?.status;
           if (status === 429) {
             Alert.alert(
-              "Slow down a bit",
-              "You've rated a lot of places recently — try again in a few minutes.",
-              [{ text: "OK" }],
+              t.placeCard.rateLimitTitle,
+              t.placeCard.rateLimitBody,
+              [{ text: t.common.ok }],
             );
           } else {
             Alert.alert(
-              "Couldn't save your rating",
-              "Something went wrong — check your connection and try again.",
-              [{ text: "OK" }],
+              t.placeCard.saveErrTitle,
+              t.placeCard.saveErrBody,
+              [{ text: t.common.ok }],
             );
           }
           setUserRating(previousRating);
@@ -325,7 +330,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
                 accessibilityLabel="Top pick"
               >
                 <Feather name="star" size={11} color="#f59e0b" />
-                <Text style={styles.topPickBadgeText}>Top pick</Text>
+                <Text style={styles.topPickBadgeText}>{t.placeCard.topPick}</Text>
               </Animated.View>
             ) : null}
             {walkTime ? (

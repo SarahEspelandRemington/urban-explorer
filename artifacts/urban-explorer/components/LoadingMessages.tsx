@@ -2,25 +2,8 @@ import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
-
-const DISCOVERY_MESSAGES = [
-  "Digging through the archives...",
-  "Checking old maps and records...",
-  "Unearthing local secrets...",
-  "What's hiding in plain sight here...",
-  "Your personal time machine is warming up...",
-  "Building your personal history guide...",
-  "Every spot has a story — finding yours now...",
-  "Crafting discoveries just for this spot — hang tight...",
-];
-
-const DETAIL_MESSAGES = [
-  "Digging deeper into the archives...",
-  "Uncovering the full story...",
-  "Piecing together forgotten chapters...",
-  "Crafting a history just for this place...",
-];
 
 interface LoadingMessagesProps {
   variant?: "discovery" | "detail";
@@ -30,7 +13,8 @@ interface LoadingMessagesProps {
 
 export function LoadingMessages({ variant = "discovery", interval = 4000, style }: LoadingMessagesProps) {
   const colors = useColors();
-  const messages = variant === "detail" ? DETAIL_MESSAGES : DISCOVERY_MESSAGES;
+  const t = useT();
+  const messages = variant === "detail" ? t.loadingMessages.detail : t.loadingMessages.discovery;
   const [index, setIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -46,7 +30,7 @@ export function LoadingMessages({ variant = "discovery", interval = 4000, style 
   return (
     <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)} key={index}>
       <Text style={[styles.message, { color: colors.mutedForeground }, style]}>
-        {messages[index]}
+        {messages[index % messages.length]}
       </Text>
     </Animated.View>
   );

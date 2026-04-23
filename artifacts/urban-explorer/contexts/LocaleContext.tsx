@@ -11,11 +11,15 @@ import React, {
 } from "react";
 
 import {
-  DEFAULT_NOTIFICATION_LOCALE,
-  NOTIFICATION_LOCALES,
-  getNotificationLocale,
-  type NotificationLocale,
-} from "@/lib/notificationLocales";
+  DEFAULT_LOCALE,
+  LOCALES,
+  TRANSLATIONS,
+  getLocaleMeta,
+  getStrings,
+  isLocaleCode,
+  type LocaleMeta,
+  type Strings,
+} from "@/lib/i18n";
 
 const STORAGE_KEY = "urban-explorer.notificationLocale";
 
@@ -23,8 +27,9 @@ interface LocaleContextType {
   locale: string;
   localeRef: React.MutableRefObject<string>;
   setLocale: (code: string) => Promise<void>;
-  availableLocales: NotificationLocale[];
-  resolved: NotificationLocale;
+  availableLocales: LocaleMeta[];
+  resolved: LocaleMeta;
+  t: Strings;
 }
 
 const LocaleContext = createContext<LocaleContextType | null>(null);
@@ -35,7 +40,7 @@ function matchDeviceLocale(
   for (const entry of deviceLocales) {
     const code = entry.languageCode?.toLowerCase();
     if (!code) continue;
-    if (NOTIFICATION_LOCALES.some((l) => l.code === code)) {
+    if (isLocaleCode(code)) {
       return code;
     }
   }
@@ -45,7 +50,7 @@ function matchDeviceLocale(
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const deviceLocales = Localization.useLocales();
   const deviceLocale = useMemo(
-    () => matchDeviceLocale(deviceLocales) ?? DEFAULT_NOTIFICATION_LOCALE,
+    () => matchDeviceLocale(deviceLocales) ?? DEFAULT_LOCALE,
     [deviceLocales],
   );
 
@@ -55,6 +60,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   const locale = hydrated && override ? override : deviceLocale;
+  // Mirror in a ref so non-reactive consumers (e.g. the WalkModeProvider's
+  // startWalk closure) can read the latest value without forcing a re-render
+  // on every locale change.
   const localeRef = useRef<string>(locale);
   useEffect(() => {
     localeRef.current = locale;
@@ -65,7 +73,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
         if (cancelled) return;
-        if (stored && NOTIFICATION_LOCALES.some((l) => l.code === stored)) {
+        if (stored && isLocaleCode(stored)) {
           setOverride(stored);
         }
       })
@@ -79,7 +87,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setLocale = useCallback(async (code: string) => {
-    if (!NOTIFICATION_LOCALES.some((l) => l.code === code)) return;
+    if (!isLocaleCode(code)) return;
     setOverride(code);
     try {
       await AsyncStorage.setItem(STORAGE_KEY, code);
@@ -91,8 +99,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       locale,
       localeRef,
       setLocale,
-      availableLocales: NOTIFICATION_LOCALES,
-      resolved: getNotificationLocale(locale),
+      availableLocales: LOCALES,
+      resolved: getLocaleMeta(locale),
+      t: getStrings(locale),
     }),
     [locale, setLocale],
   );
@@ -105,3 +114,13 @@ export function useLocale() {
   if (!ctx) throw new Error("useLocale must be used within LocaleProvider");
   return ctx;
 }
+
+// Convenience hook returning just the translations object so callers can write
+// `const t = useT();` and then `t.explore.discover`.
+export function useT(): Strings {
+  return useLocale().t;
+}
+
+// Re-export for any direct consumers that previously imported the type from
+// the locale context module.
+export { TRANSLATIONS };

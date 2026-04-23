@@ -23,6 +23,7 @@ import { LoadingMessages } from "@/components/LoadingMessages";
 import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceMapView } from "@/components/PlaceMapView";
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
@@ -74,6 +75,7 @@ type ViewMode = "list" | "map";
 
 export default function ExploreScreen() {
   const colors = useColors();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [permission, requestPermission] = Location.useForegroundPermissions();
@@ -394,20 +396,20 @@ export default function ExploreScreen() {
               setShowLocationSearch(false);
               discoverAt(coords.latitude, coords.longitude);
             } else {
-              setGeocodeError("Couldn't find that location. Try being more specific.");
+              setGeocodeError(t.explore.locationNotFound);
             }
           },
           onError: (err: any) => {
             setGeocodeError(
               err?.status === 429 || err?.status === 503
-                ? "Location service is temporarily unavailable — try again in a moment."
-                : "Something went wrong. Please try again.",
+                ? t.explore.locationServiceBusy
+                : t.common.somethingWrong,
             );
           },
         },
       );
     },
-    [geocodeMutation, discoverAt],
+    [geocodeMutation, discoverAt, t],
   );
 
   useEffect(() => {
@@ -472,16 +474,16 @@ export default function ExploreScreen() {
             numberOfLines={1}
           >
             {locationCalibrating
-              ? "Improving GPS accuracy…"
+              ? t.explore.improvingGps
               : locationLoading
-              ? "Locating…"
-              : areaName || "Ready to explore"}
+              ? t.explore.locating
+              : areaName || t.explore.readyToExplore}
             {!locationLoading && !manualCoords && location?.coords.accuracy
               ? `  ·  ±${Math.round(location.coords.accuracy)}m`
               : ""}
           </Text>
           <Text style={[styles.title, { color: colors.foreground }]}>
-            Discover
+            {t.explore.discover}
           </Text>
         </View>
         <View style={styles.headerActions}>
@@ -596,7 +598,7 @@ export default function ExploreScreen() {
 
       {(hasCoords || locationLoading) && (
         <View style={[styles.radiusRow, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
-          <Text style={[styles.radiusLabel, { color: colors.mutedForeground }]}>Range</Text>
+          <Text style={[styles.radiusLabel, { color: colors.mutedForeground }]}>{t.explore.range}</Text>
           {([150, 300, 500] as const).map((r) => {
             const isActive = searchRadius === r;
             return (
@@ -631,7 +633,7 @@ export default function ExploreScreen() {
                     { color: isActive ? colors.background : colors.mutedForeground },
                   ]}
                 >
-                  {r === 150 ? "Close" : r === 300 ? "Medium" : "Wide"} · {r}m
+                  {r === 150 ? t.explore.rangeClose : r === 300 ? t.explore.rangeMedium : t.explore.rangeWide} · {r}m
                 </Text>
               </Pressable>
             );
@@ -667,7 +669,7 @@ export default function ExploreScreen() {
                   { color: activeFilters.size === 0 ? colors.background : colors.mutedForeground },
                 ]}
               >
-                All
+                {t.explore.all}
               </Text>
             </Pressable>
             {filterGroups.categories.length > 1 && filterGroups.categories.map((cat) => {
@@ -798,7 +800,7 @@ export default function ExploreScreen() {
           >
             <Feather name="navigation" size={14} color={colors.primaryForeground} />
             <Text style={[styles.driftBannerText, { color: colors.primaryForeground }]}>
-              You've moved — tap to refresh this area
+              {t.explore.driftBanner}
             </Text>
             <Feather name="refresh-cw" size={14} color={colors.primaryForeground} />
           </Pressable>
@@ -861,10 +863,10 @@ export default function ExploreScreen() {
                     <Feather name="headphones" size={22} color={colors.primaryForeground} />
                     <View style={styles.walkCardText}>
                       <Text style={[styles.walkCardTitle, { color: colors.primaryForeground }]}>
-                        Start Walking
+                        {t.explore.startWalking}
                       </Text>
                       <Text style={[styles.walkCardSubtitle, { color: colors.primaryForeground + "cc" }]}>
-                        Audio tour guide — headphones or speaker
+                        {t.explore.audioTourSubtitle}
                       </Text>
                     </View>
                     <Feather name="chevron-right" size={20} color={colors.primaryForeground + "aa"} />
@@ -893,10 +895,10 @@ export default function ExploreScreen() {
                     <Feather name="search" size={20} color={colors.foreground} />
                     <View style={styles.walkCardText}>
                       <Text style={[styles.investigateCardTitle, { color: colors.foreground }]}>
-                        Investigate an Address
+                        {t.explore.investigateTitle}
                       </Text>
                       <Text style={[styles.investigateCardSubtitle, { color: colors.mutedForeground }]}>
-                        Curious about a specific building? Look it up.
+                        {t.explore.investigateSubtitle}
                       </Text>
                     </View>
                     <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
@@ -913,7 +915,7 @@ export default function ExploreScreen() {
                   >
                     <Feather name="clock" size={14} color="#92400e" />
                     <Text style={styles.ratingPaceWarningText}>
-                      You're rating quickly — pace yourself
+                      {t.explore.ratingPaceWarning}
                     </Text>
                     <Pressable
                       onPress={dismissWarning}
@@ -951,15 +953,15 @@ export default function ExploreScreen() {
                   style={[styles.emptyTitle, { color: colors.foreground }]}
                 >
                   {(discoverMutation.error as any)?.status === 429 || (discoverMutation.error as any)?.status === 503
-                    ? "We're a bit busy"
-                    : "Something went wrong"}
+                    ? t.explore.busyTitle
+                    : t.explore.errorTitle}
                 </Text>
                 <Text
                   style={[styles.emptyText, { color: colors.mutedForeground }]}
                 >
                   {(discoverMutation.error as any)?.status === 429 || (discoverMutation.error as any)?.status === 503
-                    ? "We're busy right now — try again in a moment."
-                    : "We couldn't find places nearby. Try again."}
+                    ? t.explore.busyDetail
+                    : t.explore.errorDetail}
                 </Text>
                 <Pressable
                   onPress={handleDiscover}
@@ -980,7 +982,7 @@ export default function ExploreScreen() {
                       { color: colors.primaryForeground },
                     ]}
                   >
-                    Retry
+                    {t.common.retry}
                   </Text>
                 </Pressable>
               </View>
@@ -988,10 +990,10 @@ export default function ExploreScreen() {
               <View style={styles.emptyContainer}>
                 <Feather name="map-pin" size={40} color={colors.mutedForeground} />
                 <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  Nothing found nearby
+                  {t.explore.nothingFoundTitle}
                 </Text>
                 <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  No stories found within this range. Try a wider range or move a little further down the block.
+                  {t.explore.nothingFoundDetail}
                 </Text>
                 <View style={styles.emptyActions}>
                   {searchRadius < 500 && (
@@ -1012,7 +1014,7 @@ export default function ExploreScreen() {
                     >
                       <Feather name="maximize" size={16} color={colors.primaryForeground} />
                       <Text style={[styles.retryText, { color: colors.primaryForeground }]}>
-                        Try {searchRadius === 150 ? "300m" : "500m"} range
+                        {t.explore.tryRange(searchRadius === 150 ? 300 : 500)}
                       </Text>
                     </Pressable>
                   )}
@@ -1026,7 +1028,7 @@ export default function ExploreScreen() {
                     accessibilityLabel="Search again"
                   >
                     <Feather name="refresh-cw" size={16} color={colors.foreground} />
-                    <Text style={[styles.retryText, { color: colors.foreground }]}>Search again</Text>
+                    <Text style={[styles.retryText, { color: colors.foreground }]}>{t.explore.searchAgain}</Text>
                   </Pressable>
                 </View>
               </View>
@@ -1036,12 +1038,12 @@ export default function ExploreScreen() {
                 <Text
                   style={[styles.emptyTitle, { color: colors.foreground }]}
                 >
-                  Start Exploring
+                  {t.explore.startExploringTitle}
                 </Text>
                 <Text
                   style={[styles.emptyText, { color: colors.mutedForeground }]}
                 >
-                  Tap the compass to discover interesting places around you
+                  {t.explore.startExploringDetail}
                 </Text>
               </View>
             )

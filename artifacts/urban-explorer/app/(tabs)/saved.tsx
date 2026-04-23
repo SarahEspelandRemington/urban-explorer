@@ -6,11 +6,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PlaceCard } from "@/components/PlaceCard";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
 
 export default function SavedScreen() {
   const colors = useColors();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { savedPlaces } = useDiscovery();
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -42,9 +44,9 @@ export default function SavedScreen() {
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>Saved</Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>{t.saved.title}</Text>
         <Text style={[styles.count, { color: colors.mutedForeground }]}>
-          {savedPlaces.length} {savedPlaces.length === 1 ? "place" : "places"}
+          {savedPlaces.length} {savedPlaces.length === 1 ? t.saved.placeOne : t.saved.placeMany}
         </Text>
       </View>
 
@@ -79,7 +81,7 @@ export default function SavedScreen() {
             >
               <Feather name="clock" size={14} color="#92400e" />
               <Text style={styles.ratingPaceWarningText}>
-                You're rating quickly — pace yourself
+                {t.explore.ratingPaceWarning}
               </Text>
               <Pressable
                 onPress={dismissWarning}
@@ -96,10 +98,10 @@ export default function SavedScreen() {
           <View style={styles.emptyContainer}>
             <Feather name="bookmark" size={40} color={colors.mutedForeground} />
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              No saved places yet
+              {t.saved.emptyTitle}
             </Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Bookmark places you discover to revisit them later
+              {t.saved.emptyDetail}
             </Text>
           </View>
         }

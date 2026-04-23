@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import { useSuggestLocations } from "@workspace/api-client-react";
@@ -46,6 +47,7 @@ export function LocationPermission({
   onWalkMode,
 }: LocationPermissionProps) {
   const colors = useColors();
+  const t = useT();
   const [query, setQuery] = useState("");
   const [showSearch, setShowSearch] = useState(!!showBackButton);
   const [suggestions, setSuggestions] = useState<LocationSuggestion[]>([]);
@@ -126,12 +128,12 @@ export function LocationPermission({
           <Feather name="map-pin" size={36} color={colors.primary} />
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>
-          {showSearch ? "Search a Location" : "Enable Location"}
+          {showSearch ? t.locationPermission.titleSearch : t.locationPermission.titleEnable}
         </Text>
         <Text style={[styles.description, { color: colors.mutedForeground }]}>
           {showSearch
-            ? "Enter a city, neighborhood, intersection, or address to explore."
-            : "Urban Explorer needs your location to discover interesting buildings and historical sites near you."}
+            ? t.locationPermission.descriptionSearch
+            : t.locationPermission.descriptionEnable}
         </Text>
 
         {showSearch ? (
@@ -151,7 +153,7 @@ export function LocationPermission({
                 <Feather name="search" size={18} color={colors.mutedForeground} />
                 <TextInput
                   style={[styles.input, { color: colors.foreground }]}
-                  placeholder="e.g. Greenwich Village, NYC"
+                  placeholder={t.locationPermission.placeholder}
                   placeholderTextColor={colors.mutedForeground}
                   value={query}
                   onChangeText={handleQueryChange}
@@ -249,7 +251,7 @@ export function LocationPermission({
                 <Feather name="compass" size={18} color={colors.primaryForeground} />
               )}
               <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                {isGeocoding ? "Finding location..." : "Explore This Location"}
+                {isGeocoding ? t.locationPermission.finding : t.locationPermission.exploreThis}
               </Text>
             </Pressable>
 
@@ -269,7 +271,7 @@ export function LocationPermission({
               >
                 <Feather name="arrow-left" size={14} color={colors.primary} />
                 <Text style={[styles.switchText, { color: colors.primary }]}>
-                  Back to results
+                  {t.locationPermission.backToResults}
                 </Text>
               </Pressable>
             ) : (
@@ -288,7 +290,7 @@ export function LocationPermission({
               >
                 <Feather name="navigation" size={14} color={colors.primary} />
                 <Text style={[styles.switchText, { color: colors.primary }]}>
-                  Use my current location instead
+                  {t.locationPermission.useCurrentInstead}
                 </Text>
               </Pressable>
             )}
@@ -315,12 +317,12 @@ export function LocationPermission({
                 >
                   <Feather name="settings" size={18} color={colors.primaryForeground} />
                   <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                    Open Settings
+                    {t.locationPermission.openSettings}
                   </Text>
                 </Pressable>
               ) : (
                 <Text style={[styles.deniedText, { color: colors.mutedForeground }]}>
-                  Location access was denied. Please enable it in your browser settings, or search for a location below.
+                  {t.locationPermission.deniedWeb}
                 </Text>
               )
             ) : (
@@ -339,14 +341,14 @@ export function LocationPermission({
               >
                 <Feather name="navigation" size={18} color={colors.primaryForeground} />
                 <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                  Allow Location Access
+                  {t.locationPermission.allow}
                 </Text>
               </Pressable>
             )}
 
             <View style={styles.dividerRow}>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
+              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t.common.or}</Text>
               <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
@@ -366,7 +368,7 @@ export function LocationPermission({
             >
               <Feather name="search" size={18} color={colors.foreground} />
               <Text style={[styles.secondaryButtonText, { color: colors.foreground }]}>
-                Search by Location
+                {t.locationPermission.searchByLocation}
               </Text>
             </Pressable>
 
@@ -374,7 +376,7 @@ export function LocationPermission({
               <>
                 <View style={styles.dividerRow}>
                   <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                  <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
+                  <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t.common.or}</Text>
                   <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
                 </View>
 
@@ -397,10 +399,10 @@ export function LocationPermission({
                   <Feather name="headphones" size={18} color={colors.primaryForeground} />
                   <View style={styles.walkButtonText}>
                     <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                      Start Walking
+                      {t.locationPermission.startWalking}
                     </Text>
                     <Text style={[styles.walkSubtext, { color: colors.primaryForeground + "bb" }]}>
-                      Skip ahead — explore on foot with audio
+                      {t.locationPermission.walkSubtext}
                     </Text>
                   </View>
                 </Pressable>

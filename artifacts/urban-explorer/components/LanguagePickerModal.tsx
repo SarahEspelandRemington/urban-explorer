@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useLocale } from "@/contexts/LocaleContext";
+import { useLocale, useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 interface LanguagePickerModalProps {
@@ -22,6 +22,7 @@ interface LanguagePickerModalProps {
 
 export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalProps) {
   const colors = useColors();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { locale, setLocale, availableLocales, resolved } = useLocale();
 
@@ -53,11 +54,10 @@ export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalPro
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
               <Text style={[styles.title, { color: colors.foreground }]}>
-                Walk notification language
+                {t.languageModal.title}
               </Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-                Used for the Android background notification shown while you walk.
-                Takes effect on your next walk.
+                {t.languageModal.subtitle}
               </Text>
             </View>
             <Pressable
@@ -73,7 +73,7 @@ export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalPro
 
           <View style={[styles.preview, { backgroundColor: colors.muted }]}>
             <Text style={[styles.previewLabel, { color: colors.mutedForeground }]}>
-              Preview
+              {t.languageModal.preview}
             </Text>
             <Text
               style={[styles.previewTitle, { color: colors.foreground }]}

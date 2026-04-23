@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 interface TimelineEra {
@@ -32,6 +33,7 @@ interface PlaceTimelineProps {
 
 export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoaded }: PlaceTimelineProps) {
   const colors = useColors();
+  const t = useT();
   const [expandedEra, setExpandedEra] = React.useState<number | null>(null);
 
   if (!hasLoaded && !isLoading) {
@@ -52,10 +54,10 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
           <Feather name="clock" size={20} color={colors.accent} />
           <View style={styles.loadButtonText}>
             <Text style={[styles.loadButtonTitle, { color: colors.foreground }]}>
-              Time Travel
+              {t.placeTimeline.title}
             </Text>
             <Text style={[styles.loadButtonSubtitle, { color: colors.mutedForeground }]}>
-              See how this place evolved through history
+              {t.placeTimeline.subtitle}
             </Text>
           </View>
           <Feather name="chevron-right" size={18} color={colors.accent} />
@@ -69,7 +71,7 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color={colors.accent} />
         <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-          Traveling through time...
+          {t.placeTimeline.loading}
         </Text>
       </View>
     );
@@ -80,7 +82,7 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
       <View style={styles.loadingContainer}>
         <Feather name="alert-circle" size={20} color={colors.destructive} />
         <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-          Could not load timeline. Check your connection and try again.
+          {t.placeTimeline.error}
         </Text>
         {onRetry && (
           <Pressable
@@ -90,7 +92,7 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
               { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Text style={[styles.retryText, { color: colors.accent }]}>Retry</Text>
+            <Text style={[styles.retryText, { color: colors.accent }]}>{t.common.retry}</Text>
           </Pressable>
         )}
       </View>
@@ -104,7 +106,7 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
       <View style={styles.headerRow}>
         <Feather name="clock" size={18} color={colors.accent} />
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-          Time Travel
+          {t.placeTimeline.title}
         </Text>
       </View>
 

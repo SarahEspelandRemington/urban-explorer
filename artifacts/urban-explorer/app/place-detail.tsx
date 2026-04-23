@@ -20,11 +20,13 @@ import { PlaceDetailMap } from "@/components/PlaceDetailMap";
 import { PlaceTimeline } from "@/components/PlaceTimeline";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useGetPlaceDetail, useGetPlaceTimeline } from "@workspace/api-client-react";
 
 export default function PlaceDetailScreen() {
   const colors = useColors();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
@@ -220,7 +222,7 @@ export default function PlaceDetailScreen() {
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-          Quick Facts
+          {t.placeDetail.quickFacts}
         </Text>
         {basicFacts.map((fact, i) => (
           <Animated.View
@@ -257,7 +259,7 @@ export default function PlaceDetailScreen() {
           <View style={styles.detailLoading}>
             <Feather name="alert-circle" size={20} color={colors.destructive} />
             <Text style={[styles.detailLoadingText, { color: colors.mutedForeground }]}>
-              Could not load detailed history. Check your connection and try again.
+              {t.placeDetail.couldNotLoad}
             </Text>
             <Pressable
               onPress={() =>
@@ -274,7 +276,7 @@ export default function PlaceDetailScreen() {
               accessibilityRole="button"
               accessibilityLabel="Retry loading history"
             >
-              <Text style={[styles.retryText, { color: colors.accent }]}>Retry</Text>
+              <Text style={[styles.retryText, { color: colors.accent }]}>{t.common.retry}</Text>
             </Pressable>
           </View>
         ) : detail ? (
@@ -282,7 +284,7 @@ export default function PlaceDetailScreen() {
             <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-              History
+              {t.placeDetail.history}
             </Text>
             <Text style={[styles.historyText, { color: colors.foreground }]}>
               {detail.fullHistory}
@@ -291,7 +293,7 @@ export default function PlaceDetailScreen() {
             {detail.architecturalStyle ? (
               <>
                 <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  Architecture
+                  {t.placeDetail.architecture}
                 </Text>
                 <Text style={[styles.historyText, { color: colors.foreground }]}>
                   {detail.architecturalStyle}
@@ -302,7 +304,7 @@ export default function PlaceDetailScreen() {
             {detail.notableEvents && detail.notableEvents.length > 0 ? (
               <>
                 <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  Notable Events
+                  {t.placeDetail.notableEvents}
                 </Text>
                 {detail.notableEvents.map((event: string, i: number) => (
                   <View key={i} style={styles.eventRow}>
@@ -316,7 +318,7 @@ export default function PlaceDetailScreen() {
             {detail.funFacts && detail.funFacts.length > 0 ? (
               <>
                 <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  More Fun Facts
+                  {t.placeDetail.moreFunFacts}
                 </Text>
                 {detail.funFacts.map((fact: string, i: number) => (
                   <View
@@ -333,7 +335,7 @@ export default function PlaceDetailScreen() {
             {detail.nearbyRelated && detail.nearbyRelated.length > 0 ? (
               <>
                 <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  Nearby Related
+                  {t.placeDetail.nearbyRelated}
                 </Text>
                 <View style={styles.relatedRow}>
                   {detail.nearbyRelated.map((name: string, i: number) => (

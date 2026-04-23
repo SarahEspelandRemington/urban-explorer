@@ -3,6 +3,7 @@ import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { useHeading, type HeadingTarget } from "@/contexts/HeadingContext";
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 interface Props {
@@ -12,6 +13,7 @@ interface Props {
 
 export function PlaceActions({ place, size = "full" }: Props) {
   const colors = useColors();
+  const t = useT();
   const heading = useHeading();
   const isThisTarget = heading.target?.id === place.id;
   const isThisAudio = heading.audioPlace?.id === place.id;
@@ -49,7 +51,7 @@ export function PlaceActions({ place, size = "full" }: Props) {
           />
         )}
         <Text style={[styles.btnText, { color: colors.foreground }]}>
-          {isThisSpeaking ? "Playing" : "Tell me more"}
+          {isThisSpeaking ? t.placeActions.playing : t.placeActions.tellMore}
         </Text>
       </Pressable>
 
@@ -67,7 +69,7 @@ export function PlaceActions({ place, size = "full" }: Props) {
       >
         <Feather name="navigation-2" size={16} color={colors.primaryForeground} />
         <Text style={[styles.btnText, { color: colors.primaryForeground }]}>
-          {isThisTarget ? "Heading there" : "Head There"}
+          {isThisTarget ? t.placeActions.headingThere : t.placeActions.headThere}
         </Text>
       </Pressable>
     </View>

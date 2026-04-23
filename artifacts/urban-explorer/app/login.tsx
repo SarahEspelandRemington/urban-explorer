@@ -10,11 +10,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 export default function LoginScreen() {
   const { login, isLoading } = useAuth();
   const colors = useColors();
+  const t = useT();
   const insets = useSafeAreaInsets();
 
   return (
@@ -34,11 +36,11 @@ export default function LoginScreen() {
         </View>
 
         <Text style={[styles.title, { color: colors.foreground }]}>
-          Urban Explorer
+          {t.login.title}
         </Text>
 
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Discover the hidden history around you. Log in or create a free account to start exploring.
+          {t.login.subtitle}
         </Text>
       </View>
 
@@ -55,7 +57,7 @@ export default function LoginScreen() {
             <ActivityIndicator color={colors.primaryForeground} />
           ) : (
             <Text style={[styles.loginButtonText, { color: colors.primaryForeground }]}>
-              Log in / Sign up
+              {t.login.cta}
             </Text>
           )}
         </Pressable>

@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddressInput } from "@/components/AddressInput";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { LoadingMessages } from "@/components/LoadingMessages";
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useInvestigateAddress } from "@workspace/api-client-react";
 
@@ -29,6 +30,7 @@ interface Suggestion {
 
 export default function InvestigateScreen() {
   const colors = useColors();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ nearLocation?: string }>();
@@ -59,8 +61,8 @@ export default function InvestigateScreen() {
     // number or zip while preserving the precise coords.
     setPickedCoords((prev) => {
       if (!prev) return null;
-      const t = text.trim();
-      if (t === prev.name || t.startsWith(prev.name)) return prev;
+      const trimmedText = text.trim();
+      if (trimmedText === prev.name || trimmedText.startsWith(prev.name)) return prev;
       return null;
     });
   }, []);
@@ -83,13 +85,13 @@ export default function InvestigateScreen() {
   const errorMessage = useMemo(() => {
     if (!error) return null;
     if (error.status === 404) {
-      return "Couldn't find that address. Try including a city or zip (e.g., '538 W 38th St, New York, NY').";
+      return t.investigate.notFoundError;
     }
     if (error.status === 429 || error.status === 503) {
-      return "We're a bit busy — give it a moment and try again.";
+      return t.investigate.busyError;
     }
-    return "Something went wrong. Try again in a moment.";
-  }, [error]);
+    return t.investigate.genericError;
+  }, [error, t]);
 
   // Pre-populate the input if the caller provided a near location (used as default city context).
   useEffect(() => {
@@ -121,10 +123,10 @@ export default function InvestigateScreen() {
         </Pressable>
         <View style={styles.headerTextWrap}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            Investigate an Address
+            {t.investigate.headerTitle}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-            Curious about a specific building? Ask the historian.
+            {t.investigate.headerSubtitle}
           </Text>
         </View>
       </View>
@@ -144,7 +146,7 @@ export default function InvestigateScreen() {
             onChangeText={handleChangeAddress}
             onSelectSuggestion={handleSelectSuggestion}
             onSubmitEditing={handleSubmit}
-            placeholder="e.g., 538 W 38th St, New York, NY"
+            placeholder={t.investigate.placeholder}
             dotColor={colors.primary}
             returnKeyType="search"
             nearLocation={params.nearLocation ?? null}
@@ -181,15 +183,14 @@ export default function InvestigateScreen() {
                     },
                   ]}
                 >
-                  Investigate
+                  {t.investigate.investigate}
                 </Text>
               </>
             )}
           </Pressable>
 
           <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-            Best for older or non-landmark buildings you've noticed in person — the AI
-            will reason from the architecture and neighborhood when records are sparse.
+            {t.investigate.hint}
           </Text>
         </View>
 
@@ -249,25 +250,25 @@ export default function InvestigateScreen() {
                     style={[styles.chipText, { color: colors.foreground }]}
                     numberOfLines={1}
                   >
-                    Originally: {summarize(result.originalUse, 40)}
+                    {t.investigate.originallyPrefix} {summarize(result.originalUse, 40)}
                   </Text>
                 </View>
               ) : null}
             </View>
 
-            <Section title="Originally" colors={colors} body={result.originalUse} />
-            <Section title="Today" colors={colors} body={result.currentUse} />
+            <Section title={t.investigate.sectionOriginally} colors={colors} body={result.originalUse} />
+            <Section title={t.investigate.sectionToday} colors={colors} body={result.currentUse} />
             <Section
-              title="What to look for"
+              title={t.investigate.sectionWhatToLookFor}
               colors={colors}
               body={result.architecturalStyle}
             />
-            <Section title="History" colors={colors} body={result.history} />
+            <Section title={t.investigate.sectionHistory} colors={colors} body={result.history} />
 
             {result.facts && result.facts.length > 0 ? (
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
-                  Facts & details
+                  {t.investigate.sectionFacts}
                 </Text>
                 {result.facts.map((f: string, i: number) => (
                   <View key={i} style={styles.factRow}>
@@ -283,7 +284,7 @@ export default function InvestigateScreen() {
             ) : null}
 
             <Section
-              title="Block context"
+              title={t.investigate.sectionBlockContext}
               colors={colors}
               body={result.neighborhoodContext}
             />

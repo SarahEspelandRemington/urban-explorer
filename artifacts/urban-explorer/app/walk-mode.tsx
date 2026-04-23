@@ -14,12 +14,14 @@ import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { WalkModeMap } from "@/components/WalkModeMap";
+import { useT } from "@/contexts/LocaleContext";
 import { useWalkMode, type WalkDensity } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 
 export default function WalkModeScreen() {
   const colors = useColors();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const walk = useWalkMode();
@@ -79,12 +81,12 @@ export default function WalkModeScreen() {
           ]}
         >
           <Feather name="x" size={16} color={colors.foreground} />
-          <Text style={[styles.headerHomeText, { color: colors.foreground }]}>End</Text>
+          <Text style={[styles.headerHomeText, { color: colors.foreground }]}>{t.walkMode.end}</Text>
         </Pressable>
 
         <View style={styles.walkingIndicator}>
           <View style={[styles.liveDot, { backgroundColor: "#22c55e" }]} />
-          <Text style={[styles.walkingText, { color: colors.foreground }]}>Walking</Text>
+          <Text style={[styles.walkingText, { color: colors.foreground }]}>{t.walkMode.walking}</Text>
         </View>
 
         <View style={[styles.densityToggle, { backgroundColor: colors.muted }]}>
@@ -111,7 +113,7 @@ export default function WalkModeScreen() {
                     },
                   ]}
                 >
-                  {d === "sparse" ? "Sparse" : "Dense"}
+                  {d === "sparse" ? t.walkMode.sparse : t.walkMode.dense}
                 </Text>
               </Pressable>
             );
@@ -147,7 +149,7 @@ export default function WalkModeScreen() {
           <View style={[styles.loadingMap, { backgroundColor: colors.muted }]}>
             <ActivityIndicator size="large" color={colors.primary} />
             <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
-              Getting your location…
+              {t.walkMode.gettingLocation}
             </Text>
           </View>
         )}
@@ -167,7 +169,7 @@ export default function WalkModeScreen() {
             </View>
             <View style={styles.nowPlayingText}>
               <Text style={[styles.nowPlayingLabel, { color: colors.mutedForeground }]}>
-                Now playing
+                {t.walkMode.nowPlaying}
               </Text>
               <Text style={[styles.nowPlayingTitle, { color: colors.foreground }]} numberOfLines={2}>
                 {walk.narration.currentPlace}
@@ -206,7 +208,7 @@ export default function WalkModeScreen() {
           >
             <ActivityIndicator size="small" color={colors.primary} />
             <Text style={[styles.scanningText, { color: colors.mutedForeground }]}>
-              Listening for stories nearby…
+              {t.walkMode.listening}
             </Text>
           </Animated.View>
         ) : (
@@ -216,10 +218,10 @@ export default function WalkModeScreen() {
             </View>
             <View style={styles.nowPlayingText}>
               <Text style={[styles.nowPlayingLabel, { color: colors.mutedForeground }]}>
-                Keep walking
+                {t.walkMode.keepWalking}
               </Text>
               <Text style={[styles.nowPlayingTitle, { color: colors.foreground }]}>
-                {walk.density === "dense" ? "Stories will play often" : "Stories will play as you go"}
+                {walk.density === "dense" ? t.walkMode.storiesOften : t.walkMode.storiesAsYouGo}
               </Text>
             </View>
           </View>
@@ -228,7 +230,7 @@ export default function WalkModeScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
         <Text style={[styles.statsLine, { color: colors.mutedForeground }]}>
-          {walk.stats.placesNarrated} {walk.stats.placesNarrated === 1 ? "story" : "stories"} so far
+          {t.walkMode.storiesSoFar(walk.stats.placesNarrated)}
         </Text>
       </View>
     </View>
