@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Easing, StyleSheet, Text, View } from "react-native";
 import MapView, { Circle, Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
@@ -91,6 +91,39 @@ export function WalkModeMap({
 
   const clusters = useMemo(() => clusterPlaces(places, region), [places, region]);
 
+  const [expansion, setExpansion] = useState<{
+    cluster: Cluster;
+    startedAt: number;
+  } | null>(null);
+  const [expandProgress, setExpandProgress] = useState(0);
+
+  useEffect(() => {
+    if (!expansion) return;
+    const duration = 420;
+    let raf: number;
+    let clearTimer: ReturnType<typeof setTimeout> | undefined;
+    const tick = () => {
+      const elapsed = Date.now() - expansion.startedAt;
+      const t = Math.min(1, elapsed / duration);
+      setExpandProgress(Easing.out(Easing.cubic)(t));
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        clearTimer = setTimeout(() => setExpansion(null), 60);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (clearTimer) clearTimeout(clearTimer);
+    };
+  }, [expansion]);
+
+  const expandingPlaceIds = useMemo(() => {
+    if (!expansion) return null;
+    return new Set(expansion.cluster.places.map((p) => p.id));
+  }, [expansion]);
+
   const handleClusterPress = (cluster: Cluster) => {
     if (cluster.places.length <= 1) return;
     let minLat = cluster.places[0].latitude;
@@ -105,6 +138,8 @@ export function WalkModeMap({
     }
     const latitudeDelta = Math.max((maxLat - minLat) * 2.2, 0.0015);
     const longitudeDelta = Math.max((maxLng - minLng) * 2.2, 0.0015);
+    setExpandProgress(0);
+    setExpansion({ cluster, startedAt: Date.now() });
     mapRef.current?.animateToRegion(
       {
         latitude: (minLat + maxLat) / 2,
@@ -112,7 +147,7 @@ export function WalkModeMap({
         latitudeDelta,
         longitudeDelta,
       },
-      300,
+      400,
     );
   };
 
@@ -136,7 +171,46 @@ export function WalkModeMap({
           strokeWidth={1}
         />
 
+        {expansion &&
+          expansion.cluster.places.map((place) => {
+            const t = expandProgress;
+            const lat =
+              expansion.cluster.latitude + (place.latitude - expansion.cluster.latitude) * t;
+            const lng =
+              expansion.cluster.longitude + (place.longitude - expansion.cluster.longitude) * t;
+            return (
+              <Marker
+                key={`expand:${place.id}`}
+                coordinate={{ latitude: lat, longitude: lng }}
+                anchor={{ x: 0.5, y: 0.5 }}
+                tracksViewChanges
+                opacity={0.35 + 0.65 * t}
+              >
+                <View
+                  style={[
+                    styles.expandPin,
+                    {
+                      backgroundColor: narratedIds.has(place.id)
+                        ? colors.mutedForeground
+                        : colors.primary,
+                      borderColor: colors.background,
+                      transform: [{ scale: 0.6 + 0.4 * t }],
+                    },
+                  ]}
+                />
+              </Marker>
+            );
+          })}
+
         {clusters.map((cluster) => {
+          if (expansion && cluster.key === expansion.cluster.key) return null;
+          if (
+            expandingPlaceIds &&
+            cluster.places.length === 1 &&
+            expandingPlaceIds.has(cluster.places[0].id)
+          ) {
+            return null;
+          }
           if (cluster.places.length === 1) {
             const place = cluster.places[0];
             return (
@@ -195,5 +269,11 @@ const styles = StyleSheet.create({
   clusterText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
+  },
+  expandPin: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
   },
 });
