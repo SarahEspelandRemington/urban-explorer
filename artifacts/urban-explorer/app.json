@@ -16,11 +16,20 @@
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Record voice memos to capture issues during a walk."
+        "NSMicrophoneUsageDescription": "Record voice memos to capture issues during a walk.",
+        "UIBackgroundModes": ["location", "audio"]
       }
     },
     "android": {
-      "permissions": ["RECORD_AUDIO"]
+      "permissions": [
+        "RECORD_AUDIO",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -38,6 +47,17 @@
         "expo-audio",
         {
           "microphonePermission": "Record voice memos to capture issues during a walk."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Urban Explorer to use your location to narrate nearby places.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Urban Explorer to keep narrating nearby places while your phone is in your pocket or the screen is locked.",
+          "locationAlwaysPermission": "Allow Urban Explorer to keep narrating nearby places while your phone is in your pocket or the screen is locked.",
+          "isIosBackgroundLocationEnabled": true,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ]
     ],

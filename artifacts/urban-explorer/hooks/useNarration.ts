@@ -1,3 +1,4 @@
+import { setAudioModeAsync } from "expo-audio";
 import * as Speech from "expo-speech";
 import { useCallback, useRef, useState } from "react";
 import { Platform } from "react-native";
@@ -18,6 +19,26 @@ export function unlockWebSpeech() {
     window.speechSynthesis.speak(u);
     window.speechSynthesis.cancel();
     webSpeechUnlocked = true;
+  } catch {}
+}
+
+let backgroundAudioConfigured = false;
+
+/**
+ * Configure the system audio session so that text-to-speech playback continues
+ * when the screen is locked or the app is backgrounded. Safe to call multiple
+ * times — only the first call actually flips the OS-level audio mode. No-op on
+ * web (the browser tab keeps speechSynthesis alive on its own).
+ */
+export async function enableBackgroundAudio(): Promise<void> {
+  if (Platform.OS === "web" || backgroundAudioConfigured) return;
+  try {
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: "duckOthers",
+    });
+    backgroundAudioConfigured = true;
   } catch {}
 }
 

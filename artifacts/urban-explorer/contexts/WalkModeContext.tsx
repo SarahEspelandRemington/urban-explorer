@@ -1,10 +1,36 @@
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
+import * as TaskManager from "expo-task-manager";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 
-import { unlockWebSpeech, useNarration } from "@/hooks/useNarration";
+import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
+
+// Background location task name. Defining the task at module scope (outside any
+// component) is required by expo-task-manager — the OS may invoke this task
+// after a process restart, before any React tree has mounted.
+const BACKGROUND_LOCATION_TASK = "urban-explorer-background-location";
+
+// Bridge between the OS task callback and the active WalkModeProvider instance.
+// We never want stale callbacks holding refs to torn-down providers, so the
+// provider sets this on startWalk and clears it on stopWalk.
+let activeLocationCallback:
+  | ((location: Location.LocationObject) => void)
+  | null = null;
+
+if (Platform.OS !== "web" && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK)) {
+  TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
+    if (error) return;
+    if (!data) return;
+    const { locations } = data as { locations: Location.LocationObject[] };
+    if (!locations || locations.length === 0) return;
+    const cb = activeLocationCallback;
+    if (!cb) return;
+    // Only forward the freshest sample; the tick loop doesn't need history.
+    cb(locations[locations.length - 1]);
+  });
+}
 
 interface WalkPlace {
   id: string;
@@ -243,8 +269,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
    * Pick the best place to narrate next, given current location, heading, density.
    * Returns null if nothing qualifies right now.
    */
-  const pickNext = useCallback((): WalkPlace | null => {
-    const loc = currentLocation;
+  const pickNext = useCallback((overrideLoc?: { latitude: number; longitude: number }): WalkPlace | null => {
+    const loc = overrideLoc ?? currentLocation;
     if (!loc) return null;
     const cfg = DENSITY_CONFIG[densityRef.current];
 
@@ -328,31 +354,68 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           fetchNearbyPlaces(latitude, longitude);
         }
       }
+
+      // Drive narration scheduling directly from the GPS event. JS timers may
+      // be throttled or suspended while the phone is locked, but background
+      // location callbacks keep firing — so each fresh sample is our most
+      // reliable "tick" in that state.
+      maybeNarrateRef.current?.({ latitude, longitude });
     },
     [fetchNearbyPlaces],
   );
 
-  // Free-roam narration loop: every second, see if we should start the next story.
-  useEffect(() => {
-    if (!isWalking) return;
-    const tick = () => {
+  // Encapsulates the cooldown / speaking / pick / enqueue gating so it can run
+  // from both the setInterval tick (foreground) and the GPS callback
+  // (background). Stored in a ref so handleLocationUpdate doesn't depend on
+  // pickNext/fetchNarration in its useCallback deps.
+  const maybeNarrateRef = useRef<((loc?: { latitude: number; longitude: number }) => void) | null>(null);
+  const maybeNarrate = useCallback(
+    (loc?: { latitude: number; longitude: number }) => {
       if (!isWalkingRef.current) return;
       if (isSpeakingRef.current) return;
       const cfg = DENSITY_CONFIG[densityRef.current];
       if (Date.now() - lastNarrationEndRef.current < cfg.cooldownMs) return;
-      const next = pickNext();
+      const next = pickNext(loc);
       if (!next) return;
       narratedIdsRef.current.add(next.id);
       setNarratedIds(new Set(narratedIdsRef.current));
       fetchNarration(next);
-    };
-    const interval = setInterval(tick, 1500);
+    },
+    [pickNext, fetchNarration],
+  );
+  useEffect(() => {
+    maybeNarrateRef.current = maybeNarrate;
+  }, [maybeNarrate]);
+
+  // Free-roam narration loop: belt-and-suspenders foreground tick. Background
+  // narration is driven by the GPS callback above; this interval covers the
+  // foreground case where the user is standing still (no GPS deltas) but
+  // cooldown has elapsed and a new place is in range.
+  useEffect(() => {
+    if (!isWalking) return;
+    const interval = setInterval(() => maybeNarrateRef.current?.(), 1500);
     return () => clearInterval(interval);
-  }, [isWalking, pickNext, fetchNarration]);
+  }, [isWalking]);
 
   const startWalk = useCallback(async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== "granted") return;
+
+    // Background permission is best-effort: if the user declines, Walk Mode
+    // still works while the app is in the foreground. We never block the
+    // walk on the background grant.
+    if (Platform.OS !== "web") {
+      try {
+        await Location.requestBackgroundPermissionsAsync();
+      } catch {}
+    }
+
+    // Configure the audio session so expo-speech keeps playing when the
+    // screen locks. Best-effort; on failure we fall back to foreground-only
+    // narration rather than refusing to start the walk.
+    try {
+      await enableBackgroundAudio();
+    } catch {}
 
     isWalkingRef.current = true;
     setIsWalking(true);
@@ -386,13 +449,54 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       handleLocationUpdate(loc);
     } catch {}
 
-    try {
-      const sub = await Location.watchPositionAsync(
-        { accuracy, distanceInterval: 5, timeInterval: 2000 },
-        handleLocationUpdate,
-      );
-      watchRef.current = sub;
-    } catch {}
+    if (Platform.OS === "web") {
+      try {
+        const sub = await Location.watchPositionAsync(
+          { accuracy, distanceInterval: 5, timeInterval: 2000 },
+          handleLocationUpdate,
+        );
+        watchRef.current = sub;
+      } catch {}
+    } else {
+      // On native, route GPS through the background task. This keeps the
+      // location stream alive when the screen locks (iOS uses the "location"
+      // background mode; Android keeps the process alive via the foreground
+      // service notification we configure here).
+      activeLocationCallback = handleLocationUpdate;
+      try {
+        const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(
+          BACKGROUND_LOCATION_TASK,
+        );
+        if (alreadyRunning) {
+          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+        }
+        await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+          accuracy,
+          distanceInterval: 5,
+          timeInterval: 2000,
+          activityType: Location.ActivityType.Fitness,
+          pausesUpdatesAutomatically: false,
+          showsBackgroundLocationIndicator: true,
+          foregroundService: {
+            notificationTitle: "Urban Explorer is exploring with you",
+            notificationBody:
+              "Listening for nearby places to narrate as you walk.",
+            notificationColor: "#1f2937",
+          },
+        });
+      } catch {
+        // If background updates fail to start (e.g. permission denied),
+        // fall back to a foreground-only watcher so the walk still works
+        // while the app is in front.
+        try {
+          const sub = await Location.watchPositionAsync(
+            { accuracy, distanceInterval: 5, timeInterval: 2000 },
+            handleLocationUpdate,
+          );
+          watchRef.current = sub;
+        } catch {}
+      }
+    }
 
     // Also subscribe to the device compass; it gives a true heading even when
     // the user is standing still. We fall back to GPS-velocity heading when
@@ -423,6 +527,18 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (headingWatchRef.current) {
       try { headingWatchRef.current.remove(); } catch {}
       headingWatchRef.current = null;
+    }
+    if (Platform.OS !== "web") {
+      // Tear down the background task so the foreground-service notification
+      // disappears and we stop draining battery the moment the walk ends.
+      activeLocationCallback = null;
+      Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
+        .then((running) => {
+          if (running) {
+            return Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+          }
+        })
+        .catch(() => {});
     }
   }, [narration]);
 
