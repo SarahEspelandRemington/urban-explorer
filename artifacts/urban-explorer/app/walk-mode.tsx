@@ -112,7 +112,7 @@ export default function WalkModeScreen() {
                   key={d}
                   onPress={() => setDensity(d)}
                   accessibilityRole="button"
-                  accessibilityLabel={d === "sparse" ? "Sparse stories" : "Dense stories"}
+                  accessibilityLabel={d === "sparse" ? "Fewer results" : "More results"}
                   accessibilityState={{ selected: active }}
                   style={[
                     styles.densityButton,

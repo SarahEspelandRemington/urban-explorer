@@ -241,8 +241,8 @@ const en: Strings = {
   walkMode: {
     end: "End",
     walking: "Walking",
-    sparse: "Sparse",
-    dense: "Dense",
+    sparse: "Fewer results",
+    dense: "More results",
     gettingLocation: "Getting your location…",
     nowPlaying: "Now playing",
     listening: "Listening for stories nearby…",
