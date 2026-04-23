@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Easing, StyleSheet, Text, View } from "react-native";
+import { Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import MapView, { Circle, Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
@@ -27,6 +27,7 @@ interface Cluster {
 }
 
 const CLUSTER_GRID_SIZE = 60;
+const PREVIEW_MAX_NAMES = 6;
 
 function clusterPlaces(places: WalkPlace[], region: Region): Cluster[] {
   if (places.length === 0) return [];
@@ -88,6 +89,7 @@ export function WalkModeMap({
     longitudeDelta: 0.005,
   };
   const [region, setRegion] = useState<Region>(initialRegion);
+  const [previewCluster, setPreviewCluster] = useState<Cluster | null>(null);
 
   const clusters = useMemo(() => clusterPlaces(places, region), [places, region]);
 
@@ -148,6 +150,19 @@ export function WalkModeMap({
         longitudeDelta,
       },
       400,
+    );
+  };
+
+  const focusPlace = (place: WalkPlace) => {
+    setPreviewCluster(null);
+    mapRef.current?.animateToRegion(
+      {
+        latitude: place.latitude,
+        longitude: place.longitude,
+        latitudeDelta: 0.003,
+        longitudeDelta: 0.003,
+      },
+      300,
     );
   };
 
@@ -230,30 +245,92 @@ export function WalkModeMap({
             <Marker
               key={cluster.key}
               coordinate={{ latitude: cluster.latitude, longitude: cluster.longitude }}
-              onPress={() => handleClusterPress(cluster)}
               tracksViewChanges={false}
               anchor={{ x: 0.5, y: 0.5 }}
+              stopPropagation
             >
-              <View
-                style={[
-                  styles.cluster,
-                  {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    backgroundColor: bg,
-                    borderColor: colors.background,
-                  },
-                ]}
+              <Pressable
+                onPress={() => handleClusterPress(cluster)}
+                onLongPress={() => setPreviewCluster(cluster)}
+                delayLongPress={350}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={`Cluster of ${cluster.places.length} places. Long-press to preview.`}
               >
-                <Text style={[styles.clusterText, { color: colors.primaryForeground }]}>
-                  {cluster.places.length}
-                </Text>
-              </View>
+                <View
+                  style={[
+                    styles.cluster,
+                    {
+                      width: size,
+                      height: size,
+                      borderRadius: size / 2,
+                      backgroundColor: bg,
+                      borderColor: colors.background,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.clusterText, { color: colors.primaryForeground }]}>
+                    {cluster.places.length}
+                  </Text>
+                </View>
+              </Pressable>
             </Marker>
           );
         })}
       </MapView>
+
+      {previewCluster ? (
+        <>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setPreviewCluster(null)}
+            accessibilityLabel="Dismiss cluster preview"
+          />
+          <View
+            style={[
+              styles.previewCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                shadowColor: colors.foreground,
+              },
+            ]}
+          >
+            <Text style={[styles.previewTitle, { color: colors.foreground }]}>
+              {previewCluster.places.length} places here
+            </Text>
+            <ScrollView style={styles.previewList} keyboardShouldPersistTaps="handled">
+              {previewCluster.places.slice(0, PREVIEW_MAX_NAMES).map((p) => (
+                <Pressable
+                  key={p.id}
+                  onPress={() => focusPlace(p)}
+                  style={({ pressed }) => [
+                    styles.previewItem,
+                    pressed && { backgroundColor: colors.muted },
+                  ]}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.previewItemText,
+                      {
+                        color: narratedIds.has(p.id) ? colors.mutedForeground : colors.foreground,
+                      },
+                    ]}
+                  >
+                    {p.name}
+                  </Text>
+                </Pressable>
+              ))}
+              {previewCluster.places.length > PREVIEW_MAX_NAMES ? (
+                <Text style={[styles.previewMore, { color: colors.mutedForeground }]}>
+                  +{previewCluster.places.length - PREVIEW_MAX_NAMES} more
+                </Text>
+              ) : null}
+            </ScrollView>
+          </View>
+        </>
+      ) : null}
     </View>
   );
 }
@@ -271,9 +348,48 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
   },
   expandPin: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
+  },
+  previewCard: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
+    maxHeight: 260,
+  },
+  previewTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 6,
+    paddingHorizontal: 4,
+  },
+  previewList: {
+    maxHeight: 220,
+  },
+  previewItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 6,
+  },
+  previewItemText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  previewMore: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    paddingHorizontal: 4,
+    paddingTop: 6,
   },
 });
