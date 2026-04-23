@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useRef } from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, { Circle, LatLng, Marker, Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { Circle, Marker, PROVIDER_DEFAULT } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -16,9 +16,6 @@ interface WalkModeMapProps {
   userLongitude: number;
   places: WalkPlace[];
   narratedIds: Set<string>;
-  routeGeometry?: [number, number][];
-  startPoint?: { latitude: number; longitude: number } | null;
-  endPoint?: { latitude: number; longitude: number } | null;
   followUser?: boolean;
 }
 
@@ -27,33 +24,10 @@ export function WalkModeMap({
   userLongitude,
   places,
   narratedIds,
-  routeGeometry,
-  startPoint,
-  endPoint,
   followUser = true,
 }: WalkModeMapProps) {
   const colors = useColors();
   const mapRef = useRef<MapView>(null);
-  const didFitRef = useRef(false);
-
-  const polyline = useMemo<LatLng[]>(
-    () =>
-      routeGeometry && routeGeometry.length > 0
-        ? routeGeometry.map(([lat, lng]) => ({ latitude: lat, longitude: lng }))
-        : [],
-    [routeGeometry],
-  );
-
-  useEffect(() => {
-    if (didFitRef.current) return;
-    if (polyline.length < 2 || !mapRef.current) return;
-    didFitRef.current = true;
-    const points: LatLng[] = [...polyline, { latitude: userLatitude, longitude: userLongitude }];
-    mapRef.current.fitToCoordinates(points, {
-      edgePadding: { top: 80, bottom: 240, left: 50, right: 50 },
-      animated: true,
-    });
-  }, [polyline, userLatitude, userLongitude]);
 
   return (
     <View style={styles.container}>
@@ -69,17 +43,8 @@ export function WalkModeMap({
         }}
         showsUserLocation
         showsMyLocationButton={false}
-        followsUserLocation={followUser && polyline.length === 0}
+        followsUserLocation={followUser}
       >
-        {polyline.length >= 2 && (
-          <Polyline
-            coordinates={polyline}
-            strokeColor={colors.primary}
-            strokeWidth={5}
-            lineCap="round"
-          />
-        )}
-
         <Circle
           center={{ latitude: userLatitude, longitude: userLongitude }}
           radius={80}
@@ -87,21 +52,6 @@ export function WalkModeMap({
           strokeColor={colors.primary + "40"}
           strokeWidth={1}
         />
-
-        {startPoint && (
-          <Marker
-            coordinate={startPoint}
-            title="Start"
-            pinColor="#22c55e"
-          />
-        )}
-        {endPoint && (
-          <Marker
-            coordinate={endPoint}
-            title="End"
-            pinColor="#ef4444"
-          />
-        )}
 
         {places.map((place) => (
           <Marker

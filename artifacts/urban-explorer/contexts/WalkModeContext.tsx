@@ -56,6 +56,10 @@ const DENSITY_CONFIG: Record<
     netScoreFloor: number;
     maxQueueDistance: number;
     discoverRadius: number;
+    // Minimum distance the user must walk after a story finishes before the
+    // next story is allowed. This is what makes "Sparse" actually feel sparse
+    // even when the user is walking fast — it gates on movement, not just time.
+    minMetersBetweenPicks: number;
   }
 > = {
   sparse: {
@@ -64,6 +68,7 @@ const DENSITY_CONFIG: Record<
     netScoreFloor: 1,
     maxQueueDistance: 300,
     discoverRadius: 300,
+    minMetersBetweenPicks: 120,
   },
   dense: {
     refetchMeters: 60,
@@ -71,6 +76,7 @@ const DENSITY_CONFIG: Record<
     netScoreFloor: -2,
     maxQueueDistance: 220,
     discoverRadius: 250,
+    minMetersBetweenPicks: 40,
   },
 };
 
@@ -131,6 +137,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const narratedIdsRef = useRef<Set<string>>(new Set());
   const placesRef = useRef<WalkPlace[]>([]);
   const lastNarrationEndRef = useRef<number>(0);
+  // Where the user was when the last narration ended, so we can require them
+  // to physically walk a minimum distance before picking the next story.
+  const lastNarrationEndLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const isSpeakingRef = useRef(false);
   const densityRef = useRef<WalkDensity>("sparse");
   const isWalkingRef = useRef(false);
@@ -146,8 +155,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     isSpeakingRef.current = narration.isSpeaking;
     if (wasSpeaking && !narration.isSpeaking) {
       lastNarrationEndRef.current = Date.now();
+      // Snapshot location at narration end so the next pick must be earned
+      // by walking minMetersBetweenPicks from this spot.
+      lastNarrationEndLocationRef.current = currentLocation
+        ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude }
+        : null;
     }
-  }, [narration.isSpeaking]);
+  }, [narration.isSpeaking, currentLocation]);
 
   const cachedAddressHintRef = useRef<string>("");
 
@@ -233,6 +247,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     const loc = currentLocation;
     if (!loc) return null;
     const cfg = DENSITY_CONFIG[densityRef.current];
+
+    // Movement gating: require the user to walk a minimum distance from where
+    // the last narration ended before queueing the next one. If we have no
+    // anchor yet (first pick of the walk), this gate is a no-op.
+    const anchor = lastNarrationEndLocationRef.current;
+    if (anchor) {
+      const movedSinceLast = haversineMeters(
+        anchor.latitude, anchor.longitude, loc.latitude, loc.longitude,
+      );
+      if (movedSinceLast < cfg.minMetersBetweenPicks) return null;
+    }
     // Prefer the live device compass heading; fall back to the heading we
     // derive from GPS velocity when the magnetometer is unavailable.
     const heading = deviceHeadingRef.current ?? velocityHeadingRef.current;
@@ -341,6 +366,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     deviceHeadingRef.current = null;
     velocityHeadingRef.current = null;
     cachedAddressHintRef.current = "";
+    lastNarrationEndLocationRef.current = null;
     // Start cooldown so we don't fire instantly before the user has even moved.
     lastNarrationEndRef.current = Date.now() - DENSITY_CONFIG[densityRef.current].cooldownMs + 5000;
 

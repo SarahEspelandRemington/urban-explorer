@@ -391,13 +391,13 @@ export function LocationPermission({
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Walk Mode"
+                  accessibilityLabel="Start Walking"
                   accessibilityHint="Start walking with audio narration of nearby places"
                 >
                   <Feather name="headphones" size={18} color={colors.primaryForeground} />
                   <View style={styles.walkButtonText}>
                     <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                      Walk Mode
+                      Start Walking
                     </Text>
                     <Text style={[styles.walkSubtext, { color: colors.primaryForeground + "bb" }]}>
                       Skip ahead — explore on foot with audio

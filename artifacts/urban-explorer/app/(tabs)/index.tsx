@@ -547,7 +547,7 @@ export default function ExploreScreen() {
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Walk Mode"
+            accessibilityLabel="Start Walking"
             accessibilityHint="Start an audio walking tour"
           >
             <Feather name="headphones" size={18} color={colors.foreground} />
@@ -835,14 +835,14 @@ export default function ExploreScreen() {
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Walk Mode"
+                  accessibilityLabel="Start Walking"
                   accessibilityHint="Start an audio walking tour with headphones or speaker"
                 >
                   <View style={styles.walkCardContent}>
                     <Feather name="headphones" size={22} color={colors.primaryForeground} />
                     <View style={styles.walkCardText}>
                       <Text style={[styles.walkCardTitle, { color: colors.primaryForeground }]}>
-                        Walk Mode
+                        Start Walking
                       </Text>
                       <Text style={[styles.walkCardSubtitle, { color: colors.primaryForeground + "cc" }]}>
                         Audio tour guide — headphones or speaker

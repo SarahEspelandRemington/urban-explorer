@@ -16,9 +16,6 @@ interface WalkModeMapProps {
   userLongitude: number;
   places: WalkPlace[];
   narratedIds: Set<string>;
-  routeGeometry?: [number, number][];
-  startPoint?: { latitude: number; longitude: number } | null;
-  endPoint?: { latitude: number; longitude: number } | null;
   followUser?: boolean;
 }
 
@@ -27,19 +24,16 @@ export function WalkModeMap({
   userLongitude,
   places,
   narratedIds,
-  routeGeometry,
 }: WalkModeMapProps) {
   const colors = useColors();
-  const hasRoute = routeGeometry && routeGeometry.length > 0;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-      <Feather name={hasRoute ? "map" : "map-pin"} size={32} color={colors.primary} />
+      <Feather name="map-pin" size={32} color={colors.primary} />
       <Text style={[styles.coords, { color: colors.foreground }]}>
         {userLatitude.toFixed(5)}, {userLongitude.toFixed(5)}
       </Text>
       <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-        {hasRoute ? `Route · ${routeGeometry!.length} pts · ` : ""}
         {places.length} places · {narratedIds.size} narrated
       </Text>
     </View>
