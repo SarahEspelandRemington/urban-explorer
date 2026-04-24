@@ -25,7 +25,6 @@ import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceMapView } from "@/components/PlaceMapView";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
-import { unlockWebSpeech } from "@/hooks/useNarration";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
 import { useDiscoverPlaces, useGeocodeLocation } from "@workspace/api-client-react";
 
@@ -520,136 +519,101 @@ export default function ExploreScreen() {
               ? `  ·  ±${Math.round(location.coords.accuracy)}m`
               : ""}
           </Text>
-          <View style={styles.headerActions}>
-          {showContent && (
-            <View style={[styles.toggleContainer, { backgroundColor: colors.muted }]}>
-              <Pressable
-                onPress={() => { setViewMode("list"); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                style={[
-                  styles.toggleButton,
-                  viewMode === "list" && { backgroundColor: colors.card },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="List view"
-                accessibilityState={{ selected: viewMode === "list" }}
-              >
-                <Feather
-                  name="list"
-                  size={16}
-                  color={viewMode === "list" ? colors.foreground : colors.mutedForeground}
-                />
-              </Pressable>
-              <Pressable
-                onPress={() => { setViewMode("map"); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-                style={[
-                  styles.toggleButton,
-                  viewMode === "map" && { backgroundColor: colors.card },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Map view"
-                accessibilityState={{ selected: viewMode === "map" }}
-              >
-                <Feather
-                  name="map"
-                  size={16}
-                  color={viewMode === "map" ? colors.foreground : colors.mutedForeground}
-                />
-              </Pressable>
-            </View>
-          )}
           <Pressable
             onPress={() => {
               if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setShowLanguagePicker(true);
             }}
             style={({ pressed }) => [
-              styles.searchButton,
-              {
-                backgroundColor: colors.muted,
-                opacity: pressed ? 0.85 : 1,
-              },
+              styles.languageChip,
+              { backgroundColor: colors.muted, opacity: pressed ? 0.8 : 1 },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Walk notification language"
           >
-            <Feather name="globe" size={18} color={colors.foreground} />
+            <Feather name="globe" size={13} color={colors.mutedForeground} />
           </Pressable>
-          <Pressable
-            onPress={() => { setGeocodeError(null); setShowLocationSearch(true); }}
-            style={({ pressed }) => [
-              styles.searchButton,
-              {
-                backgroundColor: colors.muted,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Search by location"
-          >
-            <Feather name="search" size={18} color={colors.foreground} />
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/walk-plan");
-            }}
-            style={({ pressed }) => [
-              styles.searchButton,
-              {
-                backgroundColor: colors.muted,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Plan a Walk"
-            accessibilityHint="Plan a walking route and pre-load stories"
-          >
-            <Feather name="map" size={18} color={colors.foreground} />
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              unlockWebSpeech();
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/walk-mode");
-            }}
-            style={({ pressed }) => [
-              styles.searchButton,
-              {
-                backgroundColor: colors.muted,
-                opacity: pressed ? 0.85 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Start Walking"
-            accessibilityHint="Start an audio walking tour"
-          >
-            <Feather name="headphones" size={18} color={colors.foreground} />
-          </Pressable>
-          <Pressable
-            onPress={handleDiscover}
-            disabled={discoverMutation.isPending || locationLoading}
-            style={({ pressed }) => [
-              styles.discoverButton,
-              {
-                backgroundColor: colors.primary,
-                opacity: pressed ? 0.85 : 1,
-                transform: [{ scale: pressed ? 0.95 : 1 }],
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Discover nearby places"
-          >
-            {discoverMutation.isPending ? (
-              <ActivityIndicator size="small" color={colors.primaryForeground} />
-            ) : (
-              <Feather name="compass" size={20} color={colors.primaryForeground} />
+        </View>
+        <View style={styles.headerBottomRow}>
+          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
+            {t.explore.discover}
+          </Text>
+          <View style={styles.headerActions}>
+            {showContent && (
+              <View style={[styles.toggleContainer, { backgroundColor: colors.muted }]}>
+                <Pressable
+                  onPress={() => { setViewMode("list"); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={[
+                    styles.toggleButton,
+                    viewMode === "list" && { backgroundColor: colors.card },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="List view"
+                  accessibilityState={{ selected: viewMode === "list" }}
+                >
+                  <Feather
+                    name="list"
+                    size={16}
+                    color={viewMode === "list" ? colors.foreground : colors.mutedForeground}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => { setViewMode("map"); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  style={[
+                    styles.toggleButton,
+                    viewMode === "map" && { backgroundColor: colors.card },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Map view"
+                  accessibilityState={{ selected: viewMode === "map" }}
+                >
+                  <Feather
+                    name="map"
+                    size={16}
+                    color={viewMode === "map" ? colors.foreground : colors.mutedForeground}
+                  />
+                </Pressable>
+              </View>
             )}
-          </Pressable>
+            <Pressable
+              onPress={() => { setGeocodeError(null); setShowLocationSearch(true); }}
+              style={({ pressed }) => [
+                styles.labeledHeaderBtn,
+                { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Search by location"
+            >
+              <Feather name="search" size={18} color={colors.foreground} />
+              <Text style={[styles.labeledHeaderBtnText, { color: colors.mutedForeground }]}>
+                Search
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={handleDiscover}
+              disabled={discoverMutation.isPending || locationLoading}
+              style={({ pressed }) => [
+                styles.labeledHeaderBtn,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.85 : 1,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Discover nearby places"
+            >
+              {discoverMutation.isPending ? (
+                <ActivityIndicator size="small" color={colors.primaryForeground} />
+              ) : (
+                <Feather name="compass" size={20} color={colors.primaryForeground} />
+              )}
+              <Text style={[styles.labeledHeaderBtnText, { color: colors.primaryForeground }]}>
+                Discover
+              </Text>
+            </Pressable>
+          </View>
         </View>
-        </View>
-        <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
-          {t.explore.discover}
-        </Text>
       </View>
 
       {(hasCoords || locationLoading) && (
@@ -900,38 +864,6 @@ export default function ExploreScreen() {
               <View>
                 <Pressable
                   onPress={() => {
-                    unlockWebSpeech();
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                    router.push("/walk-mode");
-                  }}
-                  style={({ pressed }) => [
-                    styles.walkCard,
-                    {
-                      backgroundColor: colors.primary,
-                      opacity: pressed ? 0.9 : 1,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Start Walking"
-                  accessibilityHint="Start an audio walking tour with headphones or speaker"
-                >
-                  <View style={styles.walkCardContent}>
-                    <Feather name="headphones" size={22} color={colors.primaryForeground} />
-                    <View style={styles.walkCardText}>
-                      <Text style={[styles.walkCardTitle, { color: colors.primaryForeground }]}>
-                        {t.explore.startWalking}
-                      </Text>
-                      <Text style={[styles.walkCardSubtitle, { color: colors.primaryForeground + "cc" }]}>
-                        {t.explore.audioTourSubtitle}
-                      </Text>
-                    </View>
-                    <Feather name="chevron-right" size={20} color={colors.primaryForeground + "aa"} />
-                  </View>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => {
                     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     router.push("/investigate");
                   }}
@@ -1129,7 +1061,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 10,
+  },
+  headerBottomRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  languageChip: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  labeledHeaderBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 12,
+    minWidth: 54,
+  },
+  labeledHeaderBtnText: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.3,
   },
   greeting: {
     fontSize: 10,

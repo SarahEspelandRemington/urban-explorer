@@ -3,7 +3,7 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
@@ -15,6 +15,10 @@ function NativeTabLayout() {
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "safari", selected: "safari.fill" }} />
         <Label>Explore</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="walk">
+        <Icon sf={{ default: "figure.walk", selected: "figure.walk.circle.fill" }} />
+        <Label>Walk</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="saved">
         <Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
@@ -71,6 +75,18 @@ function ClassicTabLayout() {
               <SymbolView name="safari" tintColor={color} size={24} />
             ) : (
               <Feather name="compass" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="walk"
+        options={{
+          title: "Walk",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="figure.walk" tintColor={color} size={24} />
+            ) : (
+              <MaterialCommunityIcons name="walk" size={24} color={color} />
             ),
         }}
       />
