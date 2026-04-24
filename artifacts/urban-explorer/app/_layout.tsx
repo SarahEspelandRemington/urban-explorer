@@ -42,7 +42,7 @@ function RootLayoutNav() {
     const onLoginScreen = segments[0] === "login";
     // Auth disabled for testing — skip login redirect
     if (isAuthenticated && onLoginScreen) {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/walk");
     }
   }, [isAuthenticated, isLoading, segments, router]);
 

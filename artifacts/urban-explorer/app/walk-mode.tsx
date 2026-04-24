@@ -46,7 +46,7 @@ export default function WalkModeScreen() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     walk.stopWalk();
     router.dismissAll?.();
-    router.replace("/(tabs)");
+    router.replace("/(tabs)/walk");
   };
 
   const setDensity = (d: WalkDensity) => {

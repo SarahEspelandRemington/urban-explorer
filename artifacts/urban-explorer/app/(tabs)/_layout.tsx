@@ -37,6 +37,7 @@ function ClassicTabLayout() {
 
   return (
     <Tabs
+      initialRouteName="walk"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
