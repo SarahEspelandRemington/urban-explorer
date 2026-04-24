@@ -188,11 +188,11 @@ export default function ExploreScreen() {
   const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } = useRatingPaceWarning();
 
   const WALK_BANNER_KEY = "walk_banner_dismissed";
-  const [showWalkBanner, setShowWalkBanner] = useState(false);
+  const [showWalkBanner, setShowWalkBanner] = useState(true);
 
   useEffect(() => {
     AsyncStorage.getItem(WALK_BANNER_KEY).then((val) => {
-      if (val === null) setShowWalkBanner(true);
+      if (val !== null) setShowWalkBanner(false);
     });
   }, []);
 
