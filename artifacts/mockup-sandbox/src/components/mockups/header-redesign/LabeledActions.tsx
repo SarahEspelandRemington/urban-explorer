@@ -142,10 +142,10 @@ export function LabeledActions() {
 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <ToggleGroup />
-            <IconBtn icon={Search} label="Search" />
-            <IconBtn icon={Navigation} label="Plan Walk" />
             <IconBtn icon={Footprints} label="Walk" />
             <IconBtn icon={Compass} label="Discover" primary />
+            <IconBtn icon={Navigation} label="Plan Walk" />
+            <IconBtn icon={Search} label="Search" />
           </div>
         </div>
       </div>
