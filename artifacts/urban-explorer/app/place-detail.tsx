@@ -351,13 +351,23 @@ export default function PlaceDetailScreen() {
                 </Text>
                 <View style={styles.relatedRow}>
                   {detail.nearbyRelated.map((name: string, i: number) => (
-                    <View
+                    <Pressable
                       key={i}
-                      style={[styles.relatedChip, { backgroundColor: colors.muted }]}
+                      onPress={() => {
+                        if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push({ pathname: "/investigate", params: { prefillAddress: name } });
+                      }}
+                      style={({ pressed }) => [
+                        styles.relatedChip,
+                        { backgroundColor: colors.muted, opacity: pressed ? 0.75 : 1 },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Look up ${name}`}
                     >
-                      <Feather name="map-pin" size={12} color={colors.mutedForeground} />
+                      <Feather name="map-pin" size={12} color={colors.primary} />
                       <Text style={[styles.relatedText, { color: colors.foreground }]}>{name}</Text>
-                    </View>
+                      <Feather name="chevron-right" size={12} color={colors.mutedForeground} />
+                    </Pressable>
                   ))}
                 </View>
               </>

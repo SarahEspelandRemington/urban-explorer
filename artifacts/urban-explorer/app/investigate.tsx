@@ -33,9 +33,9 @@ export default function InvestigateScreen() {
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ nearLocation?: string }>();
+  const params = useLocalSearchParams<{ nearLocation?: string; prefillAddress?: string }>();
 
-  const [address, setAddress] = useState("");
+  const [address, setAddress] = useState(params.prefillAddress ?? "");
   const [pickedCoords, setPickedCoords] = useState<{
     lat: number;
     lng: number;
