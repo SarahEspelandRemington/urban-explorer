@@ -20,6 +20,15 @@ import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import { deleteRecentRoute, loadRecentRoutes, type RecentRoute } from "@/lib/recentRoutes";
 
+const UNDO_DURATION_MS = 4000;
+
+interface PendingDelete {
+  route: RecentRoute;
+  index: number;
+  timer: ReturnType<typeof setTimeout>;
+  progress: Animated.Value;
+}
+
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
@@ -42,10 +51,17 @@ export default function WalkScreen() {
   const { isWalking } = useWalkMode();
 
   const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  const pendingDeleteRef = useRef<PendingDelete | null>(null);
 
   useEffect(() => {
     AsyncStorage.setItem(WALK_BANNER_KEY, "1");
   }, []);
+
+  useEffect(() => {
+    pendingDeleteRef.current = pendingDelete;
+  }, [pendingDelete]);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
@@ -56,9 +72,78 @@ export default function WalkScreen() {
       loadRecentRoutes().then((routes) => {
         if (active) setRecentRoutes(routes);
       });
-      return () => { active = false; };
+      return () => {
+        active = false;
+        const pd = pendingDeleteRef.current;
+        if (pd) {
+          clearTimeout(pd.timer);
+          deleteRecentRoute(pd.route.id);
+          setPendingDelete(null);
+        }
+      };
     }, []),
   );
+
+  const commitDelete = useCallback(async (id: string) => {
+    await deleteRecentRoute(id);
+    Animated.timing(toastAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setPendingDelete(null));
+  }, [toastAnim]);
+
+  const handleDeleteRoute = useCallback(
+    async (route: RecentRoute, index: number) => {
+      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      const pd = pendingDeleteRef.current;
+      if (pd) {
+        clearTimeout(pd.timer);
+        await deleteRecentRoute(pd.route.id);
+      }
+
+      setRecentRoutes((prev) => prev.filter((r) => r.id !== route.id));
+
+      const progress = new Animated.Value(1);
+      Animated.timing(progress, {
+        toValue: 0,
+        duration: UNDO_DURATION_MS,
+        useNativeDriver: false,
+      }).start();
+
+      const timer = setTimeout(() => {
+        commitDelete(route.id);
+      }, UNDO_DURATION_MS);
+
+      const newPending: PendingDelete = { route, index, timer, progress };
+      setPendingDelete(newPending);
+
+      Animated.timing(toastAnim, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    },
+    [toastAnim, commitDelete],
+  );
+
+  const handleUndo = useCallback(() => {
+    const pd = pendingDeleteRef.current;
+    if (!pd) return;
+    clearTimeout(pd.timer);
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRecentRoutes((prev) => {
+      const next = [...prev];
+      next.splice(pd.index, 0, pd.route);
+      return next;
+    });
+    Animated.timing(toastAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setPendingDelete(null));
+  }, [toastAnim]);
 
   const handleStartWalking = () => {
     unlockWebSpeech();
@@ -89,14 +174,8 @@ export default function WalkScreen() {
 
   const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
 
-  const handleDeleteRoute = useCallback(async (id: string) => {
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    const updated = await deleteRecentRoute(id);
-    setRecentRoutes(updated);
-  }, []);
-
   const renderRightActions = useCallback(
-    (id: string, dragX: Animated.AnimatedInterpolation<number>) => {
+    (route: RecentRoute, index: number, dragX: Animated.AnimatedInterpolation<number>) => {
       const scale = dragX.interpolate({
         inputRange: [-80, 0],
         outputRange: [1, 0.7],
@@ -105,8 +184,8 @@ export default function WalkScreen() {
       return (
         <Pressable
           onPress={() => {
-            swipeableRefs.current.get(id)?.close();
-            handleDeleteRoute(id);
+            swipeableRefs.current.get(route.id)?.close();
+            handleDeleteRoute(route, index);
           }}
           style={styles.deleteAction}
           accessibilityRole="button"
@@ -120,6 +199,11 @@ export default function WalkScreen() {
     },
     [handleDeleteRoute],
   );
+
+  const toastTranslateY = toastAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [80, 0],
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -291,7 +375,7 @@ export default function WalkScreen() {
             Recent Routes
           </Text>
 
-          {recentRoutes.length === 0 ? (
+          {recentRoutes.length === 0 && !pendingDelete ? (
             <View
               style={[
                 styles.emptyState,
@@ -304,14 +388,14 @@ export default function WalkScreen() {
               </Text>
             </View>
           ) : (
-            recentRoutes.map((route) => (
+            recentRoutes.map((route, index) => (
               <Swipeable
                 key={route.id}
                 ref={(ref) => {
                   if (ref) swipeableRefs.current.set(route.id, ref);
                   else swipeableRefs.current.delete(route.id);
                 }}
-                renderRightActions={(_, dragX) => renderRightActions(route.id, dragX)}
+                renderRightActions={(_, dragX) => renderRightActions(route, index, dragX)}
                 rightThreshold={40}
                 overshootRight={false}
                 friction={2}
@@ -380,6 +464,45 @@ export default function WalkScreen() {
           )}
         </View>
       </ScrollView>
+
+      {pendingDelete && (
+        <Animated.View
+          style={[
+            styles.toastContainer,
+            {
+              bottom: insets.bottom + webBottomInset + 90,
+              transform: [{ translateY: toastTranslateY }],
+              opacity: toastAnim,
+            },
+          ]}
+          pointerEvents="box-none"
+        >
+          <View style={styles.toast}>
+            <Animated.View
+              style={[
+                styles.toastProgress,
+                {
+                  width: pendingDelete.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ["0%", "100%"],
+                  }),
+                },
+              ]}
+            />
+            <Text style={styles.toastText} numberOfLines={1}>
+              Route deleted
+            </Text>
+            <Pressable
+              onPress={handleUndo}
+              style={({ pressed }) => [styles.undoButton, { opacity: pressed ? 0.7 : 1 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Undo route deletion"
+            >
+              <Text style={styles.undoText}>Undo</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -575,5 +698,50 @@ const styles = StyleSheet.create({
     width: 72,
     borderRadius: 14,
     marginLeft: 8,
+  },
+  toastContainer: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    alignItems: "stretch",
+  },
+  toast: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1C1C1E",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  toastProgress: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  toastText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: "#FFFFFF",
+  },
+  undoButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  undoText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
   },
 });
