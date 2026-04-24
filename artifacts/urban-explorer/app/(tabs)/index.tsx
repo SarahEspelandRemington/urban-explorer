@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
@@ -185,6 +186,26 @@ export default function ExploreScreen() {
   }, [places, activeFilters]);
 
   const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } = useRatingPaceWarning();
+
+  const WALK_BANNER_KEY = "walk_banner_dismissed";
+  const [showWalkBanner, setShowWalkBanner] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(WALK_BANNER_KEY).then((val) => {
+      if (val === null) setShowWalkBanner(true);
+    });
+  }, []);
+
+  const dismissWalkBanner = useCallback(() => {
+    setShowWalkBanner(false);
+    AsyncStorage.setItem(WALK_BANNER_KEY, "1");
+  }, []);
+
+  const handleWalkBannerTap = useCallback(() => {
+    dismissWalkBanner();
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/walk");
+  }, [dismissWalkBanner, router]);
 
   const handlePlaceRated = useCallback(
     (placeId: string, newRating: "up" | "down" | null, prevRating: "up" | "down" | null) => {
@@ -860,41 +881,72 @@ export default function ExploreScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
-            showContent ? (
-              <View>
-                <Pressable
-                  onPress={() => {
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push("/investigate");
-                  }}
-                  style={({ pressed }) => [
-                    styles.investigateCard,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                      opacity: pressed ? 0.9 : 1,
-                      transform: [{ scale: pressed ? 0.98 : 1 }],
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Investigate an Address"
-                  accessibilityHint="Look up the history of a specific building by address"
+            <View>
+              {showWalkBanner ? (
+                <Animated.View
+                  entering={FadeIn.duration(300)}
+                  exiting={FadeOut.duration(200)}
+                  style={[styles.walkBanner, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "40" }]}
                 >
-                  <View style={styles.cardRow}>
-                    <Feather name="search" size={20} color={colors.foreground} />
-                    <View style={styles.cardRowText}>
-                      <Text style={[styles.investigateCardTitle, { color: colors.foreground }]}>
-                        {t.explore.investigateTitle}
-                      </Text>
-                      <Text style={[styles.investigateCardSubtitle, { color: colors.mutedForeground }]}>
-                        {t.explore.investigateSubtitle}
-                      </Text>
-                    </View>
-                    <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-                  </View>
-                </Pressable>
+                  <Pressable
+                    onPress={handleWalkBannerTap}
+                    style={styles.walkBannerContent}
+                    accessibilityRole="button"
+                    accessibilityLabel="Start Walking — tap to open Walk tab"
+                    accessibilityHint="Opens the Walk tab to start your audio tour"
+                  >
+                    <Feather name="headphones" size={16} color={colors.primary} />
+                    <Text style={[styles.walkBannerText, { color: colors.primary }]}>
+                      Tap Walk tab to start your audio tour
+                    </Text>
+                    <Feather name="arrow-right" size={14} color={colors.primary} />
+                  </Pressable>
+                  <Pressable
+                    onPress={dismissWalkBanner}
+                    hitSlop={12}
+                    accessibilityRole="button"
+                    accessibilityLabel="Dismiss tip"
+                  >
+                    <Feather name="x" size={14} color={colors.primary} style={{ opacity: 0.6 }} />
+                  </Pressable>
+                </Animated.View>
+              ) : null}
 
-                {showRatingPaceWarning ? (
+              {showContent ? (
+                <>
+                  <Pressable
+                    onPress={() => {
+                      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push("/investigate");
+                    }}
+                    style={({ pressed }) => [
+                      styles.investigateCard,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                        opacity: pressed ? 0.9 : 1,
+                        transform: [{ scale: pressed ? 0.98 : 1 }],
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Investigate an Address"
+                    accessibilityHint="Look up the history of a specific building by address"
+                  >
+                    <View style={styles.cardRow}>
+                      <Feather name="search" size={20} color={colors.foreground} />
+                      <View style={styles.cardRowText}>
+                        <Text style={[styles.investigateCardTitle, { color: colors.foreground }]}>
+                          {t.explore.investigateTitle}
+                        </Text>
+                        <Text style={[styles.investigateCardSubtitle, { color: colors.mutedForeground }]}>
+                          {t.explore.investigateSubtitle}
+                        </Text>
+                      </View>
+                      <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                    </View>
+                  </Pressable>
+
+                  {showRatingPaceWarning ? (
                   <Animated.View
                     entering={FadeIn.duration(250)}
                     exiting={FadeOut.duration(200)}
@@ -916,8 +968,9 @@ export default function ExploreScreen() {
                     </Pressable>
                   </Animated.View>
                 ) : null}
-              </View>
-            ) : null
+                </>
+              ) : null}
+            </View>
           }
           refreshControl={
             <RefreshControl
@@ -1259,6 +1312,28 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   driftBannerText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.1,
+  },
+  walkBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  walkBannerContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  walkBannerText: {
+    flex: 1,
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     letterSpacing: 0.1,

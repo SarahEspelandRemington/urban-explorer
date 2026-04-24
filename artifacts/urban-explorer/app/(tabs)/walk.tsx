@@ -1,7 +1,8 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -30,6 +31,8 @@ function formatDuration(secs: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+const WALK_BANNER_KEY = "walk_banner_dismissed";
+
 export default function WalkScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -37,6 +40,10 @@ export default function WalkScreen() {
   const { isWalking } = useWalkMode();
 
   const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
+
+  useEffect(() => {
+    AsyncStorage.setItem(WALK_BANNER_KEY, "1");
+  }, []);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
