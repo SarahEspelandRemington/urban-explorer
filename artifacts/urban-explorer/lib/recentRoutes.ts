@@ -44,3 +44,15 @@ export async function loadRecentRoutes(): Promise<RecentRoute[]> {
     return [];
   }
 }
+
+export async function deleteRecentRoute(id: string): Promise<RecentRoute[]> {
+  try {
+    const raw = await AsyncStorage.getItem(RECENT_ROUTES_KEY);
+    const existing: RecentRoute[] = raw ? JSON.parse(raw) : [];
+    const updated = existing.filter((r) => r.id !== id);
+    await AsyncStorage.setItem(RECENT_ROUTES_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}

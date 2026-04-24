@@ -2,8 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Animated,
   Platform,
   Pressable,
   ScrollView,
@@ -11,12 +12,13 @@ import {
   Text,
   View,
 } from "react-native";
+import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useWalkMode } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
-import { loadRecentRoutes, type RecentRoute } from "@/lib/recentRoutes";
+import { deleteRecentRoute, loadRecentRoutes, type RecentRoute } from "@/lib/recentRoutes";
 
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
@@ -84,6 +86,40 @@ export default function WalkScreen() {
       },
     });
   };
+
+  const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
+
+  const handleDeleteRoute = useCallback(async (id: string) => {
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const updated = await deleteRecentRoute(id);
+    setRecentRoutes(updated);
+  }, []);
+
+  const renderRightActions = useCallback(
+    (id: string, dragX: Animated.AnimatedInterpolation<number>) => {
+      const scale = dragX.interpolate({
+        inputRange: [-80, 0],
+        outputRange: [1, 0.7],
+        extrapolate: "clamp",
+      });
+      return (
+        <Pressable
+          onPress={() => {
+            swipeableRefs.current.get(id)?.close();
+            handleDeleteRoute(id);
+          }}
+          style={styles.deleteAction}
+          accessibilityRole="button"
+          accessibilityLabel="Delete route"
+        >
+          <Animated.View style={{ transform: [{ scale }] }}>
+            <Feather name="trash-2" size={20} color="#fff" />
+          </Animated.View>
+        </Pressable>
+      );
+    },
+    [handleDeleteRoute],
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -269,60 +305,77 @@ export default function WalkScreen() {
             </View>
           ) : (
             recentRoutes.map((route) => (
-              <Pressable
+              <Swipeable
                 key={route.id}
-                onPress={() => handleReRunRoute(route)}
-                style={({ pressed }) => [
-                  styles.recentCard,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: colors.border,
-                    opacity: pressed ? 0.88 : 1,
-                    transform: [{ scale: pressed ? 0.98 : 1 }],
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`Re-run route from ${route.startText} to ${route.endText}`}
+                ref={(ref) => {
+                  if (ref) swipeableRefs.current.set(route.id, ref);
+                  else swipeableRefs.current.delete(route.id);
+                }}
+                renderRightActions={(_, dragX) => renderRightActions(route.id, dragX)}
+                rightThreshold={40}
+                overshootRight={false}
+                friction={2}
               >
-                <View style={[styles.recentIconWrap, { backgroundColor: colors.muted }]}>
-                  <Feather name="map-pin" size={16} color={colors.mutedForeground} />
-                </View>
-                <View style={styles.recentInfo}>
-                  <Text
-                    style={[styles.recentFrom, { color: colors.foreground }]}
-                    numberOfLines={1}
-                  >
-                    {route.startText}
-                  </Text>
-                  <View style={styles.recentToRow}>
-                    <Feather name="arrow-right" size={10} color={colors.mutedForeground} />
+                <Pressable
+                  onPress={() => handleReRunRoute(route)}
+                  onLongPress={() => {
+                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    swipeableRefs.current.get(route.id)?.openRight();
+                  }}
+                  delayLongPress={400}
+                  style={({ pressed }) => [
+                    styles.recentCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.88 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Re-run route from ${route.startText} to ${route.endText}`}
+                  accessibilityHint="Swipe left or long-press to delete"
+                >
+                  <View style={[styles.recentIconWrap, { backgroundColor: colors.muted }]}>
+                    <Feather name="map-pin" size={16} color={colors.mutedForeground} />
+                  </View>
+                  <View style={styles.recentInfo}>
                     <Text
-                      style={[styles.recentTo, { color: colors.mutedForeground }]}
+                      style={[styles.recentFrom, { color: colors.foreground }]}
                       numberOfLines={1}
                     >
-                      {route.endText}
+                      {route.startText}
                     </Text>
-                  </View>
-                  {(route.distanceMeters != null || route.durationSeconds != null) && (
-                    <View style={styles.recentMeta}>
-                      {route.distanceMeters != null && (
-                        <Text style={[styles.recentMetaText, { color: colors.mutedForeground }]}>
-                          {formatDistance(route.distanceMeters)}
-                        </Text>
-                      )}
-                      {route.distanceMeters != null && route.durationSeconds != null && (
-                        <Text style={[styles.recentMetaDot, { color: colors.mutedForeground }]}>·</Text>
-                      )}
-                      {route.durationSeconds != null && (
-                        <Text style={[styles.recentMetaText, { color: colors.mutedForeground }]}>
-                          {formatDuration(route.durationSeconds)}
-                        </Text>
-                      )}
+                    <View style={styles.recentToRow}>
+                      <Feather name="arrow-right" size={10} color={colors.mutedForeground} />
+                      <Text
+                        style={[styles.recentTo, { color: colors.mutedForeground }]}
+                        numberOfLines={1}
+                      >
+                        {route.endText}
+                      </Text>
                     </View>
-                  )}
-                </View>
-                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-              </Pressable>
+                    {(route.distanceMeters != null || route.durationSeconds != null) && (
+                      <View style={styles.recentMeta}>
+                        {route.distanceMeters != null && (
+                          <Text style={[styles.recentMetaText, { color: colors.mutedForeground }]}>
+                            {formatDistance(route.distanceMeters)}
+                          </Text>
+                        )}
+                        {route.distanceMeters != null && route.durationSeconds != null && (
+                          <Text style={[styles.recentMetaDot, { color: colors.mutedForeground }]}>·</Text>
+                        )}
+                        {route.durationSeconds != null && (
+                          <Text style={[styles.recentMetaText, { color: colors.mutedForeground }]}>
+                            {formatDuration(route.durationSeconds)}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                  <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                </Pressable>
+              </Swipeable>
             ))
           )}
         </View>
@@ -514,5 +567,13 @@ const styles = StyleSheet.create({
   recentMetaDot: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
+  },
+  deleteAction: {
+    backgroundColor: "#EF4444",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 72,
+    borderRadius: 14,
+    marginLeft: 8,
   },
 });
