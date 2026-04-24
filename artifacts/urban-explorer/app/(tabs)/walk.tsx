@@ -217,7 +217,26 @@ export default function WalkScreen() {
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>Walk</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.foreground }]}>Walk</Text>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/settings-messages");
+            }}
+            style={({ pressed }) => [
+              styles.editMessagesBtn,
+              { borderColor: colors.border, backgroundColor: colors.muted, opacity: pressed ? 0.75 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Edit loading messages"
+          >
+            <Feather name="message-square" size={13} color={colors.mutedForeground} />
+            <Text style={[styles.editMessagesBtnText, { color: colors.mutedForeground }]}>
+              Messages
+            </Text>
+          </Pressable>
+        </View>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           Explore the city with live audio stories
         </Text>
@@ -514,6 +533,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  editMessagesBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  editMessagesBtnText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
   title: {
     fontSize: 28,

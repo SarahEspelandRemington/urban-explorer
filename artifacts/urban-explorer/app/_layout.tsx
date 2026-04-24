@@ -66,6 +66,10 @@ function RootLayoutNav() {
         name="investigate"
         options={{ headerShown: false, animation: "slide_from_right" }}
       />
+      <Stack.Screen
+        name="settings-messages"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
     </Stack>
   );
 }
