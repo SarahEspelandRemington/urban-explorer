@@ -576,20 +576,6 @@ export default function ExploreScreen() {
               </View>
             )}
             <Pressable
-              onPress={() => { setGeocodeError(null); setShowLocationSearch(true); }}
-              style={({ pressed }) => [
-                styles.labeledHeaderBtn,
-                { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Search by location"
-            >
-              <Feather name="search" size={18} color={colors.foreground} />
-              <Text style={[styles.labeledHeaderBtnText, { color: colors.mutedForeground }]}>
-                Search
-              </Text>
-            </Pressable>
-            <Pressable
               onPress={handleDiscover}
               disabled={discoverMutation.isPending || locationLoading}
               style={({ pressed }) => [
@@ -610,6 +596,20 @@ export default function ExploreScreen() {
               )}
               <Text style={[styles.labeledHeaderBtnText, { color: colors.primaryForeground }]}>
                 Discover
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setGeocodeError(null); setShowLocationSearch(true); }}
+              style={({ pressed }) => [
+                styles.labeledHeaderBtn,
+                { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Search by location"
+            >
+              <Feather name="search" size={18} color={colors.foreground} />
+              <Text style={[styles.labeledHeaderBtnText, { color: colors.mutedForeground }]}>
+                Search
               </Text>
             </Pressable>
           </View>
@@ -880,9 +880,9 @@ export default function ExploreScreen() {
                   accessibilityLabel="Investigate an Address"
                   accessibilityHint="Look up the history of a specific building by address"
                 >
-                  <View style={styles.walkCardContent}>
+                  <View style={styles.cardRow}>
                     <Feather name="search" size={20} color={colors.foreground} />
-                    <View style={styles.walkCardText}>
+                    <View style={styles.cardRowText}>
                       <Text style={[styles.investigateCardTitle, { color: colors.foreground }]}>
                         {t.explore.investigateTitle}
                       </Text>
@@ -1121,20 +1121,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  searchButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  discoverButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   filterRow: {
     borderBottomWidth: 1,
     paddingVertical: 10,
@@ -1192,27 +1178,13 @@ const styles = StyleSheet.create({
     height: 20,
     alignSelf: "center",
   },
-  walkCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  walkCardContent: {
+  cardRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
   },
-  walkCardText: {
+  cardRowText: {
     flex: 1,
-  },
-  walkCardTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
-  walkCardSubtitle: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
   },
   investigateCard: {
     borderRadius: 12,
