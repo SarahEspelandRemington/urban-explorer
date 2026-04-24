@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -20,6 +20,7 @@ import { useWalkMode, type WalkPlace } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
+import { saveRecentRoute } from "@/lib/recentRoutes";
 
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
@@ -70,9 +71,15 @@ export default function WalkPlanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const walk = useWalkMode();
+  const params = useLocalSearchParams<{ prefillStart?: string; prefillEnd?: string }>();
 
-  const [startText, setStartText] = useState("");
-  const [endText, setEndText] = useState("");
+  const [startText, setStartText] = useState(params.prefillStart ?? "");
+  const [endText, setEndText] = useState(params.prefillEnd ?? "");
+
+  useEffect(() => {
+    if (params.prefillStart) setStartText(params.prefillStart);
+    if (params.prefillEnd) setEndText(params.prefillEnd);
+  }, [params.prefillStart, params.prefillEnd]);
   const startCoordsRef = useRef<Coords | null>(null);
   const endCoordsRef = useRef<Coords | null>(null);
 
@@ -183,6 +190,12 @@ export default function WalkPlanScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     unlockWebSpeech();
+    await saveRecentRoute({
+      startText,
+      endText,
+      distanceMeters: routeMeta?.distanceMeters,
+      durationSeconds: routeMeta?.durationSeconds,
+    });
     const started = await walk.startWalk(prefetchedPlaces);
     if (started) {
       router.push("/walk-mode");
