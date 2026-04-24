@@ -12,13 +12,13 @@ import { useColors } from "@/hooks/useColors";
 function NativeTabLayout() {
   return (
     <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "safari", selected: "safari.fill" }} />
-        <Label>Explore</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="walk">
         <Icon sf={{ default: "figure.walk", selected: "figure.walk.circle.fill" }} />
         <Label>Walk</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="index">
+        <Icon sf={{ default: "safari", selected: "safari.fill" }} />
+        <Label>Explore</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="saved">
         <Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
@@ -67,18 +67,6 @@ function ClassicTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="safari" tintColor={color} size={24} />
-            ) : (
-              <Feather name="compass" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
         name="walk"
         options={{
           title: "Walk",
@@ -87,6 +75,18 @@ function ClassicTabLayout() {
               <SymbolView name="figure.walk" tintColor={color} size={24} />
             ) : (
               <MaterialCommunityIcons name="walk" size={24} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: "Explore",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="safari" tintColor={color} size={24} />
+            ) : (
+              <Feather name="compass" size={22} color={color} />
             ),
         }}
       />
