@@ -10,7 +10,7 @@ import { useLocale } from "@/contexts/LocaleContext";
 import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
-import { addWalkBreadcrumb, setWalkScope } from "@/lib/sentryWalk";
+import { addWalkBreadcrumb, setWalkScope, trackNarrationFallback } from "@/lib/sentryWalk";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
 import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/buildingTypeGroups";
 
@@ -569,12 +569,27 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
                 { errorType: writeErr instanceof Error ? writeErr.constructor.name : typeof writeErr },
                 "warning",
               );
+              trackNarrationFallback("write_failure");
               // fall through to text endpoint below
             }
+          } else {
+            if (__DEV__) console.log(`[fetchNarrationPayload] audio response was empty, falling back to text`);
+            addWalkBreadcrumb("narration audio response empty", {}, "warning");
+            trackNarrationFallback("bad_response");
           }
+        } else {
+          if (__DEV__) console.log(`[fetchNarrationPayload] audio endpoint non-ok status=${res.status}, falling back to text`);
+          addWalkBreadcrumb("narration audio bad status", { status: res.status }, "warning");
+          trackNarrationFallback("bad_response");
         }
       } catch (err) {
         if (__DEV__) console.log(`[fetchNarrationPayload] audio fetch threw, will fall back to text:`, err);
+        addWalkBreadcrumb(
+          "narration audio endpoint error",
+          { errorType: err instanceof Error ? err.constructor.name : typeof err },
+          "warning",
+        );
+        trackNarrationFallback("endpoint_error");
       }
     }
 

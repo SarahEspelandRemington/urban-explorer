@@ -25,6 +25,29 @@ export function setWalkScope(data: WalkScopeData): void {
 }
 
 /**
+ * Increment the narration audio-to-text fallback counter in Sentry metrics.
+ *
+ * Reasons:
+ *   "write_failure"   – audio bytes were received but writing the temp file threw
+ *   "endpoint_error"  – the audio fetch itself threw (network / timeout / abort)
+ *   "bad_response"    – the audio endpoint returned a non-ok status or empty body
+ *
+ * This lets you see in the Sentry Metrics dashboard how often the native audio
+ * path degrades to text, and *why* it degrades.
+ */
+export type NarrationFallbackReason =
+  | "write_failure"
+  | "endpoint_error"
+  | "bad_response";
+
+export function trackNarrationFallback(reason: NarrationFallbackReason): void {
+  if (!DSN) return;
+  Sentry.metrics.increment("narration.audio_fallback", 1, {
+    tags: { reason },
+  });
+}
+
+/**
  * Record a walk-lifecycle event as a Sentry breadcrumb.
  * Only call with opaque IDs and counts — never place names or coordinates.
  */
