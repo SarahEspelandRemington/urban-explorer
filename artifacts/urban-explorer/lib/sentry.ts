@@ -9,6 +9,9 @@ const PII_KEY_PATTERNS = [
 ];
 
 function isPiiKey(key: string): boolean {
+  // Keys ending with "Id" or "Count" are safe metadata — not PII — even if
+  // they contain a pattern word (e.g. "currentPlaceId", "placeCount").
+  if (/(?:Id|Count)$/.test(key)) return false;
   const lk = key.toLowerCase();
   return PII_KEY_PATTERNS.some((p) => lk.includes(p));
 }
@@ -31,9 +34,17 @@ if (DSN) {
     dsn: DSN,
     tracesSampleRate: 0,
     enableNativeNagger: false,
-    maxBreadcrumbs: 0,
+    maxBreadcrumbs: 20,
     beforeSend(event) {
-      event.breadcrumbs = [];
+      // Retain walk-category breadcrumbs only; drop everything else (XHR,
+      // console, navigation, etc.) which may inadvertently carry PII.
+      if (Array.isArray(event.breadcrumbs) && event.breadcrumbs.length > 0) {
+        event.breadcrumbs = event.breadcrumbs.filter(
+          (b) => b.category === "walk",
+        );
+      } else {
+        event.breadcrumbs = undefined;
+      }
       event.request = undefined;
       event.user = undefined;
       if (event.extra) {

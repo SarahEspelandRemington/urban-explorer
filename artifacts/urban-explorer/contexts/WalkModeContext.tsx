@@ -10,6 +10,7 @@ import { useLocale } from "@/contexts/LocaleContext";
 import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
+import { addWalkBreadcrumb, setWalkScope } from "@/lib/sentryWalk";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
 import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/buildingTypeGroups";
 
@@ -360,6 +361,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [narration.isSpeaking, currentLocation]);
 
+  // Keep Sentry scope up-to-date with walk state so every crash report carries
+  // a snapshot of what was happening: whether the user was walking, which place
+  // was being narrated, and how many places are in the queue.
+  // PII-safe: only opaque IDs and counts, no coordinates or place names.
+  useEffect(() => {
+    setWalkScope({
+      isWalking,
+      currentPlaceId: currentNarrationPlace?.id ?? null,
+      placeCount: nearbyPlaces.length,
+      narrationCount: narratedIds.size,
+    });
+  }, [isWalking, currentNarrationPlace, nearbyPlaces.length, narratedIds.size]);
+
   // Mirror narration state into the iOS Now Playing widget so the lock screen
   // shows "Urban Explorer — <place>" with working pause/play/skip controls.
   // No-op on web/Android (the native module is iOS-only).
@@ -495,6 +509,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     } else {
       narration.enqueue(place.id, payload.text, place.name);
     }
+    addWalkBreadcrumb("narration fetched", { placeId: place.id, kind: payload.kind });
     if (Platform.OS !== "web") {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -865,6 +880,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       if (__DEV__) console.log(`[maybeNarrate] PASSED — fetching narration for "${next.name}"`);
       narratedIdsRef.current.set(next.id, Date.now());
       setNarratedIds(new Map(narratedIdsRef.current));
+      addWalkBreadcrumb("place visited", { placeId: next.id });
       fetchNarration(next);
     },
     [pickNext, fetchNarration],
@@ -934,6 +950,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
     isWalkingRef.current = true;
     setIsWalking(true);
+    addWalkBreadcrumb("walk started");
 
     // Fetch server-side heading-bias config in the background. Reset first so
     // any stale values from a previous walk are cleared. The fetch races
@@ -1120,6 +1137,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const stopWalk = useCallback(() => {
     isWalkingRef.current = false;
     setIsWalking(false);
+    addWalkBreadcrumb("walk stopped");
     narration.stop();
     // Discard any prefetch that was in-flight or cached when the walk ended.
     // The in-flight guard (isWalkingRef.current check in the async closure) will
