@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import globals from "globals";
+import { plugin as noPiiInSentryPlugin } from "./eslint-rules/no-pii-in-sentry.mjs";
 
 export default [
   {
@@ -31,7 +32,7 @@ export default [
   },
   {
     files: ["artifacts/urban-explorer/**/*.{ts,tsx}"],
-    plugins: { "react-hooks": reactHooks },
+    plugins: { "react-hooks": reactHooks, "local": noPiiInSentryPlugin },
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
@@ -44,6 +45,7 @@ export default [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "no-empty": ["warn", { allowEmptyCatch: true }],
+      "local/no-pii-in-sentry": "warn",
     },
   },
   {
