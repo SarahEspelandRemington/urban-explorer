@@ -62,6 +62,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `postProcessPlaces()` validates fields, enforces 1.25x radius tolerance, deduplicates by name/coords, filters vague content, validates confidence enum, sorts by distance
   - OSM text inputs are sanitized (control chars stripped, length-capped) to prevent prompt injection
 
+- **Crash reporting** (`artifacts/urban-explorer/lib/sentry.ts`, `lib/sentryWalk.ts`):
+  - `sentry.ts` initializes Sentry at module load time (before any render), gated on `EXPO_PUBLIC_SENTRY_DSN`. When absent, all exports are no-ops.
+  - PII protection: `isPiiKey` + recursive `scrubObject` strip lat/lon/place/address/name/narration/altitude/heading/speed keys from `event.extra` and `event.contexts`. `scrubString` redacts keyed PII patterns (e.g. `name: "Central Park"`) from breadcrumb and event messages. `beforeAddBreadcrumb` hook drops all non-walk breadcrumbs at SDK ingestion time; walk breadcrumbs have their `data` and `message` scrubbed at that point too. `beforeSend` is a second pass: same filters applied before the event leaves the device.
+  - `sentryWalk.ts` provides `setWalkScope()` (stamps current walk state onto the Sentry scope) and `addWalkBreadcrumb()` (adds a walk-category breadcrumb with ingestion-time PII scrubbing). Called from `WalkModeContext.tsx` on walk start/stop, place visited, narration fetched, and fetch errors.
+  - Sentry metrics: `trackNarrationFallback(reason)` increments `narration.audio_fallback` counter with a `reason` tag to track TTS fallback rates.
+  - Test suite: `artifacts/urban-explorer/__tests__/sentry.test.ts` + `sentryWalk.test.ts` — 200+ tests covering `isPiiKey`, `scrubObject`, `scrubString`, `beforeSend`, `beforeAddBreadcrumb`. Registered as the `privacy-tests` validation step.
+  - ESLint rule: `eslint-rules/no-pii-in-sentry.mjs` — warns when a known PII field (name, lat, place, etc.) is interpolated into a Sentry call's message argument. Registered as the `lint-rules` validation step.
+  - `app.config.js` (replaces `app.json`) — dynamic Expo config that reads `SENTRY_ORG`/`SENTRY_PROJECT` from environment for the `@sentry/react-native/expo` build plugin.
+
 - **Shared libs**:
   - `lib/api-spec` - OpenAPI specification
   - `lib/api-client-react` - Generated React Query hooks
@@ -71,8 +80,11 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Key Commands
 
-- `pnpm run typecheck` — full typecheck across all packages
+- `pnpm run typecheck` — full typecheck across all packages (registered as a validation step)
 - `pnpm run build` — typecheck + build all packages
+- `pnpm run lint` — ESLint across urban-explorer + api-server (registered as a validation step)
+- `pnpm run lint:rules` — run the custom no-pii-in-sentry ESLint rule tests (registered as a validation step)
+- `pnpm --filter @workspace/urban-explorer run test` — run the privacy/sentry unit test suite (registered as a validation step)
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
@@ -122,6 +134,75 @@ That script installs dependencies and pushes the database schema. Then complete 
 
 ### Artifacts and workflows
 
-Both workflows are defined in `.replit` and restart automatically:
+Service workflows (defined in `.replit`, restart automatically):
 - `artifacts/api-server` — Express API server (`pnpm --filter @workspace/api-server run dev`)
 - `artifacts/urban-explorer` — Expo mobile app (`pnpm --filter @workspace/urban-explorer run dev`)
+
+Validation workflows (run on demand or as CI gates):
+- `privacy-tests` — `pnpm --filter @workspace/urban-explorer run test` (200+ sentry/privacy unit tests)
+- `lint-rules` — `pnpm run lint:rules` (ESLint PII rule self-tests)
+- `lint` — `pnpm run lint` (ESLint across all source files)
+- `typecheck` — `pnpm run typecheck` (TypeScript check across all packages)
+
+All four validations run via the **Project** run button. They are also wired as `isValidation = true` gates in `.replit`.
+
+### Verifying the setup after import
+
+After running `setup.sh`, verify everything is healthy:
+
+```bash
+pnpm run typecheck      # should exit 0 (no errors)
+pnpm run lint           # should exit 0 (warnings only, no errors)
+pnpm run lint:rules     # should print "All tests passed"
+pnpm --filter @workspace/urban-explorer run test  # should pass all tests
+```
+
+## Reverting features using git
+
+The full git history is preserved in the `.git` folder, which is included when you export the project as a zip. In a new Replit (or any git environment), you can roll back specific features.
+
+### Key feature commits
+
+| Feature | Commit |
+|---|---|
+| Race condition / stability fixes | `e05014c` |
+| expo-dev-client + DevBuildBanner | `19beaeb` |
+| Sentry crash reporting (initial) | `ef02ede` |
+| Sentry source maps / app.config.js | `e86102e` |
+| Walk session context in Sentry | `d4cc389` |
+| Narration failure breadcrumbs | `c1c52e8` |
+| Narration fallback rate metric | `944d25e` |
+| Privacy test suite (jest) | `72ce4de` |
+| ESLint PII rule | `8b6a03e` |
+| PII scrubbing in arrays | `d83e4b8` |
+| beforeBreadcrumb ingestion hook | `7a10412` |
+| Multi-word PII fix in scrubString | `38a77e8` |
+
+### How to revert
+
+**Roll the whole project back to a specific point** (destructive — loses all commits after that hash):
+```bash
+git reset --hard <commit-hash>
+```
+
+**Undo a single commit while keeping everything else** (safe, creates a new undo commit):
+```bash
+git revert <commit-hash>
+```
+
+**Remove Sentry entirely** (files to delete):
+```bash
+rm -rf artifacts/urban-explorer/lib/sentry.ts \
+       artifacts/urban-explorer/lib/sentryWalk.ts \
+       artifacts/urban-explorer/__tests__/sentry.test.ts \
+       artifacts/urban-explorer/__tests__/sentryWalk.test.ts \
+       artifacts/urban-explorer/__mocks__ \
+       artifacts/urban-explorer/jest.config.js \
+       eslint-rules/
+```
+Then remove the `@sentry/react-native` entry from `artifacts/urban-explorer/package.json`, revert `app.config.js` back to `app.json`, remove the `wrap` call from `app/_layout.tsx`, and remove the `captureException` call from `components/ErrorBoundary.tsx`.
+
+**Find the commit that introduced a file or change:**
+```bash
+git log --oneline --follow -- artifacts/urban-explorer/lib/sentry.ts
+```
