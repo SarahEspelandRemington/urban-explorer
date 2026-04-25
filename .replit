@@ -24,8 +24,9 @@ args = "privacy-tests"
 name = "privacy-tests"
 author = "agent"
 
+
 [workflows.workflow.metadata]
-isValidation = true
+outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

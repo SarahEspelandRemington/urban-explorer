@@ -19,10 +19,19 @@ export function getCapturedInitOptions(): InitOptions | null {
   return _capturedInitOptions;
 }
 
+export const addBreadcrumb = jest.fn();
+export const getCurrentScope = jest.fn(() => ({ setContext: jest.fn() }));
+export const metrics = {
+  increment: jest.fn(),
+};
+
 export function resetMock(): void {
   _capturedInitOptions = null;
   init.mockClear();
   wrap.mockClear();
   captureException.mockClear();
   captureMessage.mockClear();
+  addBreadcrumb.mockClear();
+  getCurrentScope.mockClear();
+  metrics.increment.mockClear();
 }

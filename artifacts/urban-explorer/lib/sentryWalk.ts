@@ -1,5 +1,7 @@
 import * as Sentry from "@sentry/react-native";
 
+import { scrubObject } from "./sentry";
+
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
 export interface WalkScopeData {
@@ -50,6 +52,11 @@ export function trackNarrationFallback(reason: NarrationFallbackReason): void {
 /**
  * Record a walk-lifecycle event as a Sentry breadcrumb.
  * Only call with opaque IDs and counts — never place names or coordinates.
+ *
+ * PII is scrubbed from `data` at the point of ingestion (before the breadcrumb
+ * enters Sentry's in-memory buffer) so that accidentally-included fields are
+ * never stored, even transiently. The `beforeSend` scrub in sentry.ts is kept
+ * as a second line of defence.
  */
 export function addWalkBreadcrumb(
   message: string,
@@ -57,10 +64,12 @@ export function addWalkBreadcrumb(
   level: Sentry.SeverityLevel = "info",
 ): void {
   if (!DSN) return;
+  const scrubbedData = data ? scrubObject(data) : undefined;
+  const hasData = scrubbedData != null && Object.keys(scrubbedData).length > 0;
   Sentry.addBreadcrumb({
     category: "walk",
     message,
     level,
-    ...(data ? { data } : {}),
+    ...(hasData ? { data: scrubbedData } : {}),
   });
 }
