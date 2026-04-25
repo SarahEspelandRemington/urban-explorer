@@ -3,34 +3,46 @@ import type React from "react";
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
+const PII_KEY_PATTERNS = [
+  "lat", "lon", "lng", "coord", "location", "place", "address",
+  "destination", "origin", "route", "street", "city", "geo",
+];
+
+function isPiiKey(key: string): boolean {
+  const lk = key.toLowerCase();
+  return PII_KEY_PATTERNS.some((p) => lk.includes(p));
+}
+
+function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(obj)) {
+    if (isPiiKey(key)) continue;
+    if (val !== null && typeof val === "object" && !Array.isArray(val)) {
+      out[key] = scrubObject(val as Record<string, unknown>);
+    } else {
+      out[key] = val;
+    }
+  }
+  return out;
+}
+
 if (DSN) {
   Sentry.init({
     dsn: DSN,
     tracesSampleRate: 0,
     enableNativeNagger: false,
+    maxBreadcrumbs: 0,
     beforeSend(event) {
+      event.breadcrumbs = [];
+      event.request = undefined;
+      event.user = undefined;
       if (event.extra) {
-        const cleaned: Record<string, unknown> = {};
-        for (const [key, val] of Object.entries(event.extra)) {
-          const lk = key.toLowerCase();
-          if (
-            lk.includes("lat") ||
-            lk.includes("lon") ||
-            lk.includes("coord") ||
-            lk.includes("location") ||
-            lk.includes("place") ||
-            lk.includes("address")
-          ) {
-            continue;
-          }
-          cleaned[key] = val;
-        }
-        event.extra = cleaned;
+        event.extra = scrubObject(event.extra as Record<string, unknown>);
       }
-      if (event.contexts?.device) {
-        const dev = event.contexts.device as Record<string, unknown>;
-        delete dev.latitude;
-        delete dev.longitude;
+      if (event.contexts) {
+        event.contexts = scrubObject(
+          event.contexts as unknown as Record<string, unknown>,
+        ) as typeof event.contexts;
       }
       return event;
     },
