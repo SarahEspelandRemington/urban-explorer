@@ -31,12 +31,13 @@ export function setWalkScope(data: WalkScopeData): void {
 export function addWalkBreadcrumb(
   message: string,
   data?: Record<string, unknown>,
+  level: Sentry.SeverityLevel = "info",
 ): void {
   if (!DSN) return;
   Sentry.addBreadcrumb({
     category: "walk",
     message,
-    level: "info",
+    level,
     ...(data ? { data } : {}),
   });
 }

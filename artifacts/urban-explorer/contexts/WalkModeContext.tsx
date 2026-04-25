@@ -467,7 +467,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           lastFetchRef.current = { latitude, longitude };
         }
       }
-    } catch {
+    } catch (err) {
+      addWalkBreadcrumb(
+        "fetchNearbyPlaces error",
+        { errorType: err instanceof Error ? err.constructor.name : typeof err },
+        "error",
+      );
     } finally {
       fetchingRef.current = false;
       setIsLoading(false);
@@ -559,6 +564,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               return { kind: "audio", audioUri: file.uri, cleanup };
             } catch (writeErr) {
               if (__DEV__) console.log(`[fetchNarrationPayload] file.write failed, will fall back to text:`, writeErr);
+              addWalkBreadcrumb(
+                "narration audio write failed",
+                { errorType: writeErr instanceof Error ? writeErr.constructor.name : typeof writeErr },
+                "warning",
+              );
               // fall through to text endpoint below
             }
           }
@@ -576,15 +586,26 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch(`${API_BASE}/api/explore/walk-narration`, { method: "POST", headers, body, signal: textController.signal });
         if (__DEV__) console.log(`[fetchNarrationPayload] text response status=${res.status} for "${place.name}"`);
-        if (!res.ok) return null;
+        if (!res.ok) {
+          addWalkBreadcrumb("narration fetch failed", { status: res.status }, "error");
+          return null;
+        }
         const data = await res.json();
-        if (typeof data?.narration !== "string" || !data.narration.trim()) return null;
+        if (typeof data?.narration !== "string" || !data.narration.trim()) {
+          addWalkBreadcrumb("narration payload null or empty", {}, "error");
+          return null;
+        }
         return { kind: "text", text: data.narration };
       } finally {
         clearTimeout(textTimeout);
       }
     } catch (err) {
       if (__DEV__) console.log(`[fetchNarrationPayload] text fetch threw:`, err);
+      addWalkBreadcrumb(
+        "narration fetch threw",
+        { errorType: err instanceof Error ? err.constructor.name : typeof err },
+        "error",
+      );
       return null;
     }
   }, []);
