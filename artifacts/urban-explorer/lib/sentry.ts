@@ -43,6 +43,10 @@ const PII_KEY_PATTERNS = [
   "name", "summary", "narration", "altitude", "heading", "speed",
 ];
 
+// Lookahead used by scrubString to stop an unquoted multi-word value just
+// before the next PII key delimiter (e.g. "name: X Y name: Z" → two matches).
+const PII_UNQUOTED_LOOKAHEAD = PII_KEY_PATTERNS.map((p) => `\\b${p}\\b`).join("|");
+
 export function isPiiKey(key: string): boolean {
   // Keys ending with "Id" or "Count" are safe metadata — not PII — even if
   // they contain a pattern word (e.g. "currentPlaceId", "placeCount").
@@ -56,8 +60,13 @@ export function isPiiKey(key: string): boolean {
  *
  * Matches structured patterns like:
  *   name: Eiffel Tower          → name: [redacted]
+ *   name: Central Park          → name: [redacted]   (multi-word unquoted)
  *   place="Coffee House"        → place=[redacted]
  *   narration: 'Long text here' → narration: [redacted]
+ *
+ * For unquoted values the match greedily consumes additional space-separated
+ * tokens until it encounters the start of another PII key delimiter or the
+ * end of the string, so multi-word place names are fully redacted.
  *
  * This does NOT catch place names interpolated raw with no surrounding key
  * (e.g. "Failed for The Eiffel Tower"). Callers (addWalkBreadcrumb,
@@ -69,7 +78,7 @@ export function scrubString(text: string): string {
   for (const pattern of PII_KEY_PATTERNS) {
     result = result.replace(
       new RegExp(
-        `(\\b${pattern}\\b\\s*[:=]\\s*)(?:"[^"]*"|'[^']*'|\\S+)`,
+        `(\\b${pattern}\\b\\s*[:=]\\s*)(?:"[^"]*"|'[^']*'|\\S+(?:\\s+(?!(?:${PII_UNQUOTED_LOOKAHEAD})\\s*[:=])\\S+)*)`,
         "gi",
       ),
       "$1[redacted]",

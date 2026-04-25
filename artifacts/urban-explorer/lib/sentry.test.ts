@@ -167,6 +167,26 @@ describe("scrubString", () => {
     test("speed: 1.4 → speed: [redacted]", () => {
       expect(scrubString("speed: 1.4")).toBe("speed: [redacted]");
     });
+
+    test("name: Central Park → name: [redacted] (multi-word)", () => {
+      expect(scrubString("name: Central Park")).toBe("name: [redacted]");
+    });
+
+    test("place: Eiffel Tower Paris → place: [redacted] (three-word)", () => {
+      expect(scrubString("place: Eiffel Tower Paris")).toBe("place: [redacted]");
+    });
+
+    test("name: Central Park, summary: nice — both keys redacted, comma consumed", () => {
+      expect(scrubString("name: Central Park, summary: nice")).toBe(
+        "name: [redacted] summary: [redacted]",
+      );
+    });
+
+    test("two adjacent unquoted multi-word PII values are each fully redacted", () => {
+      expect(scrubString("name: Central Park lat: 51.5")).toBe(
+        "name: [redacted] lat: [redacted]",
+      );
+    });
   });
 
   describe("redacts key=value form", () => {
@@ -391,6 +411,150 @@ describe("scrubObject", () => {
   });
 });
 
+<<<<<<< HEAD
+=======
+describe("scrubString", () => {
+  describe("redacts quoted double-quote values", () => {
+    test('name: "Value" → name: [redacted]', () => {
+      expect(scrubString('name: "Central Park"')).toBe("name: [redacted]");
+    });
+
+    test('place: "Coffee House" → place: [redacted]', () => {
+      expect(scrubString('place: "Coffee House"')).toBe("place: [redacted]");
+    });
+
+    test('narration: "Long narration text" → narration: [redacted]', () => {
+      expect(scrubString('narration: "Long narration text here"')).toBe(
+        "narration: [redacted]",
+      );
+    });
+  });
+
+  describe("redacts quoted single-quote values", () => {
+    test("name: 'Value' → name: [redacted]", () => {
+      expect(scrubString("name: 'Central Park'")).toBe("name: [redacted]");
+    });
+
+    test("summary: 'AI description' → summary: [redacted]", () => {
+      expect(scrubString("summary: 'AI generated description'")).toBe(
+        "summary: [redacted]",
+      );
+    });
+  });
+
+  describe("redacts unquoted values", () => {
+    test("name: CentralPark → name: [redacted]", () => {
+      expect(scrubString("name: CentralPark")).toBe("name: [redacted]");
+    });
+
+    test("lat: 51.5074 → lat: [redacted]", () => {
+      expect(scrubString("lat: 51.5074")).toBe("lat: [redacted]");
+    });
+
+    test("lon: -0.1278 → lon: [redacted]", () => {
+      expect(scrubString("lon: -0.1278")).toBe("lon: [redacted]");
+    });
+
+    test("heading: 270 → heading: [redacted]", () => {
+      expect(scrubString("heading: 270")).toBe("heading: [redacted]");
+    });
+
+    test("speed: 1.4 → speed: [redacted]", () => {
+      expect(scrubString("speed: 1.4")).toBe("speed: [redacted]");
+    });
+
+    test("name: Central Park → name: [redacted] (multi-word)", () => {
+      expect(scrubString("name: Central Park")).toBe("name: [redacted]");
+    });
+
+    test("place: Eiffel Tower Paris → place: [redacted] (three-word)", () => {
+      expect(scrubString("place: Eiffel Tower Paris")).toBe("place: [redacted]");
+    });
+
+    test("name: Central Park, summary: nice — both keys redacted, comma consumed", () => {
+      expect(scrubString("name: Central Park, summary: nice")).toBe(
+        "name: [redacted] summary: [redacted]",
+      );
+    });
+
+    test("two adjacent unquoted multi-word PII values are each fully redacted", () => {
+      expect(scrubString("name: Central Park lat: 51.5")).toBe(
+        "name: [redacted] lat: [redacted]",
+      );
+    });
+  });
+
+  describe("redacts key=value form", () => {
+    test('place="Coffee House" → place=[redacted]', () => {
+      expect(scrubString('place="Coffee House"')).toBe("place=[redacted]");
+    });
+
+    test("lat=51.5074 → lat=[redacted]", () => {
+      expect(scrubString("lat=51.5074")).toBe("lat=[redacted]");
+    });
+
+    test("name=CentralPark → name=[redacted]", () => {
+      expect(scrubString("name=CentralPark")).toBe("name=[redacted]");
+    });
+
+    test("address='123 Main St' → address=[redacted]", () => {
+      expect(scrubString("address='123 Main St'")).toBe("address=[redacted]");
+    });
+  });
+
+  describe("redacts multiple PII keys in one string", () => {
+    test("lat and lon both redacted (unquoted values consume trailing comma)", () => {
+      expect(scrubString("lat: 51.5, lon: -0.1")).toBe(
+        "lat: [redacted] lon: [redacted]",
+      );
+    });
+
+    test("name and summary both redacted", () => {
+      expect(scrubString('name: "Park", summary: "Nice place"')).toBe(
+        'name: [redacted], summary: [redacted]',
+      );
+    });
+
+    test("mixed colon and equals forms", () => {
+      expect(scrubString('lat: 51.5 place="Park"')).toBe(
+        'lat: [redacted] place=[redacted]',
+      );
+    });
+  });
+
+  describe("leaves strings with no PII unchanged", () => {
+    test("plain message with no PII keys is unchanged", () => {
+      const msg = "Failed to fetch narration audio";
+      expect(scrubString(msg)).toBe(msg);
+    });
+
+    test("safe key=value pairs are unchanged", () => {
+      const msg = "kind: audio, status: ok";
+      expect(scrubString(msg)).toBe(msg);
+    });
+
+    test("opaque IDs with PII-like suffix (Id) are unchanged", () => {
+      const msg = "placeId: abc123";
+      expect(scrubString(msg)).toBe(msg);
+    });
+
+    test("empty string returns empty string", () => {
+      expect(scrubString("")).toBe("");
+    });
+  });
+
+  describe("case-insensitivity", () => {
+    test("NAME: Value → NAME: [redacted]", () => {
+      expect(scrubString("NAME: CentralPark")).toBe("NAME: [redacted]");
+    });
+
+    test("Lat: 51.5 → Lat: [redacted]", () => {
+      expect(scrubString("Lat: 51.5")).toBe("Lat: [redacted]");
+    });
+  });
+});
+
+>>>>>>> abadda2 (Fix scrubString to fully redact multi-word unquoted PII values)
 describe("beforeSend pipeline", () => {
   function makeEvent(overrides: Partial<ErrorEvent> = {}): ErrorEvent {
     return {
