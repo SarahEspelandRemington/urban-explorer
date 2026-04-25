@@ -14,8 +14,5 @@ export const modules: ModuleMap = {
   "./components/mockups/style-directions/FieldNotes.tsx": () => import("../components/mockups/style-directions/FieldNotes.tsx"),
   "./components/mockups/style-directions/SoftDepth.tsx": () => import("../components/mockups/style-directions/SoftDepth.tsx"),
   "./components/mockups/style-directions/UrbanGlow.tsx": () => import("../components/mockups/style-directions/UrbanGlow.tsx"),
-  "./components/mockups/style-directions/WarmEmber.tsx": () => import("../components/mockups/style-directions/WarmEmber.tsx"),
-  "./components/mockups/header-redesign/LabeledActions.tsx": () => import("../components/mockups/header-redesign/LabeledActions.tsx"),
-  "./components/mockups/header-redesign/SimplifiedBar.tsx": () => import("../components/mockups/header-redesign/SimplifiedBar.tsx"),
-  "./components/mockups/header-redesign/WalkFirst.tsx": () => import("../components/mockups/header-redesign/WalkFirst.tsx")
+  "./components/mockups/style-directions/WarmEmber.tsx": () => import("../components/mockups/style-directions/WarmEmber.tsx")
 };
