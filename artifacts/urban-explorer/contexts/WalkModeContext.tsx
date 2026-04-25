@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
@@ -91,6 +92,12 @@ interface WalkModeContextType {
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
 
 const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+
+// In Expo Go the native modules are the SDK-bundled versions and may not match
+// the JS package versions installed in this project. Skip the native audio path
+// (expo-file-system write + expo-audio player) to avoid native bridge crashes;
+// the text / expo-speech fallback works fine in Expo Go.
+const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 // Density tuning
 const DENSITY_CONFIG: Record<
@@ -504,7 +511,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     const headers = { "Content-Type": "application/json", ...await authHeaders() };
 
     // Native: try the natural-voice MP3 endpoint first.
-    if (Platform.OS !== "web") {
+    // Skipped in Expo Go: the bundled native runtime may not match the JS
+    // package versions, which can cause a native crash on file write / playback.
+    if (Platform.OS !== "web" && !IS_EXPO_GO) {
       try {
         if (__DEV__) console.log(`[fetchNarrationPayload] POST walk-narration-audio for "${place.name}"`);
         const audioController = new AbortController();
