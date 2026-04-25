@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/react-native";
-import type { ErrorEvent } from "@sentry/react-native";
+import type { ErrorEvent, Breadcrumb } from "@sentry/react-native";
 import type React from "react";
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -134,6 +134,27 @@ export function beforeSend(event: ErrorEvent): ErrorEvent {
   return event;
 }
 
+/**
+ * Platform-level breadcrumb safety net.
+ *
+ * Fires on every `Sentry.addBreadcrumb` call — including any call that bypasses
+ * the `addWalkBreadcrumb` helper — before the breadcrumb enters Sentry's
+ * in-memory buffer.
+ *
+ * - Non-walk breadcrumbs are dropped immediately (return null).
+ * - Walk breadcrumbs have their `data` field passed through `scrubObject`.
+ * - If the scrubbed data object is empty, `data` is omitted entirely.
+ */
+export function beforeAddBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
+  if (breadcrumb.category !== "walk") return null;
+
+  if (!breadcrumb.data) return breadcrumb;
+
+  const scrubbed = scrubObject(breadcrumb.data as Record<string, unknown>);
+  const hasData = Object.keys(scrubbed).length > 0;
+  return { ...breadcrumb, ...(hasData ? { data: scrubbed } : { data: undefined }) };
+}
+
 if (DSN) {
   Sentry.init({
     dsn: DSN,
@@ -141,6 +162,7 @@ if (DSN) {
     enableNativeNagger: false,
     maxBreadcrumbs: 20,
     beforeSend,
+    beforeBreadcrumb: beforeAddBreadcrumb,
   });
 }
 

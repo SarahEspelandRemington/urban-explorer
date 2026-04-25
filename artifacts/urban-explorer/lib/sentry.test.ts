@@ -1,4 +1,4 @@
-import { beforeSend, isPiiKey, scrubObject, scrubString } from "./sentry";
+import { beforeSend, beforeAddBreadcrumb, isPiiKey, scrubObject, scrubString } from "./sentry";
 import type { ErrorEvent, Breadcrumb } from "@sentry/react-native";
 
 describe("isPiiKey", () => {
@@ -852,6 +852,159 @@ describe("beforeSend pipeline", () => {
       });
       const result = beforeSend(event);
       expect(result).toBe(event);
+    });
+  });
+});
+
+describe("beforeAddBreadcrumb", () => {
+  describe("drops non-walk breadcrumbs", () => {
+    test("returns null for xhr category", () => {
+      const crumb: Breadcrumb = { category: "xhr", message: "GET /api/places" };
+      expect(beforeAddBreadcrumb(crumb)).toBeNull();
+    });
+
+    test("returns null for console category", () => {
+      const crumb: Breadcrumb = { category: "console", message: "user logged in" };
+      expect(beforeAddBreadcrumb(crumb)).toBeNull();
+    });
+
+    test("returns null for navigation category", () => {
+      const crumb: Breadcrumb = { category: "navigation", message: "route changed" };
+      expect(beforeAddBreadcrumb(crumb)).toBeNull();
+    });
+
+    test("returns null for breadcrumb with no category", () => {
+      const crumb: Breadcrumb = { message: "something happened" };
+      expect(beforeAddBreadcrumb(crumb)).toBeNull();
+    });
+
+    test("returns null for unknown category", () => {
+      const crumb: Breadcrumb = { category: "http", message: "request made" };
+      expect(beforeAddBreadcrumb(crumb)).toBeNull();
+    });
+  });
+
+  describe("passes walk breadcrumbs through", () => {
+    test("returns breadcrumb unchanged when it has no data field", () => {
+      const crumb: Breadcrumb = { category: "walk", message: "walk started", level: "info" };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.category).toBe("walk");
+      expect(result!.message).toBe("walk started");
+      expect(result!.data).toBeUndefined();
+    });
+
+    test("returns breadcrumb unchanged when data is undefined", () => {
+      const crumb: Breadcrumb = { category: "walk", message: "walk stopped", data: undefined };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.data).toBeUndefined();
+    });
+
+    test("preserves walk breadcrumb data that contains no PII", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "narration fetched",
+        data: { placeId: "abc123", kind: "audio" },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.data).toEqual({ placeId: "abc123", kind: "audio" });
+    });
+  });
+
+  describe("scrubs PII from walk breadcrumb data", () => {
+    test("removes top-level PII keys from data", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "narration fetched",
+        data: { placeId: "abc", lat: 51.5, lon: -0.1, kind: "audio" },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.data).toEqual({ placeId: "abc", kind: "audio" });
+    });
+
+    test("removes nested PII keys from data", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "route recorded",
+        data: {
+          placeId: "start",
+          meta: { name: "Central Park", kind: "outdoor" },
+        },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.data).toEqual({
+        placeId: "start",
+        meta: { kind: "outdoor" },
+      });
+    });
+
+    test("scrubs PII from array-of-objects inside data", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "route recorded",
+        data: {
+          waypoints: [
+            { lat: 51.5, lon: -0.1, placeId: "x", kind: "audio" },
+            { lat: 48.8, lon: 2.3, placeId: "y", kind: "text" },
+          ],
+          placeId: "start",
+        },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.data).toEqual({
+        waypoints: [
+          { placeId: "x", kind: "audio" },
+          { placeId: "y", kind: "text" },
+        ],
+        placeId: "start",
+      });
+    });
+  });
+
+  describe("omits data when scrubbed result is empty", () => {
+    test("sets data to undefined when all data keys are PII", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "leak",
+        data: { lat: 51.5, lon: -0.1, name: "Central Park", heading: 270 },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.data).toBeUndefined();
+    });
+
+    test("sets data to undefined when only PII key is present", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "leak",
+        data: { speed: 1.4 },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.data).toBeUndefined();
+    });
+  });
+
+  describe("preserves non-data breadcrumb fields", () => {
+    test("preserves message, level, and timestamp alongside scrubbed data", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "place visited",
+        level: "info",
+        timestamp: 1714003200,
+        data: { placeId: "abc", lat: 51.5 },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.message).toBe("place visited");
+      expect(result!.level).toBe("info");
+      expect(result!.timestamp).toBe(1714003200);
+      expect(result!.data).toEqual({ placeId: "abc" });
     });
   });
 });
