@@ -38,6 +38,7 @@
     },
     "plugins": [
       "expo-dev-client",
+      "@sentry/react-native/expo",
       [
         "expo-router",
         {

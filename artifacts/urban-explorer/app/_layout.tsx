@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { wrap as sentryWrap } from "@/lib/sentry";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { DevBuildBanner } from "@/components/DevBuildBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -75,7 +76,7 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -121,3 +122,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default sentryWrap(RootLayout);
