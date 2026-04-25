@@ -410,6 +410,7 @@ describe("scrubObject", () => {
     expect(scrubObject(input)).toEqual(input);
   });
 });
+
 describe("beforeSend pipeline", () => {
   function makeEvent(overrides: Partial<ErrorEvent> = {}): ErrorEvent {
     return {
