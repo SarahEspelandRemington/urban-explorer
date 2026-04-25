@@ -20,6 +20,10 @@ author = "agent"
 task = "workflow.run"
 args = "privacy-tests"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "lint-rules"
+
 [[workflows.workflow]]
 name = "privacy-tests"
 author = "agent"
@@ -31,6 +35,17 @@ outputType = "console"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm --filter @workspace/urban-explorer run test"
+
+[[workflows.workflow]]
+name = "lint-rules"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run lint:rules"
+
+[workflows.workflow.metadata]
+isValidation = true
 
 [agent]
 stack = "PNPM_WORKSPACE"
