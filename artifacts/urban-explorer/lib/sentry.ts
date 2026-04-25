@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/react-native";
+import type { ErrorEvent } from "@sentry/react-native";
 import type React from "react";
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
@@ -90,41 +91,43 @@ export function scrubObject(obj: Record<string, unknown>): Record<string, unknow
   return out;
 }
 
+export function beforeSend(event: ErrorEvent): ErrorEvent {
+  // Retain walk-category breadcrumbs only; drop everything else (XHR,
+  // console, navigation, etc.) which may inadvertently carry PII.
+  if (Array.isArray(event.breadcrumbs) && event.breadcrumbs.length > 0) {
+    event.breadcrumbs = event.breadcrumbs
+      .filter((b) => b.category === "walk")
+      .map((b) => ({
+        ...b,
+        message: b.message ? scrubString(b.message) : b.message,
+        data: b.data ? scrubObject(b.data as Record<string, unknown>) : b.data,
+      }));
+  } else {
+    event.breadcrumbs = undefined;
+  }
+  event.request = undefined;
+  event.user = undefined;
+  if (event.message) {
+    event.message = scrubString(event.message);
+  }
+  if (event.extra) {
+    event.extra = scrubObject(event.extra as Record<string, unknown>);
+  }
+  if (event.contexts) {
+    event.contexts = scrubObject(
+      event.contexts as unknown as Record<string, unknown>,
+    ) as typeof event.contexts;
+  }
+  return event;
+}
+
 if (DSN) {
   Sentry.init({
     dsn: DSN,
     tracesSampleRate: 0,
     enableNativeNagger: false,
     maxBreadcrumbs: 20,
-    beforeSend(event) {
-      // Retain walk-category breadcrumbs only; drop everything else (XHR,
-      // console, navigation, etc.) which may inadvertently carry PII.
-      if (Array.isArray(event.breadcrumbs) && event.breadcrumbs.length > 0) {
-        event.breadcrumbs = event.breadcrumbs
-          .filter((b) => b.category === "walk")
-          .map((b) => ({
-            ...b,
-            message: b.message ? scrubString(b.message) : b.message,
-            data: b.data ? scrubObject(b.data as Record<string, unknown>) : b.data,
-          }));
-      } else {
-        event.breadcrumbs = undefined;
-      }
-      event.request = undefined;
-      event.user = undefined;
-      if (event.message) {
-        event.message = scrubString(event.message);
-      }
-      if (event.extra) {
-        event.extra = scrubObject(event.extra as Record<string, unknown>);
-      }
-      if (event.contexts) {
-        event.contexts = scrubObject(
-          event.contexts as unknown as Record<string, unknown>,
-        ) as typeof event.contexts;
-      }
-      return event;
-    },
+    beforeSend,
   });
 }
 
