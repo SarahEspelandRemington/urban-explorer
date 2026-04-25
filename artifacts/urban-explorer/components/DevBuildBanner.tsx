@@ -47,8 +47,8 @@ export function DevBuildBanner() {
       />
       <Text style={styles.text} numberOfLines={2}>
         {IS_EXPO_GO
-          ? "Expo Go — narration uses text-to-speech fallback. Build with EAS for MP3 audio + background location: eas build --profile development --platform ios"
-          : "Dev build active — MP3 narration, background location, and lock-screen controls are all enabled."}
+          ? "Expo Go — TTS fallback. For full audio: eas build --profile development --platform ios"
+          : "Dev build — MP3 narration, background location & lock-screen controls active."}
       </Text>
       <Pressable onPress={() => setDismissed(true)} hitSlop={16} style={styles.closeBtn}>
         <Feather name="x" size={13} color="rgba(255,255,255,0.8)" />
