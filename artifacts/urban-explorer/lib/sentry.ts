@@ -142,17 +142,26 @@ export function beforeSend(event: ErrorEvent): ErrorEvent {
  * in-memory buffer.
  *
  * - Non-walk breadcrumbs are dropped immediately (return null).
+ * - Walk breadcrumbs have their `message` field passed through `scrubString`.
  * - Walk breadcrumbs have their `data` field passed through `scrubObject`.
  * - If the scrubbed data object is empty, `data` is omitted entirely.
  */
 export function beforeAddBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   if (breadcrumb.category !== "walk") return null;
 
-  if (!breadcrumb.data) return breadcrumb;
+  const scrubbedMessage = breadcrumb.message
+    ? scrubString(breadcrumb.message)
+    : breadcrumb.message;
+
+  if (!breadcrumb.data) return { ...breadcrumb, message: scrubbedMessage };
 
   const scrubbed = scrubObject(breadcrumb.data as Record<string, unknown>);
   const hasData = Object.keys(scrubbed).length > 0;
-  return { ...breadcrumb, ...(hasData ? { data: scrubbed } : { data: undefined }) };
+  return {
+    ...breadcrumb,
+    message: scrubbedMessage,
+    ...(hasData ? { data: scrubbed } : { data: undefined }),
+  };
 }
 
 if (DSN) {

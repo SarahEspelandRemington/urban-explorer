@@ -1007,4 +1007,68 @@ describe("beforeAddBreadcrumb", () => {
       expect(result!.data).toEqual({ placeId: "abc" });
     });
   });
+
+  describe("scrubs PII from walk breadcrumb message", () => {
+    test('redacts name in message (colon + quoted form) — visited name: "Central Park"', () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: 'visited name: "Central Park"',
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.message).toBe("visited name: [redacted]");
+    });
+
+    test('redacts coordinate in message — "lat: 51.5074"', () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "lat: 51.5074",
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.message).toBe("lat: [redacted]");
+    });
+
+    test('redacts place in message (equals form) — place="Coffee House"', () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: 'place="Coffee House"',
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.message).toBe("place=[redacted]");
+    });
+
+    test("leaves safe message unchanged", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "walk started",
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.message).toBe("walk started");
+    });
+
+    test("handles missing message gracefully", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        data: { placeId: "abc" },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.message).toBeUndefined();
+    });
+
+    test("scrubs both message and data when both contain PII", () => {
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: 'name: "Central Park"',
+        data: { placeId: "abc", lat: 51.5, kind: "audio" },
+      };
+      const result = beforeAddBreadcrumb(crumb);
+      expect(result).not.toBeNull();
+      expect(result!.message).toBe("name: [redacted]");
+      expect(result!.data).toEqual({ placeId: "abc", kind: "audio" });
+    });
+  });
 });
