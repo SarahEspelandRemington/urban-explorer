@@ -430,6 +430,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       });
       if (res.ok) {
         const data = await res.json();
+        // Guard: if stopWalk was called while the fetch was in-flight, discard
+        // results so we don't repopulate the places list or update state after
+        // the walk has ended.
+        if (!isWalkingRef.current) return;
         if (Array.isArray(data?.places)) {
           // Merge with existing — dedupe by id, then evict anything farther
           // than memoryRadius from the user's current location. Without the
@@ -593,14 +597,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
     // --- Normal path (cache miss or stale) ---
     const payload = await fetchNarrationPayload(place);
-    if (payload) {
-      // Remember which place is now driving the lock-screen widget so the
-      // artwork we send matches the story being spoken.
-      enqueueNarration(place, payload);
-      // Start pre-fetching the next candidate so it's ready when this
-      // narration finishes and the movement gate clears.
-      prefetchNextRef.current?.();
+    if (!payload) return;
+    // Guard: if stopWalk was called while the fetch was in-flight (up to 15 s),
+    // discard the payload and run its cleanup so we never play audio or update
+    // stats after the walk has ended.
+    if (!isWalkingRef.current) {
+      if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
+      return;
     }
+    // Remember which place is now driving the lock-screen widget so the
+    // artwork we send matches the story being spoken.
+    enqueueNarration(place, payload);
+    // Start pre-fetching the next candidate so it's ready when this
+    // narration finishes and the movement gate clears.
+    prefetchNextRef.current?.();
   }, [enqueueNarration, fetchNarrationPayload]);
 
   /**
