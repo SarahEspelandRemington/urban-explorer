@@ -64,7 +64,7 @@ export function isPiiKey(key: string): boolean {
  * captureMessage) are expected to use only caller-controlled, opaque strings.
  * This scrubber is a belt-and-suspenders guard for structured patterns.
  */
-function scrubString(text: string): string {
+export function scrubString(text: string): string {
   let result = text;
   for (const pattern of PII_KEY_PATTERNS) {
     result = result.replace(
