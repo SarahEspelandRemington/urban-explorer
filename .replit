@@ -24,6 +24,10 @@ args = "privacy-tests"
 task = "workflow.run"
 args = "lint-rules"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "lint"
+
 [[workflows.workflow]]
 name = "privacy-tests"
 author = "agent"
@@ -43,6 +47,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm run lint:rules"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "lint"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run lint"
 
 [workflows.workflow.metadata]
 isValidation = true
