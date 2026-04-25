@@ -107,6 +107,14 @@ That script installs dependencies and pushes the database schema. Then complete 
 
 4. **Optional: Sentry DSN** — add `EXPO_PUBLIC_SENTRY_DSN` to Secrets with the DSN from your Sentry project (Settings → Projects → Client Keys). The mobile app runs fine without it; crash reporting is simply disabled.
 
+5. **Optional: Sentry source map uploads** — these are EAS build-time secrets, not Replit secrets. Set them via the EAS CLI after installing it (`npm install -g eas-cli`):
+   ```
+   eas secret:create --name SENTRY_AUTH_TOKEN --value <token>
+   eas secret:create --name SENTRY_ORG --value <org-slug>
+   eas secret:create --name SENTRY_PROJECT --value <project-slug>
+   ```
+   Without these, crash reports still work but stack traces show minified positions instead of readable file/line info. The `SENTRY_AUTH_TOKEN` is an internal integration token from sentry.io (Settings → Developer Settings → Internal Integrations, needs `project:releases` + `org:read` scopes).
+
 ### What is NOT exported
 
 - **Database contents** (user ratings, sessions, saved places stored server-side). The schema is recreated by `db push`, but any existing data is lost. Saved places in the mobile app are stored in AsyncStorage on the device and are unaffected.
