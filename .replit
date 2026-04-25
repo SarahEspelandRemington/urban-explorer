@@ -24,12 +24,12 @@ args = "privacy-tests"
 name = "privacy-tests"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter urban-explorer jest lib/sentry.test.ts --no-coverage"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/urban-explorer run test"
 
 [agent]
 stack = "PNPM_WORKSPACE"
