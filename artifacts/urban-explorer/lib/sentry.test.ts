@@ -437,6 +437,23 @@ describe("beforeSend pipeline", () => {
       expect(result.extra).toEqual({ meta: { placeId: "x", status: "ok" } });
     });
 
+    test("scrubs PII keys from array of objects in event.extra", () => {
+      const event = makeEvent({
+        extra: {
+          waypoints: [
+            { lat: 51.5, lon: -0.1, kind: "audio" },
+            { lat: 48.8, lon: 2.3, kind: "text" },
+          ],
+          retries: 2,
+        },
+      });
+      const result = beforeSend(event);
+      expect(result.extra).toEqual({
+        waypoints: [{ kind: "audio" }, { kind: "text" }],
+        retries: 2,
+      });
+    });
+
     test("does not modify event when extra is absent", () => {
       const event = makeEvent();
       const result = beforeSend(event);
@@ -476,6 +493,30 @@ describe("beforeSend pipeline", () => {
           currentPlaceId: "abc123",
           placeCount: 5,
           narrationCount: 2,
+        },
+      });
+    });
+
+    test("scrubs PII keys from array of objects in event.contexts", () => {
+      const event = makeEvent({
+        contexts: {
+          walk: {
+            isWalking: true,
+            stops: [
+              { lat: 51.5, lon: -0.1, placeId: "x", kind: "audio" },
+              { lat: 48.8, lon: 2.3, placeId: "y", kind: "text" },
+            ],
+          },
+        } as unknown as ErrorEvent["contexts"],
+      });
+      const result = beforeSend(event);
+      expect(result.contexts).toEqual({
+        walk: {
+          isWalking: true,
+          stops: [
+            { placeId: "x", kind: "audio" },
+            { placeId: "y", kind: "text" },
+          ],
         },
       });
     });
