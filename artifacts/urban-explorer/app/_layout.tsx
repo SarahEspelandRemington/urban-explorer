@@ -17,6 +17,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { DevBuildBanner } from "@/components/DevBuildBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HeadingBanner } from "@/components/HeadingBanner";
 import { DiscoveryProvider } from "@/contexts/DiscoveryContext";
@@ -106,6 +107,7 @@ export default function RootLayout() {
                     <KeyboardProvider>
                       <RootLayoutNav />
                       <HeadingBanner />
+                      <DevBuildBanner />
                     </KeyboardProvider>
                   </GestureHandlerRootView>
                 </HeadingProvider>
