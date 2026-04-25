@@ -50,6 +50,33 @@ export function isPiiKey(key: string): boolean {
   return PII_KEY_PATTERNS.some((p) => lk.includes(p));
 }
 
+/**
+ * Redact values adjacent to known PII key names in a free-text string.
+ *
+ * Matches structured patterns like:
+ *   name: Eiffel Tower          → name: [redacted]
+ *   place="Coffee House"        → place=[redacted]
+ *   narration: 'Long text here' → narration: [redacted]
+ *
+ * This does NOT catch place names interpolated raw with no surrounding key
+ * (e.g. "Failed for The Eiffel Tower"). Callers (addWalkBreadcrumb,
+ * captureMessage) are expected to use only caller-controlled, opaque strings.
+ * This scrubber is a belt-and-suspenders guard for structured patterns.
+ */
+function scrubString(text: string): string {
+  let result = text;
+  for (const pattern of PII_KEY_PATTERNS) {
+    result = result.replace(
+      new RegExp(
+        `(\\b${pattern}\\b\\s*[:=]\\s*)(?:"[^"]*"|'[^']*'|\\S+)`,
+        "gi",
+      ),
+      "$1[redacted]",
+    );
+  }
+  return result;
+}
+
 export function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(obj)) {
@@ -77,6 +104,7 @@ if (DSN) {
           .filter((b) => b.category === "walk")
           .map((b) => ({
             ...b,
+            message: b.message ? scrubString(b.message) : b.message,
             data: b.data ? scrubObject(b.data as Record<string, unknown>) : b.data,
           }));
       } else {
@@ -84,6 +112,9 @@ if (DSN) {
       }
       event.request = undefined;
       event.user = undefined;
+      if (event.message) {
+        event.message = scrubString(event.message);
+      }
       if (event.extra) {
         event.extra = scrubObject(event.extra as Record<string, unknown>);
       }
