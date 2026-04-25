@@ -3,9 +3,9 @@ module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
   moduleNameMapper: {
-    "^@sentry/react-native$": "<rootDir>/__mocks__/@sentry/react-native.js",
+    "^@sentry/react-native$": "<rootDir>/__mocks__/@sentry/react-native.ts",
   },
-  testMatch: ["**/*.test.ts", "**/*.test.tsx"],
+  testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
   transform: {
     "^.+\\.tsx?$": ["ts-jest", { tsconfig: "tsconfig.json" }],
   },
