@@ -42,7 +42,7 @@ const PII_KEY_PATTERNS = [
   "name", "summary", "narration", "altitude", "heading", "speed",
 ];
 
-function isPiiKey(key: string): boolean {
+export function isPiiKey(key: string): boolean {
   // Keys ending with "Id" or "Count" are safe metadata — not PII — even if
   // they contain a pattern word (e.g. "currentPlaceId", "placeCount").
   if (/(?:Id|Count)$/.test(key)) return false;
@@ -50,7 +50,7 @@ function isPiiKey(key: string): boolean {
   return PII_KEY_PATTERNS.some((p) => lk.includes(p));
 }
 
-function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
+export function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(obj)) {
     if (isPiiKey(key)) continue;
