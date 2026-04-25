@@ -1,7 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import React, { useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { captureMessage, hasDsn } from "../lib/sentry";
 
 const IS_EXPO_GO = Constants.appOwnership === "expo";
 
@@ -24,6 +25,17 @@ const IS_EXPO_GO = Constants.appOwnership === "expo";
  */
 export function DevBuildBanner() {
   const [dismissed, setDismissed] = useState(false);
+  const [sentryBtnSent, setSentryBtnSent] = useState(false);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const btnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      if (btnTimer.current) clearTimeout(btnTimer.current);
+    };
+  }, []);
 
   if (!__DEV__) return null;
   if (dismissed) return null;
@@ -31,29 +43,85 @@ export function DevBuildBanner() {
 
   const statusBarHeight = Constants.statusBarHeight ?? 44;
 
+  function showToast() {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    Animated.timing(toastAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    toastTimer.current = setTimeout(() => {
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 3000);
+  }
+
+  function handleTestSentry() {
+    captureMessage("Test event from Urban Explorer dev build");
+    setSentryBtnSent(true);
+    if (btnTimer.current) clearTimeout(btnTimer.current);
+    btnTimer.current = setTimeout(() => setSentryBtnSent(false), 3000);
+    showToast();
+  }
+
+  const toastOpacity = toastAnim;
+  const toastTranslateY = toastAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-8, 0],
+  });
+
+  const bannerHeight = 36;
+
   return (
-    <View
-      style={[
-        styles.banner,
-        IS_EXPO_GO ? styles.expoGoBanner : styles.devBuildBanner,
-        { top: statusBarHeight },
-      ]}
-    >
-      <Feather
-        name={IS_EXPO_GO ? "alert-circle" : "check-circle"}
-        size={13}
-        color="#fff"
-        style={styles.icon}
-      />
-      <Text style={styles.text} numberOfLines={2}>
-        {IS_EXPO_GO
-          ? "Expo Go — TTS fallback. For full audio: eas build --profile development --platform ios"
-          : "Dev build — MP3 narration, background location & lock-screen controls active."}
-      </Text>
-      <Pressable onPress={() => setDismissed(true)} hitSlop={16} style={styles.closeBtn}>
-        <Feather name="x" size={13} color="rgba(255,255,255,0.8)" />
-      </Pressable>
-    </View>
+    <>
+      <View
+        style={[
+          styles.banner,
+          IS_EXPO_GO ? styles.expoGoBanner : styles.devBuildBanner,
+          { top: statusBarHeight },
+        ]}
+      >
+        <Feather
+          name={IS_EXPO_GO ? "alert-circle" : "check-circle"}
+          size={13}
+          color="#fff"
+          style={styles.icon}
+        />
+        <Text style={styles.text} numberOfLines={2}>
+          {IS_EXPO_GO
+            ? "Expo Go — TTS fallback. For full audio: eas build --profile development --platform ios"
+            : "Dev build — MP3 narration, background location & lock-screen controls active."}
+        </Text>
+        {hasDsn && (
+          <Pressable
+            onPress={handleTestSentry}
+            hitSlop={8}
+            style={[styles.sentryBtn, sentryBtnSent && styles.sentryBtnSent]}
+          >
+            <Text style={styles.sentryBtnText}>
+              {sentryBtnSent ? "Sent ✓" : "Test Sentry"}
+            </Text>
+          </Pressable>
+        )}
+        <Pressable onPress={() => setDismissed(true)} hitSlop={16} style={styles.closeBtn}>
+          <Feather name="x" size={13} color="rgba(255,255,255,0.8)" />
+        </Pressable>
+      </View>
+
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.toast,
+          { top: statusBarHeight + bannerHeight + 8 },
+          { opacity: toastOpacity, transform: [{ translateY: toastTranslateY }] },
+        ]}
+      >
+        <Text style={styles.toastText}>Sentry event sent — check your dashboard</Text>
+      </Animated.View>
+    </>
   );
 }
 
@@ -86,8 +154,37 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     opacity: 0.95,
   },
+  sentryBtn: {
+    flexShrink: 0,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  sentryBtnSent: {
+    backgroundColor: "rgba(255,255,255,0.35)",
+  },
+  sentryBtnText: {
+    fontSize: 11,
+    color: "#fff",
+    fontWeight: "600",
+  },
   closeBtn: {
     flexShrink: 0,
     padding: 2,
+  },
+  toast: {
+    position: "absolute",
+    alignSelf: "center",
+    zIndex: 9999,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  toastText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "500",
   },
 });

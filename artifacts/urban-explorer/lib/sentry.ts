@@ -57,6 +57,16 @@ export function captureException(
   Sentry.captureException(err, ctx);
 }
 
+export function captureMessage(
+  message: string,
+  level?: Parameters<typeof Sentry.captureMessage>[1],
+): void {
+  if (!DSN) return;
+  Sentry.captureMessage(message, level);
+}
+
+export const hasDsn = Boolean(DSN);
+
 export function wrap<T extends React.ComponentType<any>>(component: T): T {
   return DSN ? (Sentry.wrap(component) as T) : component;
 }
