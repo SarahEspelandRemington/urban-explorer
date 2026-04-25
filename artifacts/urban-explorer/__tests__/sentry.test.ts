@@ -207,6 +207,37 @@ describe("beforeSend integration", () => {
     expect(data).toHaveProperty("kind", "audio");
   });
 
+  test("scrubs PII keys from array of objects inside walk breadcrumb data", () => {
+    const event = makeEvent({
+      breadcrumbs: [
+        {
+          category: "walk",
+          message: "route recorded",
+          data: {
+            waypoints: [
+              { lat: 51.5, lon: -0.1, placeId: "x", kind: "audio" },
+              { lat: 48.8, lon: 2.3, placeId: "y", kind: "text" },
+            ],
+            placeId: "start",
+          },
+        },
+      ],
+    });
+    const result = beforeSend(event);
+    const data = result.breadcrumbs![0].data!;
+    expect(data).toHaveProperty("placeId", "start");
+    const waypoints = data["waypoints"] as Record<string, unknown>[];
+    expect(waypoints).toHaveLength(2);
+    expect(waypoints[0]).not.toHaveProperty("lat");
+    expect(waypoints[0]).not.toHaveProperty("lon");
+    expect(waypoints[0]).toHaveProperty("placeId", "x");
+    expect(waypoints[0]).toHaveProperty("kind", "audio");
+    expect(waypoints[1]).not.toHaveProperty("lat");
+    expect(waypoints[1]).not.toHaveProperty("lon");
+    expect(waypoints[1]).toHaveProperty("placeId", "y");
+    expect(waypoints[1]).toHaveProperty("kind", "text");
+  });
+
   test("scrubs PII patterns from walk breadcrumb message strings", () => {
     const event = makeEvent({
       breadcrumbs: [

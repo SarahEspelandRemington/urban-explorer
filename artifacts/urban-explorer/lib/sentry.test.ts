@@ -641,6 +641,33 @@ describe("beforeSend pipeline", () => {
       expect(crumbs[0].data).toBeUndefined();
     });
 
+    test("scrubs PII keys from array of objects inside walk breadcrumb data", () => {
+      const event = makeEvent({
+        breadcrumbs: [
+          {
+            category: "walk",
+            message: "route recorded",
+            data: {
+              waypoints: [
+                { lat: 51.5, lon: -0.1, placeId: "x", kind: "audio" },
+                { lat: 48.8, lon: 2.3, placeId: "y", kind: "text" },
+              ],
+              placeId: "start",
+            },
+          },
+        ] as Breadcrumb[],
+      });
+      const result = beforeSend(event);
+      const crumbs = result.breadcrumbs as Breadcrumb[];
+      expect(crumbs[0].data).toEqual({
+        waypoints: [
+          { placeId: "x", kind: "audio" },
+          { placeId: "y", kind: "text" },
+        ],
+        placeId: "start",
+      });
+    });
+
     test("sets breadcrumbs to undefined when breadcrumbs array is empty", () => {
       const event = makeEvent({ breadcrumbs: [] as Breadcrumb[] });
       const result = beforeSend(event);
