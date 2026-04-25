@@ -95,13 +95,14 @@ export function beforeSend(event: ErrorEvent): ErrorEvent {
   // Retain walk-category breadcrumbs only; drop everything else (XHR,
   // console, navigation, etc.) which may inadvertently carry PII.
   if (Array.isArray(event.breadcrumbs) && event.breadcrumbs.length > 0) {
-    event.breadcrumbs = event.breadcrumbs
+    const filtered = event.breadcrumbs
       .filter((b) => b.category === "walk")
       .map((b) => ({
         ...b,
         message: b.message ? scrubString(b.message) : b.message,
         data: b.data ? scrubObject(b.data as Record<string, unknown>) : b.data,
       }));
+    event.breadcrumbs = filtered.length > 0 ? filtered : undefined;
   } else {
     event.breadcrumbs = undefined;
   }

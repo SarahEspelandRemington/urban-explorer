@@ -240,7 +240,7 @@ describe("beforeSend pipeline", () => {
         ] as Breadcrumb[],
       });
       const result = beforeSend(event);
-      expect(result.breadcrumbs).toEqual([]);
+      expect(result.breadcrumbs).toBeUndefined();
     });
 
     test("retains walk breadcrumbs", () => {
