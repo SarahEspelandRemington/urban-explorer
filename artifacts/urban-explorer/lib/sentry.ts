@@ -78,12 +78,24 @@ function scrubString(text: string): string {
   return result;
 }
 
+function isPlainObject(val: unknown): val is Record<string, unknown> {
+  if (val === null || typeof val !== "object" || Array.isArray(val)) return false;
+  const proto = Object.getPrototypeOf(val) as unknown;
+  return proto === Object.prototype || proto === null;
+}
+
 export function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(obj)) {
     if (isPiiKey(key)) continue;
-    if (val !== null && typeof val === "object" && !Array.isArray(val)) {
-      out[key] = scrubObject(val as Record<string, unknown>);
+    if (val !== null && typeof val === "object") {
+      if (Array.isArray(val)) {
+        out[key] = val.map((item) =>
+          isPlainObject(item) ? scrubObject(item) : item,
+        );
+      } else {
+        out[key] = scrubObject(val as Record<string, unknown>);
+      }
     } else {
       out[key] = val;
     }

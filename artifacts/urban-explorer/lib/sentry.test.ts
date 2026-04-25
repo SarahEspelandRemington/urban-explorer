@@ -199,10 +199,58 @@ describe("scrubObject", () => {
     });
   });
 
-  test("passes arrays through without recursing into them", () => {
+  test("passes arrays of primitives through unchanged", () => {
     const input = { tags: ["audio", "outdoor"], placeId: "x" };
     const result = scrubObject(input);
     expect(result).toEqual({ tags: ["audio", "outdoor"], placeId: "x" });
+  });
+
+  test("scrubs PII keys from plain-object elements inside an array", () => {
+    const input = {
+      waypoints: [
+        { lat: 51.5, lon: -0.1, kind: "audio" },
+        { lat: 48.8, lon: 2.3, kind: "text" },
+      ],
+      placeId: "x",
+    };
+    const result = scrubObject(input);
+    expect(result).toEqual({
+      waypoints: [{ kind: "audio" }, { kind: "text" }],
+      placeId: "x",
+    });
+  });
+
+  test("keeps safe keys intact inside array elements", () => {
+    const input = {
+      items: [
+        { placeId: "abc", narrationCount: 2, kind: "audio" },
+        { placeId: "def", narrationCount: 1, kind: "text" },
+      ],
+    };
+    expect(scrubObject(input)).toEqual(input);
+  });
+
+  test("recurses into nested objects inside array elements", () => {
+    const input = {
+      stops: [
+        { meta: { lat: 51.5, kind: "audio" }, placeId: "x" },
+      ],
+    };
+    expect(scrubObject(input)).toEqual({
+      stops: [{ meta: { kind: "audio" }, placeId: "x" }],
+    });
+  });
+
+  test("leaves non-object array elements (strings, numbers, null) unchanged", () => {
+    const input = { values: [1, "hello", null, true] };
+    expect(scrubObject(input)).toEqual({ values: [1, "hello", null, true] });
+  });
+
+  test("leaves non-plain-object array elements (Date, class instances) unchanged", () => {
+    const d = new Date("2026-04-25T00:00:00Z");
+    const input = { timestamps: [d] };
+    const result = scrubObject(input);
+    expect((result.timestamps as unknown[])[0]).toBe(d);
   });
 
   test("passes null values through", () => {
