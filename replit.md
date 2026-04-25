@@ -86,3 +86,34 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - Frontend JSON.parse calls (navigation params, AsyncStorage) have safe fallbacks
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## Reimporting / First-time Setup
+
+If this project is exported as a zip and imported into a new Replit, run the following once from the Shell:
+
+```bash
+bash scripts/setup.sh
+```
+
+That script installs dependencies and pushes the database schema. Then complete these manual steps:
+
+### Required manual steps after import
+
+1. **OpenAI integration** — open the Integrations tab in the Replit sidebar and connect **OpenAI**. This automatically provisions `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY`. The API server will not start without these.
+
+2. **SESSION_SECRET** — go to Secrets (padlock icon) and add `SESSION_SECRET` set to any long random string. Generate one with `openssl rand -hex 32` in the Shell.
+
+3. **Database** — the PostgreSQL module in `.replit` auto-provisions a fresh database and all `PG*` / `DATABASE_URL` env vars. No action needed, but you must run `pnpm --filter @workspace/db run push` (already done by `setup.sh`) to create the tables.
+
+4. **Optional: Sentry DSN** — add `EXPO_PUBLIC_SENTRY_DSN` to Secrets with the DSN from your Sentry project (Settings → Projects → Client Keys). The mobile app runs fine without it; crash reporting is simply disabled.
+
+### What is NOT exported
+
+- **Database contents** (user ratings, sessions, saved places stored server-side). The schema is recreated by `db push`, but any existing data is lost. Saved places in the mobile app are stored in AsyncStorage on the device and are unaffected.
+- **Secrets** — all values in the Secrets tab must be re-added manually (see above).
+
+### Artifacts and workflows
+
+Both workflows are defined in `.replit` and restart automatically:
+- `artifacts/api-server` — Express API server (`pnpm --filter @workspace/api-server run dev`)
+- `artifacts/urban-explorer` — Expo mobile app (`pnpm --filter @workspace/urban-explorer run dev`)
