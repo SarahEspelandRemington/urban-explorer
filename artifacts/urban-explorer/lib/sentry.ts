@@ -24,11 +24,10 @@ const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 // Location.LocationObject (and in fetchNarrationPayload request bodies) but
 // are NOT currently forwarded to Sentry. They are added here defensively so
 // that a future event.extra or event.contexts key accidentally including them
-// is scrubbed before the event leaves the device. NOTE: breadcrumb data
-// objects are NOT currently passed through scrubObject in beforeSend —
-// breadcrumb safety relies on strict call-site discipline (only opaque IDs
-// and counters) plus the category filter that drops every non-"walk" crumb.
-// A follow-up task adds scrubObject coverage to breadcrumb.data as well.
+// is scrubbed before the event leaves the device. Breadcrumb data objects
+// are now also passed through scrubObject in beforeSend (after the category
+// filter) so that any future call-site that accidentally includes a PII field
+// is scrubbed before the event leaves the device.
 //
 //   "name"      — place name (human-readable, identifies a specific building)
 //   "summary"   — AI-generated place description (contains place-specific text)
@@ -74,9 +73,12 @@ if (DSN) {
       // Retain walk-category breadcrumbs only; drop everything else (XHR,
       // console, navigation, etc.) which may inadvertently carry PII.
       if (Array.isArray(event.breadcrumbs) && event.breadcrumbs.length > 0) {
-        event.breadcrumbs = event.breadcrumbs.filter(
-          (b) => b.category === "walk",
-        );
+        event.breadcrumbs = event.breadcrumbs
+          .filter((b) => b.category === "walk")
+          .map((b) => ({
+            ...b,
+            data: b.data ? scrubObject(b.data as Record<string, unknown>) : b.data,
+          }));
       } else {
         event.breadcrumbs = undefined;
       }
