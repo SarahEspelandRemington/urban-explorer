@@ -3,9 +3,44 @@ import type React from "react";
 
 const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 
+// ─── PII audit (2026-04-25) ──────────────────────────────────────────────────
+// Audited all Sentry data paths against this pattern list:
+//
+// 1. event.contexts["walk"] (setWalkScope in lib/sentryWalk.ts):
+//      isWalking (bool), currentPlaceId (opaque ID, *Id suffix), placeCount
+//      (*Count suffix), narrationCount (*Count suffix) — all safe.
+//
+// 2. event.contexts["react"] (ErrorBoundary.tsx captureException call):
+//      componentStack — React component-tree trace, no user data, safe.
+//
+// 3. event.extra: nothing in the codebase sets extra fields explicitly.
+//
+// 4. Walk breadcrumb data (addWalkBreadcrumb in WalkModeContext.tsx):
+//      "narration fetched" → { placeId (*Id), kind ("audio"|"text") } — safe.
+//      "place visited"     → { placeId (*Id) } — safe.
+//      "walk started" / "walk stopped" → no data — safe.
+//
+// Gaps identified: the following field names appear on WalkPlace and
+// Location.LocationObject (and in fetchNarrationPayload request bodies) but
+// are NOT currently forwarded to Sentry. They are added here defensively so
+// that a future event.extra or event.contexts key accidentally including them
+// is scrubbed before the event leaves the device. NOTE: breadcrumb data
+// objects are NOT currently passed through scrubObject in beforeSend —
+// breadcrumb safety relies on strict call-site discipline (only opaque IDs
+// and counters) plus the category filter that drops every non-"walk" crumb.
+// A follow-up task adds scrubObject coverage to breadcrumb.data as well.
+//
+//   "name"      — place name (human-readable, identifies a specific building)
+//   "summary"   — AI-generated place description (contains place-specific text)
+//   "narration" — spoken narration text (content derived from place identity)
+//   "altitude"  — third GPS coordinate dimension, same sensitivity as lat/lon
+//   "heading"   — direction of travel (location-adjacent movement data)
+//   "speed"     — movement velocity (location-adjacent movement data)
+// ─────────────────────────────────────────────────────────────────────────────
 const PII_KEY_PATTERNS = [
   "lat", "lon", "lng", "coord", "location", "place", "address",
   "destination", "origin", "route", "street", "city", "geo",
+  "name", "summary", "narration", "altitude", "heading", "speed",
 ];
 
 function isPiiKey(key: string): boolean {
