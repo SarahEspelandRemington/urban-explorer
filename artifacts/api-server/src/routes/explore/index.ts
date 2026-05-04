@@ -1001,7 +1001,11 @@ Return ${placeCount} places. Quality beats quantity — if you can only find 6 p
     );
   } catch (err: any) {
     if (discoverAbort.signal.aborted) {
-      if (!res.headersSent) {
+      // The abort is most often triggered by the client closing the connection
+      // (res.on("close")), so the socket may already be gone.  Only attempt a
+      // response write when headers haven't been sent and the socket is still
+      // open — otherwise we'd produce a write-after-close log noise.
+      if (!res.headersSent && res.socket?.writable) {
         res.status(503).json({ error: "Discovery service temporarily unavailable. Please try again." });
       }
       return;
