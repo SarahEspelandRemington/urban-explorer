@@ -1,10 +1,15 @@
 import { Feather } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import React, { useEffect, useRef, useState } from "react";
 import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { captureMessage, hasDsn } from "../lib/sentry";
 
 const IS_EXPO_GO = Constants.appOwnership === "expo";
+
+// Versioned key — bump the suffix if we ever want to force the banner to
+// re-appear (e.g. to surface a new dev-only notice).
+const DISMISS_KEY = "urban-explorer.devBanner.dismissed.v1";
 
 /**
  * Developer-only banner that shows at the top of the app while in __DEV__ mode.
@@ -24,21 +29,40 @@ const IS_EXPO_GO = Constants.appOwnership === "expo";
  * The banner is completely stripped from production builds (guarded by __DEV__).
  */
 export function DevBuildBanner() {
-  const [dismissed, setDismissed] = useState(false);
+  // `null` = still loading the persisted preference; `true`/`false` = known.
+  // Hide while loading so a dismissed banner never flashes on cold launch.
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
   const [sentryBtnSent, setSentryBtnSent] = useState(false);
   const toastAnim = useRef(new Animated.Value(0)).current;
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const btnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(DISMISS_KEY)
+      .then((v) => {
+        if (!cancelled) setDismissed(v === "1");
+      })
+      .catch(() => {
+        if (!cancelled) setDismissed(false);
+      });
     return () => {
+      cancelled = true;
       if (toastTimer.current) clearTimeout(toastTimer.current);
       if (btnTimer.current) clearTimeout(btnTimer.current);
     };
   }, []);
 
+  function handleDismiss() {
+    setDismissed(true);
+    // Fire-and-forget; banner already hidden, so a write failure is harmless.
+    AsyncStorage.setItem(DISMISS_KEY, "1").catch(() => {
+      /* ignore */
+    });
+  }
+
   if (!__DEV__) return null;
-  if (dismissed) return null;
+  if (dismissed !== false) return null;
   if (Platform.OS === "web") return null;
 
   const statusBarHeight = Constants.statusBarHeight ?? 44;
@@ -106,7 +130,7 @@ export function DevBuildBanner() {
             </Text>
           </Pressable>
         )}
-        <Pressable onPress={() => setDismissed(true)} hitSlop={16} style={styles.closeBtn}>
+        <Pressable onPress={handleDismiss} hitSlop={16} style={styles.closeBtn}>
           <Feather name="x" size={13} color="rgba(255,255,255,0.8)" />
         </Pressable>
       </View>
