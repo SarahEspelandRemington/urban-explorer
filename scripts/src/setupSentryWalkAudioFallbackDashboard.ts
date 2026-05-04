@@ -45,6 +45,38 @@ function isMigrateLegacyEnabled(): boolean {
 const FETCH_ALERT_NAME = "Walk Mode audio fallback rate (fetch)";
 const PLAYBACK_ALERT_NAME = "Walk Mode audio fallback rate (playback)";
 
+// Detection mode for the per-side alert rules.
+//
+//   "dynamic" (default) — Sentry Anomaly Detection. The detector learns each
+//                         metric's hourly/daily baseline (narration.audio_fallback
+//                         filtered by reason group) and pages only when the count
+//                         is genuinely anomalous against that baseline. This
+//                         implicitly normalizes against narration volume: a quiet
+//                         hour with a 100% failure rate is anomalous and pages;
+//                         a busy hour with the usual fallback noise stays silent.
+//                         As close as Sentry currently gets to firing on a
+//                         fallback / narration.played ratio without supporting
+//                         cross-metric equation alerts on custom metrics.
+//
+//   "static"            — Legacy absolute-count thresholds (fetch >=15/8, playback
+//                         >=10/5). Use this escape hatch only if the org's Sentry
+//                         plan does not support anomaly detection (it requires
+//                         Business plan or above) or if you need to bridge a gap
+//                         while dynamic alerts gather their ~7-day baseline.
+//
+// Set via the AUDIO_FALLBACK_ALERT_DETECTION_TYPE env var; defaults to "dynamic".
+const DETECTION_TYPE_ENV = "AUDIO_FALLBACK_ALERT_DETECTION_TYPE";
+type DetectionType = "dynamic" | "static";
+function getDetectionType(): DetectionType {
+  const raw = (process.env[DETECTION_TYPE_ENV] ?? "").trim().toLowerCase();
+  if (raw === "static") return "static";
+  if (raw === "" || raw === "dynamic") return "dynamic";
+  console.warn(
+    `Unknown ${DETECTION_TYPE_ENV}=${raw} — defaulting to "dynamic". Supported values: "dynamic" | "static".`,
+  );
+  return "dynamic";
+}
+
 interface SentryProject {
   id: string;
   slug: string;
@@ -275,58 +307,128 @@ async function deleteAlertRule(
 interface AlertRuleSpec {
   name: string;
   reasons: string[];
-  critical: number;
-  warning: number;
-  resolve: number;
+  // Dynamic-mode sensitivity. Sentry maps this onto an internal anomaly score
+  // threshold; "high" pages on smaller deviations, "low" only on large ones.
+  // Playback-side runs at "high" because a sustained playback failure rate
+  // almost always indicates an expo-audio / OS audio-stack regression worth
+  // catching as early as possible (and there's no upstream observability —
+  // OpenAI/server logs — to back-stop a missed page).
+  // Fetch-side runs at "medium" because endpoint_error / bad_response can
+  // legitimately surge during third-party (OpenAI) blips that resolve on
+  // their own; we want to catch sustained regressions, not paper over every
+  // transient blip.
+  dynamicSensitivity: "low" | "medium" | "high";
+  // Static-mode legacy thresholds. Only used when AUDIO_FALLBACK_ALERT_DETECTION_TYPE=static.
+  staticCritical: number;
+  staticWarning: number;
+  staticResolve: number;
   rationale: string;
 }
 
-async function createOneAlertRule(
-  token: string,
-  org: string,
-  projectSlug: string,
-  spec: AlertRuleSpec,
-): Promise<SentryAlertRule> {
-  const existing = await findExistingAlertRule(token, org, spec.name);
-  if (existing) {
-    console.log(
-      `Alert rule "${spec.name}" already exists (id=${existing.id}), reusing.`,
-    );
-    return existing;
-  }
+interface AlertRuleBodyBase {
+  name: string;
+  aggregate: string;
+  dataset: string;
+  query: string;
+  timeWindow: number;
+  thresholdType: number;
+  projects: string[];
+  environment: null;
+  comparisonDelta: null;
+}
 
-  // Sentry Metric Alerts trigger on a single aggregate value, not on an
-  // equation across two metrics. We alert on absolute fallback volume
-  // (sum(narration.audio_fallback) over 1h) filtered by reason group, so
-  // a fetch-side spike and a playback-side spike each get their own
-  // calibrated threshold instead of being averaged into one combined
-  // count. The dashboard's "Audio fallback rate %" panel carries the
-  // true rate-based view for humans, and the minimum-volume guard is
-  // implicit: low traffic naturally keeps the count under threshold.
-  const body = {
+function buildAlertRuleBody(
+  spec: AlertRuleSpec,
+  detectionType: DetectionType,
+  projectSlug: string,
+): Record<string, unknown> {
+  const base: AlertRuleBodyBase = {
     name: spec.name,
     aggregate: FALLBACK_AGGREGATE_FOR_ALERT,
     dataset: "metrics",
     query: `reason:[${spec.reasons.join(",")}]`,
+    // 1h window: long enough to smooth out a single bad minute, short enough
+    // to react before a regression eats the whole shift. Matches the static
+    // baseline thresholds were originally calibrated against.
     timeWindow: 60,
     thresholdType: 0,
-    resolveThreshold: spec.resolve,
-    triggers: [
-      {
-        label: "critical",
-        alertThreshold: spec.critical,
-        actions: [],
-      },
-      {
-        label: "warning",
-        alertThreshold: spec.warning,
-        actions: [],
-      },
-    ],
     projects: [projectSlug],
     environment: null,
     comparisonDelta: null,
   };
+
+  if (detectionType === "dynamic") {
+    // Sentry Anomaly Detection. The detector learns each metric's
+    // hourly/daily baseline and pages when the count deviates significantly.
+    // Triggers in dynamic mode use alertThreshold=0 — Sentry ignores the
+    // numeric threshold and uses the trained anomaly score instead.
+    // Sensitivity (low/medium/high) is what actually controls how easily the
+    // alert fires. seasonality "auto" lets Sentry pick hourly vs daily vs
+    // weekly periodicity from the data.
+    return {
+      ...base,
+      detectionType: "dynamic",
+      sensitivity: spec.dynamicSensitivity,
+      seasonality: "auto",
+      resolveThreshold: null,
+      triggers: [
+        {
+          label: "critical",
+          alertThreshold: 0,
+          actions: [],
+        },
+      ],
+    };
+  }
+
+  // Static (legacy) escape hatch. Absolute per-side fallback count thresholds.
+  return {
+    ...base,
+    detectionType: "static",
+    resolveThreshold: spec.staticResolve,
+    triggers: [
+      {
+        label: "critical",
+        alertThreshold: spec.staticCritical,
+        actions: [],
+      },
+      {
+        label: "warning",
+        alertThreshold: spec.staticWarning,
+        actions: [],
+      },
+    ],
+  };
+}
+
+async function upsertOneAlertRule(
+  token: string,
+  org: string,
+  projectSlug: string,
+  spec: AlertRuleSpec,
+  detectionType: DetectionType,
+): Promise<SentryAlertRule> {
+  const body = buildAlertRuleBody(spec, detectionType, projectSlug);
+  const existing = await findExistingAlertRule(token, org, spec.name);
+
+  if (existing) {
+    // PUT to update so re-running the script migrates legacy static rules
+    // (and any drift in thresholds / reason filter) onto the current spec
+    // without manual intervention.
+    const updated = await sentryFetch<SentryAlertRule>(
+      token,
+      `/organizations/${encodeURIComponent(org)}/alert-rules/${encodeURIComponent(existing.id)}/`,
+      { method: "PUT", body: JSON.stringify(body) },
+    );
+    console.log(
+      `Updated alert rule "${spec.name}" (id=${updated.id}) → detectionType=${detectionType}` +
+        (detectionType === "dynamic"
+          ? `, sensitivity=${spec.dynamicSensitivity}`
+          : `, critical=${spec.staticCritical}/warning=${spec.staticWarning}`) +
+        `. Rationale: ${spec.rationale}`,
+    );
+    return updated;
+  }
 
   const created = await sentryFetch<SentryAlertRule>(
     token,
@@ -334,7 +436,11 @@ async function createOneAlertRule(
     { method: "POST", body: JSON.stringify(body) },
   );
   console.log(
-    `Created alert rule "${spec.name}" (id=${created.id}). Rationale: ${spec.rationale}`,
+    `Created alert rule "${spec.name}" (id=${created.id}) → detectionType=${detectionType}` +
+      (detectionType === "dynamic"
+        ? `, sensitivity=${spec.dynamicSensitivity}`
+        : `, critical=${spec.staticCritical}/warning=${spec.staticWarning}`) +
+      `. Rationale: ${spec.rationale}`,
   );
   console.warn(
     `NOTE: Alert was created with no notification actions. Add a Slack/Email\n` +
@@ -355,40 +461,63 @@ async function createAlertRules(
   // rule nor a working replacement.
   const legacy = await findExistingAlertRule(token, org, LEGACY_ALERT_NAME);
   const migrateLegacy = isMigrateLegacyEnabled();
+  const detectionType = getDetectionType();
+
+  console.log(
+    `Audio-fallback alert detection mode: ${detectionType}` +
+      (detectionType === "dynamic"
+        ? " (Sentry Anomaly Detection — sensitivity-based, learns hourly/daily " +
+          "baseline; ~7 days of data needed before it pages reliably)"
+        : ` (legacy absolute-count thresholds; set ${DETECTION_TYPE_ENV}=dynamic to switch back)`),
+  );
 
   const fetchSpec: AlertRuleSpec = {
     name: FETCH_ALERT_NAME,
     reasons: FETCH_REASONS,
-    critical: 15,
-    warning: 8,
-    resolve: 5,
+    dynamicSensitivity: "medium",
+    staticCritical: 15,
+    staticWarning: 8,
+    staticResolve: 5,
     rationale:
       "Fetch-side reasons (write_failure | endpoint_error | bad_response). " +
-      "Thresholds carried over from the original combined rule, which was " +
-      "originally calibrated against fetch-only volume; treat as approximate " +
-      "until real hourly walk volume confirms.",
+      "Dynamic sensitivity 'medium' — endpoint_error / bad_response can " +
+      "legitimately surge during third-party (OpenAI) blips that resolve on " +
+      "their own; we want to catch sustained regressions, not paper over " +
+      "every transient blip. Static fallback thresholds are carried over " +
+      "from the original combined rule and remain placeholders until real " +
+      "hourly walk volume confirms.",
   };
 
   const playbackSpec: AlertRuleSpec = {
     name: PLAYBACK_ALERT_NAME,
     reasons: PLAYBACK_REASONS,
-    critical: 10,
-    warning: 5,
-    resolve: 3,
+    dynamicSensitivity: "high",
+    staticCritical: 10,
+    staticWarning: 5,
+    staticResolve: 3,
     rationale:
       "Playback-side reasons (playback_create | playback_play | " +
-      "playback_status_error | playback_watchdog). Set tighter than the " +
-      "fetch side because a sustained playback failure rate almost always " +
-      "indicates an expo-audio or OS audio-stack regression worth catching " +
-      "early. Approximate placeholder — retune once real volume is observed.",
+      "playback_status_error | playback_watchdog). Dynamic sensitivity " +
+      "'high' — a sustained playback failure rate almost always indicates " +
+      "an expo-audio or OS audio-stack regression worth catching early, " +
+      "and unlike fetch-side issues there is no upstream observability " +
+      "(OpenAI/server logs) to back-stop a missed page. Static fallback " +
+      "thresholds are placeholders until real volume is observed.",
   };
 
-  const fetchRule = await createOneAlertRule(token, org, projectSlug, fetchSpec);
-  const playbackRule = await createOneAlertRule(
+  const fetchRule = await upsertOneAlertRule(
+    token,
+    org,
+    projectSlug,
+    fetchSpec,
+    detectionType,
+  );
+  const playbackRule = await upsertOneAlertRule(
     token,
     org,
     projectSlug,
     playbackSpec,
+    detectionType,
   );
 
   // Now that both replacements are confirmed in place, optionally clean up
