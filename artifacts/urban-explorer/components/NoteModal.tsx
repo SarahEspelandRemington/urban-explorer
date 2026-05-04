@@ -30,9 +30,13 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
 
   const hasInteracted = useRef(false);
   const lastExistingNote = useRef<string | undefined>(undefined);
+  const prevVisible = useRef(false);
 
   useEffect(() => {
-    if (visible) {
+    const wasVisible = prevVisible.current;
+    prevVisible.current = visible;
+
+    if (visible && !wasVisible) {
       const existingChanged = lastExistingNote.current !== existingNote;
       lastExistingNote.current = existingNote;
       if (existingChanged || !hasInteracted.current) {

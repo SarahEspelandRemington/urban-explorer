@@ -443,6 +443,7 @@ interface SwipeToDeleteProps {
 
 function SwipeToDelete({ children, onDelete, label, colors }: SwipeToDeleteProps) {
   const translateX = useRef(new RNAnimated.Value(0)).current;
+  const cardOpacity = useRef(new RNAnimated.Value(1)).current;
   const startX = useRef(0);
   const currentDx = useRef(0);
   const isRevealed = useRef(false);
@@ -488,7 +489,16 @@ function SwipeToDelete({ children, onDelete, label, colors }: SwipeToDeleteProps
         ]}
       >
         <Pressable
-          onPress={() => { springBack(); onDelete(); }}
+          onPress={() => {
+            RNAnimated.timing(cardOpacity, {
+              toValue: 0.15,
+              duration: 140,
+              useNativeDriver: true,
+            }).start(() => {
+              springBack();
+              onDelete();
+            });
+          }}
           style={styles.deleteActionInner}
           accessibilityRole="button"
           accessibilityLabel={label}
@@ -498,7 +508,7 @@ function SwipeToDelete({ children, onDelete, label, colors }: SwipeToDeleteProps
         </Pressable>
       </RNAnimated.View>
       <RNAnimated.View
-        style={{ transform: [{ translateX }] }}
+        style={{ transform: [{ translateX }], opacity: cardOpacity }}
         onStartShouldSetResponder={() => true}
         onMoveShouldSetResponder={(e) => {
           const dx = Math.abs(e.nativeEvent.pageX - startX.current);
