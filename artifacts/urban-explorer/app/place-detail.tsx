@@ -26,6 +26,7 @@ import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { buildPlaceId } from "@/lib/placeId";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
+import { useStillLoading } from "@/hooks/useStillLoading";
 import { useGetPlaceDetail, useGetPlaceTimeline } from "@workspace/api-client-react";
 
 export default function PlaceDetailScreen() {
@@ -67,16 +68,7 @@ export default function PlaceDetailScreen() {
   const detailMutation = useGetPlaceDetail();
   const timelineMutation = useGetPlaceTimeline();
   const [timelineLoaded, setTimelineLoaded] = React.useState(false);
-  const [showStillLoading, setShowStillLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    if (detailMutation.isPending) {
-      const timer = setTimeout(() => setShowStillLoading(true), 10_000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowStillLoading(false);
-    }
-  }, [detailMutation.isPending]);
+  const showStillLoading = useStillLoading(detailMutation.isPending);
 
   React.useEffect(() => {
     if (params.name) {

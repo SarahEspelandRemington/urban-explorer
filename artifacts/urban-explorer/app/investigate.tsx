@@ -19,6 +19,7 @@ import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollV
 import { LoadingMessages } from "@/components/LoadingMessages";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
+import { useStillLoading } from "@/hooks/useStillLoading";
 import { useInvestigateAddress } from "@workspace/api-client-react";
 
 interface Suggestion {
@@ -45,7 +46,7 @@ export default function InvestigateScreen() {
   const investigate = useInvestigateAddress();
   const result = investigate.data;
   const error = investigate.error as { status?: number; message?: string } | null;
-  const [showStillLoading, setShowStillLoading] = useState(false);
+  const showStillLoading = useStillLoading(investigate.isPending);
 
   const handleSelectSuggestion = useCallback((s: Suggestion) => {
     if (typeof s.latitude === "number" && typeof s.longitude === "number") {
@@ -93,16 +94,6 @@ export default function InvestigateScreen() {
     }
     return t.investigate.genericError;
   }, [error, t]);
-
-  useEffect(() => {
-    if (investigate.isPending) {
-      setShowStillLoading(false);
-      const timer = setTimeout(() => setShowStillLoading(true), 10_000);
-      return () => clearTimeout(timer);
-    } else {
-      setShowStillLoading(false);
-    }
-  }, [investigate.isPending]);
 
   // Pre-populate the input if the caller provided a near location (used as default city context).
   useEffect(() => {
