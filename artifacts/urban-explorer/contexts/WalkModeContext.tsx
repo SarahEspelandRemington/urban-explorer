@@ -13,6 +13,11 @@ import { fetchNarrationPayload as fetchNarrationPayloadUtil } from "@/lib/fetchN
 import { addWalkBreadcrumb, setWalkScope } from "@/lib/sentryWalk";
 import { installSessionCallback, dispatchLocation } from "@/lib/walkSessionManager";
 import { executeStopWalkSync } from "@/lib/walkStopSession";
+import {
+  consumePrefetchedNarration,
+  type PrefetchEntry,
+  runPrefetchCycle,
+} from "@/lib/narrationPrefetchPipeline";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
 import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/buildingTypeGroups";
 
@@ -314,11 +319,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // holds a pre-rendered MP3 file URI (so playback starts the instant the
   // current narration finishes). On web — and as a graceful fallback when the
   // audio endpoint failed — it can also hold raw narration text.
-  const prefetchedNarrationRef = useRef<{
-    placeId: string;
-    payload: NarrationPayload;
-    place: WalkPlace;
-  } | null>(null);
+  const prefetchedNarrationRef = useRef<PrefetchEntry<WalkPlace> | null>(null);
   // Ref to the latest prefetchNext callback — same ref-wrapping pattern as
   // maybeNarrateRef, so fetchNarration can call it without being listed as a
   // dependency (avoiding stale-closure re-creation on every location change).
@@ -541,21 +542,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // --- Narration pipeline: fast path ---
     // Check if we already pre-fetched the narration for this place while the
     // previous story was playing. If so, enqueue it immediately (no round-trip)
-    // and then start pre-fetching the one after that.
+    // and then start pre-fetching the one after that. consumePrefetchedNarration
+    // also runs the stale-cleanup when the cached entry is for a different place.
     const prefetched = prefetchedNarrationRef.current;
     prefetchedNarrationRef.current = null; // always consume / clear the cache
-    if (prefetched && prefetched.placeId === place.id) {
+    const lookup = consumePrefetchedNarration(prefetched, place.id);
+    if (lookup.kind === "hit") {
       if (__DEV__) {
-        console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue (${prefetched.payload.kind})`);
+        console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`);
       }
-      enqueueNarration(place, prefetched.payload);
+      enqueueNarration(place, lookup.entry.payload);
       // Keep the pipeline going: pre-fetch the next candidate.
       prefetchNextRef.current?.();
       return;
-    }
-    // Stale prefetch (different place won the pick) — discard its temp file.
-    if (prefetched && prefetched.payload.kind === "audio") {
-      try { prefetched.payload.cleanup?.(); } catch {}
     }
 
     // --- Normal path (cache miss or stale) ---
@@ -673,48 +672,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   //   • We skip the pre-fetch if the cache already holds the right candidate
   //     to avoid redundant API calls on every location tick.
   const prefetchNext = useCallback(() => {
-    if (!isWalkingRef.current) return;
-    const candidate = pickNext();
-    if (!candidate) return;
-    // Already cached for this candidate — no need to re-fetch.
-    if (prefetchedNarrationRef.current?.placeId === candidate.id) return;
-    // Another request for this candidate is already in flight — dedupe.
-    if (prefetchInFlightRef.current === candidate.id) return;
-    // Clear any stale entry so we don't serve the wrong place. If the stale
-    // entry was an audio payload we own the temp file, so delete it first.
-    const stale = prefetchedNarrationRef.current;
-    if (stale && stale.payload.kind === "audio") {
-      try { stale.payload.cleanup?.(); } catch {}
-    }
-    prefetchedNarrationRef.current = null;
-
-    const candidateId = candidate.id;
-    prefetchInFlightRef.current = candidateId;
-    (async () => {
-      try {
-        const place = placesRef.current.find((p) => p.id === candidateId);
-        if (!place) return;
-        const payload = await fetchNarrationPayload(place);
-        if (!payload) return;
-        // Guard: discard if the walk ended, or if the place was already narrated
-        // while we were fetching (e.g. the user tapped Skip, or duplicate GPS
-        // ticks fired). We own the audio temp file so delete it before bailing.
-        if (!isWalkingRef.current || narratedIdsRef.current.has(candidateId)) {
-          if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
-          return;
-        }
-        prefetchedNarrationRef.current = { placeId: candidateId, payload, place };
-        if (__DEV__) {
-          console.log(`[prefetchNext] cached "${place.name}" (${payload.kind}) for pipeline`);
-        }
-      } catch {
-      } finally {
-        // Always clear the in-flight marker so a later call can retry if needed.
-        if (prefetchInFlightRef.current === candidateId) {
-          prefetchInFlightRef.current = null;
-        }
-      }
-    })();
+    runPrefetchCycle({
+      isWalkingRef,
+      narratedIdsRef,
+      prefetchedNarrationRef,
+      prefetchInFlightRef,
+      placesRef,
+      pickNext,
+      fetchPayload: fetchNarrationPayload,
+    });
   }, [pickNext, fetchNarrationPayload]);
   useEffect(() => {
     prefetchNextRef.current = prefetchNext;
