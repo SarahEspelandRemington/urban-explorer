@@ -90,6 +90,7 @@ export interface Strings {
     dense: string;
     gettingLocation: string;
     nowPlaying: string;
+    replayBadge: string;
     listening: string;
     keepWalking: string;
     storiesOften: string;
@@ -335,6 +336,7 @@ const en: Strings = {
     dense: "More results",
     gettingLocation: "Getting your location…",
     nowPlaying: "Now playing",
+    replayBadge: "Replay",
     listening: "Listening for stories nearby…",
     keepWalking: "Keep walking",
     storiesOften: "Stories will play often",
@@ -604,6 +606,7 @@ const es: Strings = {
     dense: "Frecuentes",
     gettingLocation: "Obteniendo tu ubicación…",
     nowPlaying: "Reproduciendo",
+    replayBadge: "Repetición",
     listening: "Buscando historias cercanas…",
     keepWalking: "Sigue caminando",
     storiesOften: "Las historias sonarán con frecuencia",
@@ -874,6 +877,7 @@ const fr: Strings = {
     dense: "Fréquentes",
     gettingLocation: "Obtention de votre position…",
     nowPlaying: "En lecture",
+    replayBadge: "Reprise",
     listening: "Recherche d'histoires à proximité…",
     keepWalking: "Continuez à marcher",
     storiesOften: "Les histoires se déclencheront souvent",
@@ -1143,6 +1147,7 @@ const de: Strings = {
     dense: "Häufig",
     gettingLocation: "Standort wird abgerufen…",
     nowPlaying: "Wird abgespielt",
+    replayBadge: "Wiederholung",
     listening: "Suche Geschichten in der Nähe…",
     keepWalking: "Geh weiter",
     storiesOften: "Geschichten werden häufig abgespielt",
@@ -1412,6 +1417,7 @@ const it: Strings = {
     dense: "Frequenti",
     gettingLocation: "Recupero della tua posizione…",
     nowPlaying: "In riproduzione",
+    replayBadge: "Replay",
     listening: "In ascolto di storie vicine…",
     keepWalking: "Continua a camminare",
     storiesOften: "Le storie partiranno spesso",
@@ -1681,6 +1687,7 @@ const pt: Strings = {
     dense: "Frequentes",
     gettingLocation: "Obtendo sua localização…",
     nowPlaying: "Tocando agora",
+    replayBadge: "Repetição",
     listening: "Procurando histórias por perto…",
     keepWalking: "Continue caminhando",
     storiesOften: "As histórias virão com frequência",
@@ -1949,6 +1956,7 @@ const nl: Strings = {
     dense: "Vaak",
     gettingLocation: "Locatie ophalen…",
     nowPlaying: "Speelt nu",
+    replayBadge: "Herhaling",
     listening: "Op zoek naar verhalen in de buurt…",
     keepWalking: "Blijf lopen",
     storiesOften: "Verhalen spelen vaak af",
@@ -2217,6 +2225,7 @@ const ja: Strings = {
     dense: "多め",
     gettingLocation: "位置情報を取得中…",
     nowPlaying: "再生中",
+    replayBadge: "再生済み",
     listening: "近くの物語を探しています…",
     keepWalking: "歩き続けてください",
     storiesOften: "頻繁に物語が再生されます",
@@ -2485,6 +2494,7 @@ const ko: Strings = {
     dense: "자주",
     gettingLocation: "위치를 가져오는 중…",
     nowPlaying: "재생 중",
+    replayBadge: "재생",
     listening: "주변 이야기를 듣는 중…",
     keepWalking: "계속 걸으세요",
     storiesOften: "이야기가 자주 재생됩니다",
@@ -2752,6 +2762,7 @@ const zh: Strings = {
     dense: "密集",
     gettingLocation: "正在获取你的位置…",
     nowPlaying: "正在播放",
+    replayBadge: "重播",
     listening: "正在聆听附近的故事…",
     keepWalking: "继续走",
     storiesOften: "故事会经常播放",

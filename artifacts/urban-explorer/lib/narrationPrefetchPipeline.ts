@@ -304,10 +304,18 @@ export function consumePrefetchedNarration<P extends PrefetchPlaceLike>(
   requestedPlaceId: string,
   stalePool?: StalePrefetchPool<P>,
 ):
-  | { kind: "hit"; entry: PrefetchEntry<P> }
+  // `source` distinguishes the two hit paths:
+  //   "live"        — the live prefetch slot already held this place's payload
+  //                   (the normal first-time-narration fast path: pickNext
+  //                   chose place N and we'd already prefetched it for N).
+  //   "staleReplay" — the live slot was for a different place, but the stale
+  //                   pool revived a payload that was previously parked for
+  //                   this place (the genuine "skip + re-pick within TTL"
+  //                   replay flow). UI uses this to surface a "Replay" badge.
+  | { kind: "hit"; source: "live" | "staleReplay"; entry: PrefetchEntry<P> }
   | { kind: "miss" } {
   if (prefetched && prefetched.placeId === requestedPlaceId) {
-    return { kind: "hit", entry: prefetched };
+    return { kind: "hit", source: "live", entry: prefetched };
   }
   if (stalePool) {
     const revived = reviveStalePrefetchedEntry(stalePool, requestedPlaceId);
@@ -315,7 +323,7 @@ export function consumePrefetchedNarration<P extends PrefetchPlaceLike>(
       // The mismatched live entry (if any) is still potentially useful —
       // park it so a follow-up re-pick can replay it too.
       if (prefetched) parkStalePrefetchedEntry(stalePool, prefetched);
-      return { kind: "hit", entry: revived };
+      return { kind: "hit", source: "staleReplay", entry: revived };
     }
     if (prefetched) parkStalePrefetchedEntry(stalePool, prefetched);
     return { kind: "miss" };

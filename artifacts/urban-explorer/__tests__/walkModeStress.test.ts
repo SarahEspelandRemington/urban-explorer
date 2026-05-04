@@ -424,6 +424,10 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       expect(result.kind).toBe("hit");
       if (result.kind === "hit") {
         expect(result.entry.payload).toEqual(cached.payload);
+        // Live prefetch path: this is the normal first-time-narration fast
+        // path, not a replay. The UI uses source="live" to suppress the
+        // "Replay" badge.
+        expect(result.source).toBe("live");
       }
       expect(cleanup).not.toHaveBeenCalled();
     });
@@ -862,6 +866,9 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       if (result.kind === "hit") {
         expect(result.entry.placeId).toBe("place-A");
         expect(result.entry.payload).toEqual(aEntry.payload);
+        // Genuine "skip + re-pick within TTL" replay path. UI uses
+        // source="staleReplay" to surface the "Replay" badge.
+        expect(result.source).toBe("staleReplay");
       }
       // A was revived (not cleaned up); B was parked in its place.
       expect(aCleanup).not.toHaveBeenCalled();

@@ -90,6 +90,11 @@ interface WalkModeContextType {
   density: WalkDensity;
   setDensity: (d: WalkDensity) => void;
   currentNarrationPlace: WalkPlace | null;
+  // True for a few seconds when the current narration started from the
+  // short-window cache (a place that was just re-picked within the prefetch
+  // TTL). UI uses this to show a small "Replay" badge so users know the
+  // instant playback is intentional, not a degraded fallback.
+  isReplay: boolean;
   fetchPlacesAlongRoute: (geometry: number[][], maxPlaces?: number) => Promise<WalkPlace[]>;
   enabledBuildingGroups: Set<BuildingGroupKey>;
   setEnabledBuildingGroups: (groups: Set<BuildingGroupKey>) => void;
@@ -255,6 +260,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
   const [density, setDensityState] = useState<WalkDensity>("dense");
   const [currentNarrationPlace, setCurrentNarrationPlace] = useState<WalkPlace | null>(null);
+  const [isReplay, setIsReplay] = useState(false);
+  // Auto-clear timer for the "Replay" badge so it disappears after a few
+  // seconds and doesn't clutter the Now Playing card.
+  const replayBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [enabledBuildingGroups, setEnabledBuildingGroupsState] = useState<Set<BuildingGroupKey>>(new Set());
   const enabledBuildingGroupsRef = useRef<Set<BuildingGroupKey>>(new Set());
   // Server-fetched heading-bias overrides. Null until the walk-config
@@ -394,6 +403,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // keep showing a photo from a place we've already moved past.
       currentNarrationPlaceRef.current = null;
       setCurrentNarrationPlace(null);
+      // Clear the "Replay" badge as soon as the cached narration ends so it
+      // doesn't carry over to the next story.
+      if (replayBadgeTimerRef.current) {
+        clearTimeout(replayBadgeTimerRef.current);
+        replayBadgeTimerRef.current = null;
+      }
+      setIsReplay(false);
     }
   }, [narration.isSpeaking, currentLocation]);
 
@@ -582,7 +598,28 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     const lookup = consumePrefetchedNarration(prefetched, place.id, getStalePrefetchPool());
     if (lookup.kind === "hit") {
       if (__DEV__) {
-        console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`);
+        console.log(`[fetchNarration] cache HIT (${lookup.source}) for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`);
+      }
+      // Only the "staleReplay" path is a genuine replay (a place that was
+      // displaced from the live slot and revived from the stale pool because
+      // the user re-picked it within the TTL). A "live" hit is the normal
+      // first-time narration fast path — the prefetch landed before the user
+      // finished the previous story — and must NOT show the Replay badge.
+      if (lookup.source === "staleReplay") {
+        // Auto-clear after a few seconds so the badge doesn't linger.
+        if (replayBadgeTimerRef.current) {
+          clearTimeout(replayBadgeTimerRef.current);
+        }
+        setIsReplay(true);
+        replayBadgeTimerRef.current = setTimeout(() => {
+          setIsReplay(false);
+          replayBadgeTimerRef.current = null;
+        }, 4000);
+      } else if (replayBadgeTimerRef.current) {
+        // Live first-time narration: drop any stale badge that was still up.
+        clearTimeout(replayBadgeTimerRef.current);
+        replayBadgeTimerRef.current = null;
+        setIsReplay(false);
       }
       enqueueNarration(place, lookup.entry.payload);
       // Keep the pipeline going: pre-fetch the next candidate.
@@ -600,6 +637,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
       return;
     }
+    // First-time narration: ensure any stale "Replay" badge from the previous
+    // story is gone before we kick off the new one.
+    if (replayBadgeTimerRef.current) {
+      clearTimeout(replayBadgeTimerRef.current);
+      replayBadgeTimerRef.current = null;
+    }
+    setIsReplay(false);
     // Remember which place is now driving the lock-screen widget so the
     // artwork we send matches the story being spoken.
     enqueueNarration(place, payload);
@@ -1106,6 +1150,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     nowPlayingUnsubRef.current = null;
     setIsWalking(false);
     addWalkBreadcrumb("walk stopped");
+    // Tear down the "Replay" badge timer so it can't fire after the walk ends
+    // (which would leave the badge briefly visible on the next walk).
+    if (replayBadgeTimerRef.current) {
+      clearTimeout(replayBadgeTimerRef.current);
+      replayBadgeTimerRef.current = null;
+    }
+    setIsReplay(false);
     // Discard any prefetch that was in-flight or cached when the walk ended.
     // The in-flight guard (isWalkingRef.current check in the async closure) will
     // handle the async case, but also clean up whatever already landed so we
@@ -1162,6 +1213,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         density,
         setDensity,
         currentNarrationPlace,
+        isReplay,
         fetchPlacesAlongRoute,
         enabledBuildingGroups,
         setEnabledBuildingGroups,

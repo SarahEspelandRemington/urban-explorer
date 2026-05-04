@@ -282,9 +282,27 @@ export default function WalkModeScreen() {
               );
             })()}
             <View style={styles.nowPlayingText}>
-              <Text style={[styles.nowPlayingLabel, { color: colors.mutedForeground }]}>
-                {t.walkMode.nowPlaying}
-              </Text>
+              <View style={styles.nowPlayingLabelRow}>
+                <Text style={[styles.nowPlayingLabel, { color: colors.mutedForeground }]}>
+                  {t.walkMode.nowPlaying}
+                </Text>
+                {walk.isReplay ? (
+                  <Animated.View
+                    entering={Platform.OS !== "web" ? FadeIn.duration(200) : undefined}
+                    exiting={Platform.OS !== "web" ? FadeOut.duration(200) : undefined}
+                    style={[
+                      styles.replayBadge,
+                      { backgroundColor: colors.primary + "1f", borderColor: colors.primary + "55" },
+                    ]}
+                    accessibilityLabel={t.walkMode.replayBadge}
+                  >
+                    <Feather name="rotate-ccw" size={10} color={colors.primary} />
+                    <Text style={[styles.replayBadgeText, { color: colors.primary }]}>
+                      {t.walkMode.replayBadge}
+                    </Text>
+                  </Animated.View>
+                ) : null}
+              </View>
               <Text style={[styles.nowPlayingTitle, { color: colors.foreground }]} numberOfLines={2}>
                 {walk.narration.currentPlace}
               </Text>
@@ -431,11 +449,31 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   nowPlayingText: { flex: 1, minWidth: 0 },
+  nowPlayingLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   nowPlayingLabel: {
     fontSize: 11,
     fontFamily: "Inter_500Medium",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  replayBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  replayBadgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
   nowPlayingTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginTop: 2 },
   iconBtn: {
