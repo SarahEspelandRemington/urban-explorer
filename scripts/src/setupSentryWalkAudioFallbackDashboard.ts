@@ -23,7 +23,19 @@ const PLAYBACK_REASONS = [
 
 // Legacy single-rule name from before the fetch/playback split. The script
 // detects but does not auto-delete it — see createAlertRules() for the warning.
+// Opt-in env flag: when set to a truthy value, the script will DELETE the
+// legacy rule after both per-side replacements are confirmed in place. Without
+// the flag, behavior stays warn-only so the script has no destructive side
+// effects without explicit consent.
 const LEGACY_ALERT_NAME = "Walk Mode audio fallback rate";
+const MIGRATE_LEGACY_FLAG = "MIGRATE_LEGACY_AUDIO_FALLBACK_ALERT";
+
+function isMigrateLegacyEnabled(): boolean {
+  const raw = process.env[MIGRATE_LEGACY_FLAG];
+  if (raw == null) return false;
+  const v = raw.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
 
 const FETCH_ALERT_NAME = "Walk Mode audio fallback rate (fetch)";
 const PLAYBACK_ALERT_NAME = "Walk Mode audio fallback rate (playback)";
@@ -225,6 +237,28 @@ async function findExistingAlertRule(
   return list.find((r) => r.name === name) ?? null;
 }
 
+async function deleteAlertRule(
+  token: string,
+  org: string,
+  ruleId: string,
+): Promise<void> {
+  // DELETE /alert-rules/<id>/ returns 204 No Content on success, which is not
+  // valid JSON — bypass sentryFetch's JSON parser here.
+  const url = `${SENTRY_HOST}/api/0/organizations/${encodeURIComponent(org)}/alert-rules/${encodeURIComponent(ruleId)}/`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(
+      `Sentry API DELETE /alert-rules/${ruleId}/ failed: ${res.status} ${res.statusText}\n${body}`,
+    );
+  }
+}
+
 interface AlertRuleSpec {
   name: string;
   reasons: string[];
@@ -302,16 +336,12 @@ async function createAlertRules(
   org: string,
   projectSlug: string,
 ): Promise<{ fetch: SentryAlertRule; playback: SentryAlertRule }> {
-  // Warn (don't auto-delete) if the pre-split combined rule still exists.
+  // Detect the pre-split combined rule up front. We only act on it AFTER both
+  // per-side replacements are confirmed in place below — that way an
+  // intermediate failure can never leave the project with neither the legacy
+  // rule nor a working replacement.
   const legacy = await findExistingAlertRule(token, org, LEGACY_ALERT_NAME);
-  if (legacy) {
-    console.warn(
-      `\nLegacy combined alert rule "${LEGACY_ALERT_NAME}" still exists (id=${legacy.id}).\n` +
-        `It is now superseded by the per-side fetch/playback rules below. Disable or\n` +
-        `delete it manually so you don't get double-paged:\n` +
-        `  ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${legacy.id}/\n`,
-    );
-  }
+  const migrateLegacy = isMigrateLegacyEnabled();
 
   const fetchSpec: AlertRuleSpec = {
     name: FETCH_ALERT_NAME,
@@ -347,6 +377,39 @@ async function createAlertRules(
     projectSlug,
     playbackSpec,
   );
+
+  // Now that both replacements are confirmed in place, optionally clean up
+  // the legacy combined rule. Re-fetch by name so we never delete based on a
+  // stale reference (e.g. the operator already deleted it manually between
+  // the up-front detection and now), and so a no-op run with the flag set is
+  // safe.
+  if (legacy) {
+    if (migrateLegacy) {
+      const stillThere = await findExistingAlertRule(token, org, LEGACY_ALERT_NAME);
+      if (stillThere) {
+        await deleteAlertRule(token, org, stillThere.id);
+        console.log(
+          `Deleted legacy combined alert rule "${LEGACY_ALERT_NAME}" (id=${stillThere.id}) ` +
+            `because ${MIGRATE_LEGACY_FLAG} is set and both per-side replacements are in place.`,
+        );
+      } else {
+        console.log(
+          `Legacy combined alert rule "${LEGACY_ALERT_NAME}" was already gone by the time ` +
+            `we tried to delete it (${MIGRATE_LEGACY_FLAG} set). Nothing to do.`,
+        );
+      }
+    } else {
+      console.warn(
+        `\nLegacy combined alert rule "${LEGACY_ALERT_NAME}" still exists (id=${legacy.id}).\n` +
+          `It is now superseded by the per-side fetch/playback rules above. Either:\n` +
+          `  - Disable or delete it manually in the Sentry UI:\n` +
+          `      ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${legacy.id}/\n` +
+          `  - Or re-run this script with ${MIGRATE_LEGACY_FLAG}=1 to delete it automatically\n` +
+          `    (safe now that both per-side replacements are confirmed in place).\n`,
+      );
+    }
+  }
+
   return { fetch: fetchRule, playback: playbackRule };
 }
 
