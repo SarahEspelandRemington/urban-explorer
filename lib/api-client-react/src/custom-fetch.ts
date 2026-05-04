@@ -1,5 +1,12 @@
 export type CustomFetchOptions = RequestInit & {
   responseType?: "json" | "text" | "blob" | "auto";
+  /**
+   * Per-request timeout in milliseconds.  When set, the fetch is aborted if
+   * the server does not respond within this window.  Pass `0` to disable the
+   * timeout for a specific request.  Falls back to the module-level default
+   * set via `setDefaultFetchTimeout` (30 s out of the box).
+   */
+  timeout?: number;
 };
 
 export type ErrorType<T = unknown> = ApiError<T>;
@@ -17,6 +24,11 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+// Safety-net timeout applied to every fetch that doesn't already supply a
+// signal.  30 s is generous for any individual API call in this app; it
+// prevents infinite hangs when a backend service stalls.  Set to 0 to opt
+// out globally (not recommended).
+let _defaultTimeout = 30_000;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -27,6 +39,14 @@ let _authTokenGetter: AuthTokenGetter | null = null;
  */
 export function setBaseUrl(url: string | null): void {
   _baseUrl = url ? url.replace(/\/+$/, "") : null;
+}
+
+/**
+ * Override the default per-request timeout (milliseconds).
+ * Pass `0` to disable the safety-net entirely (not recommended in production).
+ */
+export function setDefaultFetchTimeout(ms: number): void {
+  _defaultTimeout = ms;
 }
 
 /**
@@ -327,7 +347,7 @@ export async function customFetch<T = unknown>(
   options: CustomFetchOptions = {},
 ): Promise<T> {
   input = applyBaseUrl(input);
-  const { responseType = "auto", headers: headersInit, ...init } = options;
+  const { responseType = "auto", headers: headersInit, timeout, ...init } = options;
 
   const method = resolveMethod(input, init.method);
 
@@ -360,7 +380,23 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // Apply a timeout when the caller hasn't already wired an AbortSignal.
+  // This prevents infinite hangs if a backend service stalls.
+  const effectiveTimeout = timeout !== undefined ? timeout : _defaultTimeout;
+  let timeoutController: AbortController | null = null;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  if (!init.signal && effectiveTimeout > 0) {
+    timeoutController = new AbortController();
+    timeoutId = setTimeout(() => timeoutController!.abort(), effectiveTimeout);
+    init.signal = timeoutController.signal;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(input, { ...init, method, headers });
+  } finally {
+    if (timeoutId !== null) clearTimeout(timeoutId);
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

@@ -968,27 +968,49 @@ Here is one PERFECT example entry — use it as your quality benchmark for every
 
 Return ${placeCount} places. Quality beats quantity — if you can only find 6 places with genuinely strong, specific stories, return 6 rather than padding with weak entries. Keep all results within the immediate area (geographic filtering is applied automatically). Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
 
+  // Hard cap the main discovery call.  The brainstorm + Overpass together can
+  // take up to ~13 s in full mode; give the main call 20 s so the total
+  // round-trip never exceeds ~33 s even in the worst case.  Client-side fetch
+  // has its own 30 s safety-net, so users will always see a retry prompt rather
+  // than an infinite spinner.
+  const DISCOVER_LLM_TIMEOUT_MS = 20_000;
+  const discoverAbort = new AbortController();
+  const discoverTimer = setTimeout(() => discoverAbort.abort(), DISCOVER_LLM_TIMEOUT_MS);
+  // Cancel in-flight call immediately when the client navigates away.
+  res.on("close", () => discoverAbort.abort());
+
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    response = await openai.chat.completions.create({
-      model: modelName,
-      max_completion_tokens: maxTokens,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        {
-          role: "user",
-          content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?${osmContext}${brainstormContext ? `\n\n---\nPRE-RESEARCH (use this to surface deeper or more obscure facts — do not copy verbatim, but let it inform your selections):\n${brainstormContext}` : ""}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    });
+    response = await openai.chat.completions.create(
+      {
+        model: modelName,
+        max_completion_tokens: maxTokens,
+        messages: [
+          {
+            role: "system",
+            content: systemPrompt,
+          },
+          {
+            role: "user",
+            content: `I'm standing at exactly ${latitude}, ${longitude}. What obscure, overlooked, or forgotten history is within ${radiusFeet} feet of me right now?${osmContext}${brainstormContext ? `\n\n---\nPRE-RESEARCH (use this to surface deeper or more obscure facts — do not copy verbatim, but let it inform your selections):\n${brainstormContext}` : ""}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { signal: discoverAbort.signal },
+    );
   } catch (err: any) {
+    if (discoverAbort.signal.aborted) {
+      if (!res.headersSent) {
+        res.status(503).json({ error: "Discovery service temporarily unavailable. Please try again." });
+      }
+      return;
+    }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
     res.status(status).json({ error: "Discovery service temporarily unavailable. Please try again." });
     return;
+  } finally {
+    clearTimeout(discoverTimer);
   }
 
   const content = response.choices[0]?.message?.content;

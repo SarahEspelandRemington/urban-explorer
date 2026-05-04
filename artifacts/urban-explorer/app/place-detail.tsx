@@ -271,6 +271,17 @@ export default function PlaceDetailScreen() {
           onRetry={() => {
             setTimelineLoaded(false);
             timelineMutation.reset();
+            // Actually re-fire the request — reset() alone only cleared the
+            // error state; without mutate() no new network call is made.
+            timelineMutation.mutate({
+              data: {
+                placeName: params.name,
+                latitude: lat,
+                longitude: lng,
+                category: params.category,
+                yearBuilt: params.yearBuilt || undefined,
+              },
+            });
           }}
           hasLoaded={timelineLoaded}
         />
