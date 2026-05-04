@@ -5,7 +5,7 @@
 DIRS="artifacts/urban-explorer artifacts/api-server lib scripts"
 ROOT_CONFIGS="package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.json tsconfig.base.json"
 PATTERN='^(<<<<<<<|=======|>>>>>>>)'
-EXTENSIONS='--include=*.ts --include=*.tsx --include=*.js --include=*.mjs --include=*.jsx --include=*.json --include=*.yaml --include=*.yml --include=*.md --include=*.sh'
+EXTENSIONS='--include=*.ts --include=*.tsx --include=*.js --include=*.mjs --include=*.jsx --include=*.json --include=*.yaml --include=*.yml --include=*.md --include=*.sh --include=*.css --include=*.scss --include=*.toml --include=*.env --include=*.env.*'
 
 if grep -rn -E $EXTENSIONS "$PATTERN" $DIRS $ROOT_CONFIGS; then
   echo ""
