@@ -213,8 +213,14 @@ export interface Strings {
   };
   login: {
     title: string;
+    tagline: string;
     subtitle: string;
     cta: string;
+  };
+  walk: {
+    welcomeTitle: string;
+    welcomeBody: string;
+    welcomeDismiss: string;
   };
   notFound: {
     stackTitle: string;
@@ -471,9 +477,16 @@ const en: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "Audio walking tours of the city around you.",
     subtitle:
       "Discover the hidden history around you. Log in or create a free account to start exploring.",
     cta: "Log in / Sign up",
+  },
+  walk: {
+    welcomeTitle: "Welcome to Walk Mode",
+    welcomeBody:
+      "Tap Start Walking to hear stories about places you pass, or Plan a Route to pre-load a path.",
+    welcomeDismiss: "Got it",
   },
   notFound: {
     stackTitle: "Oops!",
@@ -734,9 +747,16 @@ const es: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "Audioguías a pie por la ciudad que te rodea.",
     subtitle:
       "Descubre la historia oculta a tu alrededor. Inicia sesión o crea una cuenta gratis para empezar.",
     cta: "Iniciar sesión / Registrarse",
+  },
+  walk: {
+    welcomeTitle: "Bienvenido al Modo Paseo",
+    welcomeBody:
+      "Toca Empezar a caminar para oír historias sobre los lugares que pasas, o Planificar una ruta para precargarla.",
+    welcomeDismiss: "Entendido",
   },
   notFound: {
     stackTitle: "¡Vaya!",
@@ -996,9 +1016,16 @@ const fr: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "Visites audio à pied de la ville qui vous entoure.",
     subtitle:
       "Découvrez l'histoire cachée autour de vous. Connectez-vous ou créez un compte gratuit pour commencer.",
     cta: "Se connecter / S'inscrire",
+  },
+  walk: {
+    welcomeTitle: "Bienvenue dans le Mode Marche",
+    welcomeBody:
+      "Touchez Commencer à marcher pour entendre des récits sur les lieux que vous croisez, ou Planifier un itinéraire pour le précharger.",
+    welcomeDismiss: "Compris",
   },
   notFound: {
     stackTitle: "Oups !",
@@ -1258,9 +1285,16 @@ const de: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "Audio-Stadtspaziergänge durch deine Umgebung.",
     subtitle:
       "Entdecke die verborgene Geschichte um dich herum. Melde dich an oder erstelle ein kostenloses Konto.",
     cta: "Anmelden / Registrieren",
+  },
+  walk: {
+    welcomeTitle: "Willkommen im Lauf-Modus",
+    welcomeBody:
+      "Tippe auf Loslaufen, um Geschichten zu Orten an deiner Route zu hören, oder auf Route planen, um sie vorab zu laden.",
+    welcomeDismiss: "Verstanden",
   },
   notFound: {
     stackTitle: "Hoppla!",
@@ -1520,9 +1554,16 @@ const it: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "Visite audio a piedi della città intorno a te.",
     subtitle:
       "Scopri la storia nascosta intorno a te. Accedi o crea un account gratuito per iniziare.",
     cta: "Accedi / Registrati",
+  },
+  walk: {
+    welcomeTitle: "Benvenuto in Modalità Camminata",
+    welcomeBody:
+      "Tocca Inizia a camminare per ascoltare storie sui luoghi che incontri, o Pianifica un percorso per precaricarlo.",
+    welcomeDismiss: "Ho capito",
   },
   notFound: {
     stackTitle: "Ops!",
@@ -1782,9 +1823,16 @@ const pt: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "Tours a pé com áudio pela cidade ao seu redor.",
     subtitle:
       "Descubra a história escondida ao seu redor. Entre ou crie uma conta grátis para começar.",
     cta: "Entrar / Cadastrar",
+  },
+  walk: {
+    welcomeTitle: "Bem-vindo ao Modo Caminhada",
+    welcomeBody:
+      "Toque em Começar a caminhar para ouvir histórias sobre lugares que passa, ou em Planejar rota para pré-carregar um caminho.",
+    welcomeDismiss: "Entendi",
   },
   notFound: {
     stackTitle: "Ops!",
@@ -2043,9 +2091,16 @@ const nl: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "Audiowandelingen door de stad om je heen.",
     subtitle:
       "Ontdek de verborgen geschiedenis om je heen. Log in of maak een gratis account om te beginnen.",
     cta: "Inloggen / Registreren",
+  },
+  walk: {
+    welcomeTitle: "Welkom in Wandelmodus",
+    welcomeBody:
+      "Tik op Begin met wandelen om verhalen te horen over plekken die je passeert, of op Plan een route om er een vooraf te laden.",
+    welcomeDismiss: "Begrepen",
   },
   notFound: {
     stackTitle: "Oeps!",
@@ -2304,9 +2359,16 @@ const ja: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "あなたの街を歩きながら聴く音声ツアー。",
     subtitle:
       "あなたの周りに隠れた歴史を発見しましょう。ログインまたは無料登録して始めてください。",
     cta: "ログイン / 新規登録",
+  },
+  walk: {
+    welcomeTitle: "ウォークモードへようこそ",
+    welcomeBody:
+      "「歩きはじめる」を押すと通り過ぎる場所の物語が流れます。事前に経路を読み込むには「ルートを計画」を押してください。",
+    welcomeDismiss: "わかりました",
   },
   notFound: {
     stackTitle: "おっと！",
@@ -2565,9 +2627,16 @@ const ko: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "주변 도시를 걷며 듣는 오디오 투어.",
     subtitle:
       "주변에 숨겨진 역사를 발견하세요. 로그인하거나 무료 계정을 만들어 시작하세요.",
     cta: "로그인 / 회원가입",
+  },
+  walk: {
+    welcomeTitle: "워크 모드에 오신 것을 환영합니다",
+    welcomeBody:
+      "걷기 시작을 누르면 지나치는 장소의 이야기를 들을 수 있어요. 경로를 미리 받으려면 경로 계획을 눌러보세요.",
+    welcomeDismiss: "확인",
   },
   notFound: {
     stackTitle: "이런!",
@@ -2823,8 +2892,14 @@ const zh: Strings = {
   },
   login: {
     title: "Urban Explorer",
+    tagline: "在你身边的城市里漫步,边走边听。",
     subtitle: "发现你身边隐藏的历史。登录或免费注册以开始。",
     cta: "登录 / 注册",
+  },
+  walk: {
+    welcomeTitle: "欢迎来到漫步模式",
+    welcomeBody: "点击「开始漫步」聆听沿途地点的故事,或点击「规划路线」预先加载路径。",
+    welcomeDismiss: "知道了",
   },
   notFound: {
     stackTitle: "哎呀！",

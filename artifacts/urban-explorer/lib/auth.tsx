@@ -1,12 +1,16 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import * as AuthSession from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
+import { InteractionManager } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
-WebBrowser.maybeCompleteAuthSession();
-
-const AUTH_TOKEN_KEY = "auth_session_token";
-const ISSUER_URL = process.env.EXPO_PUBLIC_ISSUER_URL ?? "https://replit.com/oidc";
+import { markStartupPhase } from "./coldStart";
+import { AUTH_TOKEN_STORAGE_KEY } from "./authConstants";
 
 interface User {
   id: string;
@@ -20,7 +24,7 @@ interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -28,7 +32,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
-  login: async () => {},
+  refreshUser: async () => {},
   logout: async () => {},
 });
 
@@ -39,114 +43,53 @@ function getApiBaseUrl(): string {
   return "";
 }
 
-function getClientId(): string {
-  return process.env.EXPO_PUBLIC_REPL_ID || "";
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const discovery = AuthSession.useAutoDiscovery(ISSUER_URL);
-
-  const redirectUri = AuthSession.makeRedirectUri();
-
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: getClientId(),
-      scopes: ["openid", "email", "profile", "offline_access"],
-      redirectUri,
-      prompt: AuthSession.Prompt.Login,
-    },
-    discovery,
-  );
-
   const fetchUser = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
       if (!token) {
         setUser(null);
-        setIsLoading(false);
         return;
       }
-
       const apiBase = getApiBaseUrl();
       const res = await fetch(`${apiBase}/api/auth/user`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-
       if (data.user) {
         setUser(data.user);
       } else {
-        await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+        await SecureStore.deleteItemAsync(AUTH_TOKEN_STORAGE_KEY);
         setUser(null);
       }
     } catch {
       setUser(null);
     } finally {
       setIsLoading(false);
+      markStartupPhase("authUserResolved");
     }
   }, []);
 
+  // The auth probe is deliberately deferred until after the first interactive
+  // frame so the SecureStore read + /api/auth/user round-trip never block the
+  // splash from hiding. The UI renders immediately with `isLoading=true`;
+  // screens that gate on auth show the unauthenticated state until this
+  // resolves, which on cold start is typically tens of milliseconds later.
   useEffect(() => {
-    fetchUser();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      fetchUser();
+    });
+    return () => {
+      handle.cancel();
+    };
   }, [fetchUser]);
-
-  useEffect(() => {
-    if (response?.type !== "success" || !request?.codeVerifier) return;
-
-    const { code, state } = response.params;
-
-    (async () => {
-      try {
-        const apiBase = getApiBaseUrl();
-        if (!apiBase) {
-          console.error("API base URL is not configured.");
-          return;
-        }
-
-        const exchangeRes = await fetch(`${apiBase}/api/mobile-auth/token-exchange`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code,
-            code_verifier: request.codeVerifier,
-            redirect_uri: redirectUri,
-            state,
-          }),
-        });
-
-        if (!exchangeRes.ok) {
-          console.error("Token exchange failed:", exchangeRes.status);
-          setIsLoading(false);
-          return;
-        }
-
-        const data = await exchangeRes.json();
-        if (data.token) {
-          await SecureStore.setItemAsync(AUTH_TOKEN_KEY, data.token);
-          setIsLoading(true);
-          await fetchUser();
-        }
-      } catch (err) {
-        console.error("Token exchange error:", err);
-        setIsLoading(false);
-      }
-    })();
-  }, [response, request, redirectUri, fetchUser]);
-
-  const login = useCallback(async () => {
-    try {
-      await promptAsync();
-    } catch (err) {
-      console.error("Login error:", err);
-    }
-  }, [promptAsync]);
 
   const logout = useCallback(async () => {
     try {
-      const token = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+      const token = await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
       if (token) {
         const apiBase = getApiBaseUrl();
         await fetch(`${apiBase}/api/mobile-auth/logout`, {
@@ -156,10 +99,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch {
     } finally {
-      await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+      await SecureStore.deleteItemAsync(AUTH_TOKEN_STORAGE_KEY);
       setUser(null);
     }
   }, []);
+
+  const refreshUser = useCallback(async () => {
+    setIsLoading(true);
+    await fetchUser();
+  }, [fetchUser]);
 
   return (
     <AuthContext.Provider
@@ -167,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
-        login,
+        refreshUser,
         logout,
       }}
     >

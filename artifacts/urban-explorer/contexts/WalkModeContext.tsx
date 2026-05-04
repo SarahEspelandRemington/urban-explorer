@@ -342,16 +342,24 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // replay/eviction ratio over time tells us whether the TTL is too short
   // (lots of evictions, few replays — re-picks happen later than 30s) or
   // too long (lots of replays clustered near the TTL ceiling).
-  const stalePrefetchPoolRef = useRef<StalePrefetchPool<WalkPlace>>(
-    createStalePrefetchPool<WalkPlace>({
-      onReplay: ({ placeId, ageMs }) => {
-        addWalkBreadcrumb("narration_cache_replay", { placeId, ageMs });
-      },
-      onEvict: ({ placeId, ageMs }) => {
-        addWalkBreadcrumb("narration_cache_evict", { placeId, ageMs });
-      },
-    }),
-  );
+  // Lazy-initialised: createStalePrefetchPool() spins up timers and an LRU
+  // map that are only useful once a walk is actually running. Doing it inline
+  // at provider mount adds work to every cold start, including launches where
+  // the user never goes near Walk Mode. Initialise on first read instead.
+  const stalePrefetchPoolRef = useRef<StalePrefetchPool<WalkPlace> | null>(null);
+  const getStalePrefetchPool = useCallback((): StalePrefetchPool<WalkPlace> => {
+    if (!stalePrefetchPoolRef.current) {
+      stalePrefetchPoolRef.current = createStalePrefetchPool<WalkPlace>({
+        onReplay: ({ placeId, ageMs }) => {
+          addWalkBreadcrumb("narration_cache_replay", { placeId, ageMs });
+        },
+        onEvict: ({ placeId, ageMs }) => {
+          addWalkBreadcrumb("narration_cache_evict", { placeId, ageMs });
+        },
+      });
+    }
+    return stalePrefetchPoolRef.current;
+  }, []);
   // Holds the stop() function returned by installSessionCallback for the current
   // walk session. Calling stop() removes the callback via CAS inside
   // walkSessionManager, so a delayed stopWalk from an old session never
@@ -571,7 +579,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // also runs the stale-cleanup when the cached entry is for a different place.
     const prefetched = prefetchedNarrationRef.current;
     prefetchedNarrationRef.current = null; // always consume / clear the cache
-    const lookup = consumePrefetchedNarration(prefetched, place.id, stalePrefetchPoolRef.current);
+    const lookup = consumePrefetchedNarration(prefetched, place.id, getStalePrefetchPool());
     if (lookup.kind === "hit") {
       if (__DEV__) {
         console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`);
@@ -705,9 +713,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       placesRef,
       pickNext,
       fetchPayload: fetchNarrationPayload,
-      stalePool: stalePrefetchPoolRef.current,
+      stalePool: getStalePrefetchPool(),
     });
-  }, [pickNext, fetchNarrationPayload]);
+  }, [pickNext, fetchNarrationPayload, getStalePrefetchPool]);
   useEffect(() => {
     prefetchNextRef.current = prefetchNext;
   }, [prefetchNext]);
@@ -961,8 +969,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     prefetchedNarrationRef.current = null;
     prefetchInFlightRef.current = null;
     // Drain the stale-replay pool too so a previous walk's parked entries
-    // don't leak temp files or accidentally replay across walks.
-    disposeStalePrefetchPool(stalePrefetchPoolRef.current);
+    // don't leak temp files or accidentally replay across walks. The pool
+    // is lazy-allocated, so on the very first walk this is a no-op.
+    if (stalePrefetchPoolRef.current) {
+      disposeStalePrefetchPool(stalePrefetchPoolRef.current);
+    }
     // Start cooldown so we don't fire instantly before the user has even moved.
     // Use the largest cooldown across all densities so the 5-second initial
     // wait is preserved even if auto-density switches to a stricter tier right
@@ -1107,7 +1118,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     prefetchInFlightRef.current = null;
     // Drain the short-window stale-replay pool too: cancel pending TTL timers
     // and delete every temp file we were holding for possible re-pick replay.
-    disposeStalePrefetchPool(stalePrefetchPoolRef.current);
+    if (stalePrefetchPoolRef.current) {
+      disposeStalePrefetchPool(stalePrefetchPoolRef.current);
+    }
     if (watchRef.current) {
       try { watchRef.current.remove(); } catch {}
       watchRef.current = null;

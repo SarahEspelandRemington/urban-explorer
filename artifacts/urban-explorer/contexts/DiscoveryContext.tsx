@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
+import { STARTUP_KEYS, getStartupValue } from "@/lib/startupStorage";
+
 export interface SavedPlace {
   id: string;
   name: string;
@@ -35,23 +37,27 @@ const DiscoveryContext = createContext<DiscoveryContextType>({
   updateNote: () => {},
 });
 
-const STORAGE_KEY = "@urban_explorer_saved";
+const STORAGE_KEY = STARTUP_KEYS.savedPlaces;
 
 export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
   const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((data) => {
-      if (data) {
-        try {
-          const parsed = JSON.parse(data);
-          if (Array.isArray(parsed)) {
-            setSavedPlaces(parsed);
-          }
-        } catch {}
-      }
+    // Reads via the batched multiGet snapshot — see lib/startupStorage.ts.
+    let cancelled = false;
+    getStartupValue(STORAGE_KEY).then((data) => {
+      if (cancelled || !data) return;
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {
+          setSavedPlaces(parsed);
+        }
+      } catch {}
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const persist = useCallback((places: SavedPlace[]) => {

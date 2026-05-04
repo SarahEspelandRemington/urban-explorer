@@ -22,8 +22,9 @@ import {
   type MeasurementSystem,
   type Strings,
 } from "@/lib/i18n";
+import { STARTUP_KEYS, getStartupValue } from "@/lib/startupStorage";
 
-const STORAGE_KEY = "urban-explorer.notificationLocale";
+const STORAGE_KEY = STARTUP_KEYS.locale;
 
 interface LocaleContextType {
   locale: string;
@@ -72,7 +73,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem(STORAGE_KEY)
+    // Read from the shared multiGet snapshot so cold start only pays for one
+    // AsyncStorage round-trip across all providers (vs one per provider).
+    getStartupValue(STORAGE_KEY)
       .then((stored) => {
         if (cancelled) return;
         if (stored && isLocaleCode(stored)) {

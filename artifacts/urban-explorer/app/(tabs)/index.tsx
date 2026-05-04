@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { STARTUP_KEYS, getStartupValue, setStartupValue } from "@/lib/startupStorage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
@@ -23,10 +23,12 @@ import { LanguagePickerModal } from "@/components/LanguagePickerModal";
 import { LoadingMessages } from "@/components/LoadingMessages";
 import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
+import { PlaceCardSkeleton } from "@/components/PlaceCardSkeleton";
 import { PlaceMapView } from "@/components/PlaceMapView";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
+import { markStartupPhase } from "@/lib/coldStart";
 import { useDiscoverPlaces, useGeocodeLocation } from "@workspace/api-client-react";
 
 interface DiscoveredPlace {
@@ -187,19 +189,27 @@ export default function ExploreScreen() {
 
   const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } = useRatingPaceWarning();
 
-  const WALK_BANNER_KEY = "walk_banner_dismissed";
+  const WALK_BANNER_KEY = STARTUP_KEYS.walkBannerDismissed;
   const [showWalkBanner, setShowWalkBanner] = useState(true);
 
   useEffect(() => {
-    AsyncStorage.getItem(WALK_BANNER_KEY).then((val) => {
+    let cancelled = false;
+    // Reads via the batched startup multiGet — see lib/startupStorage.ts.
+    getStartupValue(WALK_BANNER_KEY).then((val) => {
+      if (cancelled) return;
       if (val !== null) setShowWalkBanner(false);
     });
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [WALK_BANNER_KEY]);
 
   const dismissWalkBanner = useCallback(() => {
     setShowWalkBanner(false);
-    AsyncStorage.setItem(WALK_BANNER_KEY, "1");
-  }, []);
+    // Use the write-through helper so a later getStartupValue() — e.g. on
+    // re-mount — sees the dismissal instead of the boot snapshot.
+    setStartupValue(WALK_BANNER_KEY, "1").catch(() => {});
+  }, [WALK_BANNER_KEY]);
 
   const handleWalkBannerTap = useCallback(() => {
     dismissWalkBanner();
@@ -416,8 +426,12 @@ export default function ExploreScreen() {
             if (requestId !== discoverRequestRef.current) return;
             setPlaces((data?.places as DiscoveredPlace[] | undefined) ?? []);
             setAreaName((data?.location as string | undefined) ?? "");
+            // Cold-start phase marker — only the first call lands; subsequent
+            // discovers are no-ops on the recorder.
+            markStartupPhase("exploreFirstResponse");
           },
           onError: (_err: any) => {
+            markStartupPhase("exploreFirstResponse");
           },
         },
       );
@@ -1028,9 +1042,9 @@ export default function ExploreScreen() {
             discoverMutation.isPending ? (
               <Animated.View
                 entering={Platform.OS !== "web" ? FadeIn : undefined}
-                style={styles.loadingContainer}
+                style={styles.skeletonContainer}
               >
-                <ActivityIndicator size="large" color={colors.primary} />
+                <PlaceCardSkeleton count={4} />
                 <LoadingMessages variant="discovery" />
               </Animated.View>
             ) : discoverMutation.isError ? (
@@ -1309,6 +1323,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingTop: 100,
     gap: 12,
+  },
+  skeletonContainer: {
+    paddingTop: 4,
+    gap: 16,
+    alignItems: "stretch",
   },
   emptyContainer: {
     alignItems: "center",

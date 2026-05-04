@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { InteractionManager } from "react-native";
 import { useAuth } from "@/lib/auth";
 import { getApiToken } from "@/lib/apiToken";
 
@@ -53,7 +54,22 @@ export function UserRatingsProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    (async () => {
+    // Defer the network round-trip until after the first interactive frame.
+    // The ratings result is only consumed by Explore list items further down
+    // the screen, so blocking the JS bridge with this fetch during the splash
+    // window measurably delays time-to-first-paint on cold start.
+    let cancelled = false;
+    const handle = InteractionManager.runAfterInteractions(() => {
+      if (cancelled) return;
+      void loadRatings();
+    });
+
+    return () => {
+      cancelled = true;
+      handle.cancel();
+    };
+
+    async function loadRatings() {
       try {
         const token = await getApiToken();
         if (!token) {
@@ -92,9 +108,9 @@ export function UserRatingsProvider({ children }: { children: React.ReactNode })
         await Promise.all(storageWrites);
       } catch {
       } finally {
-        setIsLoaded(true);
+        if (!cancelled) setIsLoaded(true);
       }
-    })();
+    }
   }, [userId]);
 
   const setLocalRating = useCallback((placeId: string, rating: RatingValue | null) => {

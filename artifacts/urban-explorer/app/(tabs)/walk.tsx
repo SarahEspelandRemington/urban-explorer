@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -15,12 +14,15 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useWalkMode } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import { deleteRecentRoute, loadRecentRoutes, type RecentRoute } from "@/lib/recentRoutes";
+import { STARTUP_KEYS, getStartupValue, setStartupValue } from "@/lib/startupStorage";
 
 const UNDO_DURATION_MS = 4000;
+const WALK_WELCOME_KEY = STARTUP_KEYS.walkWelcomeDismissed;
 
 interface PendingDelete {
   route: RecentRoute;
@@ -42,12 +44,13 @@ function formatDuration(secs: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-const WALK_BANNER_KEY = "walk_banner_dismissed";
+const WALK_BANNER_KEY = STARTUP_KEYS.walkBannerDismissed;
 
 export default function WalkScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const { isWalking } = useWalkMode();
 
   const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
@@ -55,8 +58,31 @@ export default function WalkScreen() {
   const toastAnim = useRef(new Animated.Value(0)).current;
   const pendingDeleteRef = useRef<PendingDelete | null>(null);
 
+  // Visiting the Walk tab counts as acknowledging the Explore-tab "Tap Walk
+  // tab to start your audio tour" hint, so suppress that on the next render.
+  // Write-through so a same-session re-mount of Explore sees the dismissal
+  // instead of the boot snapshot.
   useEffect(() => {
-    AsyncStorage.setItem(WALK_BANNER_KEY, "1");
+    setStartupValue(WALK_BANNER_KEY, "1").catch(() => {});
+  }, []);
+
+  // First-run welcome card on the Walk tab itself. Hidden by default so we
+  // don't briefly flash it before the storage read resolves; we show it only
+  // when the persisted dismiss flag is missing.
+  const [showWelcome, setShowWelcome] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    getStartupValue(WALK_WELCOME_KEY).then((val) => {
+      if (cancelled) return;
+      if (val == null) setShowWelcome(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const dismissWelcome = useCallback(() => {
+    setShowWelcome(false);
+    setStartupValue(WALK_WELCOME_KEY, "1").catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -250,6 +276,55 @@ export default function WalkScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {showWelcome && !isWalking && (
+          <View
+            style={[
+              styles.welcomeCard,
+              {
+                backgroundColor: colors.primary + "14",
+                borderColor: colors.primary + "40",
+              },
+            ]}
+            accessibilityRole="summary"
+            accessibilityLabel={t.walk.welcomeTitle}
+          >
+            <View style={styles.welcomeHeader}>
+              <View
+                style={[
+                  styles.welcomeIcon,
+                  { backgroundColor: colors.primary + "22" },
+                ]}
+              >
+                <Feather name="compass" size={18} color={colors.primary} />
+              </View>
+              <Text style={[styles.welcomeTitle, { color: colors.foreground }]}>
+                {t.walk.welcomeTitle}
+              </Text>
+            </View>
+            <Text style={[styles.welcomeBody, { color: colors.mutedForeground }]}>
+              {t.walk.welcomeBody}
+            </Text>
+            <Pressable
+              onPress={dismissWelcome}
+              style={({ pressed }) => [
+                styles.welcomeButton,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t.walk.welcomeDismiss}
+            >
+              <Text
+                style={[styles.welcomeButtonText, { color: colors.primaryForeground }]}
+              >
+                {t.walk.welcomeDismiss}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
         {isWalking && (
           <Pressable
             onPress={handleResumeWalk}
@@ -638,6 +713,46 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     lineHeight: 18,
+  },
+  welcomeCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 10,
+  },
+  welcomeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  welcomeIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  welcomeTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.2,
+  },
+  welcomeBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
+  },
+  welcomeButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginTop: 4,
+  },
+  welcomeButtonText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
   },
   tipCard: {
     flexDirection: "row",
