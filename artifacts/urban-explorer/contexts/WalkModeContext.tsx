@@ -337,8 +337,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // replay the cached audio instantly instead of re-fetching from scratch.
   // Entries that age out are cleaned up by the pool's TTL timer so we never
   // leak temp files.
+  // Telemetry on the stale pool: each replay means the 30s TTL saved a
+  // round-trip; each eviction means an entry aged out unused. The
+  // replay/eviction ratio over time tells us whether the TTL is too short
+  // (lots of evictions, few replays — re-picks happen later than 30s) or
+  // too long (lots of replays clustered near the TTL ceiling).
   const stalePrefetchPoolRef = useRef<StalePrefetchPool<WalkPlace>>(
-    createStalePrefetchPool<WalkPlace>(),
+    createStalePrefetchPool<WalkPlace>({
+      onReplay: ({ placeId, ageMs }) => {
+        addWalkBreadcrumb("narration_cache_replay", { placeId, ageMs });
+      },
+      onEvict: ({ placeId, ageMs }) => {
+        addWalkBreadcrumb("narration_cache_evict", { placeId, ageMs });
+      },
+    }),
   );
   // Holds the stop() function returned by installSessionCallback for the current
   // walk session. Calling stop() removes the callback via CAS inside

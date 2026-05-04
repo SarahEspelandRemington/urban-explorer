@@ -46,8 +46,20 @@ export interface PrefetchEntry<P extends PrefetchPlaceLike> {
 
 export const DEFAULT_STALE_PREFETCH_TTL_MS = 30_000;
 
+/**
+ * Telemetry payload passed to the optional onReplay / onEvict callbacks.
+ * `ageMs` is the time the entry spent parked in the pool — for replays this
+ * tells us how long after parking the re-pick happened (useful for TTL
+ * tuning); for evictions it's effectively the configured TTL.
+ */
+export interface StalePoolEventInfo {
+  placeId: string;
+  ageMs: number;
+}
+
 export interface StalePrefetchedSlot<P extends PrefetchPlaceLike> {
   entry: PrefetchEntry<P>;
+  parkedAt: number;
   expiresAt: number;
   // Opaque handle for the cleanup timer; whatever schedule() returned.
   timerHandle: unknown;
@@ -59,6 +71,12 @@ export interface StalePrefetchPool<P extends PrefetchPlaceLike> {
   now: () => number;
   schedule: (fn: () => void, ms: number) => unknown;
   cancel: (handle: unknown) => void;
+  // Telemetry hooks — fire on a successful revive (replay) and on TTL
+  // age-out (evict). Re-park displacement and disposeStalePrefetchPool
+  // teardown are NOT counted as evictions: only entries that actually
+  // aged out without being replayed.
+  onReplay?: (info: StalePoolEventInfo) => void;
+  onEvict?: (info: StalePoolEventInfo) => void;
 }
 
 export interface CreateStalePoolOptions {
@@ -66,6 +84,8 @@ export interface CreateStalePoolOptions {
   now?: () => number;
   schedule?: (fn: () => void, ms: number) => unknown;
   cancel?: (handle: unknown) => void;
+  onReplay?: (info: StalePoolEventInfo) => void;
+  onEvict?: (info: StalePoolEventInfo) => void;
 }
 
 /**
@@ -82,7 +102,22 @@ export function createStalePrefetchPool<P extends PrefetchPlaceLike>(
     now: opts.now ?? (() => Date.now()),
     schedule: opts.schedule ?? ((fn, ms) => setTimeout(fn, ms)),
     cancel: opts.cancel ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>)),
+    onReplay: opts.onReplay,
+    onEvict: opts.onEvict,
   };
+}
+
+function emitPoolEvent<P extends PrefetchPlaceLike>(
+  cb: ((info: StalePoolEventInfo) => void) | undefined,
+  pool: StalePrefetchPool<P>,
+  slot: StalePrefetchedSlot<P>,
+): void {
+  if (!cb) return;
+  try {
+    cb({ placeId: slot.entry.placeId, ageMs: pool.now() - slot.parkedAt });
+  } catch {
+    // Telemetry must never break the cache flow.
+  }
 }
 
 function runAudioCleanup<P extends PrefetchPlaceLike>(entry: PrefetchEntry<P>): void {
@@ -107,7 +142,8 @@ export function parkStalePrefetchedEntry<P extends PrefetchPlaceLike>(
     runAudioCleanup(existing.entry);
     pool.map.delete(entry.placeId);
   }
-  const expiresAt = pool.now() + pool.ttlMs;
+  const parkedAt = pool.now();
+  const expiresAt = parkedAt + pool.ttlMs;
   // Capture placeId locally so the timer doesn't accidentally clear an
   // unrelated slot if a later park reuses the same id.
   const slotPlaceId = entry.placeId;
@@ -116,9 +152,12 @@ export function parkStalePrefetchedEntry<P extends PrefetchPlaceLike>(
     if (current && current.entry === entry) {
       runAudioCleanup(entry);
       pool.map.delete(slotPlaceId);
+      // TTL fired with no replay — record an eviction so the configured TTL
+      // can be tuned against the replay/eviction ratio.
+      emitPoolEvent(pool.onEvict, pool, current);
     }
   }, pool.ttlMs);
-  pool.map.set(slotPlaceId, { entry, expiresAt, timerHandle });
+  pool.map.set(slotPlaceId, { entry, parkedAt, expiresAt, timerHandle });
 }
 
 /**
@@ -137,10 +176,15 @@ export function reviveStalePrefetchedEntry<P extends PrefetchPlaceLike>(
     try { pool.cancel(slot.timerHandle); } catch {}
     runAudioCleanup(slot.entry);
     pool.map.delete(placeId);
+    // Synchronous expiry path: the entry aged out before the timer ran. We
+    // still treat this as an eviction — the user did not benefit from it.
+    emitPoolEvent(pool.onEvict, pool, slot);
     return null;
   }
   try { pool.cancel(slot.timerHandle); } catch {}
   pool.map.delete(placeId);
+  // Successful re-pick within the TTL — the cache saved a round-trip.
+  emitPoolEvent(pool.onReplay, pool, slot);
   return slot.entry;
 }
 

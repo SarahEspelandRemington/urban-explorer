@@ -972,6 +972,141 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       expect(pool.map.size).toBe(0);
     });
 
+    test("onReplay fires with placeId + ageMs when the pool serves a re-pick", () => {
+      const onReplay = jest.fn();
+      const onEvict = jest.fn();
+      const state = { now: 1_000_000 };
+      const pool = createStalePrefetchPool<StressPlace>({
+        ttlMs: 30_000,
+        now: () => state.now,
+        schedule: () => "noop-handle",
+        cancel: () => {},
+        onReplay,
+        onEvict,
+      });
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+      });
+
+      // Re-pick happens 8s after parking — well within the TTL.
+      state.now += 8_000;
+      const revived = reviveStalePrefetchedEntry(pool, "place-A");
+
+      expect(revived).not.toBeNull();
+      expect(onReplay).toHaveBeenCalledTimes(1);
+      expect(onReplay).toHaveBeenCalledWith({ placeId: "place-A", ageMs: 8_000 });
+      expect(onEvict).not.toHaveBeenCalled();
+    });
+
+    test("onEvict fires when the TTL timer ages an entry out without a replay", () => {
+      const onReplay = jest.fn();
+      const onEvict = jest.fn();
+      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      pool.onReplay = onReplay;
+      pool.onEvict = onEvict;
+
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+      });
+
+      // Step past TTL — timer fires, eviction recorded.
+      advance(30_000);
+
+      expect(onEvict).toHaveBeenCalledTimes(1);
+      expect(onEvict).toHaveBeenCalledWith({ placeId: "place-A", ageMs: 30_000 });
+      expect(onReplay).not.toHaveBeenCalled();
+    });
+
+    test("synchronous expiry in revive (timer hadn't fired yet) also counts as evict", () => {
+      const onReplay = jest.fn();
+      const onEvict = jest.fn();
+      const state = { now: 1_000_000 };
+      const pool = createStalePrefetchPool<StressPlace>({
+        ttlMs: 30_000,
+        now: () => state.now,
+        schedule: () => "noop-handle",
+        cancel: () => {},
+        onReplay,
+        onEvict,
+      });
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+      });
+
+      // Past the TTL, but the timer never ran — the synchronous-expiry
+      // branch in reviveStalePrefetchedEntry must still emit an eviction.
+      state.now += 31_000;
+      const revived = reviveStalePrefetchedEntry(pool, "place-A");
+
+      expect(revived).toBeNull();
+      expect(onReplay).not.toHaveBeenCalled();
+      expect(onEvict).toHaveBeenCalledTimes(1);
+      expect(onEvict).toHaveBeenCalledWith({ placeId: "place-A", ageMs: 31_000 });
+    });
+
+    test("re-park displacement and disposeStalePrefetchPool do NOT fire onEvict", () => {
+      const onReplay = jest.fn();
+      const onEvict = jest.fn();
+      const { pool } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      pool.onReplay = onReplay;
+      pool.onEvict = onEvict;
+
+      // Park, then re-park the same id — displacement is not an eviction.
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A1.mp3", cleanup: jest.fn() },
+      });
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A2.mp3", cleanup: jest.fn() },
+      });
+      expect(onEvict).not.toHaveBeenCalled();
+
+      // Park another and tear down — dispose is not an eviction either.
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-B",
+        place: { id: "place-B", name: "B" },
+        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() },
+      });
+      disposeStalePrefetchPool(pool);
+      expect(onEvict).not.toHaveBeenCalled();
+      expect(onReplay).not.toHaveBeenCalled();
+    });
+
+    test("onReplay/onEvict throws are swallowed so the cache flow never breaks", () => {
+      const onReplay = jest.fn(() => { throw new Error("sentry down"); });
+      const onEvict = jest.fn(() => { throw new Error("sentry down"); });
+      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      pool.onReplay = onReplay;
+      pool.onEvict = onEvict;
+
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+      });
+      // Replay should not throw despite onReplay throwing.
+      expect(() => reviveStalePrefetchedEntry(pool, "place-A")).not.toThrow();
+
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-B",
+        place: { id: "place-B", name: "B" },
+        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() },
+      });
+      // TTL fire should not throw despite onEvict throwing.
+      expect(() => advance(30_000)).not.toThrow();
+      expect(onReplay).toHaveBeenCalledTimes(1);
+      expect(onEvict).toHaveBeenCalledTimes(1);
+    });
+
     test("runPrefetchCycle without a stale pool still cleans up displaced audio (back-compat)", async () => {
       const places: StressPlace[] = [
         { id: "place-A", name: "A" },
