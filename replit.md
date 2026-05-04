@@ -102,6 +102,40 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
     ```
     The script (`scripts/src/setupSentryWalkPrefetchDashboard.ts`) is idempotent: it reuses an existing "Walk Mode Prefetch" dashboard / "Walk Mode prefetch hit rate" alert rule if found, otherwise creates them via the Sentry REST API. On success it patches the **Dashboard URL** and **Alert URL** lines above with the real links, so future readers can click straight through. The alert is created without notification actions — open the printed Alert URL once and add the on-call Slack/Email target so it actually pages.
     Manual fallback if the script can't be run: Dashboards → New Dashboard → "Walk Mode Prefetch" → add the two panels above. Alerts → Create Alert → Metric Alert → pick `narration.prefetch_event` → paste the equation → set thresholds. Then paste the URLs above so the team can find them.
+  - **Walk Mode Audio Fallback dashboard** — saved Sentry dashboard that charts the natural-voice TTS fallback rate over time off the `narration.audio_fallback` metric (emitted by `trackNarrationFallback` in `lib/sentryWalk.ts`, called from every fallback path in `lib/fetchNarrationPayload.ts`). When the gpt-audio pipeline degrades (OpenAI outage, server-side cache bug, or a client-side `write_failure` spike on a new OS version) users silently fall back to robotic system speech — this dashboard makes that visible.
+    - **Audio Fallback Dashboard URL**: _to be filled in once created — paste the `https://<org>.sentry.io/dashboard/<id>/` link here._
+    - **Panel 1 — "Audio fallback events by reason" (stacked area, 24h)**
+      - Metric: `narration.audio_fallback` (counter), aggregate `sum`
+      - Group by tag: `reason`
+      - Visualization: stacked area chart so `write_failure` / `endpoint_error` / `bad_response` are visible side-by-side over time. A spike in any single `reason` points at a specific failure mode (write_failure → client/OS issue, endpoint_error → network/timeout, bad_response → server/upstream issue).
+    - **Panel 2 — "Total narration volume" (line, 24h, 5-min buckets)**
+      - Metric: `narration.prefetch_event` (counter), aggregate `sum`, no `event` filter
+      - Provides **approximate** denominator context: every narration emits at least one prefetch event, but the same metric also counts lifecycle events like `DEDUPE` and `STOP_WALK_DISCARD`, so the sum slightly over-counts true narrations played. Good enough as a volume sanity check — a high fallback count next to a low volume is background noise; a high count next to high volume is a real regression.
+    - **Panel 3 — "Audio fallback rate %" (line, 24h, 5-min buckets)**
+      - Equation: `100 * sum(narration.audio_fallback) / sum(narration.prefetch_event)`
+      - In Sentry's "Add Equation" UI: define two queries (`A` = audio_fallback sum, `B` = prefetch_event sum) and use equation `100 * A / B`.
+      - Y-axis: 0–100, threshold line at `10`.
+      - Read this as an **approximate** rate (denominator caveat above). For a tighter rate once narration volume is well-understood, swap the denominator for a dedicated `narration.played` counter or filter `event:HIT|MISS|STALE_DISCARD` to exclude lifecycle noise.
+  - **Walk Mode Audio Fallback rate alert** — Metric Alert in Sentry that pages on TTS-pipeline regressions.
+    - **Audio Fallback Alert URL**: _to be filled in once created — paste the `https://<org>.sentry.io/alerts/rules/details/<id>/` link here._
+    - Dataset: Metrics → `narration.audio_fallback`
+    - Aggregate: `sum(narration.audio_fallback)` (no `reason` filter — fires on any reason)
+    - Time window: **1 hour**, evaluated every 5 minutes
+    - **Critical** when `sum >= 15` over the window (**approximate** placeholder for ~> 10% of typical hourly walk volume)
+    - **Warning** when `sum >= 8` over the window (**approximate** placeholder for ~> 5% of typical hourly walk volume)
+    - Resolve when the value returns below `5` for one full window
+    - **Why count and not rate**: Sentry Metric Alerts can't fire on a cross-metric equation, so the alert uses the absolute fallback count as a proxy. The thresholds above are seeded guesses — they MUST be retuned in the Sentry UI once real hourly walk volume is observed, otherwise the alert will either page on noise (if real volume is low) or stay silent through real regressions (if real volume is much higher than assumed). The dashboard's Panel 3 carries the true rate-based view for humans.
+    - Minimum-volume guard: the absolute-count thresholds are themselves the guard — a quiet hour with one or two failures naturally stays under the warning line.
+    - Owner / route to: the Walk Mode on-call channel (Slack/Email destination set on the Sentry side).
+  - **How to create (or recreate) the audio-fallback dashboard + alert** — automated via a one-shot script (mirrors the prefetch script above):
+    ```bash
+    SENTRY_AUTH_TOKEN=<token-with-org:read+project:read+project:write+alerts:write> \
+    SENTRY_ORG=<org-slug> \
+    SENTRY_PROJECT=<project-slug> \
+    pnpm --filter @workspace/scripts run setup:sentry-walk-audio-dashboard
+    ```
+    The script (`scripts/src/setupSentryWalkAudioFallbackDashboard.ts`) is idempotent: it reuses an existing "Walk Mode Audio Fallback" dashboard / "Walk Mode audio fallback rate" alert rule if found, otherwise creates them via the Sentry REST API. On success it patches the **Audio Fallback Dashboard URL** and **Audio Fallback Alert URL** lines above with the real links. The alert is created without notification actions — open the printed Alert URL once and add the on-call Slack/Email target so it actually pages.
+    Manual fallback: Dashboards → New Dashboard → "Walk Mode Audio Fallback" → add the three panels above. Alerts → Create Alert → Metric Alert → pick `narration.audio_fallback` → set the absolute-count thresholds. Then paste the URLs above so the team can find them.
 
 - **Shared libs**:
   - `lib/api-spec` - OpenAPI specification
