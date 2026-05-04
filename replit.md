@@ -66,10 +66,42 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `sentry.ts` initializes Sentry at module load time (before any render), gated on `EXPO_PUBLIC_SENTRY_DSN`. When absent, all exports are no-ops.
   - PII protection: `isPiiKey` + recursive `scrubObject` strip lat/lon/place/address/name/narration/altitude/heading/speed keys from `event.extra` and `event.contexts`. `scrubString` redacts keyed PII patterns (e.g. `name: "Central Park"`) from breadcrumb and event messages. `beforeAddBreadcrumb` hook drops all non-walk breadcrumbs at SDK ingestion time; walk breadcrumbs have their `data` and `message` scrubbed at that point too. `beforeSend` is a second pass: same filters applied before the event leaves the device.
   - `sentryWalk.ts` provides `setWalkScope()` (stamps current walk state onto the Sentry scope) and `addWalkBreadcrumb()` (adds a walk-category breadcrumb with ingestion-time PII scrubbing). Called from `WalkModeContext.tsx` on walk start/stop, place visited, narration fetched, and fetch errors.
-  - Sentry metrics: `trackNarrationFallback(reason)` increments `narration.audio_fallback` counter with a `reason` tag to track TTS fallback rates.
+  - Sentry metrics: `trackNarrationFallback(reason)` increments `narration.audio_fallback` counter with a `reason` tag to track TTS fallback rates. `trackPrefetchEvent(event)` increments `narration.prefetch_event` counter (tagged `event` ∈ `HIT | MISS | STALE_DISCARD | STOP_WALK_DISCARD | DEDUPE`) for every narration prefetch outcome — see "Sentry Dashboards & Alerts" below for the saved panel and regression alert wired off this metric.
   - Test suite: `artifacts/urban-explorer/__tests__/sentry.test.ts` + `sentryWalk.test.ts` — 200+ tests covering `isPiiKey`, `scrubObject`, `scrubString`, `beforeSend`, `beforeAddBreadcrumb`. Registered as the `privacy-tests` validation step.
   - ESLint rule: `eslint-rules/no-pii-in-sentry.mjs` — warns when a known PII field (name, lat, place, etc.) is interpolated into a Sentry call's message argument. Registered as the `lint-rules` validation step.
   - `app.config.js` (replaces `app.json`) — dynamic Expo config that reads `SENTRY_ORG`/`SENTRY_PROJECT` from environment for the `@sentry/react-native/expo` build plugin.
+
+- **Sentry Dashboards & Alerts** (configured in the Sentry web UI, not in code):
+  - **Walk Mode Prefetch dashboard** — saved Sentry dashboard that charts the narration-prefetch hit rate over time off the `narration.prefetch_event` metric (emitted by `trackPrefetchEvent` in `lib/sentryWalk.ts`).
+    - **Dashboard URL**: _to be filled in once created — paste the `https://<org>.sentry.io/dashboard/<id>/` link here._
+    - **Panel 1 — "Prefetch events by outcome" (stacked area, 24h)**
+      - Metric: `narration.prefetch_event` (counter), aggregate `sum`
+      - Group by tag: `event`
+      - Visualization: stacked area chart so HIT / MISS / STALE_DISCARD / STOP_WALK_DISCARD / DEDUPE are visible side-by-side over time.
+    - **Panel 2 — "Prefetch hit rate %" (line, 24h, 5-min buckets)**
+      - Equation: `100 * sum(narration.prefetch_event){event:HIT} / (sum(narration.prefetch_event){event:HIT} + sum(narration.prefetch_event){event:MISS} + sum(narration.prefetch_event){event:STALE_DISCARD})`
+      - In Sentry's "Add Equation" UI: define three queries (`A` = HIT sum, `B` = MISS sum, `C` = STALE_DISCARD sum) and use equation `100 * A / (A + B + C)`.
+      - Y-axis: 0–100, threshold line at `60`.
+      - `STOP_WALK_DISCARD` and `DEDUPE` are intentionally excluded from the denominator: they reflect lifecycle/coalescing behavior, not cache effectiveness.
+  - **Walk Mode Prefetch hit-rate alert** — Metric Alert in Sentry that pages on prefetch-pipeline regressions.
+    - **Alert URL**: _to be filled in once created — paste the `https://<org>.sentry.io/alerts/rules/details/<id>/` link here._
+    - Dataset: Metrics → `narration.prefetch_event`
+    - Same equation as Panel 2 above (`100 * A / (A + B + C)`)
+    - Time window: **1 hour**, evaluated every 5 minutes
+    - **Critical** when the equation is `< 60` for the window
+    - **Warning** when the equation is `< 75` for the window
+    - Resolve when the value returns above the threshold for one full window
+    - Minimum sample-size guard: also require `A + B + C >= 20` over the window so a quiet hour with two events doesn't page the team. Configure as a secondary trigger condition (alert only fires when both the percentage trigger and the volume trigger are true).
+    - Owner / route to: the Walk Mode on-call channel (Slack/Email destination set on the Sentry side).
+  - **How to create (or recreate) the dashboard + alert** — automated via a one-shot script:
+    ```bash
+    SENTRY_AUTH_TOKEN=<token-with-org:read+project:read+project:write+alerts:write> \
+    SENTRY_ORG=<org-slug> \
+    SENTRY_PROJECT=<project-slug> \
+    pnpm --filter @workspace/scripts run setup:sentry-walk-dashboard
+    ```
+    The script (`scripts/src/setupSentryWalkPrefetchDashboard.ts`) is idempotent: it reuses an existing "Walk Mode Prefetch" dashboard / "Walk Mode prefetch hit rate" alert rule if found, otherwise creates them via the Sentry REST API. On success it patches the **Dashboard URL** and **Alert URL** lines above with the real links, so future readers can click straight through. The alert is created without notification actions — open the printed Alert URL once and add the on-call Slack/Email target so it actually pages.
+    Manual fallback if the script can't be run: Dashboards → New Dashboard → "Walk Mode Prefetch" → add the two panels above. Alerts → Create Alert → Metric Alert → pick `narration.prefetch_event` → paste the equation → set thresholds. Then paste the URLs above so the team can find them.
 
 - **Shared libs**:
   - `lib/api-spec` - OpenAPI specification
