@@ -15,8 +15,11 @@ import { installSessionCallback, dispatchLocation } from "@/lib/walkSessionManag
 import { executeStopWalkSync } from "@/lib/walkStopSession";
 import {
   consumePrefetchedNarration,
+  createStalePrefetchPool,
+  disposeStalePrefetchPool,
   type PrefetchEntry,
   runPrefetchCycle,
+  type StalePrefetchPool,
 } from "@/lib/narrationPrefetchPipeline";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
 import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/buildingTypeGroups";
@@ -327,6 +330,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Tracks which place ID is currently being pre-fetched, so repeated calls
   // to prefetchNext before the first resolves don't issue parallel duplicates.
   const prefetchInFlightRef = useRef<string | null>(null);
+  // Short-window holding pen for prefetched payloads that would otherwise be
+  // discarded (because pickNext now favours a different candidate).  If the
+  // queue re-picks the same place within the TTL — common when a brief skip
+  // is followed by the cooldown re-promoting the original candidate — we
+  // replay the cached audio instantly instead of re-fetching from scratch.
+  // Entries that age out are cleaned up by the pool's TTL timer so we never
+  // leak temp files.
+  const stalePrefetchPoolRef = useRef<StalePrefetchPool<WalkPlace>>(
+    createStalePrefetchPool<WalkPlace>(),
+  );
   // Holds the stop() function returned by installSessionCallback for the current
   // walk session. Calling stop() removes the callback via CAS inside
   // walkSessionManager, so a delayed stopWalk from an old session never
@@ -546,7 +559,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // also runs the stale-cleanup when the cached entry is for a different place.
     const prefetched = prefetchedNarrationRef.current;
     prefetchedNarrationRef.current = null; // always consume / clear the cache
-    const lookup = consumePrefetchedNarration(prefetched, place.id);
+    const lookup = consumePrefetchedNarration(prefetched, place.id, stalePrefetchPoolRef.current);
     if (lookup.kind === "hit") {
       if (__DEV__) {
         console.log(`[fetchNarration] cache HIT for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`);
@@ -680,6 +693,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       placesRef,
       pickNext,
       fetchPayload: fetchNarrationPayload,
+      stalePool: stalePrefetchPoolRef.current,
     });
   }, [pickNext, fetchNarrationPayload]);
   useEffect(() => {
@@ -934,6 +948,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
     prefetchedNarrationRef.current = null;
     prefetchInFlightRef.current = null;
+    // Drain the stale-replay pool too so a previous walk's parked entries
+    // don't leak temp files or accidentally replay across walks.
+    disposeStalePrefetchPool(stalePrefetchPoolRef.current);
     // Start cooldown so we don't fire instantly before the user has even moved.
     // Use the largest cooldown across all densities so the 5-second initial
     // wait is preserved even if auto-density switches to a stricter tier right
@@ -1076,6 +1093,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
     prefetchedNarrationRef.current = null;
     prefetchInFlightRef.current = null;
+    // Drain the short-window stale-replay pool too: cancel pending TTL timers
+    // and delete every temp file we were holding for possible re-pick replay.
+    disposeStalePrefetchPool(stalePrefetchPoolRef.current);
     if (watchRef.current) {
       try { watchRef.current.remove(); } catch {}
       watchRef.current = null;

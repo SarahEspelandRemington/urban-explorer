@@ -344,9 +344,14 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
 
 import {
   consumePrefetchedNarration,
+  createStalePrefetchPool,
+  disposeStalePrefetchPool,
+  parkStalePrefetchedEntry,
+  reviveStalePrefetchedEntry,
   runPrefetchCycle,
   type NarrationPayload,
   type PrefetchEntry,
+  type StalePrefetchPool,
 } from "../lib/narrationPrefetchPipeline";
 
 interface StressPlace { id: string; name: string }
@@ -716,6 +721,285 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
       expect(state.prefetchedNarrationRef.current).toBeNull();
       expect(state.prefetchInFlightRef.current).toBeNull();
+    });
+  });
+
+  // --- Guard 4: STALE-POOL REPLAY (skip then re-pick within TTL) ----------
+  //
+  // When the live cache holds A and we want to fetch B, the displaced A
+  // payload is parked in a short-window stale pool instead of being deleted.
+  // A subsequent re-pick of A within the TTL must replay that cached audio
+  // without another fetchPayload call, while still cleaning up entries that
+  // age out of the TTL.
+
+  describe("stale-pool replay for skip-then-re-pick", () => {
+    // Controllable clock and scheduler so TTL behaviour stays deterministic.
+    function buildControlledPool<P extends StressPlace>(opts?: { ttlMs?: number }): {
+      pool: StalePrefetchPool<P>;
+      advance: (ms: number) => void;
+      pendingTimers: number;
+    } {
+      const state = { now: 1_000_000 };
+      type Timer = { fireAt: number; fn: () => void; cancelled: boolean };
+      const timers = new Set<Timer>();
+      const pool = createStalePrefetchPool<P>({
+        ttlMs: opts?.ttlMs ?? 30_000,
+        now: () => state.now,
+        schedule: (fn, ms) => {
+          const t: Timer = { fireAt: state.now + ms, fn, cancelled: false };
+          timers.add(t);
+          return t;
+        },
+        cancel: (handle) => {
+          const t = handle as Timer;
+          t.cancelled = true;
+          timers.delete(t);
+        },
+      });
+      const handle = {
+        pool,
+        advance(ms: number) {
+          state.now += ms;
+          // Fire any due timers in chronological order, mirroring real
+          // setTimeout semantics so the pool's auto-cleanup runs deterministically.
+          let progress = true;
+          while (progress) {
+            progress = false;
+            for (const t of [...timers]) {
+              if (!t.cancelled && t.fireAt <= state.now) {
+                timers.delete(t);
+                t.fn();
+                progress = true;
+              }
+            }
+          }
+        },
+        get pendingTimers() {
+          return timers.size;
+        },
+      };
+      return handle;
+    }
+
+    test("re-pick within TTL replays cached audio without re-fetching", async () => {
+      const places: StressPlace[] = [
+        { id: "place-A", name: "A" },
+        { id: "place-B", name: "B" },
+      ];
+      const state = buildPipelineState(places);
+      const { pool } = buildControlledPool<StressPlace>();
+      const aCleanup = jest.fn();
+      const fetchPayload = jest.fn(async (place: StressPlace): Promise<NarrationPayload> => {
+        if (place.id === "place-A") {
+          return { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup };
+        }
+        return { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() };
+      });
+
+      // Cycle 1: prefetch A.
+      let candidate: StressPlace = places[0];
+      await runPrefetchCycle({
+        ...state,
+        pickNext: () => candidate,
+        fetchPayload,
+        stalePool: pool,
+      });
+      expect(state.prefetchedNarrationRef.current?.placeId).toBe("place-A");
+      expect(fetchPayload).toHaveBeenCalledTimes(1);
+
+      // Cycle 2: queue now picks B (skip simulated). Live A should be parked
+      // in the stale pool, NOT cleaned up.
+      candidate = places[1];
+      await runPrefetchCycle({
+        ...state,
+        pickNext: () => candidate,
+        fetchPayload,
+        stalePool: pool,
+      });
+      expect(state.prefetchedNarrationRef.current?.placeId).toBe("place-B");
+      expect(fetchPayload).toHaveBeenCalledTimes(2);
+      expect(aCleanup).not.toHaveBeenCalled();
+      expect(pool.map.has("place-A")).toBe(true);
+
+      // Cycle 3: queue re-picks A within TTL. Should revive from pool, no new
+      // fetch, B gets parked.
+      candidate = places[0];
+      const cycleResult = runPrefetchCycle({
+        ...state,
+        pickNext: () => candidate,
+        fetchPayload,
+        stalePool: pool,
+      });
+      expect(cycleResult).toBeUndefined();
+      expect(fetchPayload).toHaveBeenCalledTimes(2);
+      expect(state.prefetchedNarrationRef.current?.placeId).toBe("place-A");
+      expect(aCleanup).not.toHaveBeenCalled();
+      expect(pool.map.has("place-A")).toBe(false);
+      expect(pool.map.has("place-B")).toBe(true);
+    });
+
+    test("consumePrefetchedNarration revives from pool when live cache is mismatched", () => {
+      const { pool } = buildControlledPool<StressPlace>();
+      const aCleanup = jest.fn();
+      const aEntry: PrefetchEntry<StressPlace> = {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup },
+      };
+      // Simulate: A was just parked because B took the live slot.
+      parkStalePrefetchedEntry(pool, aEntry);
+
+      const liveB: PrefetchEntry<StressPlace> = {
+        placeId: "place-B",
+        place: { id: "place-B", name: "B" },
+        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() },
+      };
+
+      // Now fetchNarration is called for A while live cache holds B.
+      const result = consumePrefetchedNarration(liveB, "place-A", pool);
+
+      expect(result.kind).toBe("hit");
+      if (result.kind === "hit") {
+        expect(result.entry.placeId).toBe("place-A");
+        expect(result.entry.payload).toEqual(aEntry.payload);
+      }
+      // A was revived (not cleaned up); B was parked in its place.
+      expect(aCleanup).not.toHaveBeenCalled();
+      expect(pool.map.has("place-A")).toBe(false);
+      expect(pool.map.has("place-B")).toBe(true);
+    });
+
+    test("entries that age out past TTL are cleaned up by the scheduled timer", () => {
+      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      const cleanup = jest.fn();
+      const entry: PrefetchEntry<StressPlace> = {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup },
+      };
+
+      parkStalePrefetchedEntry(pool, entry);
+      expect(pool.map.has("place-A")).toBe(true);
+
+      // 29 s in: still live, no cleanup yet.
+      advance(29_000);
+      expect(cleanup).not.toHaveBeenCalled();
+      expect(pool.map.has("place-A")).toBe(true);
+
+      // 30 s in: TTL fires, cleanup runs, entry is gone.
+      advance(1_000);
+      expect(cleanup).toHaveBeenCalledTimes(1);
+      expect(pool.map.has("place-A")).toBe(false);
+    });
+
+    test("revive after TTL expiry is treated as miss and runs cleanup", () => {
+      // This guards the case where the timer somehow hasn't fired yet but the
+      // expiresAt timestamp says we're past the TTL — the revive path must
+      // synchronously dispose of the entry rather than handing back stale audio.
+      const noOp = () => {};
+      const state = { now: 1_000_000 };
+      const pool = createStalePrefetchPool<StressPlace>({
+        ttlMs: 30_000,
+        now: () => state.now,
+        schedule: () => "noop-handle",
+        cancel: noOp,
+      });
+      const cleanup = jest.fn();
+      const entry: PrefetchEntry<StressPlace> = {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup },
+      };
+      parkStalePrefetchedEntry(pool, entry);
+
+      // Advance the clock past the TTL without firing any timer.
+      state.now += 31_000;
+      const revived = reviveStalePrefetchedEntry(pool, "place-A");
+
+      expect(revived).toBeNull();
+      expect(cleanup).toHaveBeenCalledTimes(1);
+      expect(pool.map.has("place-A")).toBe(false);
+    });
+
+    test("disposeStalePrefetchPool runs cleanup on every pending entry", () => {
+      const { pool, pendingTimers: _ignored } = buildControlledPool<StressPlace>();
+      const aCleanup = jest.fn();
+      const bCleanup = jest.fn();
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup },
+      });
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-B",
+        place: { id: "place-B", name: "B" },
+        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: bCleanup },
+      });
+
+      disposeStalePrefetchPool(pool);
+
+      expect(aCleanup).toHaveBeenCalledTimes(1);
+      expect(bCleanup).toHaveBeenCalledTimes(1);
+      expect(pool.map.size).toBe(0);
+    });
+
+    test("re-parking the same placeId cancels prior timer and cleans up the old entry", () => {
+      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      const firstCleanup = jest.fn();
+      const secondCleanup = jest.fn();
+
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A1.mp3", cleanup: firstCleanup },
+      });
+      // Re-park (e.g. a fresh fetch landed and was then displaced again).
+      parkStalePrefetchedEntry(pool, {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "audio", audioUri: "file:///tmp/A2.mp3", cleanup: secondCleanup },
+      });
+
+      // First entry's cleanup ran when it was displaced.
+      expect(firstCleanup).toHaveBeenCalledTimes(1);
+      expect(secondCleanup).not.toHaveBeenCalled();
+
+      // The first entry's timer must have been cancelled — only the second
+      // timer should fire when the TTL elapses.
+      advance(30_000);
+      expect(firstCleanup).toHaveBeenCalledTimes(1);
+      expect(secondCleanup).toHaveBeenCalledTimes(1);
+      expect(pool.map.size).toBe(0);
+    });
+
+    test("runPrefetchCycle without a stale pool still cleans up displaced audio (back-compat)", async () => {
+      const places: StressPlace[] = [
+        { id: "place-A", name: "A" },
+        { id: "place-B", name: "B" },
+      ];
+      const state = buildPipelineState(places);
+      const aCleanup = jest.fn();
+      state.prefetchedNarrationRef.current = {
+        placeId: "place-A",
+        place: places[0],
+        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup },
+      };
+
+      const fetchPayload = jest.fn(async (): Promise<NarrationPayload> => ({
+        kind: "audio",
+        audioUri: "file:///tmp/B.mp3",
+        cleanup: jest.fn(),
+      }));
+
+      await runPrefetchCycle({
+        ...state,
+        pickNext: () => places[1],
+        fetchPayload,
+        // No stalePool — legacy path: A must be cleaned up immediately.
+      });
+
+      expect(aCleanup).toHaveBeenCalledTimes(1);
+      expect(state.prefetchedNarrationRef.current?.placeId).toBe("place-B");
     });
   });
 });
