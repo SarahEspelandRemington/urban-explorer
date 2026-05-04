@@ -10,6 +10,45 @@ const SENTRY_PROJECT = process.env.SENTRY_PROJECT;
 const METRIC_MRI = "c:custom/narration.prefetch_event@none";
 const METRIC_NAME_FOR_ALERT = "sum(c:custom/narration.prefetch_event@none)";
 
+const ALERT_NAME = "Walk Mode prefetch hit rate";
+
+// Detection mode for the prefetch hit-rate alert rule.
+//
+//   "dynamic" (default) — Sentry Anomaly Detection. The detector learns the
+//                         metric's hourly/daily baseline (HIT count over a 1h
+//                         window) and pages only when the count is genuinely
+//                         anomalously low against that baseline. This implicitly
+//                         normalizes against walk volume: a quiet hour with a
+//                         100% hit rate but only 50 walks no longer looks like
+//                         a critical regression, and a busy hour where the hit
+//                         rate has actually collapsed but volume kept the count
+//                         above the legacy floor no longer stays silent. As
+//                         close as Sentry currently gets to firing on a true
+//                         HIT / (HIT+MISS+STALE_DISCARD) ratio without
+//                         supporting cross-query equation alerts on custom
+//                         metrics. Mirrors the dynamic-detection migration
+//                         applied to the audio-fallback alerts in Task #229.
+//
+//   "static"            — Legacy absolute-count thresholds (HIT count <60
+//                         critical, <75 warning, resolve >=75). Use this
+//                         escape hatch only if the org's Sentry plan does not
+//                         support anomaly detection (Business plan or above)
+//                         or if you need to bridge a gap while the dynamic
+//                         alert gathers its ~7-day baseline.
+//
+// Set via the PREFETCH_ALERT_DETECTION_TYPE env var; defaults to "dynamic".
+const DETECTION_TYPE_ENV = "PREFETCH_ALERT_DETECTION_TYPE";
+type DetectionType = "dynamic" | "static";
+function getDetectionType(): DetectionType {
+  const raw = (process.env[DETECTION_TYPE_ENV] ?? "").trim().toLowerCase();
+  if (raw === "static") return "static";
+  if (raw === "" || raw === "dynamic") return "dynamic";
+  console.warn(
+    `Unknown ${DETECTION_TYPE_ENV}=${raw} — defaulting to "dynamic". Supported values: "dynamic" | "static".`,
+  );
+  return "dynamic";
+}
+
 interface SentryProject {
   id: string;
   slug: string;
@@ -198,49 +237,153 @@ async function findExistingAlertRule(
   return list.find((r) => r.name === name) ?? null;
 }
 
-async function createAlertRule(
-  token: string,
-  org: string,
-  projectSlug: string,
-): Promise<SentryAlertRule> {
-  const name = "Walk Mode prefetch hit rate";
-  const existing = await findExistingAlertRule(token, org, name);
-  if (existing) {
-    console.log(`Alert rule "${name}" already exists (id=${existing.id}), reusing.`);
-    return existing;
-  }
+// Dynamic-mode sensitivity. Sentry maps this onto an internal anomaly score
+// threshold; "high" pages on smaller deviations, "low" only on large ones.
+// "medium" mirrors the symmetric tuning used on the fetch-side audio-fallback
+// alert in Task #229: catch sustained regressions without paging on every
+// transient blip in third-party dependencies (a brief OpenAI / network blip
+// can dent the prefetch hit rate the same way it dents the audio-fallback
+// rate, and we don't want to wake the on-call on noise).
+const DYNAMIC_SENSITIVITY: "low" | "medium" | "high" = "medium";
 
-  const body = {
-    name,
+// Static-mode legacy thresholds. Only used when PREFETCH_ALERT_DETECTION_TYPE=static.
+// Carried over from the original absolute-count rule (HIT count <60 critical,
+// <75 warning, resolve >=75) so the static fallback behaves exactly as before.
+const STATIC_CRITICAL = 60;
+const STATIC_WARNING = 75;
+const STATIC_RESOLVE = 75;
+
+interface AlertRuleBodyBase {
+  name: string;
+  aggregate: string;
+  dataset: string;
+  query: string;
+  timeWindow: number;
+  thresholdType: number;
+  projects: string[];
+  environment: null;
+  comparisonDelta: null;
+}
+
+function buildAlertRuleBody(
+  detectionType: DetectionType,
+  projectSlug: string,
+): Record<string, unknown> {
+  const base: AlertRuleBodyBase = {
+    name: ALERT_NAME,
     aggregate: METRIC_NAME_FOR_ALERT,
     dataset: "metrics",
     query: "event:HIT",
+    // 1h window: long enough to smooth out a single bad minute, short enough
+    // to react before a regression eats the whole shift. Matches the static
+    // baseline thresholds were originally calibrated against, and matches the
+    // audio-fallback alerts so all Walk Mode pages share the same cadence.
     timeWindow: 60,
+    // Below-threshold direction. In dynamic mode this tells Sentry to page on
+    // anomalously LOW HIT counts (the regression direction we care about — a
+    // collapse in cache effectiveness). In static mode it preserves the
+    // legacy "alert when HIT count drops below the floor" semantics.
     thresholdType: 1,
-    resolveThreshold: 75,
-    triggers: [
-      {
-        label: "critical",
-        alertThreshold: 60,
-        actions: [],
-      },
-      {
-        label: "warning",
-        alertThreshold: 75,
-        actions: [],
-      },
-    ],
     projects: [projectSlug],
     environment: null,
     comparisonDelta: null,
   };
+
+  if (detectionType === "dynamic") {
+    // Sentry Anomaly Detection. The detector learns the HIT count's
+    // hourly/daily baseline and pages when the count deviates significantly
+    // below it. Triggers in dynamic mode use alertThreshold=0 — Sentry
+    // ignores the numeric threshold and uses the trained anomaly score
+    // instead. Sensitivity (low/medium/high) is what actually controls how
+    // easily the alert fires. seasonality "auto" lets Sentry pick hourly vs
+    // daily vs weekly periodicity from the data.
+    return {
+      ...base,
+      detectionType: "dynamic",
+      sensitivity: DYNAMIC_SENSITIVITY,
+      seasonality: "auto",
+      resolveThreshold: null,
+      triggers: [
+        {
+          label: "critical",
+          alertThreshold: 0,
+          actions: [],
+        },
+      ],
+    };
+  }
+
+  // Static (legacy) escape hatch. Absolute HIT-count thresholds — the same
+  // numbers the rule was originally created with.
+  return {
+    ...base,
+    detectionType: "static",
+    resolveThreshold: STATIC_RESOLVE,
+    triggers: [
+      {
+        label: "critical",
+        alertThreshold: STATIC_CRITICAL,
+        actions: [],
+      },
+      {
+        label: "warning",
+        alertThreshold: STATIC_WARNING,
+        actions: [],
+      },
+    ],
+  };
+}
+
+async function upsertAlertRule(
+  token: string,
+  org: string,
+  projectSlug: string,
+): Promise<SentryAlertRule> {
+  const detectionType = getDetectionType();
+
+  console.log(
+    `Prefetch hit-rate alert detection mode: ${detectionType}` +
+      (detectionType === "dynamic"
+        ? ` (Sentry Anomaly Detection — sensitivity=${DYNAMIC_SENSITIVITY}, learns ` +
+          `hourly/daily baseline; ~7 days of data needed before it pages reliably)`
+        : ` (legacy absolute HIT-count thresholds critical=<${STATIC_CRITICAL}/warning=<${STATIC_WARNING}; ` +
+          `set ${DETECTION_TYPE_ENV}=dynamic to switch back)`),
+  );
+
+  const body = buildAlertRuleBody(detectionType, projectSlug);
+  const existing = await findExistingAlertRule(token, org, ALERT_NAME);
+
+  if (existing) {
+    // PUT to update so re-running the script migrates a legacy static rule
+    // (or any drift in thresholds / detection mode) onto the current spec
+    // without manual intervention.
+    const updated = await sentryFetch<SentryAlertRule>(
+      token,
+      `/organizations/${encodeURIComponent(org)}/alert-rules/${encodeURIComponent(existing.id)}/`,
+      { method: "PUT", body: JSON.stringify(body) },
+    );
+    console.log(
+      `Updated alert rule "${ALERT_NAME}" (id=${updated.id}) → detectionType=${detectionType}` +
+        (detectionType === "dynamic"
+          ? `, sensitivity=${DYNAMIC_SENSITIVITY}`
+          : `, critical=<${STATIC_CRITICAL}/warning=<${STATIC_WARNING}`) +
+        `.`,
+    );
+    return updated;
+  }
 
   const created = await sentryFetch<SentryAlertRule>(
     token,
     `/organizations/${encodeURIComponent(org)}/alert-rules/`,
     { method: "POST", body: JSON.stringify(body) },
   );
-  console.log(`Created alert rule "${name}" (id=${created.id}).`);
+  console.log(
+    `Created alert rule "${ALERT_NAME}" (id=${created.id}) → detectionType=${detectionType}` +
+      (detectionType === "dynamic"
+        ? `, sensitivity=${DYNAMIC_SENSITIVITY}`
+        : `, critical=<${STATIC_CRITICAL}/warning=<${STATIC_WARNING}`) +
+      `.`,
+  );
   console.warn(
     `NOTE: Alert was created with no notification actions. Add a Slack/Email\n` +
       `target in the Sentry UI so the on-call channel actually gets paged:\n` +
@@ -291,7 +434,7 @@ async function main(): Promise<void> {
   const project = await getProject(token, org, projectSlug);
 
   const dashboard = await createDashboard(token, org, project.id);
-  const alertRule = await createAlertRule(token, org, projectSlug);
+  const alertRule = await upsertAlertRule(token, org, projectSlug);
 
   await patchReplitMd(org, dashboard.id, alertRule.id);
 
