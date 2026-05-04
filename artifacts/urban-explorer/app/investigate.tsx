@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddressInput } from "@/components/AddressInput";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { LoadingMessages } from "@/components/LoadingMessages";
+import { StillLoadingHint } from "@/components/StillLoadingHint";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useStillLoading } from "@/hooks/useStillLoading";
@@ -216,12 +217,7 @@ export default function InvestigateScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
             <LoadingMessages variant="discovery" />
             {showStillLoading ? (
-              <Animated.Text
-                entering={FadeInDown.duration(600)}
-                style={[styles.stillLoadingText, { color: colors.mutedForeground }]}
-              >
-                {t.investigate.stillLoading}
-              </Animated.Text>
+              <StillLoadingHint hint={t.investigate.stillLoading} />
             ) : null}
           </View>
         )}
@@ -404,13 +400,6 @@ const styles = StyleSheet.create({
     paddingVertical: 36,
     alignItems: "center",
     gap: 14,
-  },
-  stillLoadingText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    opacity: 0.7,
-    marginTop: 4,
   },
   resultCard: {
     padding: 18,

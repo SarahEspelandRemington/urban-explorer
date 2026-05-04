@@ -16,6 +16,7 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LoadingMessages } from "@/components/LoadingMessages";
+import { StillLoadingHint } from "@/components/StillLoadingHint";
 import { NoteModal } from "@/components/NoteModal";
 import { PlaceActions } from "@/components/PlaceActions";
 import { PlaceDetailMap } from "@/components/PlaceDetailMap";
@@ -293,12 +294,7 @@ export default function PlaceDetailScreen() {
             <ActivityIndicator size="small" color={colors.primary} />
             <LoadingMessages variant="detail" />
             {showStillLoading ? (
-              <Animated.Text
-                entering={FadeInDown.duration(600)}
-                style={[styles.stillLoadingText, { color: colors.mutedForeground }]}
-              >
-                {t.placeDetail.stillLoading}
-              </Animated.Text>
+              <StillLoadingHint hint={t.placeDetail.stillLoading} />
             ) : null}
           </View>
         ) : detailMutation.isError ? (
@@ -549,13 +545,6 @@ const styles = StyleSheet.create({
   detailLoadingText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-  },
-  stillLoadingText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    opacity: 0.7,
-    marginTop: 4,
   },
   historyText: {
     fontSize: 15,

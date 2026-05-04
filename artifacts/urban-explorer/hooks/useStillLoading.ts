@@ -17,11 +17,13 @@ import { useState, useEffect } from "react";
  *
  * // Inside JSX, while myMutation.isPending:
  * {showStillLoading ? (
- *   <Animated.Text entering={FadeInDown.duration(600)}>
- *     {t.myScreen.stillLoading}
- *   </Animated.Text>
+ *   <StillLoadingHint hint={t.myScreen.stillLoading} />
  * ) : null}
  * ```
+ *
+ * Use `StillLoadingHint` from `@/components/StillLoadingHint` to render the
+ * animated text — it encapsulates the `Animated.Text` + `FadeInDown.duration(600)`
+ * pattern so each screen only needs to pass the hint string as a prop.
  *
  * The boolean resets to `false` automatically whenever `isPending` flips back
  * to `false`, so there is no cleanup required at the call site.
