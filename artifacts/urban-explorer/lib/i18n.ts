@@ -215,6 +215,7 @@ export interface Strings {
     sectionHistory: string;
     sectionFacts: string;
     sectionBlockContext: string;
+    stillLoading: string;
   };
   login: {
     title: string;
@@ -484,6 +485,7 @@ const en: Strings = {
     sectionHistory: "History",
     sectionFacts: "Facts & details",
     sectionBlockContext: "Block context",
+    stillLoading: "Taking longer than usual… still working on it.",
   },
   login: {
     title: "Urban Explorer",
@@ -759,6 +761,7 @@ const es: Strings = {
     sectionHistory: "Historia",
     sectionFacts: "Datos y detalles",
     sectionBlockContext: "Contexto del barrio",
+    stillLoading: "Tomando más tiempo de lo habitual… seguimos trabajando.",
   },
   login: {
     title: "Urban Explorer",
@@ -1033,6 +1036,7 @@ const fr: Strings = {
     sectionHistory: "Histoire",
     sectionFacts: "Faits et détails",
     sectionBlockContext: "Contexte du quartier",
+    stillLoading: "Ça prend plus de temps que prévu… on continue.",
   },
   login: {
     title: "Urban Explorer",
@@ -1307,6 +1311,7 @@ const de: Strings = {
     sectionHistory: "Geschichte",
     sectionFacts: "Fakten & Details",
     sectionBlockContext: "Umgebung",
+    stillLoading: "Dauert länger als üblich… wir sind noch dabei.",
   },
   login: {
     title: "Urban Explorer",
@@ -1581,6 +1586,7 @@ const it: Strings = {
     sectionHistory: "Storia",
     sectionFacts: "Fatti e dettagli",
     sectionBlockContext: "Contesto del quartiere",
+    stillLoading: "Ci vuole più del solito… stiamo ancora lavorando.",
   },
   login: {
     title: "Urban Explorer",
@@ -1855,6 +1861,7 @@ const pt: Strings = {
     sectionHistory: "História",
     sectionFacts: "Fatos e detalhes",
     sectionBlockContext: "Contexto do bairro",
+    stillLoading: "Está demorando mais que o normal… ainda estamos a trabalhar.",
   },
   login: {
     title: "Urban Explorer",
@@ -2128,6 +2135,7 @@ const nl: Strings = {
     sectionHistory: "Geschiedenis",
     sectionFacts: "Feiten & details",
     sectionBlockContext: "Buurt-context",
+    stillLoading: "Duurt langer dan gewoonlijk… we zijn er nog mee bezig.",
   },
   login: {
     title: "Urban Explorer",
@@ -2401,6 +2409,7 @@ const ja: Strings = {
     sectionHistory: "歴史",
     sectionFacts: "事実と詳細",
     sectionBlockContext: "周辺の文脈",
+    stillLoading: "通常より時間がかかっています…まだ処理中です。",
   },
   login: {
     title: "Urban Explorer",
@@ -2674,6 +2683,7 @@ const ko: Strings = {
     sectionHistory: "역사",
     sectionFacts: "사실과 세부사항",
     sectionBlockContext: "동네 맥락",
+    stillLoading: "평소보다 오래 걸리고 있어요… 아직 처리 중입니다.",
   },
   login: {
     title: "Urban Explorer",
@@ -2944,6 +2954,7 @@ const zh: Strings = {
     sectionHistory: "历史",
     sectionFacts: "事实与细节",
     sectionBlockContext: "街区背景",
+    stillLoading: "比平时花的时间长一些……我们还在努力。",
   },
   login: {
     title: "Urban Explorer",

@@ -45,6 +45,7 @@ export default function InvestigateScreen() {
   const investigate = useInvestigateAddress();
   const result = investigate.data;
   const error = investigate.error as { status?: number; message?: string } | null;
+  const [showStillLoading, setShowStillLoading] = useState(false);
 
   const handleSelectSuggestion = useCallback((s: Suggestion) => {
     if (typeof s.latitude === "number" && typeof s.longitude === "number") {
@@ -92,6 +93,16 @@ export default function InvestigateScreen() {
     }
     return t.investigate.genericError;
   }, [error, t]);
+
+  useEffect(() => {
+    if (investigate.isPending) {
+      setShowStillLoading(false);
+      const timer = setTimeout(() => setShowStillLoading(true), 10_000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowStillLoading(false);
+    }
+  }, [investigate.isPending]);
 
   // Pre-populate the input if the caller provided a near location (used as default city context).
   useEffect(() => {
@@ -213,6 +224,14 @@ export default function InvestigateScreen() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary} />
             <LoadingMessages variant="discovery" />
+            {showStillLoading ? (
+              <Animated.Text
+                entering={FadeInDown.duration(600)}
+                style={[styles.stillLoadingText, { color: colors.mutedForeground }]}
+              >
+                {t.investigate.stillLoading}
+              </Animated.Text>
+            ) : null}
           </View>
         )}
 
@@ -394,6 +413,13 @@ const styles = StyleSheet.create({
     paddingVertical: 36,
     alignItems: "center",
     gap: 14,
+  },
+  stillLoadingText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    opacity: 0.7,
+    marginTop: 4,
   },
   resultCard: {
     padding: 18,
