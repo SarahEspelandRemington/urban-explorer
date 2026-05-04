@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 interface NoteModalProps {
@@ -23,6 +24,7 @@ interface NoteModalProps {
 }
 
 export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: NoteModalProps) {
+  const t = useT();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
@@ -80,7 +82,7 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
             </View>
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: colors.foreground }]}>
-                Saved
+                {t.saved.noteModalTitle}
               </Text>
               <Text style={[styles.subtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
                 {placeName}
@@ -97,7 +99,7 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
           </View>
 
           <Text style={[styles.label, { color: colors.mutedForeground }]}>
-            Add a personal note (optional)
+            {t.saved.noteModalLabel}
           </Text>
           <TextInput
             ref={inputRef}
@@ -106,7 +108,7 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
               hasInteracted.current = true;
               setNote(text);
             }}
-            placeholder="e.g. visited on a rainy Tuesday, loved the architecture…"
+            placeholder={t.saved.noteModalPlaceholder}
             placeholderTextColor={colors.mutedForeground + "80"}
             multiline
             maxLength={280}
@@ -129,10 +131,10 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
             onPress={handleSave}
             style={[styles.saveBtn, { backgroundColor: colors.primary }]}
             accessibilityRole="button"
-            accessibilityLabel="Save note"
+            accessibilityLabel={note.trim() ? t.saved.noteModalSave : t.saved.noteModalDone}
           >
             <Text style={[styles.saveBtnText, { color: colors.primaryForeground }]}>
-              {note.trim() ? "Save note" : "Done"}
+              {note.trim() ? t.saved.noteModalSave : t.saved.noteModalDone}
             </Text>
           </Pressable>
         </View>

@@ -77,6 +77,11 @@ export interface Strings {
     editNote: string;
     deleteNote: string;
     swipeToDelete: string;
+    noteModalTitle: string;
+    noteModalLabel: string;
+    noteModalPlaceholder: string;
+    noteModalSave: string;
+    noteModalDone: string;
   };
   walkMode: {
     end: string;
@@ -265,6 +270,11 @@ const en: Strings = {
     editNote: "Edit note",
     deleteNote: "Delete note",
     swipeToDelete: "Delete",
+    noteModalTitle: "Saved",
+    noteModalLabel: "Add a personal note (optional)",
+    noteModalPlaceholder: "e.g. visited on a rainy Tuesday, loved the architecture…",
+    noteModalSave: "Save note",
+    noteModalDone: "Done",
   },
   walkMode: {
     end: "End",
@@ -474,6 +484,11 @@ const es: Strings = {
     editNote: "Editar nota",
     deleteNote: "Eliminar nota",
     swipeToDelete: "Eliminar",
+    noteModalTitle: "Guardado",
+    noteModalLabel: "Añadir una nota personal (opcional)",
+    noteModalPlaceholder: "p. ej. visité un martes lluvioso, me encantó la arquitectura…",
+    noteModalSave: "Guardar nota",
+    noteModalDone: "Listo",
   },
   walkMode: {
     end: "Fin",
@@ -684,6 +699,11 @@ const fr: Strings = {
     editNote: "Modifier la note",
     deleteNote: "Supprimer la note",
     swipeToDelete: "Supprimer",
+    noteModalTitle: "Enregistré",
+    noteModalLabel: "Ajouter une note personnelle (facultatif)",
+    noteModalPlaceholder: "ex. visité un mardi pluvieux, j'ai adoré l'architecture…",
+    noteModalSave: "Enregistrer la note",
+    noteModalDone: "Terminé",
   },
   walkMode: {
     end: "Fin",
@@ -893,6 +913,11 @@ const de: Strings = {
     editNote: "Notiz bearbeiten",
     deleteNote: "Notiz löschen",
     swipeToDelete: "Löschen",
+    noteModalTitle: "Gespeichert",
+    noteModalLabel: "Persönliche Notiz hinzufügen (optional)",
+    noteModalPlaceholder: "z. B. an einem regnerischen Dienstag besucht, tolle Architektur…",
+    noteModalSave: "Notiz speichern",
+    noteModalDone: "Fertig",
   },
   walkMode: {
     end: "Ende",
@@ -1102,6 +1127,11 @@ const it: Strings = {
     editNote: "Modifica nota",
     deleteNote: "Elimina nota",
     swipeToDelete: "Elimina",
+    noteModalTitle: "Salvato",
+    noteModalLabel: "Aggiungi una nota personale (facoltativo)",
+    noteModalPlaceholder: "es. visitato un martedì piovoso, architettura fantastica…",
+    noteModalSave: "Salva nota",
+    noteModalDone: "Fine",
   },
   walkMode: {
     end: "Fine",
@@ -1311,6 +1341,11 @@ const pt: Strings = {
     editNote: "Editar nota",
     deleteNote: "Apagar nota",
     swipeToDelete: "Apagar",
+    noteModalTitle: "Salvo",
+    noteModalLabel: "Adicionar uma nota pessoal (opcional)",
+    noteModalPlaceholder: "ex. visitei numa terça chuvosa, adorei a arquitetura…",
+    noteModalSave: "Salvar nota",
+    noteModalDone: "Concluído",
   },
   walkMode: {
     end: "Fim",
@@ -1519,6 +1554,11 @@ const nl: Strings = {
     editNote: "Notitie bewerken",
     deleteNote: "Notitie verwijderen",
     swipeToDelete: "Verwijderen",
+    noteModalTitle: "Opgeslagen",
+    noteModalLabel: "Voeg een persoonlijke notitie toe (optioneel)",
+    noteModalPlaceholder: "bijv. bezocht op een regenachtige dinsdag, dol op de architectuur…",
+    noteModalSave: "Notitie opslaan",
+    noteModalDone: "Klaar",
   },
   walkMode: {
     end: "Stop",
@@ -1727,6 +1767,11 @@ const ja: Strings = {
     editNote: "メモを編集",
     deleteNote: "メモを削除",
     swipeToDelete: "削除",
+    noteModalTitle: "保存済み",
+    noteModalLabel: "個人メモを追加（任意）",
+    noteModalPlaceholder: "例：雨の火曜日に訪問、建築が素晴らしかった…",
+    noteModalSave: "メモを保存",
+    noteModalDone: "完了",
   },
   walkMode: {
     end: "終了",
@@ -1935,6 +1980,11 @@ const ko: Strings = {
     editNote: "메모 수정",
     deleteNote: "메모 삭제",
     swipeToDelete: "삭제",
+    noteModalTitle: "저장됨",
+    noteModalLabel: "개인 메모 추가 (선택 사항)",
+    noteModalPlaceholder: "예: 비 오는 화요일에 방문, 건축이 멋졌어요…",
+    noteModalSave: "메모 저장",
+    noteModalDone: "완료",
   },
   walkMode: {
     end: "종료",
@@ -2142,6 +2192,11 @@ const zh: Strings = {
     editNote: "编辑备注",
     deleteNote: "删除备注",
     swipeToDelete: "删除",
+    noteModalTitle: "已保存",
+    noteModalLabel: "添加个人备注（可选）",
+    noteModalPlaceholder: "如：在一个雨天星期二到访，喜欢这里的建筑…",
+    noteModalSave: "保存备注",
+    noteModalDone: "完成",
   },
   walkMode: {
     end: "结束",
