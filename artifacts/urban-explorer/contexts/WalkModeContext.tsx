@@ -329,6 +329,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Tracks which place ID is currently being pre-fetched, so repeated calls
   // to prefetchNext before the first resolves don't issue parallel duplicates.
   const prefetchInFlightRef = useRef<string | null>(null);
+  // Tracks the exact callback reference that was installed as activeLocationCallback
+  // for the current walk session. Used by stopWalk for a compare-and-swap so a
+  // delayed stop from a prior session cannot accidentally clear the callback of
+  // a new walk that has already started.
+  const walkSessionCallbackRef = useRef<((loc: Location.LocationObject) => void) | null>(null);
 
   const applyDensity = useCallback((d: WalkDensity) => {
     if (densityRef.current === d) return;
@@ -379,6 +384,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // No-op on web/Android (the native module is iOS-only).
   useEffect(() => {
     if (!isWalking) return;
+    // Guard: stopWalk sets isWalkingRef.current = false synchronously before
+    // any async work and before NowPlaying.clear(). If this effect fires late
+    // (React batched the narration state change with the stop), we must not
+    // re-set the widget after the walk has been torn down.
+    if (!isWalkingRef.current) return;
     if (narration.isSpeaking && narration.currentPlace) {
       NowPlaying.setNowPlaying(
         narration.currentPlace,
@@ -556,8 +566,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // never collide on the same path. Cleanup deletes the file when
             // playback finishes (or is cancelled via stop/skip).
             const fileName = `walk-narr-${place.id.replace(/[^a-zA-Z0-9_-]/g, "_")}-${Date.now()}.mp3`;
-            const file = new File(Paths.cache, fileName);
             try {
+              const file = new File(Paths.cache, fileName);
               file.write(new Uint8Array(buf));
               if (__DEV__) console.log(`[fetchNarrationPayload] wrote ${buf.byteLength} bytes to ${file.uri}`);
               const cleanup = () => { try { file.delete(); } catch {} };
@@ -1108,7 +1118,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // location stream alive when the screen locks (iOS uses the "location"
       // background mode; Android keeps the process alive via the foreground
       // service notification we configure here).
+      // Compare-and-swap handoff: capture any pre-existing callback so we can
+      // warn if a previous walk didn't finish teardown before we started again.
+      // Storing our callback in walkSessionCallbackRef allows stopWalk to do a
+      // precise CAS and avoid clearing a callback that belongs to a newer session.
+      const prevCallback = activeLocationCallback;
       activeLocationCallback = handleLocationUpdate;
+      walkSessionCallbackRef.current = handleLocationUpdate;
+      if (prevCallback !== null) {
+        if (__DEV__) console.warn("[WalkMode] startWalk: activeLocationCallback was non-null — prior walk may not have cleaned up fully");
+      }
       try {
         const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(
           BACKGROUND_LOCATION_TASK,
@@ -1174,6 +1193,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     isWalkingRef.current = false;
     setIsWalking(false);
     addWalkBreadcrumb("walk stopped");
+    // Clear the lock-screen widget synchronously as the very first side-effect
+    // so that any React effect that re-renders due to narration state settling
+    // will see isWalkingRef.current === false and skip the setNowPlaying call,
+    // preventing a race where a late effect re-instates the widget after stopWalk.
+    if (nowPlayingUnsubRef.current) {
+      nowPlayingUnsubRef.current();
+      nowPlayingUnsubRef.current = null;
+    }
+    NowPlaying.clear();
     narration.stop();
     // Discard any prefetch that was in-flight or cached when the walk ended.
     // The in-flight guard (isWalkingRef.current check in the async closure) will
@@ -1185,13 +1213,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
     prefetchedNarrationRef.current = null;
     prefetchInFlightRef.current = null;
-    // Tear down the lock-screen widget and unbind remote commands so nothing
-    // is left in the Now Playing slot once Walk Mode ends.
-    if (nowPlayingUnsubRef.current) {
-      nowPlayingUnsubRef.current();
-      nowPlayingUnsubRef.current = null;
-    }
-    NowPlaying.clear();
     if (watchRef.current) {
       try { watchRef.current.remove(); } catch {}
       watchRef.current = null;
@@ -1203,7 +1224,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (Platform.OS !== "web") {
       // Tear down the background task so the foreground-service notification
       // disappears and we stop draining battery the moment the walk ends.
-      activeLocationCallback = null;
+      // Compare-and-swap: only clear the module-level callback if it still
+      // belongs to this walk session. If a rapid stop-then-start already
+      // installed a new callback, leave it untouched so the new walk keeps
+      // receiving GPS events.
+      if (activeLocationCallback === walkSessionCallbackRef.current) {
+        activeLocationCallback = null;
+      } else if (__DEV__ && walkSessionCallbackRef.current !== null) {
+        console.warn("[WalkMode] stopWalk: activeLocationCallback was replaced by a newer session — skipping clear");
+      }
+      walkSessionCallbackRef.current = null;
       Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
         .then((running) => {
           if (running) {

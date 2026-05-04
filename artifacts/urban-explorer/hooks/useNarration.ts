@@ -201,6 +201,10 @@ export function useNarration() {
 
       const sub = player.addListener("playbackStatusUpdate", (status: AudioStatus) => {
         if (speechGenRef.current !== myGen) return;
+        // Null-check: if teardownActive already ran (currentSubRef cleared before
+        // player.remove()), this is a stale event fired by the OS during teardown.
+        // Exit early rather than risk calling remove() on an already-removed player.
+        if (!currentSubRef.current) return;
         if (status.didJustFinish) {
           if (__DEV__) console.log(`[narration audio] didJustFinish gen=${myGen}`);
           onFinish();
