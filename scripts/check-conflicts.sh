@@ -2,7 +2,7 @@
 # Scan source files for unresolved git merge conflict markers.
 # Fails with a non-zero exit code if any are found.
 
-DIRS="artifacts/urban-explorer artifacts/api-server"
+DIRS="artifacts/urban-explorer artifacts/api-server lib"
 PATTERN='^(<<<<<<<|=======|>>>>>>>)'
 EXTENSIONS='--include=*.ts --include=*.tsx --include=*.js --include=*.mjs --include=*.jsx'
 
