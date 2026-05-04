@@ -56,6 +56,7 @@ export interface Strings {
     startExploringDetail: string;
     locationNotFound: string;
     locationServiceBusy: string;
+    stillLoading: string;
   };
   saved: {
     title: string;
@@ -304,6 +305,7 @@ const en: Strings = {
     startExploringDetail: "Tap the compass to discover interesting places around you",
     locationNotFound: "Couldn't find that location. Try being more specific.",
     locationServiceBusy: "Location service is temporarily unavailable — try again in a moment.",
+    stillLoading: "Taking longer than usual…",
   },
   saved: {
     title: "Saved",
@@ -576,6 +578,7 @@ const es: Strings = {
     locationNotFound: "No encontramos esa ubicación. Intenta ser más específico.",
     locationServiceBusy:
       "El servicio de ubicación no está disponible — inténtalo de nuevo en un momento.",
+    stillLoading: "Tarda más de lo habitual…",
   },
   saved: {
     title: "Guardados",
@@ -849,6 +852,7 @@ const fr: Strings = {
     locationNotFound: "Impossible de trouver ce lieu. Essayez d'être plus précis.",
     locationServiceBusy:
       "Service de localisation indisponible — réessayez dans un instant.",
+    stillLoading: "Plus long que d'habitude…",
   },
   saved: {
     title: "Enregistrés",
@@ -1121,6 +1125,7 @@ const de: Strings = {
     locationNotFound: "Ort nicht gefunden. Sei etwas genauer.",
     locationServiceBusy:
       "Standortdienst gerade nicht verfügbar — bitte gleich erneut versuchen.",
+    stillLoading: "Dauert länger als üblich…",
   },
   saved: {
     title: "Gespeichert",
@@ -1393,6 +1398,7 @@ const it: Strings = {
     locationNotFound: "Non abbiamo trovato quel luogo. Prova a essere più specifico.",
     locationServiceBusy:
       "Servizio di localizzazione non disponibile — riprova tra poco.",
+    stillLoading: "Ci vuole più del solito…",
   },
   saved: {
     title: "Salvati",
@@ -1665,6 +1671,7 @@ const pt: Strings = {
     locationNotFound: "Não encontramos esse local. Tente ser mais específico.",
     locationServiceBusy:
       "Serviço de localização indisponível — tente novamente em instantes.",
+    stillLoading: "Demorando mais do que o normal…",
   },
   saved: {
     title: "Salvos",
@@ -1936,6 +1943,7 @@ const nl: Strings = {
     startExploringDetail: "Tik op het kompas om interessante plekken te ontdekken",
     locationNotFound: "Locatie niet gevonden. Probeer specifieker te zijn.",
     locationServiceBusy: "Locatiedienst niet beschikbaar — probeer het zo opnieuw.",
+    stillLoading: "Duurt langer dan gebruikelijk…",
   },
   saved: {
     title: "Opgeslagen",
@@ -2207,6 +2215,7 @@ const ja: Strings = {
     startExploringDetail: "コンパスをタップして、まわりの面白い場所を発見しよう",
     locationNotFound: "その場所が見つかりませんでした。もう少し具体的に入力してください。",
     locationServiceBusy: "位置情報サービスが利用できません — しばらくしてから再試行してください。",
+    stillLoading: "いつもより時間がかかっています…",
   },
   saved: {
     title: "保存済み",
@@ -2478,6 +2487,7 @@ const ko: Strings = {
     startExploringDetail: "나침반을 눌러 주변의 흥미로운 장소를 발견하세요",
     locationNotFound: "해당 위치를 찾지 못했어요. 더 구체적으로 입력해 주세요.",
     locationServiceBusy: "위치 서비스가 일시적으로 사용 불가합니다 — 잠시 후 다시 시도해 주세요.",
+    stillLoading: "평소보다 오래 걸리고 있어요…",
   },
   saved: {
     title: "저장됨",
@@ -2748,6 +2758,7 @@ const zh: Strings = {
     startExploringDetail: "点按指南针，发现身边有趣的地点",
     locationNotFound: "找不到该位置，请尝试更具体一些。",
     locationServiceBusy: "定位服务暂时不可用 — 请稍后再试。",
+    stillLoading: "比平时慢一些…",
   },
   saved: {
     title: "已保存",

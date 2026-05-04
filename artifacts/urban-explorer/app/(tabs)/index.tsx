@@ -191,6 +191,17 @@ export default function ExploreScreen() {
     return [...filtered].sort((a, b) => (b.netScore ?? 0) - (a.netScore ?? 0));
   }, [places, activeFilters]);
 
+  const [showStillLoading, setShowStillLoading] = useState(false);
+
+  useEffect(() => {
+    if (discoverMutation.isPending) {
+      const timer = setTimeout(() => setShowStillLoading(true), 10_000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowStillLoading(false);
+    }
+  }, [discoverMutation.isPending]);
+
   const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } = useRatingPaceWarning();
 
   const WALK_BANNER_KEY = STARTUP_KEYS.walkBannerDismissed;
@@ -1050,6 +1061,14 @@ export default function ExploreScreen() {
               >
                 <PlaceCardSkeleton count={4} />
                 <LoadingMessages variant="discovery" />
+                {showStillLoading ? (
+                  <Animated.Text
+                    entering={FadeIn.duration(600)}
+                    style={[styles.stillLoadingText, { color: colors.mutedForeground }]}
+                  >
+                    {t.explore.stillLoading}
+                  </Animated.Text>
+                ) : null}
               </Animated.View>
             ) : discoverMutation.isError ? (
               <View style={styles.emptyContainer}>
@@ -1332,6 +1351,13 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     gap: 16,
     alignItems: "stretch",
+  },
+  stillLoadingText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    opacity: 0.7,
+    marginTop: 4,
   },
   emptyContainer: {
     alignItems: "center",
