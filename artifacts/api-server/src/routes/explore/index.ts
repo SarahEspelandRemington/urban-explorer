@@ -451,6 +451,20 @@ async function geocodeNearLocation(address: string): Promise<{ lat: number; lon:
 const NOMINATIM_MIN_INTERVAL_MS = 1100; // Nominatim ToS: max 1 req/sec
 let lastNominatimCallAt = 0;
 
+// Schedule a single Nominatim call to be issued at least NOMINATIM_MIN_INTERVAL_MS
+// after the previous one. Claims a time slot synchronously so that multiple parallel
+// callers (e.g. Promise.allSettled) each get their own non-overlapping slot, then
+// waits asynchronously until that slot arrives before calling fn().
+function scheduleNominatimCall<T>(fn: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const earliest = lastNominatimCallAt + NOMINATIM_MIN_INTERVAL_MS;
+  const delay = Math.max(0, earliest - now);
+  lastNominatimCallAt = now + delay;
+  return new Promise<T>((resolve, reject) => {
+    setTimeout(() => fn().then(resolve, reject), delay);
+  });
+}
+
 async function verifyPlaceCoordinates(places: any[]): Promise<void> {
   // Only correct coords when the geocoded address is very far from the AI's claimed
   // position — 250m catches clear hallucinations (e.g., famous church claimed to be
@@ -465,32 +479,31 @@ async function verifyPlaceCoordinates(places: any[]): Promise<void> {
     (p) => typeof p.address === "string" && p.address.trim().length > 5,
   );
 
-  for (const p of candidates) {
-    // Respect Nominatim rate limit
-    const now = Date.now();
-    const wait = NOMINATIM_MIN_INTERVAL_MS - (now - lastNominatimCallAt);
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    lastNominatimCallAt = Date.now();
-
-    try {
-      const results = await nominatimSearch(p.address.trim(), 1, { countrycodes: "us" });
-      if (results.length === 0) continue;
-      const { lat, lon } = results[0];
-      const geocodedLat = parseFloat(lat);
-      const geocodedLon = parseFloat(lon);
-      if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) continue;
-      const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
-      if (dist > COORD_CORRECTION_THRESHOLD_M) {
-        // Coords don't match the address — replace and demote confidence.
-        p.latitude = geocodedLat;
-        p.longitude = geocodedLon;
-        p.confidence = "low";
-        p.coordSource = "nominatim-corrected";
-      }
-    } catch {
-      // keep AI coordinates on any failure
-    }
-  }
+  // Schedule all Nominatim lookups upfront so each candidate gets its own
+  // time slot (0 ms, 1100 ms, 2200 ms …). Promise.allSettled then waits for
+  // all of them concurrently — a single slow or failed lookup no longer
+  // blocks the rest, and the global rate-limit counter is updated atomically
+  // before any setTimeout fires so concurrent callers can't double-book slots.
+  await Promise.allSettled(
+    candidates.map((p) =>
+      scheduleNominatimCall(async () => {
+        const results = await nominatimSearch(p.address.trim(), 1, { countrycodes: "us" });
+        if (results.length === 0) return;
+        const { lat, lon } = results[0];
+        const geocodedLat = parseFloat(lat);
+        const geocodedLon = parseFloat(lon);
+        if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) return;
+        const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
+        if (dist > COORD_CORRECTION_THRESHOLD_M) {
+          // Coords don't match the address — replace and demote confidence.
+          p.latitude = geocodedLat;
+          p.longitude = geocodedLon;
+          p.confidence = "low";
+          p.coordSource = "nominatim-corrected";
+        }
+      }),
+    ),
+  );
 }
 
 async function postProcessPlaces(
@@ -1254,6 +1267,14 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     res.status(400).json({ error: "latitude and longitude are required" });
     return;
   }
+  if (latitude < -90 || latitude > 90) {
+    res.status(400).json({ error: "latitude must be between -90 and 90" });
+    return;
+  }
+  if (longitude < -180 || longitude > 180) {
+    res.status(400).json({ error: "longitude must be between -180 and 180" });
+    return;
+  }
 
   const cacheKey = `revgeo:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
@@ -1315,12 +1336,18 @@ router.post("/explore/investigate-address", async (req, res) => {
   let lng = providedLng;
   let canonicalAddress = trimmedAddress;
   if (typeof lat !== "number" || typeof lng !== "number") {
-    // Respect Nominatim's 1 req/sec rate limit (shared global counter).
-    const now = Date.now();
-    const wait = NOMINATIM_MIN_INTERVAL_MS - (now - lastNominatimCallAt);
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-    lastNominatimCallAt = Date.now();
-    const results = await nominatimSearch(trimmedAddress, 1, { addressdetails: "1" });
+    // Use the shared Nominatim slot scheduler so this request respects the
+    // global 1 req/sec rate limit alongside any concurrent discover or
+    // verifyPlaceCoordinates calls.
+    let results: NominatimResult[];
+    try {
+      results = await scheduleNominatimCall(() =>
+        nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
+      );
+    } catch {
+      res.status(503).json({ error: "Address lookup temporarily unavailable. Please try again." });
+      return;
+    }
     if (results.length === 0) {
       res.status(404).json({
         error:
@@ -1718,6 +1745,12 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: "Invalid request body" }); return; }
   const { placeName, category, summary, fact } = parsed.data;
 
+  // Abort controller wired to the response close event so that any in-flight
+  // audio conversion (e.g. ffmpeg via ensureCompatibleFormat) is cancelled
+  // immediately if the client disconnects, preventing orphaned temp files.
+  const abortController = new AbortController();
+  res.on("close", () => abortController.abort());
+
   // Voice is configurable via query param so we can A/B test without redeploying.
   // Defaults to "nova" — warm, conversational, energetic. Other good options for
   // walking-tour narration: "shimmer" (calm female), "fable" (British storyteller).
@@ -1787,10 +1820,14 @@ How to write for speech:
   }
 
   // Step 2: render narration text to natural-voice MP3 via OpenAI TTS.
+  // Pass the abort signal so a client disconnect immediately cancels the
+  // OpenAI request (and, if audio format conversion via ffmpeg were needed,
+  // would also kill the ffmpeg process and clean up its temp files).
   let audioBytes: Buffer;
   try {
-    audioBytes = await textToSpeech(narrationText, voice, "mp3");
+    audioBytes = await textToSpeech(narrationText, voice, "mp3", abortController.signal);
   } catch (err: any) {
+    if (abortController.signal.aborted) return;
     logger.error({ err, placeName, voice }, "TTS generation failed");
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
     res.status(status).json({ error: "Voice synthesis temporarily unavailable. Please try again." });
@@ -2530,5 +2567,27 @@ router.get("/explore/ratings", async (_req, res) => {
 router.get("/explore/walk-config", (_req, res) => {
   res.json(WALK_CONFIG);
 });
+
+// ---------------------------------------------------------------------------
+// TTL-based cache sweep — evict stale entries even if they are never accessed
+// again. Without this, llmCache, osmCache, and audioCache can accumulate
+// indefinitely on a long-running server. Each cache already checks TTL on
+// individual get() calls; this sweep ensures the memory is actually reclaimed.
+// ---------------------------------------------------------------------------
+setInterval(() => {
+  const now = Date.now();
+
+  for (const [key, entry] of llmCache) {
+    if (now - entry.timestamp > LLM_CACHE_TTL) llmCache.delete(key);
+  }
+
+  for (const [key, entry] of osmCache) {
+    if (now - entry.timestamp > OSM_CACHE_TTL) osmCache.delete(key);
+  }
+
+  for (const [key, entry] of audioCache) {
+    if (now - entry.timestamp > AUDIO_CACHE_TTL) audioCache.delete(key);
+  }
+}, 5 * 60 * 1000).unref(); // unref so the interval doesn't keep the process alive
 
 export default router;

@@ -60,15 +60,29 @@ export function detectAudioFormat(buffer: Buffer): AudioFormat {
 
 /**
  * Convert any audio/video format to WAV using ffmpeg.
+ *
+ * Pass an optional AbortSignal (e.g. from a request's `res.on('close', ...)` 
+ * handler) to kill the ffmpeg process and clean up temp files immediately if
+ * the caller is aborted or the client disconnects mid-conversion.
  */
-export async function convertToWav(audioBuffer: Buffer): Promise<Buffer> {
+export async function convertToWav(audioBuffer: Buffer, signal?: AbortSignal): Promise<Buffer> {
   const inputPath = join(tmpdir(), `input-${randomUUID()}`);
   const outputPath = join(tmpdir(), `output-${randomUUID()}.wav`);
+
+  const cleanup = async () => {
+    await unlink(inputPath).catch(() => {});
+    await unlink(outputPath).catch(() => {});
+  };
 
   try {
     await writeFile(inputPath, audioBuffer);
 
     await new Promise<void>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(new Error("ffmpeg conversion aborted"));
+        return;
+      }
+
       const ffmpeg = spawn("ffmpeg", [
         "-i", inputPath,
         "-vn",
@@ -80,31 +94,45 @@ export async function convertToWav(audioBuffer: Buffer): Promise<Buffer> {
         outputPath,
       ]);
 
+      const onAbort = () => {
+        ffmpeg.kill("SIGTERM");
+        reject(new Error("ffmpeg conversion aborted"));
+      };
+
+      signal?.addEventListener("abort", onAbort, { once: true });
+
       ffmpeg.stderr.on("data", () => {});
       ffmpeg.on("close", (code) => {
+        signal?.removeEventListener("abort", onAbort);
         if (code === 0) resolve();
         else reject(new Error(`ffmpeg exited with code ${code}`));
       });
-      ffmpeg.on("error", reject);
+      ffmpeg.on("error", (err) => {
+        signal?.removeEventListener("abort", onAbort);
+        reject(err);
+      });
     });
 
     return await readFile(outputPath);
   } finally {
-    await unlink(inputPath).catch(() => {});
-    await unlink(outputPath).catch(() => {});
+    await cleanup();
   }
 }
 
 /**
  * Auto-detect and convert audio to OpenAI-compatible format.
+ *
+ * Pass an optional AbortSignal to cancel ffmpeg mid-conversion and immediately
+ * clean up any temp files that were written (e.g. on client disconnect).
  */
 export async function ensureCompatibleFormat(
-  audioBuffer: Buffer
+  audioBuffer: Buffer,
+  signal?: AbortSignal,
 ): Promise<{ buffer: Buffer; format: "wav" | "mp3" }> {
   const detected = detectAudioFormat(audioBuffer);
   if (detected === "wav") return { buffer: audioBuffer, format: "wav" };
   if (detected === "mp3") return { buffer: audioBuffer, format: "mp3" };
-  const wavBuffer = await convertToWav(audioBuffer);
+  const wavBuffer = await convertToWav(audioBuffer, signal);
   return { buffer: wavBuffer, format: "wav" };
 }
 
@@ -170,21 +198,30 @@ export async function voiceChatStream(
   })();
 }
 
-/** Text-to-Speech using gpt-audio. */
+/** Text-to-Speech using gpt-audio.
+ *
+ * Pass an optional AbortSignal to cancel the request mid-flight (e.g. when
+ * the HTTP client disconnects). The underlying fetch to OpenAI is aborted and
+ * the caller receives an AbortError instead of waiting for the full response.
+ */
 export async function textToSpeech(
   text: string,
   voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy",
-  format: "wav" | "mp3" | "flac" | "opus" | "pcm16" = "wav"
+  format: "wav" | "mp3" | "flac" | "opus" | "pcm16" = "wav",
+  signal?: AbortSignal,
 ): Promise<Buffer> {
-  const response = await openai.chat.completions.create({
-    model: "gpt-audio",
-    modalities: ["text", "audio"],
-    audio: { voice, format },
-    messages: [
-      { role: "system", content: "You are an assistant that performs text-to-speech." },
-      { role: "user", content: `Repeat the following text verbatim: ${text}` },
-    ],
-  });
+  const response = await openai.chat.completions.create(
+    {
+      model: "gpt-audio",
+      modalities: ["text", "audio"],
+      audio: { voice, format },
+      messages: [
+        { role: "system", content: "You are an assistant that performs text-to-speech." },
+        { role: "user", content: `Repeat the following text verbatim: ${text}` },
+      ],
+    },
+    { signal },
+  );
   const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
   return Buffer.from(audioData, "base64");
 }
