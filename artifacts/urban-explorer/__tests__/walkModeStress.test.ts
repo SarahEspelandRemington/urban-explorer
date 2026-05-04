@@ -406,7 +406,14 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
       expect(result.kind).toBe("miss");
       expect(staleCleanup).toHaveBeenCalledTimes(1);
-      expect(events).toEqual(["STALE_DISCARD"]);
+      // consumePrefetchedNarration emits two events here on purpose:
+      //   1. STALE_DISCARD — the mismatched live entry was thrown away
+      //   2. MISS          — there's no usable payload for the requested place
+      // Both are meaningful in the prefetch dashboard (discards and misses are
+      // separate counters), so we assert the full sequence to keep this test
+      // honest about what the pipeline actually reports. See emit sites in
+      // narrationPrefetchPipeline.ts (~lines 408 and 422).
+      expect(events).toEqual(["STALE_DISCARD", "MISS"]);
     });
 
     test("stale text payload is dropped without cleanup (no temp file to delete)", () => {
