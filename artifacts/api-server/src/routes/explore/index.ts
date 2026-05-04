@@ -968,12 +968,12 @@ Here is one PERFECT example entry — use it as your quality benchmark for every
 
 Return ${placeCount} places. Quality beats quantity — if you can only find 6 places with genuinely strong, specific stories, return 6 rather than padding with weak entries. Keep all results within the immediate area (geographic filtering is applied automatically). Every fact should feel like a local secret — the kind of thing that makes someone stop on the sidewalk and look up.`;
 
-  // Hard cap the main discovery call.  The brainstorm + Overpass together can
-  // take up to ~13 s in full mode; give the main call 20 s so the total
-  // round-trip never exceeds ~33 s even in the worst case.  Client-side fetch
-  // has its own 30 s safety-net, so users will always see a retry prompt rather
-  // than an infinite spinner.
-  const DISCOVER_LLM_TIMEOUT_MS = 20_000;
+  // Hard cap the main discovery call.  Brainstorm and Overpass run in parallel
+  // (Promise.all above), so the parallel phase takes max(4 s, 9 s) = 9 s in
+  // full mode (3 s in quick).  A 15 s LLM cap keeps the total at ~24 s in the
+  // worst case, satisfying the ~25 s end-to-end SLA.  The client-side fetch
+  // has an explicit 25 s safety-net so users always see a retry prompt.
+  const DISCOVER_LLM_TIMEOUT_MS = 15_000;
   const discoverAbort = new AbortController();
   const discoverTimer = setTimeout(() => discoverAbort.abort(), DISCOVER_LLM_TIMEOUT_MS);
   // Cancel in-flight call immediately when the client navigates away.
