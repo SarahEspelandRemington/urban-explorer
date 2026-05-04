@@ -19,7 +19,17 @@ import { getCategoryIcon } from "@/constants/categories";
 import { useColors } from "@/hooks/useColors";
 
 // Module-level cache so geocoded addresses survive across re-renders.
+// Capped at MAX_GEOCODE_CACHE_SIZE entries; oldest entries are evicted first.
+const MAX_GEOCODE_CACHE_SIZE = 200;
 const geocodeCache = new Map<string, { latitude: number; longitude: number }>();
+
+function setCachedGeocode(key: string, value: { latitude: number; longitude: number }): void {
+  if (geocodeCache.size >= MAX_GEOCODE_CACHE_SIZE) {
+    const firstKey = geocodeCache.keys().next().value;
+    if (firstKey !== undefined) geocodeCache.delete(firstKey);
+  }
+  geocodeCache.set(key, value);
+}
 
 interface Place {
   id: string;
@@ -99,7 +109,7 @@ export function PlaceMapView({
               latitude: results[0].latitude,
               longitude: results[0].longitude,
             };
-            geocodeCache.set(cacheKey, coords);
+            setCachedGeocode(cacheKey, coords);
             setGeocodedCoords((prev) => ({ ...prev, [place.id]: coords }));
           }
         } catch {

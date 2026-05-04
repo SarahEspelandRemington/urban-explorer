@@ -225,6 +225,26 @@ export default function ExploreScreen() {
     [recordRating],
   );
 
+  const handleToggleExpand = useCallback((itemId: string, isExpanded: boolean) => {
+    setExpandedId(isExpanded ? null : itemId);
+  }, []);
+
+  const renderPlaceItem = useCallback(
+    ({ item, index }: { item: DiscoveredPlace; index: number }) => {
+      const isExpanded = expandedId === item.id || (expandedId === null && index === 0);
+      return (
+        <PlaceCard
+          place={item}
+          index={index}
+          expanded={isExpanded}
+          onToggleExpand={handleToggleExpand}
+          onRate={handlePlaceRated}
+        />
+      );
+    },
+    [expandedId, handleToggleExpand, handlePlaceRated],
+  );
+
   const effectiveLatitude = manualCoords?.latitude ?? location?.coords.latitude ?? 0;
   const effectiveLongitude = manualCoords?.longitude ?? location?.coords.longitude ?? 0;
   const hasCoords = !!(manualCoords || location);
@@ -234,13 +254,15 @@ export default function ExploreScreen() {
     setLocationCalibrating(false);
     const accuracyPref =
       Platform.OS === "web" ? Location.Accuracy.High : Location.Accuracy.BestForNavigation;
-    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> =>
-      Promise.race([
-        p,
-        new Promise<T>((_, reject) =>
-          setTimeout(() => reject(new Error("location-timeout")), ms),
-        ),
+    const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> => {
+      let timerId: ReturnType<typeof setTimeout> | undefined;
+      return Promise.race([
+        p.then((v) => { clearTimeout(timerId); return v; }),
+        new Promise<T>((_, reject) => {
+          timerId = setTimeout(() => reject(new Error("location-timeout")), ms);
+        }),
       ]);
+    };
     try {
       let first: Location.LocationObject;
       try {
@@ -296,13 +318,15 @@ export default function ExploreScreen() {
 
   // Continuously watch GPS so the location stays fresh as the user walks.
   // Only active when using real GPS (not a manually typed address).
+  const lastSetDriftRef = useRef(0);
+
   useEffect(() => {
     if (!permission?.granted || manualCoords) return;
     let sub: Location.LocationSubscription | null = null;
     let cancelled = false;
     (async () => {
       try {
-        sub = await Location.watchPositionAsync(
+        const resolved = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.Balanced,
             distanceInterval: 20,
@@ -318,10 +342,18 @@ export default function ExploreScreen() {
                 lastDiscoverCoordsRef.current.latitude,
                 lastDiscoverCoordsRef.current.longitude,
               );
-              setDriftMeters(d);
+              if (Math.abs(d - lastSetDriftRef.current) >= 10) {
+                lastSetDriftRef.current = d;
+                setDriftMeters(d);
+              }
             }
           },
         );
+        if (cancelled) {
+          resolved.remove();
+          return;
+        }
+        sub = resolved;
       } catch {
         // Silently ignore errors starting the watcher (e.g. permissions revoked mid-session).
       }
@@ -340,6 +372,7 @@ export default function ExploreScreen() {
       const requestId = ++discoverRequestRef.current;
       const r = radiusOverride ?? searchRadius;
       lastDiscoverCoordsRef.current = { latitude: lat, longitude: lng };
+      lastSetDriftRef.current = 0;
       setDriftMeters(0);
       setActiveFilters(new Set());
       setExpandedId(null);
@@ -861,25 +894,16 @@ export default function ExploreScreen() {
         <FlatList
           data={filteredPlaces}
           keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => {
-            const isExpanded = expandedId === item.id || (expandedId === null && index === 0);
-            return (
-              <PlaceCard
-                place={item}
-                index={index}
-                expanded={isExpanded}
-                onToggleExpand={() => {
-                  setExpandedId(isExpanded ? null : item.id);
-                }}
-                onRate={handlePlaceRated}
-              />
-            );
-          }}
+          renderItem={renderPlaceItem}
           contentContainerStyle={[
             styles.list,
             { paddingBottom: insets.bottom + webBottomInset + 90 },
           ]}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          windowSize={5}
+          maxToRenderPerBatch={8}
+          initialNumToRender={6}
           ListHeaderComponent={
             <View>
               {showWalkBanner ? (

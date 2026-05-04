@@ -62,7 +62,7 @@ interface PlaceCardProps {
   };
   index: number;
   expanded?: boolean;
-  onToggleExpand?: () => void;
+  onToggleExpand?: (id: string, isExpanded: boolean) => void;
   onRate?: (placeId: string, newRating: "up" | "down" | null, prevRating: "up" | "down" | null) => void;
   onSaveConfirm?: (saved: boolean) => void;
 }
@@ -233,7 +233,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    onToggleExpand?.();
+    onToggleExpand?.(place.id, expanded ?? false);
   };
 
   const saveLabel = saved ? `Remove ${place.name} from saved` : `Save ${place.name}`;
