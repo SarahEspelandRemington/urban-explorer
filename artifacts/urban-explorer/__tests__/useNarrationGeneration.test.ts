@@ -159,11 +159,14 @@ import { useNarration } from "../hooks/useNarration";
 //   ref[6]  currentCleanupRef
 //   ref[7]  currentSubRef
 //   ref[8]  audioWatchdogRef
-//   ref[9..11] audio watchdog bookkeeping
+//   ref[9]  audioWatchdogStartRef
+//   ref[10] audioWatchdogRemainingRef
+//   ref[11] audioWatchdogFireRef
 //   ref[12] teardownAllRef
 const REF_SPEAKING = 1;
 const REF_GEN = 3;
 const REF_QUEUE = 0;
+const REF_WATCHDOG_FIRE = 11;
 
 // Named with the `use` prefix so eslint-plugin-react-hooks treats it as a
 // custom hook (it calls useNarration internally). It is in fact only called
@@ -507,5 +510,108 @@ describe("useNarration — pause/resume suspend and resume the audio watchdog", 
     // speakingRef stays true throughout — onFinish never ran, so the
     // narration is still considered active and ready to resume.
     expect(getSpeaking()).toBe(true);
+  });
+});
+
+describe("useNarration — audio watchdog FIRES after 60s and unblocks the queue", () => {
+  beforeEach(() => { jest.useFakeTimers(); });
+  afterEach(() => { jest.useRealTimers(); });
+
+  // This is the missing-coverage path: the existing tests verify the
+  // watchdog gets cancelled on natural finish / on stop(), but if the
+  // FIRE path itself ever broke (e.g. someone removes the setTimeout, or
+  // the onFinish callback is hidden behind a never-true gen check) Walk
+  // Mode would deadlock for the rest of the walk on a corrupt MP3 with
+  // zero test signal. This test exercises the actual fire path.
+  test("a stalled audio narration auto-advances to the next item after 60s", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    // Only the first item should have begun playing. The second is queued.
+    expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(1);
+    expect(mockCreatedPlayers.length).toBe(1);
+    expect(mockCreatedPlayers[0].play).toHaveBeenCalledTimes(1);
+    expect(getQueueLength()).toBe(1);
+    expect(getSpeaking()).toBe(true);
+    // Exactly one timer is armed: the 60s watchdog for item 1.
+    expect(jest.getTimerCount()).toBe(1);
+
+    const genAfterFirst = getSpeechGen();
+
+    // Simulate a frozen player: never deliver didJustFinish, never deliver
+    // an error status. Just advance time past the 60s threshold.
+    jest.advanceTimersByTime(60_000);
+
+    // The watchdog must have:
+    //   1. invoked onFinish (which tore down the stuck player)
+    //   2. re-entered processQueue() and started item 2
+    //   3. captured a fresh generation for item 2
+    expect(mockCreatedPlayers[0].remove).toHaveBeenCalledTimes(1);
+    expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(2);
+    expect(mockCreatedPlayers.length).toBe(2);
+    expect(mockCreatedPlayers[1].play).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(true);
+    expect(getQueueLength()).toBe(0);
+    expect(getSpeechGen()).toBe(genAfterFirst + 1);
+  });
+
+  test("watchdog clears speakingRef when it fires with an empty queue", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("only", "file:///cache/only.mp3", "Only Place");
+    expect(getSpeaking()).toBe(true);
+    expect(jest.getTimerCount()).toBe(1);
+
+    jest.advanceTimersByTime(60_000);
+
+    // No follow-up item, so onFinish tore down the player and left the
+    // hook in an idle state — Walk Mode is unblocked, ready for the
+    // next narration request.
+    expect(mockCreatedPlayers[0].remove).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(false);
+    expect(getQueueLength()).toBe(0);
+    // The watchdog ref was cleared by clearAudioWatchdog inside teardownActive.
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test("a stale watchdog fire (after stop()) is gated by the gen check and does not double-tear-down", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    expect(mockCreatedPlayers.length).toBe(1);
+
+    // Capture the watchdog's fire callback BEFORE we tear anything down.
+    // armAudioWatchdog stores it in audioWatchdogFireRef so pause/resume can
+    // re-arm it; we use the same ref to simulate a "ghost" watchdog that
+    // somehow fires after stop() (e.g. a race where the timer fired into
+    // microtask queue right as stop was called).
+    const fire = ReactMock.__getRef(REF_WATCHDOG_FIRE).current as () => void;
+    expect(typeof fire).toBe("function");
+
+    const genBefore = getSpeechGen();
+    n.stop();
+
+    // stop() bumps generation, tears down the player exactly once, and
+    // clears the watchdog timer.
+    expect(getSpeechGen()).toBe(genBefore + 1);
+    expect(mockCreatedPlayers[0].remove).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(false);
+    expect(jest.getTimerCount()).toBe(0);
+
+    // Now invoke the captured fire callback directly. The first thing
+    // armAudioWatchdog's inner closure does is check
+    //   if (speechGenRef.current !== myGen) return;
+    // — so this MUST be a no-op. If the gen check ever regressed, fire()
+    // would call onFinish() → teardownActive() → player.remove() a second
+    // time AND re-enter processQueue() (firing a fresh utterance against
+    // an empty queue is harmless, but a double-remove on a real native
+    // AudioPlayer is a use-after-free).
+    fire();
+
+    expect(mockCreatedPlayers[0].remove).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(false);
+    expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(1);
   });
 });
