@@ -1513,9 +1513,14 @@ router.post("/explore/place-detail", async (req, res) => {
 
   const { placeName, latitude, longitude, category } = parsed.data;
 
+  const detailController = new AbortController();
+  const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
+  res.on("close", () => detailController.abort());
+
   const detailCacheKey = `detail:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
+    clearTimeout(detailTimeout);
     res.json(cachedDetail);
     return;
   }
@@ -1558,13 +1563,19 @@ Every detail should feel like a local secret worth knowing.`,
         },
       ],
       response_format: { type: "json_object" },
-    });
+    }, { signal: detailController.signal });
   } catch (err: any) {
+    clearTimeout(detailTimeout);
+    if (detailController.signal.aborted) {
+      if (!res.headersSent && res.socket?.writable) res.status(504).json({ error: "Place detail request timed out. Please try again." });
+      return;
+    }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
     res.status(status).json({ error: "Place detail service temporarily unavailable. Please try again." });
     return;
   }
 
+  clearTimeout(detailTimeout);
   const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate place details" });
@@ -1892,11 +1903,13 @@ router.post("/explore/deep-narration", async (req, res) => {
   // LLM call is cancelled immediately if the client disconnects, avoiding
   // wasted tokens and preventing the response from being sent to a gone client.
   const abortController = new AbortController();
+  const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
   const deepCacheKey = `deep-narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
+    clearTimeout(deepTimeout);
     res.json(cachedDeep);
     return;
   }
@@ -1930,12 +1943,17 @@ How to write for speech:
       ],
     }, { signal: abortController.signal });
   } catch (err: any) {
-    if (abortController.signal.aborted) return;
+    clearTimeout(deepTimeout);
+    if (abortController.signal.aborted) {
+      if (!res.headersSent && res.socket?.writable) res.status(504).json({ error: "Deep narration request timed out. Please try again." });
+      return;
+    }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
     res.status(status).json({ error: "Deep narration service temporarily unavailable. Please try again." });
     return;
   }
 
+  clearTimeout(deepTimeout);
   const content = response.choices[0]?.message?.content;
   if (!content) {
     res.status(500).json({ error: "Failed to generate deep narration" });
