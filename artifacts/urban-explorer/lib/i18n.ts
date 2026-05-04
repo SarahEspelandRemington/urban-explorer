@@ -2916,3 +2916,14 @@ export function getLocaleMeta(code: string): LocaleMeta {
     LOCALES.find((l) => l.code === DEFAULT_LOCALE)!
   );
 }
+
+export type MeasurementSystem = "metric" | "imperial";
+
+// English is the only locale that defaults to imperial units. Every other
+// locale we ship (es, fr, de, it, pt, nl, ja, ko, zh) is metric.
+// We only carry language-level codes (e.g. "en"), not regional variants like
+// "en-GB", so any future need to opt en-GB into metric would have to come
+// through an explicit user preference.
+export function getMeasurementSystem(code: string): MeasurementSystem {
+  return code === "en" ? "imperial" : "metric";
+}

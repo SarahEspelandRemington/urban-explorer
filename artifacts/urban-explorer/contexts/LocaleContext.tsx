@@ -15,9 +15,11 @@ import {
   LOCALES,
   TRANSLATIONS,
   getLocaleMeta,
+  getMeasurementSystem,
   getStrings,
   isLocaleCode,
   type LocaleMeta,
+  type MeasurementSystem,
   type Strings,
 } from "@/lib/i18n";
 
@@ -119,6 +121,12 @@ export function useLocale() {
 // `const t = useT();` and then `t.explore.discover`.
 export function useT(): Strings {
   return useLocale().t;
+}
+
+// Returns the measurement system ("metric" or "imperial") that should be used
+// to render distances and other quantities for the active locale.
+export function useMeasurementSystem(): MeasurementSystem {
+  return getMeasurementSystem(useLocale().locale);
 }
 
 // Re-export for any direct consumers that previously imported the type from

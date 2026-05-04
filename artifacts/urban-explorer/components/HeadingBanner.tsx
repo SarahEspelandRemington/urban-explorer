@@ -13,10 +13,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useHeading } from "@/contexts/HeadingContext";
-import { useT } from "@/contexts/LocaleContext";
+import { useMeasurementSystem, useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
+import type { MeasurementSystem } from "@/lib/i18n";
 
-function formatDistance(meters: number): string {
+function formatDistance(meters: number, system: MeasurementSystem): string {
+  if (system === "metric") {
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    const km = meters / 1000;
+    return `${km.toFixed(2)} km`;
+  }
   const feet = meters * 3.28084;
   if (feet < 528) return `${Math.round(feet)} ft`;
   const miles = meters * 0.000621371;
@@ -26,6 +32,7 @@ function formatDistance(meters: number): string {
 export function HeadingBanner() {
   const colors = useColors();
   const t = useT();
+  const measurementSystem = useMeasurementSystem();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const heading = useHeading();
@@ -90,7 +97,7 @@ export function HeadingBanner() {
             ? heading.distanceMeters != null
               ? t.headingBanner.headingToPlaceWithDistanceAccessibility(
                   headlinePlace.name,
-                  formatDistance(heading.distanceMeters),
+                  formatDistance(heading.distanceMeters, measurementSystem),
                 )
               : t.headingBanner.headingToPlaceAccessibility(headlinePlace.name)
             : t.headingBanner.nowPlayingDeepDivePlaceAccessibility(headlinePlace.name)
@@ -121,7 +128,7 @@ export function HeadingBanner() {
             </Text>
             {showNav && heading.distanceMeters != null && (
               <Text style={[styles.distance, { color: colors.primary }]}>
-                {formatDistance(heading.distanceMeters)}
+                {formatDistance(heading.distanceMeters, measurementSystem)}
                 {heading.cardinal ? ` · ${heading.cardinal}` : ""}
               </Text>
             )}
