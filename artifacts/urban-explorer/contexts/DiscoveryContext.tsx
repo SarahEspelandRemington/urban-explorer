@@ -16,13 +16,15 @@ export interface SavedPlace {
   netScore?: number;
   photoUrl?: string;
   savedAt: string;
+  note?: string;
 }
 
 interface DiscoveryContextType {
   savedPlaces: SavedPlace[];
-  savePlace: (place: Omit<SavedPlace, "savedAt">) => void;
+  savePlace: (place: Omit<SavedPlace, "savedAt" | "note">) => void;
   removePlace: (id: string) => void;
   isPlaceSaved: (id: string) => boolean;
+  updateNote: (id: string, note: string) => void;
 }
 
 const DiscoveryContext = createContext<DiscoveryContextType>({
@@ -30,6 +32,7 @@ const DiscoveryContext = createContext<DiscoveryContextType>({
   savePlace: () => {},
   removePlace: () => {},
   isPlaceSaved: () => false,
+  updateNote: () => {},
 });
 
 const STORAGE_KEY = "@urban_explorer_saved";
@@ -55,7 +58,7 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const savePlace = useCallback(
-    (place: Omit<SavedPlace, "savedAt">) => {
+    (place: Omit<SavedPlace, "savedAt" | "note">) => {
       setSavedPlaces((prev) => {
         if (prev.some((p) => p.id === place.id)) return prev;
         const updated = [{ ...place, savedAt: new Date().toISOString() }, ...prev];
@@ -82,8 +85,21 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
     [savedPlaces]
   );
 
+  const updateNote = useCallback(
+    (id: string, note: string) => {
+      setSavedPlaces((prev) => {
+        const updated = prev.map((p) =>
+          p.id === id ? { ...p, note: note || undefined } : p
+        );
+        persist(updated);
+        return updated;
+      });
+    },
+    [persist]
+  );
+
   return (
-    <DiscoveryContext.Provider value={{ savedPlaces, savePlace, removePlace, isPlaceSaved }}>
+    <DiscoveryContext.Provider value={{ savedPlaces, savePlace, removePlace, isPlaceSaved, updateNote }}>
       {children}
     </DiscoveryContext.Provider>
   );

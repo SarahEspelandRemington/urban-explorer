@@ -1,39 +1,127 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useCallback, useState } from "react";
-import { FlatList, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FlatList,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { NoteModal } from "@/components/NoteModal";
 import { PlaceCard } from "@/components/PlaceCard";
+import { SaveToast } from "@/components/SaveToast";
+import { getCategoryColor } from "@/constants/categories";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
 
+import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
+
+type SortMode = "newest" | "nearest";
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export default function SavedScreen() {
   const colors = useColors();
   const t = useT();
   const insets = useSafeAreaInsets();
-  const { savedPlaces } = useDiscovery();
+  const { savedPlaces, removePlace, updateNote } = useDiscovery();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("newest");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastSaved, setToastSaved] = useState(true);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const swipeOffsets = useRef<Record<string, number>>({});
 
   const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } =
     useRatingPaceWarning();
 
   const handlePlaceRated = useCallback(
     (_placeId: string, newRating: "up" | "down" | null) => {
-      if (newRating !== null) {
-        recordRating();
-      }
+      if (newRating !== null) recordRating();
     },
     [recordRating],
   );
 
+  // Acquire location for distance sort (best-effort, no permission prompt)
+  useEffect(() => {
+    Location.getForegroundPermissionsAsync().then(({ status }) => {
+      if (status !== "granted") return;
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        .then((pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }))
+        .catch(() => {});
+    });
+  }, []);
+
+  // Unique categories from saved places
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of savedPlaces) {
+      if (p.category) seen.add(p.category);
+    }
+    return Array.from(seen).sort();
+  }, [savedPlaces]);
+
+  // Filtered + sorted list
+  const filtered = useMemo(() => {
+    let list = [...savedPlaces];
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q) ||
+          (p.note && p.note.toLowerCase().includes(q)),
+      );
+    }
+    if (categoryFilter) {
+      list = list.filter((p) => p.category === categoryFilter);
+    }
+    if (sortMode === "nearest" && userLocation) {
+      list.sort(
+        (a, b) =>
+          haversineMeters(userLocation.lat, userLocation.lng, a.latitude, a.longitude) -
+          haversineMeters(userLocation.lat, userLocation.lng, b.latitude, b.longitude),
+      );
+    }
+    return list;
+  }, [savedPlaces, query, categoryFilter, sortMode, userLocation]);
+
+  const handleSaveConfirm = useCallback((wasSaved: boolean) => {
+    setToastSaved(wasSaved);
+    setToastVisible(false);
+    setTimeout(() => setToastVisible(true), 10);
+  }, []);
+
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
 
+  const editingPlace = editingNoteId ? savedPlaces.find((p) => p.id === editingNoteId) : null;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -44,25 +132,232 @@ export default function SavedScreen() {
           },
         ]}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>{t.saved.title}</Text>
-        <Text style={[styles.count, { color: colors.mutedForeground }]}>
-          {savedPlaces.length} {savedPlaces.length === 1 ? t.saved.placeOne : t.saved.placeMany}
-        </Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerLeft}>
+            <Text style={[styles.title, { color: colors.foreground }]}>{t.saved.title}</Text>
+            <Text style={[styles.count, { color: colors.mutedForeground }]}>
+              {filtered.length !== savedPlaces.length
+                ? `${filtered.length} of ${savedPlaces.length}`
+                : `${savedPlaces.length} ${savedPlaces.length === 1 ? t.saved.placeOne : t.saved.placeMany}`}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowMap((v) => !v);
+            }}
+            style={[
+              styles.mapToggleBtn,
+              {
+                backgroundColor: showMap ? colors.primary + "18" : colors.muted,
+                borderColor: showMap ? colors.primary + "40" : colors.border,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={showMap ? "Hide map" : "Show map"}
+            accessibilityState={{ selected: showMap }}
+          >
+            <Feather name="map" size={15} color={showMap ? colors.primary : colors.mutedForeground} />
+            <Text style={[styles.mapToggleText, { color: showMap ? colors.primary : colors.mutedForeground }]}>
+              {t.saved.mapToggle}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Search */}
+        <View style={[styles.searchRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+          <Feather name="search" size={15} color={colors.mutedForeground} style={{ opacity: 0.6 }} />
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t.saved.searchPlaceholder}
+            placeholderTextColor={colors.mutedForeground + "80"}
+            style={[styles.searchInput, { color: colors.foreground }]}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+          {query.length > 0 ? (
+            <Pressable onPress={() => setQuery("")} hitSlop={12}>
+              <Feather name="x" size={14} color={colors.mutedForeground} />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {/* Filters + Sort */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersRow}
+        >
+          {/* Sort buttons */}
+          <Pressable
+            onPress={() => setSortMode("newest")}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: sortMode === "newest" ? colors.primary : colors.muted,
+                borderColor: sortMode === "newest" ? colors.primary : colors.border,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: sortMode === "newest" }}
+          >
+            <Feather
+              name="clock"
+              size={12}
+              color={sortMode === "newest" ? colors.primaryForeground : colors.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                { color: sortMode === "newest" ? colors.primaryForeground : colors.mutedForeground },
+              ]}
+            >
+              {t.saved.sortNewest}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => setSortMode("nearest")}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: sortMode === "nearest" ? colors.primary : colors.muted,
+                borderColor: sortMode === "nearest" ? colors.primary : colors.border,
+                opacity: !userLocation ? 0.45 : 1,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: sortMode === "nearest" }}
+            disabled={!userLocation}
+          >
+            <Feather
+              name="navigation"
+              size={12}
+              color={sortMode === "nearest" ? colors.primaryForeground : colors.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.chipText,
+                { color: sortMode === "nearest" ? colors.primaryForeground : colors.mutedForeground },
+              ]}
+            >
+              {t.saved.sortNearest}
+            </Text>
+          </Pressable>
+
+          {/* Separator */}
+          <View style={[styles.chipSeparator, { backgroundColor: colors.border }]} />
+
+          {/* "All" category filter */}
+          <Pressable
+            onPress={() => setCategoryFilter(null)}
+            style={[
+              styles.chip,
+              {
+                backgroundColor: categoryFilter === null ? colors.foreground : colors.muted,
+                borderColor: categoryFilter === null ? colors.foreground : colors.border,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: categoryFilter === null }}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                { color: categoryFilter === null ? colors.background : colors.mutedForeground },
+              ]}
+            >
+              {t.saved.filterAll}
+            </Text>
+          </Pressable>
+
+          {categories.map((cat) => {
+            const active = categoryFilter === cat;
+            const catColor = getCategoryColor(cat, colors);
+            return (
+              <Pressable
+                key={cat}
+                onPress={() => setCategoryFilter(active ? null : cat)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active ? catColor + "20" : colors.muted,
+                    borderColor: active ? catColor + "60" : colors.border,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    { color: active ? catColor : colors.mutedForeground },
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
+      {/* Mini Map */}
+      {showMap && filtered.length > 0 ? (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+          style={[styles.mapContainer, { borderBottomColor: colors.border }]}
+        >
+          <MapView
+            style={styles.map}
+            provider={PROVIDER_DEFAULT}
+            initialRegion={{
+              latitude: filtered[0].latitude,
+              longitude: filtered[0].longitude,
+              latitudeDelta: 0.04,
+              longitudeDelta: 0.04,
+            }}
+            showsUserLocation
+          >
+            {filtered.map((place) => (
+              <Marker
+                key={place.id}
+                coordinate={{ latitude: place.latitude, longitude: place.longitude }}
+                title={place.name}
+                description={place.category}
+                pinColor={colors.primary}
+              />
+            ))}
+          </MapView>
+        </Animated.View>
+      ) : null}
+
+      {/* List */}
       <FlatList
-        data={savedPlaces}
+        data={filtered}
         keyExtractor={(item) => item.id}
         renderItem={({ item, index }) => {
           const isExpanded = expandedId === item.id;
           return (
-            <PlaceCard
-              place={item}
-              index={index}
-              expanded={isExpanded}
-              onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
-              onRate={handlePlaceRated}
-            />
+            <SwipeToDelete
+              onDelete={() => {
+                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                removePlace(item.id);
+              }}
+              label={t.saved.swipeToDelete}
+              colors={colors}
+            >
+              <PlaceCard
+                place={item}
+                index={index}
+                expanded={isExpanded}
+                onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
+                onRate={handlePlaceRated}
+                onSaveConfirm={handleSaveConfirm}
+              />
+            </SwipeToDelete>
           );
         }}
         contentContainerStyle={[
@@ -98,17 +393,100 @@ export default function SavedScreen() {
           <View style={styles.emptyContainer}>
             <Feather name="bookmark" size={40} color={colors.mutedForeground} />
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              {t.saved.emptyTitle}
+              {query || categoryFilter ? "No results" : t.saved.emptyTitle}
             </Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              {t.saved.emptyDetail}
+              {query || categoryFilter
+                ? "Try a different search or filter"
+                : t.saved.emptyDetail}
             </Text>
           </View>
         }
       />
+
+      {/* Note edit modal (from long-press in saved list) */}
+      {editingPlace ? (
+        <NoteModal
+          visible={!!editingNoteId}
+          placeName={editingPlace.name}
+          existingNote={editingPlace.note}
+          onSave={(note) => {
+            updateNote(editingPlace.id, note);
+            setEditingNoteId(null);
+          }}
+          onSkip={() => setEditingNoteId(null)}
+        />
+      ) : null}
+
+      {/* Save confirmation toast */}
+      <SaveToast
+        visible={toastVisible}
+        label={toastSaved ? t.saved.savedConfirm : t.saved.removedConfirm}
+        onHide={() => setToastVisible(false)}
+      />
     </View>
   );
 }
+
+// ─── Swipe-to-delete wrapper ──────────────────────────────────────────────────
+
+interface SwipeToDeleteProps {
+  children: React.ReactNode;
+  onDelete: () => void;
+  label: string;
+  colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
+}
+
+function SwipeToDelete({ children, onDelete, label, colors }: SwipeToDeleteProps) {
+  const [revealed, setRevealed] = useState(false);
+  const startX = useRef<number>(0);
+  const THRESHOLD = 80;
+
+  if (Platform.OS === "web") {
+    return <>{children}</>;
+  }
+
+  return (
+    <View style={styles.swipeWrapper}>
+      {revealed ? (
+        <Animated.View
+          entering={FadeIn.duration(120)}
+          style={[styles.deleteAction, { backgroundColor: colors.destructive }]}
+        >
+          <Pressable
+            onPress={() => {
+              setRevealed(false);
+              onDelete();
+            }}
+            style={styles.deleteActionInner}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+          >
+            <Feather name="trash-2" size={18} color="#fff" />
+            <Text style={styles.deleteActionText}>{label}</Text>
+          </Pressable>
+        </Animated.View>
+      ) : null}
+      <View
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={(e) => { startX.current = e.nativeEvent.pageX; }}
+        onResponderRelease={(e) => {
+          const dx = startX.current - e.nativeEvent.pageX;
+          if (dx > THRESHOLD) {
+            setRevealed(true);
+          } else if (dx < -20) {
+            setRevealed(false);
+          }
+        }}
+        style={revealed ? styles.swipeContentRevealed : undefined}
+      >
+        {children}
+      </View>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
@@ -116,8 +494,17 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 14,
+    paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  headerLeft: {
+    gap: 2,
   },
   title: {
     fontSize: 28,
@@ -128,6 +515,68 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     marginTop: 2,
+  },
+  mapToggleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  mapToggleText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    padding: 0,
+  },
+  filtersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingBottom: 2,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  chipSeparator: {
+    width: 1,
+    height: 20,
+    borderRadius: 1,
+    marginHorizontal: 2,
+  },
+  mapContainer: {
+    height: 200,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  map: {
+    flex: 1,
   },
   list: {
     padding: 16,
@@ -167,5 +616,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: "#92400e",
+  },
+  swipeWrapper: {
+    position: "relative",
+  },
+  swipeContentRevealed: {
+    transform: [{ translateX: -100 }],
+  },
+  deleteAction: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 100,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 0,
+  },
+  deleteActionInner: {
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 12,
+  },
+  deleteActionText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
   },
 });

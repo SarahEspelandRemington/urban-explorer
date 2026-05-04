@@ -16,9 +16,11 @@ import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LoadingMessages } from "@/components/LoadingMessages";
+import { NoteModal } from "@/components/NoteModal";
 import { PlaceActions } from "@/components/PlaceActions";
 import { PlaceDetailMap } from "@/components/PlaceDetailMap";
 import { PlaceTimeline } from "@/components/PlaceTimeline";
+import { SaveToast } from "@/components/SaveToast";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useT } from "@/contexts/LocaleContext";
@@ -30,7 +32,10 @@ export default function PlaceDetailScreen() {
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { savePlace, removePlace, isPlaceSaved } = useDiscovery();
+  const { savePlace, removePlace, isPlaceSaved, updateNote } = useDiscovery();
+  const [toastVisible, setToastVisible] = React.useState(false);
+  const [toastSaved, setToastSaved] = React.useState(true);
+  const [noteModalVisible, setNoteModalVisible] = React.useState(false);
 
   const params = useLocalSearchParams<{
     name: string;
@@ -100,6 +105,9 @@ export default function PlaceDetailScreen() {
     }
     if (saved) {
       removePlace(placeId);
+      setToastSaved(false);
+      setToastVisible(false);
+      setTimeout(() => setToastVisible(true), 10);
     } else {
       savePlace({
         id: placeId,
@@ -111,6 +119,10 @@ export default function PlaceDetailScreen() {
         latitude: lat,
         longitude: lng,
       });
+      setToastSaved(true);
+      setToastVisible(false);
+      setTimeout(() => setToastVisible(true), 10);
+      setNoteModalVisible(true);
     }
   };
 
@@ -376,6 +388,23 @@ export default function PlaceDetailScreen() {
         ) : null}
         </View>
       </ScrollView>
+
+      <NoteModal
+        visible={noteModalVisible}
+        placeName={params.name}
+        existingNote={undefined}
+        onSave={(note) => {
+          updateNote(placeId, note);
+          setNoteModalVisible(false);
+        }}
+        onSkip={() => setNoteModalVisible(false)}
+      />
+
+      <SaveToast
+        visible={toastVisible}
+        label={toastSaved ? t.saved.savedConfirm : t.saved.removedConfirm}
+        onHide={() => setToastVisible(false)}
+      />
     </View>
   );
 }
