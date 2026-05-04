@@ -9,6 +9,11 @@ const SENTRY_PROJECT = process.env.SENTRY_PROJECT;
 
 const FALLBACK_METRIC_MRI = "c:custom/narration.audio_fallback@none";
 const TOTAL_METRIC_MRI = "c:custom/narration.prefetch_event@none";
+// Dedicated "narrations that actually started playback" counter. Used as
+// the Panel 3 denominator so the rate isn't inflated by lifecycle events
+// (DEDUPE / STOP_WALK_DISCARD) that ride on narration.prefetch_event.
+// Emitted by trackNarrationPlayed in artifacts/urban-explorer/lib/sentryWalk.ts.
+const PLAYED_METRIC_MRI = "c:custom/narration.played@none";
 const FALLBACK_AGGREGATE_FOR_ALERT = `sum(${FALLBACK_METRIC_MRI})`;
 
 // Reason tag values emitted by trackNarrationFallback. Kept here so the alert
@@ -195,9 +200,17 @@ async function createDashboard(
             orderby: "",
           },
           {
+            // Denominator: narrations that actually started playback. We
+            // intentionally do NOT use narration.prefetch_event here — that
+            // counter also includes lifecycle events (DEDUPE,
+            // STOP_WALK_DISCARD) that over-count true narrations and make
+            // the rate look better than reality. narration.played is
+            // emitted once per queued item that successfully began playing
+            // (audio play() returned without throwing, or speech.speak /
+            // window.speechSynthesis.speak was invoked).
             name: "B",
-            fields: [`sum(${TOTAL_METRIC_MRI})`],
-            aggregates: [`sum(${TOTAL_METRIC_MRI})`],
+            fields: [`sum(${PLAYED_METRIC_MRI})`],
+            aggregates: [`sum(${PLAYED_METRIC_MRI})`],
             columns: [],
             conditions: "",
             orderby: "",

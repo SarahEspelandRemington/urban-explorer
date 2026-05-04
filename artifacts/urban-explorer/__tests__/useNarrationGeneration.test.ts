@@ -156,12 +156,17 @@ jest.mock("../lib/sentryWalk", () => ({
   addWalkBreadcrumb: jest.fn(),
   setWalkScope: jest.fn(),
   trackPrefetchEvent: jest.fn(),
+  trackNarrationPlayed: jest.fn(),
 }));
 
 import { useNarration } from "../hooks/useNarration";
-import { trackNarrationFallback as mockedTrackNarrationFallback } from "../lib/sentryWalk";
+import {
+  trackNarrationFallback as mockedTrackNarrationFallback,
+  trackNarrationPlayed as mockedTrackNarrationPlayed,
+} from "../lib/sentryWalk";
 
 const mockTrackNarrationFallback = mockedTrackNarrationFallback as jest.Mock;
+const mockTrackNarrationPlayed = mockedTrackNarrationPlayed as jest.Mock;
 
 // ─── Test harness ────────────────────────────────────────────────────────────
 
@@ -196,6 +201,7 @@ function useFreshNarrationHook() {
   mockCreateAudioPlayer.mockClear();
   mockCreatedPlayers.length = 0;
   mockTrackNarrationFallback.mockClear();
+  mockTrackNarrationPlayed.mockClear();
   // Default: createAudioPlayer returns a working fake player. Individual
   // tests (e.g. the "playback_create" failure path) override this with
   // mockImplementationOnce to throw.
@@ -975,5 +981,107 @@ describe("useNarration — web utterance.onerror emits 'text_web_error'", () => 
     expect(mockTrackNarrationFallback).toHaveBeenCalledWith("text_web_error");
     expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
     expect(getSpeaking()).toBe(false);
+  });
+});
+
+// ─── trackNarrationPlayed denominator emission ───────────────────────────────
+//
+// The Walk Mode Audio Fallback dashboard's Panel 3 ("Audio fallback rate %")
+// divides sum(narration.audio_fallback) by sum(narration.played). For the
+// rate to be trustworthy, narration.played must fire exactly once per queued
+// item that successfully started playback — and NEVER fire for items that
+// failed before playback (playback_create / playback_play throws, text_empty
+// guard). These tests pin each path so a regression that drops or
+// double-counts the denominator would fail loudly here, before it skews the
+// production dashboard.
+
+describe("useNarration — trackNarrationPlayed fires once per actually-started playback", () => {
+  beforeEach(() => { jest.useFakeTimers(); });
+  afterEach(() => { jest.useRealTimers(); });
+
+  test("audio path: emits 'audio' once after player.play() succeeds", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+
+    expect(mockCreatedPlayers.length).toBe(1);
+    expect(mockCreatedPlayers[0].play).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("audio");
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
+  });
+
+  test("native text path: emits 'text' once after Speech.speak is invoked", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueue("p1", "first text", "Place One");
+
+    expect(mockSpeechSpeak).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("text");
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
+  });
+
+  test("playback_create failure does NOT emit narration.played (denominator stays clean)", () => {
+    const n = useFreshNarrationHook();
+
+    // First enqueueAudio: createAudioPlayer throws, so play() is never
+    // reached. No narration.played should fire for item 1. Item 2 plays
+    // normally and contributes one narration.played("audio").
+    mockCreateAudioPlayer.mockImplementationOnce(() => {
+      throw new Error("invalid file://");
+    });
+    n.enqueueAudio("p1", "file:///cache/bad.mp3", "Place One");
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_create");
+    // Exactly one narration.played, for item 2 only.
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("audio");
+  });
+
+  test("playback_play (player.play() throws) does NOT emit narration.played", () => {
+    const n = useFreshNarrationHook();
+
+    // Item 1: play() throws. Item 2: works normally. Only item 2 counts.
+    mockCreateAudioPlayer.mockImplementationOnce(() => {
+      const listeners: Listener[] = [];
+      const player: FakePlayer = {
+        play: jest.fn(() => { throw new Error("audio session lost"); }),
+        pause: jest.fn(),
+        remove: jest.fn(),
+        addListener: jest.fn((_event: string, l: Listener) => {
+          listeners.push(l);
+          const subRemove = jest.fn(() => {
+            const idx = listeners.indexOf(l);
+            if (idx >= 0) listeners.splice(idx, 1);
+          });
+          player.__subRemove = subRemove;
+          return { remove: subRemove };
+        }),
+        __listeners: listeners,
+        __subRemove: null,
+      };
+      mockCreatedPlayers.push(player);
+      return player;
+    });
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_play");
+    // Exactly one narration.played, for item 2 only.
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("audio");
+  });
+
+  test("text_empty guard does NOT emit narration.played", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueue("p1", "", "Place One");
+    n.enqueue("p2", "real text", "Place Two");
+
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("text_empty");
+    // Only item 2 actually started speaking, so only one narration.played.
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("text");
   });
 });

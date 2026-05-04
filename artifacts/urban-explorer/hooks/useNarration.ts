@@ -3,7 +3,7 @@ import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 
-import { trackNarrationFallback } from "../lib/sentryWalk";
+import { trackNarrationFallback, trackNarrationPlayed } from "../lib/sentryWalk";
 
 interface NarrationItem {
   id: string;
@@ -241,6 +241,11 @@ export function useNarration() {
 
       try {
         player.play();
+        // Audio playback successfully started — count it toward the
+        // dashboard's "narrations played" denominator. Emitted only after
+        // play() returns without throwing, so playback_create / playback_play
+        // failures stay out of the denominator (the rate stays meaningful).
+        try { trackNarrationPlayed("audio"); } catch {}
       } catch (err) {
         if (__DEV__) console.log(`[narration audio] play() threw:`, err);
         // Surface the silent skip to the audio-fallback dashboard. play()
@@ -295,6 +300,10 @@ export function useNarration() {
       if (selectedVoice) utterance.voice = selectedVoice;
 
       window.speechSynthesis.speak(utterance);
+      // Web text playback successfully started (synchronous handoff to the
+      // browser's speech synth) — count it toward the dashboard's
+      // "narrations played" denominator.
+      try { trackNarrationPlayed("text"); } catch {}
 
       retryTimerRef.current = setTimeout(() => {
         if (speakingRef.current && !window.speechSynthesis.speaking) {
@@ -311,6 +320,10 @@ export function useNarration() {
         rate: 0.9,
         pitch: 1.05,
         onDone: () => { if (__DEV__) console.log(`[Speech.speak] onDone gen=${myGen}`); onFinish(); },
+        // Note: trackNarrationPlayed("text") is fired synchronously *after*
+        // Speech.speak returns below. expo-speech does not throw for typical
+        // failures (it surfaces them via onError instead), so the call
+        // returning is the closest we get to "playback started" on native.
         onStopped: () => {
           // On iOS, Speech.stop() triggers onStopped (not onDone/onError).
           // Guard with the generation check so a stop() for a previous utterance
@@ -333,6 +346,11 @@ export function useNarration() {
           onFinish();
         },
       });
+      // Native text playback was handed to expo-speech without throwing —
+      // count it toward the dashboard's "narrations played" denominator.
+      // (Speech.speak surfaces failures via onError, not by throwing, so
+      // this is the closest synchronous "started" signal we have.)
+      try { trackNarrationPlayed("text"); } catch {}
     }
   }, [teardownActive, armAudioWatchdog]);
 

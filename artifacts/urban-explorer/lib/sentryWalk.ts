@@ -121,6 +121,37 @@ export function trackPrefetchEvent(event: PrefetchTelemetryEvent): void {
 }
 
 /**
+ * Increment the "narration actually started playback" counter. Emitted from
+ * `hooks/useNarration.ts` once per queued item that successfully began
+ * playing — i.e. after `player.play()` returns without throwing on the audio
+ * path, after `Speech.speak(...)` is invoked on the native text path, and
+ * after `window.speechSynthesis.speak(...)` is invoked on the web text path.
+ *
+ * Intentionally NOT incremented for items that never started:
+ *   - `playback_create` failures (createAudioPlayer threw before play)
+ *   - `playback_play` failures (play() itself threw)
+ *   - `text_empty` (no text payload, processQueue's empty-text guard fired)
+ *
+ * This is the dedicated denominator for the Walk Mode Audio Fallback
+ * dashboard's "Audio fallback rate %" panel. Before this counter existed the
+ * panel divided `sum(narration.audio_fallback)` by `sum(narration.prefetch_event)`,
+ * which over-counts true narrations because it also includes lifecycle
+ * events like `DEDUPE` and `STOP_WALK_DISCARD`. Counting only narrations
+ * that actually started playback gives a tight, trustworthy fallback rate.
+ *
+ * The `kind` tag is for diagnostic visibility (audio vs text playbacks); the
+ * dashboard equation sums across all kinds.
+ */
+export type NarrationPlayedKind = "audio" | "text";
+
+export function trackNarrationPlayed(kind: NarrationPlayedKind): void {
+  if (!DSN) return;
+  Sentry.metrics.increment("narration.played", 1, {
+    tags: { kind },
+  });
+}
+
+/**
  * Record a walk-lifecycle event as a Sentry breadcrumb.
  * Only call with opaque IDs and counts — never place names or coordinates.
  *
