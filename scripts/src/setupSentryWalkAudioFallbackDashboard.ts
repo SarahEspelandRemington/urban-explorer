@@ -2,10 +2,20 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SENTRY_HOST = process.env.SENTRY_HOST ?? "https://sentry.io";
-const SENTRY_AUTH_TOKEN = process.env.SENTRY_AUTH_TOKEN;
-const SENTRY_ORG = process.env.SENTRY_ORG;
-const SENTRY_PROJECT = process.env.SENTRY_PROJECT;
+import {
+  SENTRY_HOST,
+  type SentryDashboard,
+  type SentryAlertRule,
+  type AlertRuleSpec,
+  requireEnv,
+  sentryFetch,
+  getProject,
+  findExistingDashboard,
+  findExistingAlertRule,
+  deleteAlertRule,
+  getDetectionType,
+  upsertAlertRule,
+} from "./lib/sentry.js";
 
 const FALLBACK_METRIC_MRI = "c:custom/narration.audio_fallback@none";
 const TOTAL_METRIC_MRI = "c:custom/narration.prefetch_event@none";
@@ -66,106 +76,6 @@ const PLAYBACK_ALERT_NAME = "Walk Mode audio fallback rate (playback)";
 //
 // Set via the AUDIO_FALLBACK_ALERT_DETECTION_TYPE env var; defaults to "dynamic".
 const DETECTION_TYPE_ENV = "AUDIO_FALLBACK_ALERT_DETECTION_TYPE";
-type DetectionType = "dynamic" | "static";
-function getDetectionType(): DetectionType {
-  const raw = (process.env[DETECTION_TYPE_ENV] ?? "").trim().toLowerCase();
-  if (raw === "static") return "static";
-  if (raw === "" || raw === "dynamic") return "dynamic";
-  console.warn(
-    `Unknown ${DETECTION_TYPE_ENV}=${raw} — defaulting to "dynamic". Supported values: "dynamic" | "static".`,
-  );
-  return "dynamic";
-}
-
-interface SentryProject {
-  id: string;
-  slug: string;
-}
-
-interface SentryDashboard {
-  id: string;
-  title: string;
-}
-
-interface SentryAlertRule {
-  id: string;
-  name: string;
-}
-
-function requireEnv(): {
-  token: string;
-  org: string;
-  project: string;
-} {
-  const missing: string[] = [];
-  if (!SENTRY_AUTH_TOKEN) missing.push("SENTRY_AUTH_TOKEN");
-  if (!SENTRY_ORG) missing.push("SENTRY_ORG");
-  if (!SENTRY_PROJECT) missing.push("SENTRY_PROJECT");
-  if (missing.length > 0) {
-    console.error(
-      `Missing required env vars: ${missing.join(", ")}\n\n` +
-        `Set them and re-run. Required scopes on SENTRY_AUTH_TOKEN:\n` +
-        `  - org:read\n` +
-        `  - project:read\n` +
-        `  - project:write\n` +
-        `  - alerts:write\n\n` +
-        `Create an internal integration token at:\n` +
-        `  ${SENTRY_HOST}/settings/<org>/developer-settings/\n`,
-    );
-    process.exit(1);
-  }
-  return {
-    token: SENTRY_AUTH_TOKEN!,
-    org: SENTRY_ORG!,
-    project: SENTRY_PROJECT!,
-  };
-}
-
-async function sentryFetch<T>(
-  token: string,
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
-  const url = `${SENTRY_HOST}/api/0${path}`;
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(
-      `Sentry API ${init.method ?? "GET"} ${path} failed: ${res.status} ${res.statusText}\n${body}`,
-    );
-  }
-  return (await res.json()) as T;
-}
-
-async function getProject(
-  token: string,
-  org: string,
-  projectSlug: string,
-): Promise<SentryProject> {
-  return sentryFetch<SentryProject>(
-    token,
-    `/projects/${encodeURIComponent(org)}/${encodeURIComponent(projectSlug)}/`,
-  );
-}
-
-async function findExistingDashboard(
-  token: string,
-  org: string,
-  title: string,
-): Promise<SentryDashboard | null> {
-  const list = await sentryFetch<SentryDashboard[]>(
-    token,
-    `/organizations/${encodeURIComponent(org)}/dashboards/?query=${encodeURIComponent(title)}`,
-  );
-  return list.find((d) => d.title === title) ?? null;
-}
 
 async function createDashboard(
   token: string,
@@ -270,210 +180,21 @@ async function createDashboard(
   return created;
 }
 
-async function findExistingAlertRule(
-  token: string,
-  org: string,
-  name: string,
-): Promise<SentryAlertRule | null> {
-  const list = await sentryFetch<SentryAlertRule[]>(
-    token,
-    `/organizations/${encodeURIComponent(org)}/alert-rules/`,
-  );
-  return list.find((r) => r.name === name) ?? null;
-}
-
-async function deleteAlertRule(
-  token: string,
-  org: string,
-  ruleId: string,
-): Promise<void> {
-  // DELETE /alert-rules/<id>/ returns 204 No Content on success, which is not
-  // valid JSON — bypass sentryFetch's JSON parser here.
-  const url = `${SENTRY_HOST}/api/0/organizations/${encodeURIComponent(org)}/alert-rules/${encodeURIComponent(ruleId)}/`;
-  const res = await fetch(url, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(
-      `Sentry API DELETE /alert-rules/${ruleId}/ failed: ${res.status} ${res.statusText}\n${body}`,
-    );
-  }
-}
-
-interface AlertRuleSpec {
-  name: string;
-  reasons: string[];
-  // Dynamic-mode sensitivity. Sentry maps this onto an internal anomaly score
-  // threshold; "high" pages on smaller deviations, "low" only on large ones.
-  // Playback-side runs at "high" because a sustained playback failure rate
-  // almost always indicates an expo-audio / OS audio-stack regression worth
-  // catching as early as possible (and there's no upstream observability —
-  // OpenAI/server logs — to back-stop a missed page).
-  // Fetch-side runs at "medium" because endpoint_error / bad_response can
-  // legitimately surge during third-party (OpenAI) blips that resolve on
-  // their own; we want to catch sustained regressions, not paper over every
-  // transient blip.
-  dynamicSensitivity: "low" | "medium" | "high";
-  // Static-mode legacy thresholds. Only used when AUDIO_FALLBACK_ALERT_DETECTION_TYPE=static.
-  staticCritical: number;
-  staticWarning: number;
-  staticResolve: number;
-  rationale: string;
-}
-
-interface AlertRuleBodyBase {
-  name: string;
-  aggregate: string;
-  dataset: string;
-  query: string;
-  timeWindow: number;
-  thresholdType: number;
-  projects: string[];
-  environment: null;
-  comparisonDelta: null;
-}
-
-function buildAlertRuleBody(
-  spec: AlertRuleSpec,
-  detectionType: DetectionType,
-  projectSlug: string,
-): Record<string, unknown> {
-  const base: AlertRuleBodyBase = {
-    name: spec.name,
+function buildFetchSpec(): AlertRuleSpec {
+  return {
+    name: FETCH_ALERT_NAME,
     aggregate: FALLBACK_AGGREGATE_FOR_ALERT,
-    dataset: "metrics",
-    query: `reason:[${spec.reasons.join(",")}]`,
+    query: `reason:[${FETCH_REASONS.join(",")}]`,
+    // Above-threshold direction. We page when fallback counts climb.
+    thresholdType: 0,
     // 1h window: long enough to smooth out a single bad minute, short enough
     // to react before a regression eats the whole shift. Matches the static
     // baseline thresholds were originally calibrated against.
     timeWindow: 60,
-    thresholdType: 0,
-    projects: [projectSlug],
-    environment: null,
-    comparisonDelta: null,
-  };
-
-  if (detectionType === "dynamic") {
-    // Sentry Anomaly Detection. The detector learns each metric's
-    // hourly/daily baseline and pages when the count deviates significantly.
-    // Triggers in dynamic mode use alertThreshold=0 — Sentry ignores the
-    // numeric threshold and uses the trained anomaly score instead.
-    // Sensitivity (low/medium/high) is what actually controls how easily the
-    // alert fires. seasonality "auto" lets Sentry pick hourly vs daily vs
-    // weekly periodicity from the data.
-    return {
-      ...base,
-      detectionType: "dynamic",
-      sensitivity: spec.dynamicSensitivity,
-      seasonality: "auto",
-      resolveThreshold: null,
-      triggers: [
-        {
-          label: "critical",
-          alertThreshold: 0,
-          actions: [],
-        },
-      ],
-    };
-  }
-
-  // Static (legacy) escape hatch. Absolute per-side fallback count thresholds.
-  return {
-    ...base,
-    detectionType: "static",
-    resolveThreshold: spec.staticResolve,
-    triggers: [
-      {
-        label: "critical",
-        alertThreshold: spec.staticCritical,
-        actions: [],
-      },
-      {
-        label: "warning",
-        alertThreshold: spec.staticWarning,
-        actions: [],
-      },
-    ],
-  };
-}
-
-async function upsertOneAlertRule(
-  token: string,
-  org: string,
-  projectSlug: string,
-  spec: AlertRuleSpec,
-  detectionType: DetectionType,
-): Promise<SentryAlertRule> {
-  const body = buildAlertRuleBody(spec, detectionType, projectSlug);
-  const existing = await findExistingAlertRule(token, org, spec.name);
-
-  if (existing) {
-    // PUT to update so re-running the script migrates legacy static rules
-    // (and any drift in thresholds / reason filter) onto the current spec
-    // without manual intervention.
-    const updated = await sentryFetch<SentryAlertRule>(
-      token,
-      `/organizations/${encodeURIComponent(org)}/alert-rules/${encodeURIComponent(existing.id)}/`,
-      { method: "PUT", body: JSON.stringify(body) },
-    );
-    console.log(
-      `Updated alert rule "${spec.name}" (id=${updated.id}) → detectionType=${detectionType}` +
-        (detectionType === "dynamic"
-          ? `, sensitivity=${spec.dynamicSensitivity}`
-          : `, critical=${spec.staticCritical}/warning=${spec.staticWarning}`) +
-        `. Rationale: ${spec.rationale}`,
-    );
-    return updated;
-  }
-
-  const created = await sentryFetch<SentryAlertRule>(
-    token,
-    `/organizations/${encodeURIComponent(org)}/alert-rules/`,
-    { method: "POST", body: JSON.stringify(body) },
-  );
-  console.log(
-    `Created alert rule "${spec.name}" (id=${created.id}) → detectionType=${detectionType}` +
-      (detectionType === "dynamic"
-        ? `, sensitivity=${spec.dynamicSensitivity}`
-        : `, critical=${spec.staticCritical}/warning=${spec.staticWarning}`) +
-      `. Rationale: ${spec.rationale}`,
-  );
-  console.warn(
-    `NOTE: Alert was created with no notification actions. Add a Slack/Email\n` +
-      `target in the Sentry UI so the on-call channel actually gets paged:\n` +
-      `  ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${created.id}/`,
-  );
-  return created;
-}
-
-async function createAlertRules(
-  token: string,
-  org: string,
-  projectSlug: string,
-): Promise<{ fetch: SentryAlertRule; playback: SentryAlertRule }> {
-  // Detect the pre-split combined rule up front. We only act on it AFTER both
-  // per-side replacements are confirmed in place below — that way an
-  // intermediate failure can never leave the project with neither the legacy
-  // rule nor a working replacement.
-  const legacy = await findExistingAlertRule(token, org, LEGACY_ALERT_NAME);
-  const migrateLegacy = isMigrateLegacyEnabled();
-  const detectionType = getDetectionType();
-
-  console.log(
-    `Audio-fallback alert detection mode: ${detectionType}` +
-      (detectionType === "dynamic"
-        ? " (Sentry Anomaly Detection — sensitivity-based, learns hourly/daily " +
-          "baseline; ~7 days of data needed before it pages reliably)"
-        : ` (legacy absolute-count thresholds; set ${DETECTION_TYPE_ENV}=dynamic to switch back)`),
-  );
-
-  const fetchSpec: AlertRuleSpec = {
-    name: FETCH_ALERT_NAME,
-    reasons: FETCH_REASONS,
+    // Dynamic sensitivity 'medium' — endpoint_error / bad_response can
+    // legitimately surge during third-party (OpenAI) blips that resolve on
+    // their own; we want to catch sustained regressions, not paper over
+    // every transient blip.
     dynamicSensitivity: "medium",
     staticCritical: 15,
     staticWarning: 8,
@@ -487,10 +208,19 @@ async function createAlertRules(
       "from the original combined rule and remain placeholders until real " +
       "hourly walk volume confirms.",
   };
+}
 
-  const playbackSpec: AlertRuleSpec = {
+function buildPlaybackSpec(): AlertRuleSpec {
+  return {
     name: PLAYBACK_ALERT_NAME,
-    reasons: PLAYBACK_REASONS,
+    aggregate: FALLBACK_AGGREGATE_FOR_ALERT,
+    query: `reason:[${PLAYBACK_REASONS.join(",")}]`,
+    thresholdType: 0,
+    timeWindow: 60,
+    // Dynamic sensitivity 'high' — a sustained playback failure rate almost
+    // always indicates an expo-audio / OS audio-stack regression worth
+    // catching as early as possible (and there's no upstream observability —
+    // OpenAI/server logs — to back-stop a missed page).
     dynamicSensitivity: "high",
     staticCritical: 10,
     staticWarning: 5,
@@ -504,53 +234,81 @@ async function createAlertRules(
       "(OpenAI/server logs) to back-stop a missed page. Static fallback " +
       "thresholds are placeholders until real volume is observed.",
   };
+}
 
-  const fetchRule = await upsertOneAlertRule(
+async function maybeDeleteLegacyRule(
+  token: string,
+  org: string,
+  legacy: SentryAlertRule | null,
+): Promise<void> {
+  if (!legacy) return;
+  if (!isMigrateLegacyEnabled()) {
+    console.warn(
+      `\nLegacy combined alert rule "${LEGACY_ALERT_NAME}" still exists (id=${legacy.id}).\n` +
+        `It is now superseded by the per-side fetch/playback rules above. Either:\n` +
+        `  - Disable or delete it manually in the Sentry UI:\n` +
+        `      ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${legacy.id}/\n` +
+        `  - Or re-run this script with ${MIGRATE_LEGACY_FLAG}=1 to delete it automatically\n` +
+        `    (safe now that both per-side replacements are confirmed in place).\n`,
+    );
+    return;
+  }
+  // Re-fetch by name so we never delete based on a stale reference (e.g.
+  // the operator already deleted it manually between the up-front detection
+  // and now), and so a no-op run with the flag set is safe.
+  const stillThere = await findExistingAlertRule(token, org, LEGACY_ALERT_NAME);
+  if (stillThere) {
+    await deleteAlertRule(token, org, stillThere.id);
+    console.log(
+      `Deleted legacy combined alert rule "${LEGACY_ALERT_NAME}" (id=${stillThere.id}) ` +
+        `because ${MIGRATE_LEGACY_FLAG} is set and both per-side replacements are in place.`,
+    );
+  } else {
+    console.log(
+      `Legacy combined alert rule "${LEGACY_ALERT_NAME}" was already gone by the time ` +
+        `we tried to delete it (${MIGRATE_LEGACY_FLAG} set). Nothing to do.`,
+    );
+  }
+}
+
+async function createAlertRules(
+  token: string,
+  org: string,
+  projectSlug: string,
+): Promise<{ fetch: SentryAlertRule; playback: SentryAlertRule }> {
+  // Detect the pre-split combined rule up front. We only act on it AFTER both
+  // per-side replacements are confirmed in place below — that way an
+  // intermediate failure can never leave the project with neither the legacy
+  // rule nor a working replacement.
+  const legacy = await findExistingAlertRule(token, org, LEGACY_ALERT_NAME);
+  const detectionType = getDetectionType(DETECTION_TYPE_ENV);
+
+  console.log(
+    `Audio-fallback alert detection mode: ${detectionType}` +
+      (detectionType === "dynamic"
+        ? " (Sentry Anomaly Detection — sensitivity-based, learns hourly/daily " +
+          "baseline; ~7 days of data needed before it pages reliably)"
+        : ` (legacy absolute-count thresholds; set ${DETECTION_TYPE_ENV}=dynamic to switch back)`),
+  );
+
+  const fetchRule = await upsertAlertRule(
     token,
     org,
     projectSlug,
-    fetchSpec,
+    buildFetchSpec(),
     detectionType,
   );
-  const playbackRule = await upsertOneAlertRule(
+  const playbackRule = await upsertAlertRule(
     token,
     org,
     projectSlug,
-    playbackSpec,
+    buildPlaybackSpec(),
     detectionType,
   );
 
   // Now that both replacements are confirmed in place, optionally clean up
-  // the legacy combined rule. Re-fetch by name so we never delete based on a
-  // stale reference (e.g. the operator already deleted it manually between
-  // the up-front detection and now), and so a no-op run with the flag set is
-  // safe.
-  if (legacy) {
-    if (migrateLegacy) {
-      const stillThere = await findExistingAlertRule(token, org, LEGACY_ALERT_NAME);
-      if (stillThere) {
-        await deleteAlertRule(token, org, stillThere.id);
-        console.log(
-          `Deleted legacy combined alert rule "${LEGACY_ALERT_NAME}" (id=${stillThere.id}) ` +
-            `because ${MIGRATE_LEGACY_FLAG} is set and both per-side replacements are in place.`,
-        );
-      } else {
-        console.log(
-          `Legacy combined alert rule "${LEGACY_ALERT_NAME}" was already gone by the time ` +
-            `we tried to delete it (${MIGRATE_LEGACY_FLAG} set). Nothing to do.`,
-        );
-      }
-    } else {
-      console.warn(
-        `\nLegacy combined alert rule "${LEGACY_ALERT_NAME}" still exists (id=${legacy.id}).\n` +
-          `It is now superseded by the per-side fetch/playback rules above. Either:\n` +
-          `  - Disable or delete it manually in the Sentry UI:\n` +
-          `      ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${legacy.id}/\n` +
-          `  - Or re-run this script with ${MIGRATE_LEGACY_FLAG}=1 to delete it automatically\n` +
-          `    (safe now that both per-side replacements are confirmed in place).\n`,
-      );
-    }
-  }
+  // the legacy combined rule.
+  await maybeDeleteLegacyRule(token, org, legacy);
 
   return { fetch: fetchRule, playback: playbackRule };
 }
