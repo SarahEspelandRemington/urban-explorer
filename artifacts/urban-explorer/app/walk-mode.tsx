@@ -84,7 +84,7 @@ export default function WalkModeScreen() {
           onPress={handleStop}
           hitSlop={20}
           accessibilityRole="button"
-          accessibilityLabel="End walk"
+          accessibilityLabel={t.walkMode.endWalkAccessibility}
           style={({ pressed }) => [
             styles.headerHomeButton,
             {
@@ -112,7 +112,7 @@ export default function WalkModeScreen() {
                   key={d}
                   onPress={() => setDensity(d)}
                   accessibilityRole="button"
-                  accessibilityLabel={d === "sparse" ? "Fewer results" : "More results"}
+                  accessibilityLabel={d === "sparse" ? t.walkMode.fewerResultsAccessibility : t.walkMode.moreResultsAccessibility}
                   accessibilityState={{ selected: active }}
                   style={[
                     styles.densityButton,
@@ -142,7 +142,7 @@ export default function WalkModeScreen() {
             }}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Building filters"
+            accessibilityLabel={t.walkMode.buildingFiltersAccessibility}
             style={({ pressed }) => [
               styles.settingsBtn,
               {
@@ -293,7 +293,7 @@ export default function WalkModeScreen() {
               onPress={togglePause}
               hitSlop={16}
               accessibilityRole="button"
-              accessibilityLabel={walk.narration.isPaused ? "Resume" : "Pause"}
+              accessibilityLabel={walk.narration.isPaused ? t.walkMode.resumeAccessibility : t.walkMode.pauseAccessibility}
               style={[styles.iconBtn, { backgroundColor: colors.muted }]}
             >
               <Feather
@@ -309,7 +309,7 @@ export default function WalkModeScreen() {
               }}
               hitSlop={16}
               accessibilityRole="button"
-              accessibilityLabel="Skip"
+              accessibilityLabel={t.walkMode.skipAccessibility}
               style={[styles.iconBtn, { backgroundColor: colors.muted }]}
             >
               <Feather name="skip-forward" size={18} color={colors.foreground} />

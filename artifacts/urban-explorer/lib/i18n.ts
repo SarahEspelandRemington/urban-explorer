@@ -106,6 +106,13 @@ export interface Strings {
     buildingGroupUtility: string;
     buildingGroupUtilityDesc: string;
     nowPlayingPlaceAccessibility: (place: string) => string;
+    endWalkAccessibility: string;
+    fewerResultsAccessibility: string;
+    moreResultsAccessibility: string;
+    buildingFiltersAccessibility: string;
+    resumeAccessibility: string;
+    pauseAccessibility: string;
+    skipAccessibility: string;
   };
   walkPlan: {
     title: string;
@@ -338,6 +345,13 @@ const en: Strings = {
     buildingGroupUtility: "Utilities & Facilities",
     buildingGroupUtilityDesc: "Service buildings, kiosks, toilets",
     nowPlayingPlaceAccessibility: (place) => `Now playing: ${place}`,
+    endWalkAccessibility: "End walk",
+    fewerResultsAccessibility: "Fewer results",
+    moreResultsAccessibility: "More results",
+    buildingFiltersAccessibility: "Building filters",
+    resumeAccessibility: "Resume",
+    pauseAccessibility: "Pause",
+    skipAccessibility: "Skip",
   },
   walkPlan: {
     title: "Plan a Walk",
@@ -593,6 +607,13 @@ const es: Strings = {
     buildingGroupUtility: "Servicios e instalaciones",
     buildingGroupUtilityDesc: "Edificios de servicio, quioscos, aseos",
     nowPlayingPlaceAccessibility: (place) => `Reproduciendo: ${place}`,
+    endWalkAccessibility: "Terminar caminata",
+    fewerResultsAccessibility: "Menos resultados",
+    moreResultsAccessibility: "Más resultados",
+    buildingFiltersAccessibility: "Filtros de edificios",
+    resumeAccessibility: "Reanudar",
+    pauseAccessibility: "Pausar",
+    skipAccessibility: "Saltar",
   },
   walkPlan: {
     title: "Planificar un paseo",
@@ -849,6 +870,13 @@ const fr: Strings = {
     buildingGroupUtility: "Services et installations",
     buildingGroupUtilityDesc: "Bâtiments de service, kiosques, toilettes",
     nowPlayingPlaceAccessibility: (place) => `En lecture : ${place}`,
+    endWalkAccessibility: "Terminer la marche",
+    fewerResultsAccessibility: "Moins de résultats",
+    moreResultsAccessibility: "Plus de résultats",
+    buildingFiltersAccessibility: "Filtres de bâtiments",
+    resumeAccessibility: "Reprendre",
+    pauseAccessibility: "Pause",
+    skipAccessibility: "Passer",
   },
   walkPlan: {
     title: "Planifier une balade",
@@ -1104,6 +1132,13 @@ const de: Strings = {
     buildingGroupUtility: "Versorgung & Einrichtungen",
     buildingGroupUtilityDesc: "Betriebsgebäude, Kioske, Toiletten",
     nowPlayingPlaceAccessibility: (place) => `Wird abgespielt: ${place}`,
+    endWalkAccessibility: "Spaziergang beenden",
+    fewerResultsAccessibility: "Weniger Ergebnisse",
+    moreResultsAccessibility: "Mehr Ergebnisse",
+    buildingFiltersAccessibility: "Gebäudefilter",
+    resumeAccessibility: "Fortsetzen",
+    pauseAccessibility: "Pause",
+    skipAccessibility: "Überspringen",
   },
   walkPlan: {
     title: "Spaziergang planen",
@@ -1359,6 +1394,13 @@ const it: Strings = {
     buildingGroupUtility: "Servizi e strutture",
     buildingGroupUtilityDesc: "Edifici di servizio, chioschi, bagni",
     nowPlayingPlaceAccessibility: (place) => `In riproduzione: ${place}`,
+    endWalkAccessibility: "Termina camminata",
+    fewerResultsAccessibility: "Meno risultati",
+    moreResultsAccessibility: "Più risultati",
+    buildingFiltersAccessibility: "Filtri edifici",
+    resumeAccessibility: "Riprendi",
+    pauseAccessibility: "Pausa",
+    skipAccessibility: "Salta",
   },
   walkPlan: {
     title: "Pianifica una passeggiata",
@@ -1614,6 +1656,13 @@ const pt: Strings = {
     buildingGroupUtility: "Serviços e instalações",
     buildingGroupUtilityDesc: "Edificações de serviço, quiosques, banheiros",
     nowPlayingPlaceAccessibility: (place) => `Tocando agora: ${place}`,
+    endWalkAccessibility: "Terminar caminhada",
+    fewerResultsAccessibility: "Menos resultados",
+    moreResultsAccessibility: "Mais resultados",
+    buildingFiltersAccessibility: "Filtros de edifícios",
+    resumeAccessibility: "Retomar",
+    pauseAccessibility: "Pausar",
+    skipAccessibility: "Pular",
   },
   walkPlan: {
     title: "Planejar passeio",
@@ -1868,6 +1917,13 @@ const nl: Strings = {
     buildingGroupUtility: "Nutsvoorzieningen & faciliteiten",
     buildingGroupUtilityDesc: "Servicegebouwen, kiosken, toiletten",
     nowPlayingPlaceAccessibility: (place) => `Speelt nu: ${place}`,
+    endWalkAccessibility: "Wandeling beëindigen",
+    fewerResultsAccessibility: "Minder resultaten",
+    moreResultsAccessibility: "Meer resultaten",
+    buildingFiltersAccessibility: "Gebouwfilters",
+    resumeAccessibility: "Hervatten",
+    pauseAccessibility: "Pauzeren",
+    skipAccessibility: "Overslaan",
   },
   walkPlan: {
     title: "Wandeling plannen",
@@ -2122,6 +2178,13 @@ const ja: Strings = {
     buildingGroupUtility: "設備・施設",
     buildingGroupUtilityDesc: "サービス棟、キオスク、トイレ",
     nowPlayingPlaceAccessibility: (place) => `再生中：${place}`,
+    endWalkAccessibility: "ウォーキング終了",
+    fewerResultsAccessibility: "表示を減らす",
+    moreResultsAccessibility: "表示を増やす",
+    buildingFiltersAccessibility: "建物フィルター",
+    resumeAccessibility: "再開",
+    pauseAccessibility: "一時停止",
+    skipAccessibility: "スキップ",
   },
   walkPlan: {
     title: "ウォーク計画",
@@ -2376,6 +2439,13 @@ const ko: Strings = {
     buildingGroupUtility: "유틸리티 및 시설",
     buildingGroupUtilityDesc: "서비스 건물, 키오스크, 화장실",
     nowPlayingPlaceAccessibility: (place) => `재생 중: ${place}`,
+    endWalkAccessibility: "걷기 종료",
+    fewerResultsAccessibility: "결과 줄이기",
+    moreResultsAccessibility: "결과 늘리기",
+    buildingFiltersAccessibility: "건물 필터",
+    resumeAccessibility: "다시 재생",
+    pauseAccessibility: "일시정지",
+    skipAccessibility: "건너뛰기",
   },
   walkPlan: {
     title: "걷기 계획",
@@ -2629,6 +2699,13 @@ const zh: Strings = {
     buildingGroupUtility: "公用设施",
     buildingGroupUtilityDesc: "服务建筑、亭子、卫生间",
     nowPlayingPlaceAccessibility: (place) => `正在播放：${place}`,
+    endWalkAccessibility: "结束步行",
+    fewerResultsAccessibility: "减少结果",
+    moreResultsAccessibility: "增加结果",
+    buildingFiltersAccessibility: "建筑过滤",
+    resumeAccessibility: "继续",
+    pauseAccessibility: "暂停",
+    skipAccessibility: "跳过",
   },
   walkPlan: {
     title: "规划步行",
