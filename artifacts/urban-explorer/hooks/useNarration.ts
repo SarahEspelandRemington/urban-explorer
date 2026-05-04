@@ -257,7 +257,11 @@ export function useNarration() {
     // --- Text path: web SpeechSynthesisUtterance, or native Speech.speak ----
     const fallbackText = item.text ?? "";
     if (!fallbackText) {
-      // Nothing to play — advance the queue.
+      // Nothing to play — advance the queue. Surface the silent skip to the
+      // audio-fallback dashboard: an empty prefetched payload (e.g. text
+      // endpoint regression, malformed cached entry) would otherwise leave
+      // a gap in the user's tour with zero telemetry.
+      try { trackNarrationFallback("text_empty"); } catch {}
       onFinish();
       return;
     }
@@ -272,6 +276,10 @@ export function useNarration() {
       utterance.onend = onFinish;
       utterance.onerror = (e) => {
         console.warn("Speech error:", e);
+        // Surface the silent skip to the audio-fallback dashboard. A Web
+        // Speech API regression (voice unavailable, synth backend down)
+        // would otherwise be invisible — the user just gets a gap.
+        try { trackNarrationFallback("text_web_error"); } catch {}
         onFinish();
       };
 
@@ -317,6 +325,11 @@ export function useNarration() {
         onError: (err) => {
           if (__DEV__) console.log(`[Speech.speak] onError gen=${myGen}:`, err);
           console.warn("Speech error:", err);
+          // Surface the silent skip to the audio-fallback dashboard. An
+          // expo-speech regression (engine unavailable, locale missing on
+          // a new OS version) would otherwise leave the dashboard at zero
+          // while users get a gap in their tour.
+          try { trackNarrationFallback("text_speak_error"); } catch {}
           onFinish();
         },
       });

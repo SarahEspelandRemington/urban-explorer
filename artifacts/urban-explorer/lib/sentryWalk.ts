@@ -49,6 +49,19 @@ export function setWalkScope(data: WalkScopeData): void {
  *                              never fired (decoder stall, lost audio session). The
  *                              queue advances.
  *
+ * Text-path reasons (emitted from `hooks/useNarration.ts` — the audio path was
+ * unavailable or already failed, so we tried to read the prefetched text via
+ * expo-speech / Web Speech API, and that silently skipped too). Without these
+ * a regression in expo-speech, the Web Speech API, or the text endpoint would
+ * leave the dashboard at zero while users get a gap in their tour:
+ *   "text_speak_error"       – native `Speech.speak`'s `onError` callback fired.
+ *                              onFinish runs and the queue advances.
+ *   "text_web_error"         – web `SpeechSynthesisUtterance.onerror` fired.
+ *                              onFinish runs and the queue advances.
+ *   "text_empty"             – the prefetched text payload was empty/missing
+ *                              (no audio AND no usable text), so processQueue's
+ *                              empty-text guard advanced past the place.
+ *
  * This lets you see in the Sentry Metrics dashboard how often the native audio
  * path degrades to text, and *why* it degrades. The dashboard's
  * "Audio fallback events by reason" panel groups by `reason`, so new values
@@ -61,7 +74,10 @@ export type NarrationFallbackReason =
   | "playback_create"
   | "playback_play"
   | "playback_status_error"
-  | "playback_watchdog";
+  | "playback_watchdog"
+  | "text_speak_error"
+  | "text_web_error"
+  | "text_empty";
 
 export function trackNarrationFallback(reason: NarrationFallbackReason): void {
   if (!DSN) return;

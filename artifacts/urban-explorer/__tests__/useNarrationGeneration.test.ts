@@ -77,9 +77,10 @@ const ReactMock = require("react") as {
 
 // ─── react-native ────────────────────────────────────────────────────────────
 // Force the native code paths in useNarration (Speech.speak fallback, expo-
-// audio player). The web branch uses window.speechSynthesis which we don't
-// want to model here.
-jest.mock("react-native", () => ({ Platform: { OS: "ios" } }));
+// audio player) by default. A handful of web-path tests below mutate
+// Platform.OS to "web" for the duration of the test and restore it after.
+const mockPlatform = { OS: "ios" as "ios" | "web" };
+jest.mock("react-native", () => ({ Platform: mockPlatform }));
 
 // ─── expo-speech ─────────────────────────────────────────────────────────────
 // The `mock` prefix is required so the jest.mock factory (which is hoisted)
@@ -811,6 +812,168 @@ describe("useNarration — playback-side silent skips emit trackNarrationFallbac
     mockCreatedPlayers[0].__listeners[0]({ didJustFinish: true });
 
     expect(mockTrackNarrationFallback).not.toHaveBeenCalled();
+    expect(getSpeaking()).toBe(false);
+  });
+});
+
+// ─── Text-path fallback telemetry ────────────────────────────────────────────
+//
+// The text path is used on web AND as the cross-platform fallback when the
+// audio fetch failed. Three silent-skip paths exist that previously emitted
+// no telemetry: native Speech.speak's onError, web utterance.onerror, and the
+// empty-text guard in processQueue. A regression in expo-speech, the Web
+// Speech API, or the text endpoint would only surface as user complaints —
+// these tests pin each path to its trackNarrationFallback reason value so
+// the dashboard's `group by reason` panel keeps surfacing every failure mode.
+
+describe("useNarration — text-path silent skips emit trackNarrationFallback", () => {
+  beforeEach(() => { jest.useFakeTimers(); });
+  afterEach(() => { jest.useRealTimers(); });
+
+  test("Speech.speak onError on native emits 'text_speak_error' and advances the queue", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueue("p1", "first text", "Place One");
+    n.enqueue("p2", "second text", "Place Two");
+    expect(mockSpeechSpeak).toHaveBeenCalledTimes(1);
+    expect(mockSpeechSpeak.mock.calls[0][0]).toBe("first text");
+    const opts1 = lastSpeechOpts();
+
+    // Simulate expo-speech reporting an error (engine unavailable, locale
+    // missing on a new OS version, etc.). useNarration's onError must:
+    //   1. emit the right telemetry reason
+    //   2. call onFinish() which advances the queue to item 2
+    opts1.onError(new Error("expo-speech failed"));
+
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("text_speak_error");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
+
+    // Item 2 began playing in place of the failed item 1.
+    expect(mockSpeechSpeak).toHaveBeenCalledTimes(2);
+    expect(mockSpeechSpeak.mock.calls[1][0]).toBe("second text");
+    expect(getSpeaking()).toBe(true);
+  });
+
+  test("empty-text guard emits 'text_empty' and advances the queue", () => {
+    const n = useFreshNarrationHook();
+
+    // Enqueue an empty narration first (the empty-text guard fires on this
+    // one) followed by a real one. Without the telemetry, the empty payload
+    // would silently skip a place with zero dashboard signal.
+    n.enqueue("p1", "", "Place One");
+    n.enqueue("p2", "real text", "Place Two");
+
+    // The first item hit the empty-text guard, which emits the telemetry
+    // and then calls onFinish() → processQueue() so item 2 begins playing.
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("text_empty");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
+
+    expect(mockSpeechSpeak).toHaveBeenCalledTimes(1);
+    expect(mockSpeechSpeak.mock.calls[0][0]).toBe("real text");
+    expect(getSpeaking()).toBe(true);
+  });
+
+  test("a successful Speech.speak onDone does NOT emit a text fallback", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueue("p1", "first text", "Place One");
+    expect(mockSpeechSpeak).toHaveBeenCalledTimes(1);
+    const opts = lastSpeechOpts();
+
+    // onDone is the happy path — no telemetry should fire.
+    opts.onDone();
+
+    expect(mockTrackNarrationFallback).not.toHaveBeenCalled();
+    expect(getSpeaking()).toBe(false);
+  });
+});
+
+// ─── Web text-path fallback telemetry ────────────────────────────────────────
+//
+// The web branch of useNarration uses window.speechSynthesis instead of
+// expo-speech. We flip Platform.OS to "web" via the shared mockPlatform
+// holder, install a minimal speechSynthesis stub on globalThis, run a fresh
+// hook, and drive utterance.onerror directly to assert the telemetry path.
+
+interface FakeUtterance {
+  text: string;
+  lang: string;
+  rate: number;
+  pitch: number;
+  onend: ((e?: unknown) => void) | null;
+  onerror: ((e?: unknown) => void) | null;
+  voice: unknown;
+}
+
+describe("useNarration — web utterance.onerror emits 'text_web_error'", () => {
+  let restore: (() => void) | null = null;
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockPlatform.OS = "web";
+
+    // Capture the utterance passed to speak() so the test can drive its
+    // onerror handler directly.
+    const synthState: { utterance: FakeUtterance | null } = { utterance: null };
+    const fakeSynth = {
+      cancel: jest.fn(),
+      speak: jest.fn((u: FakeUtterance) => { synthState.utterance = u; }),
+      pause: jest.fn(),
+      resume: jest.fn(),
+      getVoices: jest.fn(() => []),
+      speaking: false,
+    };
+    const g = globalThis as unknown as {
+      window?: unknown;
+      SpeechSynthesisUtterance?: unknown;
+      __synthState?: typeof synthState;
+    };
+    const prevWindow = g.window;
+    const prevUtter = g.SpeechSynthesisUtterance;
+    g.window = { speechSynthesis: fakeSynth };
+    g.SpeechSynthesisUtterance = function (this: FakeUtterance, text: string) {
+      this.text = text;
+      this.lang = "";
+      this.rate = 1;
+      this.pitch = 1;
+      this.onend = null;
+      this.onerror = null;
+      this.voice = null;
+    } as unknown as typeof SpeechSynthesisUtterance;
+    g.__synthState = synthState;
+
+    restore = () => {
+      mockPlatform.OS = "ios";
+      g.window = prevWindow;
+      g.SpeechSynthesisUtterance = prevUtter;
+      delete g.__synthState;
+    };
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    restore?.();
+    restore = null;
+  });
+
+  test("utterance.onerror on web emits 'text_web_error' and advances the queue", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueue("p1", "first text", "Place One");
+
+    const synthState = (globalThis as unknown as {
+      __synthState: { utterance: FakeUtterance | null };
+    }).__synthState;
+    expect(synthState.utterance).not.toBeNull();
+    expect(typeof synthState.utterance!.onerror).toBe("function");
+
+    // Drive the Web Speech API's error path. useNarration's onerror handler
+    // must emit the telemetry reason and run onFinish (which clears the
+    // speaking flag because the queue is empty).
+    synthState.utterance!.onerror!({ error: "synthesis-failed" });
+
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("text_web_error");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
     expect(getSpeaking()).toBe(false);
   });
 });
