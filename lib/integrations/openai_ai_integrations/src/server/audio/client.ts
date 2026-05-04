@@ -232,30 +232,49 @@ export async function textToSpeechStream(
   })();
 }
 
-/** Speech-to-Text using gpt-4o-mini-transcribe. */
+/** Speech-to-Text using gpt-4o-mini-transcribe.
+ *
+ * Pass an optional AbortSignal to cancel the request mid-flight (e.g. when
+ * the HTTP client disconnects). The underlying fetch to OpenAI is aborted
+ * and the caller receives an AbortError instead of waiting for the full
+ * response.
+ */
 export async function speechToText(
   audioBuffer: Buffer,
-  format: "wav" | "mp3" | "webm" = "wav"
+  format: "wav" | "mp3" | "webm" = "wav",
+  signal?: AbortSignal,
 ): Promise<string> {
   const file = await toFile(audioBuffer, `audio.${format}`);
-  const response = await openai.audio.transcriptions.create({
-    file,
-    model: "gpt-4o-mini-transcribe",
-  });
+  const response = await openai.audio.transcriptions.create(
+    {
+      file,
+      model: "gpt-4o-mini-transcribe",
+    },
+    { signal },
+  );
   return response.text;
 }
 
-/** Streaming Speech-to-Text. */
+/** Streaming Speech-to-Text.
+ *
+ * Pass an optional AbortSignal to cancel the request mid-stream (e.g. when
+ * the HTTP client disconnects). Both the initial request and the underlying
+ * stream are aborted so the OpenAI request stops being billed immediately.
+ */
 export async function speechToTextStream(
   audioBuffer: Buffer,
-  format: "wav" | "mp3" | "webm" = "wav"
+  format: "wav" | "mp3" | "webm" = "wav",
+  signal?: AbortSignal,
 ): Promise<AsyncIterable<string>> {
   const file = await toFile(audioBuffer, `audio.${format}`);
-  const stream = await openai.audio.transcriptions.create({
-    file,
-    model: "gpt-4o-mini-transcribe",
-    stream: true,
-  });
+  const stream = await openai.audio.transcriptions.create(
+    {
+      file,
+      model: "gpt-4o-mini-transcribe",
+      stream: true,
+    },
+    { signal },
+  );
 
   return (async function* () {
     for await (const event of stream) {
