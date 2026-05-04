@@ -148,6 +148,7 @@ export interface Strings {
     photoOf: string;
     retryHistoryAccessibility: string;
     lookUp: string;
+    stillLoading: string;
   };
   locationPermission: {
     titleSearch: string;
@@ -397,6 +398,7 @@ const en: Strings = {
     photoOf: "Photo of",
     retryHistoryAccessibility: "Retry loading history",
     lookUp: "Look up",
+    stillLoading: "Taking longer than usual…",
   },
   locationPermission: {
     titleSearch: "Search a Location",
@@ -670,6 +672,7 @@ const es: Strings = {
     photoOf: "Foto de",
     retryHistoryAccessibility: "Reintentar cargar historia",
     lookUp: "Buscar",
+    stillLoading: "Tarda más de lo habitual…",
   },
   locationPermission: {
     titleSearch: "Buscar una ubicación",
@@ -944,6 +947,7 @@ const fr: Strings = {
     photoOf: "Photo de",
     retryHistoryAccessibility: "Réessayer le chargement",
     lookUp: "Rechercher",
+    stillLoading: "Plus long que d'habitude…",
   },
   locationPermission: {
     titleSearch: "Rechercher un lieu",
@@ -1217,6 +1221,7 @@ const de: Strings = {
     photoOf: "Foto von",
     retryHistoryAccessibility: "Geschichte erneut laden",
     lookUp: "Nachschlagen",
+    stillLoading: "Dauert länger als üblich…",
   },
   locationPermission: {
     titleSearch: "Ort suchen",
@@ -1490,6 +1495,7 @@ const it: Strings = {
     photoOf: "Foto di",
     retryHistoryAccessibility: "Riprova a caricare la storia",
     lookUp: "Cerca",
+    stillLoading: "Ci vuole più del solito…",
   },
   locationPermission: {
     titleSearch: "Cerca un luogo",
@@ -1763,6 +1769,7 @@ const pt: Strings = {
     photoOf: "Foto de",
     retryHistoryAccessibility: "Tentar carregar história novamente",
     lookUp: "Pesquisar",
+    stillLoading: "Demorando mais do que o normal…",
   },
   locationPermission: {
     titleSearch: "Buscar um local",
@@ -2035,6 +2042,7 @@ const nl: Strings = {
     photoOf: "Foto van",
     retryHistoryAccessibility: "Geschiedenis opnieuw laden",
     lookUp: "Opzoeken",
+    stillLoading: "Duurt langer dan gebruikelijk…",
   },
   locationPermission: {
     titleSearch: "Zoek een locatie",
@@ -2307,6 +2315,7 @@ const ja: Strings = {
     photoOf: "写真：",
     retryHistoryAccessibility: "歴史を再読み込み",
     lookUp: "調べる",
+    stillLoading: "いつもより時間がかかっています…",
   },
   locationPermission: {
     titleSearch: "場所を検索",
@@ -2579,6 +2588,7 @@ const ko: Strings = {
     photoOf: "사진：",
     retryHistoryAccessibility: "역사 다시 로드",
     lookUp: "찾아보기",
+    stillLoading: "평소보다 오래 걸리고 있어요…",
   },
   locationPermission: {
     titleSearch: "위치 검색",
@@ -2850,6 +2860,7 @@ const zh: Strings = {
     photoOf: "照片：",
     retryHistoryAccessibility: "重新加载历史",
     lookUp: "查找",
+    stillLoading: "比平时慢一些…",
   },
   locationPermission: {
     titleSearch: "搜索地点",

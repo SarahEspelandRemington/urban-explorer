@@ -67,6 +67,16 @@ export default function PlaceDetailScreen() {
   const detailMutation = useGetPlaceDetail();
   const timelineMutation = useGetPlaceTimeline();
   const [timelineLoaded, setTimelineLoaded] = React.useState(false);
+  const [showStillLoading, setShowStillLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (detailMutation.isPending) {
+      const timer = setTimeout(() => setShowStillLoading(true), 10_000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowStillLoading(false);
+    }
+  }, [detailMutation.isPending]);
 
   React.useEffect(() => {
     if (params.name) {
@@ -290,6 +300,14 @@ export default function PlaceDetailScreen() {
           <View style={styles.detailLoading}>
             <ActivityIndicator size="small" color={colors.primary} />
             <LoadingMessages variant="detail" />
+            {showStillLoading ? (
+              <Animated.Text
+                entering={FadeInDown.duration(600)}
+                style={[styles.stillLoadingText, { color: colors.mutedForeground }]}
+              >
+                {t.placeDetail.stillLoading}
+              </Animated.Text>
+            ) : null}
           </View>
         ) : detailMutation.isError ? (
           <View style={styles.detailLoading}>
@@ -539,6 +557,13 @@ const styles = StyleSheet.create({
   detailLoadingText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
+  },
+  stillLoadingText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    opacity: 0.7,
+    marginTop: 4,
   },
   historyText: {
     fontSize: 15,
