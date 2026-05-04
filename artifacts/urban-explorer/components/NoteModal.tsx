@@ -28,9 +28,17 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
   const inputRef = useRef<TextInput>(null);
   const [note, setNote] = useState(existingNote ?? "");
 
+  const hasInteracted = useRef(false);
+  const lastExistingNote = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     if (visible) {
-      setNote(existingNote ?? "");
+      const existingChanged = lastExistingNote.current !== existingNote;
+      lastExistingNote.current = existingNote;
+      if (existingChanged || !hasInteracted.current) {
+        setNote(existingNote ?? "");
+        hasInteracted.current = false;
+      }
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [visible, existingNote]);
@@ -90,7 +98,10 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
           <TextInput
             ref={inputRef}
             value={note}
-            onChangeText={setNote}
+            onChangeText={(text) => {
+              hasInteracted.current = true;
+              setNote(text);
+            }}
             placeholder="e.g. visited on a rainy Tuesday, loved the architecture…"
             placeholderTextColor={colors.mutedForeground + "80"}
             multiline

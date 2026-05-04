@@ -23,6 +23,7 @@ import { PlaceTimeline } from "@/components/PlaceTimeline";
 import { SaveToast } from "@/components/SaveToast";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
+import { buildPlaceId } from "@/lib/placeId";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useGetPlaceDetail, useGetPlaceTimeline } from "@workspace/api-client-react";
@@ -58,7 +59,7 @@ export default function PlaceDetailScreen() {
   const tags = React.useMemo<string[]>(() => {
     try { return params.tags ? (JSON.parse(params.tags) as string[]) : []; } catch { return []; }
   }, [params.tags]);
-  const placeId = React.useMemo(() => params.name ? `${params.name}-${lat}-${lng}` : "", [params.name, lat, lng]);
+  const placeId = React.useMemo(() => params.name ? buildPlaceId(params.name, lat, lng) : "", [params.name, lat, lng]);
   const saved = isPlaceSaved(placeId);
   const iconName = getCategoryIcon(params.category || "");
   const categoryColor = getCategoryColor(params.category || "", colors);

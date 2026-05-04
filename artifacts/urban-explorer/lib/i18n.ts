@@ -63,6 +63,8 @@ export interface Strings {
     placeMany: string;
     emptyTitle: string;
     emptyDetail: string;
+    noResults: string;
+    noResultsDetail: string;
     searchPlaceholder: string;
     sortNewest: string;
     sortNearest: string;
@@ -249,6 +251,8 @@ const en: Strings = {
     placeMany: "places",
     emptyTitle: "No saved places yet",
     emptyDetail: "Bookmark places you discover to revisit them later",
+    noResults: "No results",
+    noResultsDetail: "Try a different search or filter",
     searchPlaceholder: "Search saved places…",
     sortNewest: "Newest",
     sortNearest: "Nearest",
@@ -456,6 +460,8 @@ const es: Strings = {
     placeMany: "lugares",
     emptyTitle: "Aún no hay lugares guardados",
     emptyDetail: "Guarda lugares que descubras para volver a ellos después",
+    noResults: "Sin resultados",
+    noResultsDetail: "Prueba otra búsqueda o filtro",
     searchPlaceholder: "Buscar lugares guardados…",
     sortNewest: "Más recientes",
     sortNearest: "Más cercanos",
@@ -664,6 +670,8 @@ const fr: Strings = {
     placeMany: "lieux",
     emptyTitle: "Aucun lieu enregistré",
     emptyDetail: "Marquez les lieux que vous découvrez pour les retrouver plus tard",
+    noResults: "Aucun résultat",
+    noResultsDetail: "Essayez une autre recherche ou un autre filtre",
     searchPlaceholder: "Rechercher des lieux enregistrés…",
     sortNewest: "Plus récents",
     sortNearest: "Plus proches",
@@ -871,6 +879,8 @@ const de: Strings = {
     placeMany: "Orte",
     emptyTitle: "Noch keine gespeicherten Orte",
     emptyDetail: "Speichere Orte, die du entdeckst, um später wiederzukommen",
+    noResults: "Keine Ergebnisse",
+    noResultsDetail: "Versuche eine andere Suche oder einen anderen Filter",
     searchPlaceholder: "Gespeicherte Orte suchen…",
     sortNewest: "Neueste",
     sortNearest: "Nächste",
@@ -1078,6 +1088,8 @@ const it: Strings = {
     placeMany: "luoghi",
     emptyTitle: "Ancora nessun luogo salvato",
     emptyDetail: "Salva i luoghi che scopri per ritrovarli più tardi",
+    noResults: "Nessun risultato",
+    noResultsDetail: "Prova un'altra ricerca o filtro",
     searchPlaceholder: "Cerca luoghi salvati…",
     sortNewest: "Più recenti",
     sortNearest: "Più vicini",
@@ -1285,6 +1297,8 @@ const pt: Strings = {
     placeMany: "lugares",
     emptyTitle: "Nenhum lugar salvo ainda",
     emptyDetail: "Marque lugares que descobrir para revisitar depois",
+    noResults: "Sem resultados",
+    noResultsDetail: "Tente outra pesquisa ou filtro",
     searchPlaceholder: "Buscar lugares salvos…",
     sortNewest: "Mais recentes",
     sortNearest: "Mais próximos",
@@ -1491,6 +1505,8 @@ const nl: Strings = {
     placeMany: "plekken",
     emptyTitle: "Nog geen opgeslagen plekken",
     emptyDetail: "Sla plekken op die je ontdekt om later terug te bezoeken",
+    noResults: "Geen resultaten",
+    noResultsDetail: "Probeer een andere zoekopdracht of filter",
     searchPlaceholder: "Zoek opgeslagen plekken…",
     sortNewest: "Nieuwste",
     sortNearest: "Dichtste",
@@ -1697,6 +1713,8 @@ const ja: Strings = {
     placeMany: "件",
     emptyTitle: "保存された場所はまだありません",
     emptyDetail: "発見した場所をブックマークして、後で見返しましょう",
+    noResults: "結果なし",
+    noResultsDetail: "別の検索またはフィルターをお試しください",
     searchPlaceholder: "保存した場所を検索…",
     sortNewest: "新しい順",
     sortNearest: "近い順",
@@ -1903,6 +1921,8 @@ const ko: Strings = {
     placeMany: "곳",
     emptyTitle: "아직 저장된 장소가 없어요",
     emptyDetail: "발견한 장소를 북마크하고 나중에 다시 찾아보세요",
+    noResults: "결과 없음",
+    noResultsDetail: "다른 검색어나 필터를 시도해 보세요",
     searchPlaceholder: "저장된 장소 검색…",
     sortNewest: "최신순",
     sortNearest: "가까운 순",
@@ -2108,6 +2128,8 @@ const zh: Strings = {
     placeMany: "个地点",
     emptyTitle: "还没有保存的地点",
     emptyDetail: "把你发现的地点收藏起来，方便以后回顾",
+    noResults: "没有结果",
+    noResultsDetail: "试试其他搜索或筛选",
     searchPlaceholder: "搜索已保存地点…",
     sortNewest: "最新",
     sortNearest: "最近",

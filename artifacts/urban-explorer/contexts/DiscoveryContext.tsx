@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 export interface SavedPlace {
   id: string;
@@ -39,6 +39,7 @@ const STORAGE_KEY = "@urban_explorer_saved";
 
 export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
   const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([]);
+  const writeQueueRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((data) => {
@@ -54,7 +55,9 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const persist = useCallback((places: SavedPlace[]) => {
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(places));
+    writeQueueRef.current = writeQueueRef.current.then(() =>
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(places)).catch(() => {})
+    );
   }, []);
 
   const savePlace = useCallback(

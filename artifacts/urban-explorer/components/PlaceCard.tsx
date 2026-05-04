@@ -10,6 +10,7 @@ import { NoteModal } from "@/components/NoteModal";
 import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
+import { buildPlaceId } from "@/lib/placeId";
 import { useT } from "@/contexts/LocaleContext";
 import { storageKey, useUserRatings } from "@/contexts/UserRatingsContext";
 import { useColors } from "@/hooks/useColors";
@@ -71,7 +72,7 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   const t = useT();
   const router = useRouter();
   const { savePlace, removePlace, isPlaceSaved, updateNote } = useDiscovery();
-  const placeId = `${place.name}-${place.latitude}-${place.longitude}`;
+  const placeId = buildPlaceId(place.name, place.latitude, place.longitude);
   const saved = isPlaceSaved(placeId);
   const [noteModalVisible, setNoteModalVisible] = useState(false);
 

@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated as RNAnimated,
   FlatList,
   Platform,
   Pressable,
@@ -349,14 +350,19 @@ export default function SavedScreen() {
               label={t.saved.swipeToDelete}
               colors={colors}
             >
-              <PlaceCard
-                place={item}
-                index={index}
-                expanded={isExpanded}
-                onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
-                onRate={handlePlaceRated}
-                onSaveConfirm={handleSaveConfirm}
-              />
+              <Pressable
+                onLongPress={() => setEditingNoteId(item.id)}
+                delayLongPress={500}
+              >
+                <PlaceCard
+                  place={item}
+                  index={index}
+                  expanded={isExpanded}
+                  onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
+                  onRate={handlePlaceRated}
+                  onSaveConfirm={handleSaveConfirm}
+                />
+              </Pressable>
             </SwipeToDelete>
           );
         }}
@@ -393,12 +399,10 @@ export default function SavedScreen() {
           <View style={styles.emptyContainer}>
             <Feather name="bookmark" size={40} color={colors.mutedForeground} />
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              {query || categoryFilter ? "No results" : t.saved.emptyTitle}
+              {query || categoryFilter ? t.saved.noResults : t.saved.emptyTitle}
             </Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              {query || categoryFilter
-                ? "Try a different search or filter"
-                : t.saved.emptyDetail}
+              {query || categoryFilter ? t.saved.noResultsDetail : t.saved.emptyDetail}
             </Text>
           </View>
         }
@@ -438,50 +442,101 @@ interface SwipeToDeleteProps {
 }
 
 function SwipeToDelete({ children, onDelete, label, colors }: SwipeToDeleteProps) {
-  const [revealed, setRevealed] = useState(false);
-  const startX = useRef<number>(0);
-  const THRESHOLD = 80;
+  const translateX = useRef(new RNAnimated.Value(0)).current;
+  const startX = useRef(0);
+  const currentDx = useRef(0);
+  const isRevealed = useRef(false);
+  const THRESHOLD = 72;
+  const SNAP = -100;
 
   if (Platform.OS === "web") {
     return <>{children}</>;
   }
 
+  const springBack = () => {
+    isRevealed.current = false;
+    RNAnimated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 100,
+    }).start();
+  };
+
+  const snapOpen = () => {
+    isRevealed.current = true;
+    RNAnimated.spring(translateX, {
+      toValue: SNAP,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 100,
+    }).start();
+  };
+
+  const deleteOpacity = translateX.interpolate({
+    inputRange: [SNAP, -20, 0],
+    outputRange: [1, 0.4, 0],
+    extrapolate: "clamp",
+  });
+
   return (
     <View style={styles.swipeWrapper}>
-      {revealed ? (
-        <Animated.View
-          entering={FadeIn.duration(120)}
-          style={[styles.deleteAction, { backgroundColor: colors.destructive }]}
+      <RNAnimated.View
+        style={[
+          styles.deleteAction,
+          { backgroundColor: colors.destructive, opacity: deleteOpacity },
+        ]}
+      >
+        <Pressable
+          onPress={() => { springBack(); onDelete(); }}
+          style={styles.deleteActionInner}
+          accessibilityRole="button"
+          accessibilityLabel={label}
         >
-          <Pressable
-            onPress={() => {
-              setRevealed(false);
-              onDelete();
-            }}
-            style={styles.deleteActionInner}
-            accessibilityRole="button"
-            accessibilityLabel={label}
-          >
-            <Feather name="trash-2" size={18} color="#fff" />
-            <Text style={styles.deleteActionText}>{label}</Text>
-          </Pressable>
-        </Animated.View>
-      ) : null}
-      <View
+          <Feather name="trash-2" size={18} color="#fff" />
+          <Text style={styles.deleteActionText}>{label}</Text>
+        </Pressable>
+      </RNAnimated.View>
+      <RNAnimated.View
+        style={{ transform: [{ translateX }] }}
         onStartShouldSetResponder={() => true}
-        onResponderGrant={(e) => { startX.current = e.nativeEvent.pageX; }}
-        onResponderRelease={(e) => {
-          const dx = startX.current - e.nativeEvent.pageX;
-          if (dx > THRESHOLD) {
-            setRevealed(true);
-          } else if (dx < -20) {
-            setRevealed(false);
+        onMoveShouldSetResponder={(e) => {
+          const dx = Math.abs(e.nativeEvent.pageX - startX.current);
+          const dy = Math.abs(e.nativeEvent.pageY - (e.nativeEvent.locationY ?? 0));
+          return dx > 5 && dx > dy;
+        }}
+        onResponderGrant={(e) => {
+          startX.current = e.nativeEvent.pageX;
+          currentDx.current = 0;
+          translateX.stopAnimation();
+        }}
+        onResponderMove={(e) => {
+          const rawDx = e.nativeEvent.pageX - startX.current;
+          currentDx.current = rawDx;
+          const base = isRevealed.current ? SNAP : 0;
+          const clamped = Math.max(SNAP, Math.min(0, base + rawDx));
+          translateX.setValue(clamped);
+        }}
+        onResponderRelease={() => {
+          const dx = currentDx.current;
+          if (isRevealed.current) {
+            if (dx > 30) {
+              springBack();
+            } else {
+              snapOpen();
+            }
+          } else {
+            if (dx < -THRESHOLD) {
+              snapOpen();
+            } else {
+              springBack();
+            }
           }
         }}
-        style={revealed ? styles.swipeContentRevealed : undefined}
+        onResponderTerminate={springBack}
       >
         {children}
-      </View>
+      </RNAnimated.View>
     </View>
   );
 }
@@ -619,9 +674,6 @@ const styles = StyleSheet.create({
   },
   swipeWrapper: {
     position: "relative",
-  },
-  swipeContentRevealed: {
-    transform: [{ translateX: -100 }],
   },
   deleteAction: {
     position: "absolute",
