@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
@@ -35,6 +35,16 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
   const colors = useColors();
   const t = useT();
   const [expandedEra, setExpandedEra] = React.useState<number | null>(null);
+  const [showStillLoading, setShowStillLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => setShowStillLoading(true), 10_000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowStillLoading(false);
+    }
+  }, [isLoading]);
 
   if (!hasLoaded && !isLoading) {
     return (
@@ -73,6 +83,14 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
         <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
           {t.placeTimeline.loading}
         </Text>
+        {showStillLoading ? (
+          <Animated.Text
+            entering={FadeIn.duration(600)}
+            style={[styles.stillLoadingText, { color: colors.mutedForeground }]}
+          >
+            {t.placeDetail.stillLoading}
+          </Animated.Text>
+        ) : null}
       </View>
     );
   }
@@ -261,6 +279,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     textAlign: "center",
+  },
+  stillLoadingText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    opacity: 0.7,
+    marginTop: 4,
   },
   retryButton: {
     paddingHorizontal: 20,
