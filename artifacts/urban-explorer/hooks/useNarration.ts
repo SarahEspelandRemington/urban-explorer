@@ -3,6 +3,8 @@ import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 
+import { trackNarrationFallback } from "../lib/sentryWalk";
+
 interface NarrationItem {
   id: string;
   placeName: string;
@@ -176,6 +178,10 @@ export function useNarration() {
         player = createAudioPlayer({ uri: item.audioUri });
       } catch (err) {
         if (__DEV__) console.log(`[narration audio] createAudioPlayer threw:`, err);
+        // Surface the silent skip to the audio-fallback dashboard so a
+        // regression in expo-audio / a corrupt cache file doesn't go
+        // unnoticed (the user just gets a gap in their tour, no crash).
+        try { trackNarrationFallback("playback_create"); } catch {}
         // If we can't even create the player, run cleanup and advance the
         // queue so we don't hang the walk-mode pipeline.
         if (item.cleanup) { try { item.cleanup(); } catch {} }
@@ -196,6 +202,10 @@ export function useNarration() {
       armAudioWatchdog(AUDIO_WATCHDOG_MS, () => {
         if (speechGenRef.current !== myGen) return;
         if (__DEV__) console.log(`[narration audio] watchdog tripped gen=${myGen}, forcing advance`);
+        // Surface the silent skip to the audio-fallback dashboard. Without
+        // this, a decoder stall / lost audio session would leave the queue
+        // moving on with zero telemetry, masking a real regression.
+        try { trackNarrationFallback("playback_watchdog"); } catch {}
         onFinish();
       });
 
@@ -220,6 +230,10 @@ export function useNarration() {
           (typeof status.reasonForWaitingToPlay === "string" && /error|fail|cannot|noItem/i.test(status.reasonForWaitingToPlay));
         if (errSignal) {
           if (__DEV__) console.log(`[narration audio] error status gen=${myGen}, advancing:`, status.playbackState, status.reasonForWaitingToPlay);
+          // Surface the silent skip to the audio-fallback dashboard. The
+          // OS told us decoding failed; if we don't track it the dashboard
+          // will show zero events while users get a gap in their tour.
+          try { trackNarrationFallback("playback_status_error"); } catch {}
           onFinish();
         }
       });
@@ -229,6 +243,10 @@ export function useNarration() {
         player.play();
       } catch (err) {
         if (__DEV__) console.log(`[narration audio] play() threw:`, err);
+        // Surface the silent skip to the audio-fallback dashboard. play()
+        // throws on lost audio sessions / decoder unavailability — Walk
+        // Mode advances the queue, so without this the failure is invisible.
+        try { trackNarrationFallback("playback_play"); } catch {}
         // teardownActive (run inside onFinish) will remove the listener and
         // the watchdog, so we don't need to do it manually here.
         onFinish();

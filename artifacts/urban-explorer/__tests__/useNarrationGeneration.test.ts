@@ -145,7 +145,22 @@ jest.mock("expo-audio", () => ({
   createAudioPlayer: mockCreateAudioPlayer,
 }));
 
+// ─── lib/sentryWalk ──────────────────────────────────────────────────────────
+// Mocked so the playback-side fallback tests below can assert that
+// trackNarrationFallback fires with the right reason on each silent-skip
+// path. Mirrors the assertion pattern used in walkModeStress.test.ts for
+// the fetch-side "write_failure" / "endpoint_error" / "bad_response" tests.
+jest.mock("../lib/sentryWalk", () => ({
+  trackNarrationFallback: jest.fn(),
+  addWalkBreadcrumb: jest.fn(),
+  setWalkScope: jest.fn(),
+  trackPrefetchEvent: jest.fn(),
+}));
+
 import { useNarration } from "../hooks/useNarration";
+import { trackNarrationFallback as mockedTrackNarrationFallback } from "../lib/sentryWalk";
+
+const mockTrackNarrationFallback = mockedTrackNarrationFallback as jest.Mock;
 
 // ─── Test harness ────────────────────────────────────────────────────────────
 
@@ -179,6 +194,31 @@ function useFreshNarrationHook() {
   mockSpeechResume.mockClear();
   mockCreateAudioPlayer.mockClear();
   mockCreatedPlayers.length = 0;
+  mockTrackNarrationFallback.mockClear();
+  // Default: createAudioPlayer returns a working fake player. Individual
+  // tests (e.g. the "playback_create" failure path) override this with
+  // mockImplementationOnce to throw.
+  mockCreateAudioPlayer.mockImplementation(() => {
+    const listeners: Listener[] = [];
+    const player: FakePlayer = {
+      play: jest.fn(),
+      pause: jest.fn(),
+      remove: jest.fn(),
+      addListener: jest.fn((_event: string, l: Listener) => {
+        listeners.push(l);
+        const subRemove = jest.fn(() => {
+          const idx = listeners.indexOf(l);
+          if (idx >= 0) listeners.splice(idx, 1);
+        });
+        player.__subRemove = subRemove;
+        return { remove: subRemove };
+      }),
+      __listeners: listeners,
+      __subRemove: null,
+    };
+    mockCreatedPlayers.push(player);
+    return player;
+  });
   return useNarration();
 }
 
@@ -613,5 +653,164 @@ describe("useNarration — audio watchdog FIRES after 60s and unblocks the queue
     expect(mockCreatedPlayers[0].remove).toHaveBeenCalledTimes(1);
     expect(getSpeaking()).toBe(false);
     expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── Playback-side fallback telemetry ────────────────────────────────────────
+//
+// Walk Mode silently advances the queue when expo-audio fails post-fetch.
+// Without these telemetry calls, the "Walk Mode Audio Fallback" Sentry
+// dashboard would show zero events on a regression in expo-audio or a new
+// OS audio-stack issue, and the only signal would be user complaints. These
+// tests pin each silent-skip path to a specific `trackNarrationFallback`
+// reason value so the dashboard's `group by reason` panel keeps surfacing
+// every failure mode.
+//
+// Mirrors the assertion pattern used in walkModeStress.test.ts for the
+// fetch-side reasons ("write_failure" / "endpoint_error" / "bad_response").
+
+describe("useNarration — playback-side silent skips emit trackNarrationFallback", () => {
+  beforeEach(() => { jest.useFakeTimers(); });
+  afterEach(() => { jest.useRealTimers(); });
+
+  test("createAudioPlayer throw emits 'playback_create' and advances the queue", () => {
+    const n = useFreshNarrationHook();
+
+    // First enqueueAudio call: createAudioPlayer throws (corrupt cache file
+    // / native runtime mismatch). Second item should still play once the
+    // deferred drain fires.
+    mockCreateAudioPlayer.mockImplementationOnce(() => {
+      throw new Error("invalid file://");
+    });
+
+    const cleanup1 = jest.fn();
+    n.enqueueAudio("p1", "file:///cache/bad.mp3", "Place One", cleanup1);
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    // Telemetry: the silent skip is reported with the right reason.
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_create");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
+
+    // The bad file's cleanup ran so we don't leak the temp file.
+    expect(cleanup1).toHaveBeenCalledTimes(1);
+
+    // Item 1's createAudioPlayer threw, but item 2 began playing
+    // synchronously when its enqueueAudio call re-entered processQueue
+    // (the throw branch reset speakingRef before returning). So exactly
+    // one player exists, and it's for item 2.
+    expect(mockCreatedPlayers.length).toBe(1);
+    expect(mockCreatedPlayers[0].play).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(true);
+
+    // The deferred drain timer from item 1's throw branch is harmless —
+    // when it fires it sees speakingRef=true (item 2 is playing) and
+    // returns without creating a third player.
+    jest.advanceTimersByTime(50);
+    expect(mockCreatedPlayers.length).toBe(1);
+  });
+
+  test("player.play() throw emits 'playback_play' and advances the queue", () => {
+    const n = useFreshNarrationHook();
+
+    // Override the default fake-player impl so play() throws on the first
+    // player. Subsequent players (item 2) use the default working impl.
+    mockCreateAudioPlayer.mockImplementationOnce(() => {
+      const listeners: Listener[] = [];
+      const player: FakePlayer = {
+        play: jest.fn(() => { throw new Error("audio session lost"); }),
+        pause: jest.fn(),
+        remove: jest.fn(),
+        addListener: jest.fn((_event: string, l: Listener) => {
+          listeners.push(l);
+          const subRemove = jest.fn(() => {
+            const idx = listeners.indexOf(l);
+            if (idx >= 0) listeners.splice(idx, 1);
+          });
+          player.__subRemove = subRemove;
+          return { remove: subRemove };
+        }),
+        __listeners: listeners,
+        __subRemove: null,
+      };
+      mockCreatedPlayers.push(player);
+      return player;
+    });
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    // Telemetry: the silent skip is reported with the right reason.
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_play");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
+
+    // teardownActive (run inside onFinish after play() threw) removed
+    // the broken player and processQueue was re-entered for item 2.
+    expect(mockCreatedPlayers[0].remove).toHaveBeenCalledTimes(1);
+    expect(mockCreatedPlayers.length).toBe(2);
+    expect(mockCreatedPlayers[1].play).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(true);
+  });
+
+  test("playbackStatusUpdate error state emits 'playback_status_error' and advances the queue", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    expect(mockCreatedPlayers.length).toBe(1);
+    const player = mockCreatedPlayers[0];
+    expect(player.__listeners.length).toBe(1);
+
+    // Drive a failure status — exactly the shape useNarration's regex
+    // detects via /error|fail|cannot|invalid/i on playbackState.
+    player.__listeners[0]({ playbackState: "error" });
+
+    // Telemetry: the silent skip is reported with the right reason.
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_status_error");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
+
+    // onFinish ran — the broken player was removed and item 2 began
+    // playing in its place.
+    expect(player.remove).toHaveBeenCalledTimes(1);
+    expect(mockCreatedPlayers.length).toBe(2);
+    expect(mockCreatedPlayers[1].play).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(true);
+  });
+
+  test("audio watchdog fire emits 'playback_watchdog' and advances the queue", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    expect(mockCreatedPlayers.length).toBe(1);
+    expect(jest.getTimerCount()).toBe(1); // the 60s watchdog
+
+    // Stalled decoder: never deliver didJustFinish, never deliver an error
+    // status. Just advance time past the 60s threshold.
+    jest.advanceTimersByTime(60_000);
+
+    // Telemetry: the silent skip is reported with the right reason.
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_watchdog");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
+
+    // The watchdog tore down the stuck player and started item 2.
+    expect(mockCreatedPlayers[0].remove).toHaveBeenCalledTimes(1);
+    expect(mockCreatedPlayers.length).toBe(2);
+    expect(mockCreatedPlayers[1].play).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(true);
+  });
+
+  test("a successful natural-finish does NOT emit a playback fallback", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    expect(mockCreatedPlayers.length).toBe(1);
+
+    // didJustFinish is the happy path — no telemetry should fire.
+    mockCreatedPlayers[0].__listeners[0]({ didJustFinish: true });
+
+    expect(mockTrackNarrationFallback).not.toHaveBeenCalled();
+    expect(getSpeaking()).toBe(false);
   });
 });

@@ -29,18 +29,39 @@ export function setWalkScope(data: WalkScopeData): void {
 /**
  * Increment the narration audio-to-text fallback counter in Sentry metrics.
  *
- * Reasons:
- *   "write_failure"   – audio bytes were received but writing the temp file threw
- *   "endpoint_error"  – the audio fetch itself threw (network / timeout / abort)
- *   "bad_response"    – the audio endpoint returned a non-ok status or empty body
+ * Fetch-side reasons (emitted from `lib/fetchNarrationPayload.ts` — the audio
+ * never made it to the playback engine):
+ *   "write_failure"          – audio bytes were received but writing the temp file threw
+ *   "endpoint_error"         – the audio fetch itself threw (network / timeout / abort)
+ *   "bad_response"           – the audio endpoint returned a non-ok status or empty body
+ *
+ * Playback-side reasons (emitted from `hooks/useNarration.ts` — the audio
+ * payload arrived but expo-audio could not play it, so Walk Mode silently
+ * skipped the story; the queue advances to the next item):
+ *   "playback_create"        – `createAudioPlayer({ uri })` threw (corrupt cache file,
+ *                              native runtime mismatch). The queue advances after a
+ *                              short defer.
+ *   "playback_play"          – `player.play()` threw (audio session lost, decoder
+ *                              unavailable). teardownActive runs and the queue advances.
+ *   "playback_status_error"  – `playbackStatusUpdate` reported an error / failure /
+ *                              cannotPlay state. The queue advances.
+ *   "playback_watchdog"      – the 60s audio watchdog tripped because `didJustFinish`
+ *                              never fired (decoder stall, lost audio session). The
+ *                              queue advances.
  *
  * This lets you see in the Sentry Metrics dashboard how often the native audio
- * path degrades to text, and *why* it degrades.
+ * path degrades to text, and *why* it degrades. The dashboard's
+ * "Audio fallback events by reason" panel groups by `reason`, so new values
+ * appear automatically with no dashboard edit.
  */
 export type NarrationFallbackReason =
   | "write_failure"
   | "endpoint_error"
-  | "bad_response";
+  | "bad_response"
+  | "playback_create"
+  | "playback_play"
+  | "playback_status_error"
+  | "playback_watchdog";
 
 export function trackNarrationFallback(reason: NarrationFallbackReason): void {
   if (!DSN) return;
