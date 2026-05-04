@@ -69,6 +69,11 @@ export default function WalkModeScreen() {
     walk.setEnabledBuildingGroups(next);
   };
 
+  const togglePrefetchStats = (next: boolean) => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    walk.setShowPrefetchStats(next);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -177,6 +182,28 @@ export default function WalkModeScreen() {
               {t.walkMode.buildingFiltersDescription}
             </Text>
             <ScrollView style={styles.modalGroups} showsVerticalScrollIndicator={false}>
+              <Pressable
+                onPress={() => togglePrefetchStats(!walk.showPrefetchStats)}
+                style={[styles.groupRow, { borderBottomColor: colors.border }]}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: walk.showPrefetchStats }}
+                accessibilityLabel={t.walkMode.showPrefetchStats}
+              >
+                <View style={styles.groupText}>
+                  <Text style={[styles.groupName, { color: colors.foreground }]}>
+                    {t.walkMode.showPrefetchStats}
+                  </Text>
+                  <Text style={[styles.groupDesc, { color: colors.mutedForeground }]}>
+                    {t.walkMode.showPrefetchStatsDescription}
+                  </Text>
+                </View>
+                <Switch
+                  value={walk.showPrefetchStats}
+                  onValueChange={togglePrefetchStats}
+                  trackColor={{ false: colors.muted, true: colors.primary + "80" }}
+                  thumbColor={walk.showPrefetchStats ? colors.primary : colors.mutedForeground}
+                />
+              </Pressable>
               {BUILDING_TYPE_GROUPS.map((group) => {
                 const key = group.key as BuildingGroupKey;
                 const enabled = walk.enabledBuildingGroups.has(key);
@@ -364,10 +391,10 @@ export default function WalkModeScreen() {
         <Text style={[styles.statsLine, { color: colors.mutedForeground }]}>
           {t.walkMode.storiesSoFar(walk.stats.placesNarrated)}
         </Text>
-        {__DEV__ ? (
+        {__DEV__ || walk.showPrefetchStats ? (
           <Text
             style={[styles.debugLine, { color: colors.mutedForeground }]}
-            accessibilityLabel="Prefetch cache stats (dev)"
+            accessibilityLabel="Prefetch cache stats"
           >
             {(() => {
               const s = walk.prefetchStats;

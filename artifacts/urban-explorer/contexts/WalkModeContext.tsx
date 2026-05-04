@@ -10,6 +10,7 @@ import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/us
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
 import { fetchNarrationPayload as fetchNarrationPayloadUtil } from "@/lib/fetchNarrationPayload";
+import { getStartupValue, setStartupValue, STARTUP_KEYS } from "@/lib/startupStorage";
 import { addWalkBreadcrumb, setWalkScope, trackPrefetchEvent } from "@/lib/sentryWalk";
 import { installSessionCallback, dispatchLocation } from "@/lib/walkSessionManager";
 import { executeStopWalkSync } from "@/lib/walkStopSession";
@@ -108,6 +109,14 @@ interface WalkModeContextType {
    * the pipeline silently degrades to "fetch on demand for every place".
    */
   prefetchStats: PrefetchCounters;
+  /**
+   * Persisted opt-in for the prefetch stats counter line in the Walk Mode
+   * footer. Off by default. When on, the same counter that appears in dev
+   * builds is shown in production so power users / TestFlight testers can
+   * report hit-rate numbers without us shipping a debug build.
+   */
+  showPrefetchStats: boolean;
+  setShowPrefetchStats: (enabled: boolean) => void;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
@@ -392,6 +401,25 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const prefetchCountersRef = useRef<PrefetchCounters>(emptyPrefetchCounters());
   const [prefetchStats, setPrefetchStats] = useState<PrefetchCounters>(emptyPrefetchCounters());
   const prefetchStatsFlushQueuedRef = useRef(false);
+
+  // Persisted opt-in toggle for the prefetch stats footer counter. Hydrated
+  // from AsyncStorage on mount so the user's last choice survives a relaunch.
+  // We start off so the UI never flashes the counter for users who never
+  // enabled it; the hydrate effect flips it on if the stored value is "1".
+  const [showPrefetchStats, setShowPrefetchStatsState] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void getStartupValue(STARTUP_KEYS.showPrefetchStats).then((value) => {
+      if (cancelled) return;
+      if (value === "1") setShowPrefetchStatsState(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
+  const setShowPrefetchStats = useCallback((enabled: boolean) => {
+    setShowPrefetchStatsState(enabled);
+    void setStartupValue(STARTUP_KEYS.showPrefetchStats, enabled ? "1" : "0");
+  }, []);
+
   const handlePrefetchEvent = useCallback((event: PrefetchEvent) => {
     prefetchCountersRef.current[event] += 1;
     trackPrefetchEvent(event);
@@ -1257,6 +1285,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         enabledBuildingGroups,
         setEnabledBuildingGroups,
         prefetchStats,
+        showPrefetchStats,
+        setShowPrefetchStats,
       }}
     >
       {children}

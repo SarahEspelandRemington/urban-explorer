@@ -98,6 +98,8 @@ export interface Strings {
     storiesSoFar: (n: number) => string;
     buildingFilters: string;
     buildingFiltersDescription: string;
+    showPrefetchStats: string;
+    showPrefetchStatsDescription: string;
     buildingGroupResidential: string;
     buildingGroupResidentialDesc: string;
     buildingGroupAgricultural: string;
@@ -344,6 +346,8 @@ const en: Strings = {
     storiesSoFar: (n) => `${n} ${n === 1 ? "story" : "stories"} so far`,
     buildingFilters: "Building Filters",
     buildingFiltersDescription: "Include these building types in walk stories",
+    showPrefetchStats: "Show prefetch stats",
+    showPrefetchStatsDescription: "Display the cache hit-rate counter at the bottom of the screen",
     buildingGroupResidential: "Residential",
     buildingGroupResidentialDesc: "Huts, sheds, roof structures",
     buildingGroupAgricultural: "Agricultural",
@@ -614,6 +618,8 @@ const es: Strings = {
     storiesSoFar: (n) => `${n} ${n === 1 ? "historia" : "historias"} hasta ahora`,
     buildingFilters: "Filtros de edificios",
     buildingFiltersDescription: "Incluir estos tipos de edificios en las historias",
+    showPrefetchStats: "Mostrar estadísticas de precarga",
+    showPrefetchStatsDescription: "Mostrar el contador de aciertos de caché al pie de la pantalla",
     buildingGroupResidential: "Residencial",
     buildingGroupResidentialDesc: "Cabañas, cobertizos, cubiertas",
     buildingGroupAgricultural: "Agrícola",
@@ -885,6 +891,8 @@ const fr: Strings = {
     storiesSoFar: (n) => `${n} ${n === 1 ? "histoire" : "histoires"} jusqu'ici`,
     buildingFilters: "Filtres de bâtiments",
     buildingFiltersDescription: "Inclure ces types de bâtiments dans les histoires",
+    showPrefetchStats: "Afficher les stats de préchargement",
+    showPrefetchStatsDescription: "Afficher le compteur de cache en bas de l'écran",
     buildingGroupResidential: "Résidentiel",
     buildingGroupResidentialDesc: "Cabanes, remises, toits",
     buildingGroupAgricultural: "Agricole",
@@ -1155,6 +1163,8 @@ const de: Strings = {
     storiesSoFar: (n) => `${n} ${n === 1 ? "Geschichte" : "Geschichten"} bisher`,
     buildingFilters: "Gebäudefilter",
     buildingFiltersDescription: "Diese Gebäudetypen in Geschichten einschließen",
+    showPrefetchStats: "Prefetch-Statistik anzeigen",
+    showPrefetchStatsDescription: "Cache-Trefferquote unten am Bildschirm anzeigen",
     buildingGroupResidential: "Wohngebäude",
     buildingGroupResidentialDesc: "Hütten, Schuppen, Dachaufbauten",
     buildingGroupAgricultural: "Landwirtschaft",
@@ -1425,6 +1435,8 @@ const it: Strings = {
     storiesSoFar: (n) => `${n} ${n === 1 ? "storia" : "storie"} finora`,
     buildingFilters: "Filtri edifici",
     buildingFiltersDescription: "Includi questi tipi di edifici nelle storie",
+    showPrefetchStats: "Mostra statistiche di prefetch",
+    showPrefetchStatsDescription: "Mostra il contatore di cache in fondo allo schermo",
     buildingGroupResidential: "Residenziale",
     buildingGroupResidentialDesc: "Capanne, rimesse, strutture sul tetto",
     buildingGroupAgricultural: "Agricolo",
@@ -1695,6 +1707,8 @@ const pt: Strings = {
     storiesSoFar: (n) => `${n} ${n === 1 ? "história" : "histórias"} até agora`,
     buildingFilters: "Filtros de edifícios",
     buildingFiltersDescription: "Incluir estes tipos de edifícios nas histórias",
+    showPrefetchStats: "Mostrar estatísticas de pré-busca",
+    showPrefetchStatsDescription: "Exibir o contador de cache na parte inferior da tela",
     buildingGroupResidential: "Residencial",
     buildingGroupResidentialDesc: "Cabanas, galpões, telhados",
     buildingGroupAgricultural: "Agrícola",
@@ -1964,6 +1978,8 @@ const nl: Strings = {
     storiesSoFar: (n) => `${n} ${n === 1 ? "verhaal" : "verhalen"} tot nu toe`,
     buildingFilters: "Gebouwfilters",
     buildingFiltersDescription: "Neem deze gebouwtypes op in loopverhalen",
+    showPrefetchStats: "Prefetch-statistieken tonen",
+    showPrefetchStatsDescription: "Toon de cache-hitratio onder aan het scherm",
     buildingGroupResidential: "Woningbouw",
     buildingGroupResidentialDesc: "Hutten, schuren, dakstructuren",
     buildingGroupAgricultural: "Agrarisch",
@@ -2233,6 +2249,8 @@ const ja: Strings = {
     storiesSoFar: (n) => `これまでに${n}件の物語`,
     buildingFilters: "建物フィルター",
     buildingFiltersDescription: "ウォークストーリーに含める建物タイプを選択",
+    showPrefetchStats: "プリフェッチ統計を表示",
+    showPrefetchStatsDescription: "画面下部にキャッシュのヒット率カウンターを表示",
     buildingGroupResidential: "住宅系",
     buildingGroupResidentialDesc: "小屋、物置、屋根構造物",
     buildingGroupAgricultural: "農業系",
@@ -2502,6 +2520,8 @@ const ko: Strings = {
     storiesSoFar: (n) => `지금까지 ${n}개의 이야기`,
     buildingFilters: "건물 필터",
     buildingFiltersDescription: "산책 이야기에 포함할 건물 유형 선택",
+    showPrefetchStats: "프리페치 통계 표시",
+    showPrefetchStatsDescription: "화면 하단에 캐시 적중률 카운터 표시",
     buildingGroupResidential: "주거 시설",
     buildingGroupResidentialDesc: "오두막, 창고, 지붕 구조물",
     buildingGroupAgricultural: "농업 시설",
@@ -2770,6 +2790,8 @@ const zh: Strings = {
     storiesSoFar: (n) => `已讲 ${n} 个故事`,
     buildingFilters: "建筑过滤",
     buildingFiltersDescription: "选择要纳入步行故事的建筑类型",
+    showPrefetchStats: "显示预取统计",
+    showPrefetchStatsDescription: "在屏幕底部显示缓存命中率计数器",
     buildingGroupResidential: "住宅类",
     buildingGroupResidentialDesc: "小屋、棚屋、屋顶结构",
     buildingGroupAgricultural: "农业类",

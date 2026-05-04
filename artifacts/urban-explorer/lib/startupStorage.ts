@@ -15,6 +15,7 @@ export const STARTUP_KEYS = {
   walkWelcomeDismissed: "walk_welcome_dismissed",
   savedPlaces: "@urban_explorer_saved",
   recentRoutes: "recentWalkRoutes",
+  showPrefetchStats: "walk_show_prefetch_stats",
 } as const;
 
 const ALL_KEYS = Object.values(STARTUP_KEYS);
