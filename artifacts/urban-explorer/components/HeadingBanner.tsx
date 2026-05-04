@@ -87,12 +87,13 @@ export function HeadingBanner() {
         ]}
         accessibilityLabel={
           showNav
-            ? `${t.headingBanner.headingTo} ${headlinePlace.name}${
-                heading.distanceMeters != null
-                  ? `, ${formatDistance(heading.distanceMeters)} ${t.headingBanner.awayAccessibility}`
-                  : ""
-              }`
-            : `${t.headingBanner.nowPlayingDeepDiveAboutAccessibility} ${headlinePlace.name}`
+            ? heading.distanceMeters != null
+              ? t.headingBanner.headingToPlaceWithDistanceAccessibility(
+                  headlinePlace.name,
+                  formatDistance(heading.distanceMeters),
+                )
+              : t.headingBanner.headingToPlaceAccessibility(headlinePlace.name)
+            : t.headingBanner.nowPlayingDeepDivePlaceAccessibility(headlinePlace.name)
         }
       >
         <View

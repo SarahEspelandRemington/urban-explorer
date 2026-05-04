@@ -265,7 +265,7 @@ export default function WalkModeScreen() {
             exiting={Platform.OS !== "web" ? FadeOut : undefined}
             style={[styles.nowPlaying, { backgroundColor: colors.card, borderColor: colors.border }]}
             accessibilityLiveRegion="polite"
-            accessibilityLabel={`Now playing: ${walk.narration.currentPlace}`}
+            accessibilityLabel={t.walkMode.nowPlayingPlaceAccessibility(walk.narration.currentPlace)}
           >
             {(() => {
               const photoUrl = walk.currentNarrationPlace?.photoUrl;

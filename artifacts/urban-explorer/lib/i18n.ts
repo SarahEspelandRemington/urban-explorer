@@ -105,6 +105,7 @@ export interface Strings {
     buildingGroupParkingDesc: string;
     buildingGroupUtility: string;
     buildingGroupUtilityDesc: string;
+    nowPlayingPlaceAccessibility: (place: string) => string;
   };
   walkPlan: {
     title: string;
@@ -217,12 +218,13 @@ export interface Strings {
     headingTo: string;
     tapToRetry: string;
     retryAudioAccessibility: string;
-    awayAccessibility: string;
-    nowPlayingDeepDiveAboutAccessibility: string;
     loadingAudioAccessibility: string;
     resumeAudioAccessibility: string;
     pauseAudioAccessibility: string;
     stopHeadingAccessibility: string;
+    headingToPlaceAccessibility: (place: string) => string;
+    headingToPlaceWithDistanceAccessibility: (place: string, distance: string) => string;
+    nowPlayingDeepDivePlaceAccessibility: (place: string) => string;
   };
   settingsMessages: {
     headerTitle: string;
@@ -335,6 +337,7 @@ const en: Strings = {
     buildingGroupParkingDesc: "Garages, carports, containers",
     buildingGroupUtility: "Utilities & Facilities",
     buildingGroupUtilityDesc: "Service buildings, kiosks, toilets",
+    nowPlayingPlaceAccessibility: (place) => `Now playing: ${place}`,
   },
   walkPlan: {
     title: "Plan a Walk",
@@ -467,12 +470,15 @@ const en: Strings = {
     headingTo: "Heading to",
     tapToRetry: "Tap to retry.",
     retryAudioAccessibility: "Retry deep dive audio",
-    awayAccessibility: "away",
-    nowPlayingDeepDiveAboutAccessibility: "Now playing deep dive about",
     loadingAudioAccessibility: "Loading audio",
     resumeAudioAccessibility: "Resume audio",
     pauseAudioAccessibility: "Pause audio",
     stopHeadingAccessibility: "Stop heading",
+    headingToPlaceAccessibility: (place) => `Heading to ${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `Heading to ${place}, ${distance} away`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `Now playing deep dive about ${place}`,
   },
   settingsMessages: {
     headerTitle: "Loading Messages",
@@ -586,6 +592,7 @@ const es: Strings = {
     buildingGroupParkingDesc: "Garajes, cocheras, contenedores",
     buildingGroupUtility: "Servicios e instalaciones",
     buildingGroupUtilityDesc: "Edificios de servicio, quioscos, aseos",
+    nowPlayingPlaceAccessibility: (place) => `Reproduciendo: ${place}`,
   },
   walkPlan: {
     title: "Planificar un paseo",
@@ -719,12 +726,15 @@ const es: Strings = {
     headingTo: "Yendo a",
     tapToRetry: "Toca para reintentar.",
     retryAudioAccessibility: "Reintentar audio de inmersión",
-    awayAccessibility: "de distancia",
-    nowPlayingDeepDiveAboutAccessibility: "Reproduciendo inmersión sobre",
     loadingAudioAccessibility: "Cargando audio",
     resumeAudioAccessibility: "Reanudar audio",
     pauseAudioAccessibility: "Pausar audio",
     stopHeadingAccessibility: "Cancelar navegación",
+    headingToPlaceAccessibility: (place) => `Yendo a ${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `Yendo a ${place}, a ${distance} de distancia`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `Reproduciendo inmersión sobre ${place}`,
   },
   settingsMessages: {
     headerTitle: "Mensajes de carga",
@@ -838,6 +848,7 @@ const fr: Strings = {
     buildingGroupParkingDesc: "Garages, carports, conteneurs",
     buildingGroupUtility: "Services et installations",
     buildingGroupUtilityDesc: "Bâtiments de service, kiosques, toilettes",
+    nowPlayingPlaceAccessibility: (place) => `En lecture : ${place}`,
   },
   walkPlan: {
     title: "Planifier une balade",
@@ -970,12 +981,15 @@ const fr: Strings = {
     headingTo: "En route vers",
     tapToRetry: "Appuyer pour réessayer.",
     retryAudioAccessibility: "Réessayer l'audio en profondeur",
-    awayAccessibility: "de distance",
-    nowPlayingDeepDiveAboutAccessibility: "Lecture approfondie sur",
     loadingAudioAccessibility: "Chargement de l'audio",
     resumeAudioAccessibility: "Reprendre l'audio",
     pauseAudioAccessibility: "Mettre en pause",
     stopHeadingAccessibility: "Arrêter la navigation",
+    headingToPlaceAccessibility: (place) => `En route vers ${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `En route vers ${place}, à ${distance} de distance`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `Lecture approfondie sur ${place}`,
   },
   settingsMessages: {
     headerTitle: "Messages de chargement",
@@ -1089,6 +1103,7 @@ const de: Strings = {
     buildingGroupParkingDesc: "Garagen, Carports, Container",
     buildingGroupUtility: "Versorgung & Einrichtungen",
     buildingGroupUtilityDesc: "Betriebsgebäude, Kioske, Toiletten",
+    nowPlayingPlaceAccessibility: (place) => `Wird abgespielt: ${place}`,
   },
   walkPlan: {
     title: "Spaziergang planen",
@@ -1221,12 +1236,15 @@ const de: Strings = {
     headingTo: "Unterwegs zu",
     tapToRetry: "Tippen zum Wiederholen.",
     retryAudioAccessibility: "Deep-Dive-Audio wiederholen",
-    awayAccessibility: "entfernt",
-    nowPlayingDeepDiveAboutAccessibility: "Deep Dive läuft über",
     loadingAudioAccessibility: "Audio wird geladen",
     resumeAudioAccessibility: "Audio fortsetzen",
     pauseAudioAccessibility: "Audio pausieren",
     stopHeadingAccessibility: "Navigation stoppen",
+    headingToPlaceAccessibility: (place) => `Unterwegs zu ${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `Unterwegs zu ${place}, ${distance} entfernt`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `Deep Dive läuft über ${place}`,
   },
   settingsMessages: {
     headerTitle: "Lademeldungen",
@@ -1340,6 +1358,7 @@ const it: Strings = {
     buildingGroupParkingDesc: "Garage, carport, container",
     buildingGroupUtility: "Servizi e strutture",
     buildingGroupUtilityDesc: "Edifici di servizio, chioschi, bagni",
+    nowPlayingPlaceAccessibility: (place) => `In riproduzione: ${place}`,
   },
   walkPlan: {
     title: "Pianifica una passeggiata",
@@ -1472,12 +1491,15 @@ const it: Strings = {
     headingTo: "Verso",
     tapToRetry: "Tocca per riprovare.",
     retryAudioAccessibility: "Riprova l'audio approfondito",
-    awayAccessibility: "di distanza",
-    nowPlayingDeepDiveAboutAccessibility: "Riproduzione approfondita su",
     loadingAudioAccessibility: "Caricamento audio",
     resumeAudioAccessibility: "Riprendi audio",
     pauseAudioAccessibility: "Metti in pausa",
     stopHeadingAccessibility: "Interrompi navigazione",
+    headingToPlaceAccessibility: (place) => `Verso ${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `Verso ${place}, a ${distance} di distanza`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `Riproduzione approfondita su ${place}`,
   },
   settingsMessages: {
     headerTitle: "Messaggi di caricamento",
@@ -1591,6 +1613,7 @@ const pt: Strings = {
     buildingGroupParkingDesc: "Garagens, carports, contêineres",
     buildingGroupUtility: "Serviços e instalações",
     buildingGroupUtilityDesc: "Edificações de serviço, quiosques, banheiros",
+    nowPlayingPlaceAccessibility: (place) => `Tocando agora: ${place}`,
   },
   walkPlan: {
     title: "Planejar passeio",
@@ -1723,12 +1746,15 @@ const pt: Strings = {
     headingTo: "Indo para",
     tapToRetry: "Toque para tentar de novo.",
     retryAudioAccessibility: "Repetir áudio detalhado",
-    awayAccessibility: "de distância",
-    nowPlayingDeepDiveAboutAccessibility: "Reproduzindo exploração sobre",
     loadingAudioAccessibility: "Carregando áudio",
     resumeAudioAccessibility: "Retomar áudio",
     pauseAudioAccessibility: "Pausar áudio",
     stopHeadingAccessibility: "Parar navegação",
+    headingToPlaceAccessibility: (place) => `Indo para ${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `Indo para ${place}, a ${distance} de distância`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `Reproduzindo exploração sobre ${place}`,
   },
   settingsMessages: {
     headerTitle: "Mensagens de carregamento",
@@ -1841,6 +1867,7 @@ const nl: Strings = {
     buildingGroupParkingDesc: "Garages, carports, containers",
     buildingGroupUtility: "Nutsvoorzieningen & faciliteiten",
     buildingGroupUtilityDesc: "Servicegebouwen, kiosken, toiletten",
+    nowPlayingPlaceAccessibility: (place) => `Speelt nu: ${place}`,
   },
   walkPlan: {
     title: "Wandeling plannen",
@@ -1973,12 +2000,15 @@ const nl: Strings = {
     headingTo: "Onderweg naar",
     tapToRetry: "Tik om opnieuw te proberen.",
     retryAudioAccessibility: "Deep-dive audio opnieuw proberen",
-    awayAccessibility: "verwijderd",
-    nowPlayingDeepDiveAboutAccessibility: "Deep-dive speelt over",
     loadingAudioAccessibility: "Audio laden",
     resumeAudioAccessibility: "Audio hervatten",
     pauseAudioAccessibility: "Audio pauzeren",
     stopHeadingAccessibility: "Navigatie stoppen",
+    headingToPlaceAccessibility: (place) => `Onderweg naar ${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `Onderweg naar ${place}, ${distance} verwijderd`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `Deep-dive speelt over ${place}`,
   },
   settingsMessages: {
     headerTitle: "Laadberichten",
@@ -2091,6 +2121,7 @@ const ja: Strings = {
     buildingGroupParkingDesc: "ガレージ、カーポート、コンテナ",
     buildingGroupUtility: "設備・施設",
     buildingGroupUtilityDesc: "サービス棟、キオスク、トイレ",
+    nowPlayingPlaceAccessibility: (place) => `再生中：${place}`,
   },
   walkPlan: {
     title: "ウォーク計画",
@@ -2223,12 +2254,15 @@ const ja: Strings = {
     headingTo: "向かっています：",
     tapToRetry: "タップして再試行。",
     retryAudioAccessibility: "詳細音声を再試行",
-    awayAccessibility: "先",
-    nowPlayingDeepDiveAboutAccessibility: "再生中：",
     loadingAudioAccessibility: "音声を読み込み中",
     resumeAudioAccessibility: "音声を再開",
     pauseAudioAccessibility: "音声を一時停止",
     stopHeadingAccessibility: "案内を停止",
+    headingToPlaceAccessibility: (place) => `${place}に向かっています`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `${place}に向かっています、${distance}先`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `${place}の詳細解説を再生中`,
   },
   settingsMessages: {
     headerTitle: "読み込みメッセージ",
@@ -2341,6 +2375,7 @@ const ko: Strings = {
     buildingGroupParkingDesc: "차고, 카포트, 컨테이너",
     buildingGroupUtility: "유틸리티 및 시설",
     buildingGroupUtilityDesc: "서비스 건물, 키오스크, 화장실",
+    nowPlayingPlaceAccessibility: (place) => `재생 중: ${place}`,
   },
   walkPlan: {
     title: "걷기 계획",
@@ -2473,12 +2508,15 @@ const ko: Strings = {
     headingTo: "이동 중:",
     tapToRetry: "탭하여 다시 시도.",
     retryAudioAccessibility: "딥다이브 오디오 다시 시도",
-    awayAccessibility: "거리",
-    nowPlayingDeepDiveAboutAccessibility: "재생 중：",
     loadingAudioAccessibility: "오디오 로딩 중",
     resumeAudioAccessibility: "오디오 재개",
     pauseAudioAccessibility: "오디오 일시정지",
     stopHeadingAccessibility: "안내 중지",
+    headingToPlaceAccessibility: (place) => `${place}(으)로 이동 중`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `${place}(으)로 이동 중, ${distance} 거리`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `${place}에 대한 딥다이브 재생 중`,
   },
   settingsMessages: {
     headerTitle: "로딩 메시지",
@@ -2590,6 +2628,7 @@ const zh: Strings = {
     buildingGroupParkingDesc: "车库、车棚、集装箱",
     buildingGroupUtility: "公用设施",
     buildingGroupUtilityDesc: "服务建筑、亭子、卫生间",
+    nowPlayingPlaceAccessibility: (place) => `正在播放：${place}`,
   },
   walkPlan: {
     title: "规划步行",
@@ -2719,12 +2758,15 @@ const zh: Strings = {
     headingTo: "前往",
     tapToRetry: "点按重试。",
     retryAudioAccessibility: "重试深度讲解音频",
-    awayAccessibility: "处",
-    nowPlayingDeepDiveAboutAccessibility: "正在播放：",
     loadingAudioAccessibility: "加载音频",
     resumeAudioAccessibility: "恢复音频",
     pauseAudioAccessibility: "暂停音频",
     stopHeadingAccessibility: "停止导航",
+    headingToPlaceAccessibility: (place) => `前往${place}`,
+    headingToPlaceWithDistanceAccessibility: (place, distance) =>
+      `前往${place}，距离${distance}`,
+    nowPlayingDeepDivePlaceAccessibility: (place) =>
+      `正在播放关于${place}的深度讲解`,
   },
   settingsMessages: {
     headerTitle: "加载提示语",
