@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 interface PlaceDetailMapProps {
@@ -13,6 +14,7 @@ interface PlaceDetailMapProps {
 
 export function PlaceDetailMap({ name, address }: PlaceDetailMapProps) {
   const colors = useColors();
+  const t = useT();
 
   const handleOpenMaps = () => {
     const searchQuery = address || name;
@@ -35,10 +37,10 @@ export function PlaceDetailMap({ name, address }: PlaceDetailMapProps) {
       <Feather name="map" size={24} color={colors.primary} />
       <View style={styles.textContainer}>
         <Text style={[styles.title, { color: colors.foreground }]}>
-          Open in Maps
+          {t.placeDetailMap.openInMaps}
         </Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Get directions to this spot
+          {t.placeDetailMap.getDirectionsSubtitle}
         </Text>
       </View>
       <Feather name="external-link" size={16} color={colors.mutedForeground} />

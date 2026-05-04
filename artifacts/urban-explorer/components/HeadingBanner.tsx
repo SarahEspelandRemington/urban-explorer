@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useHeading } from "@/contexts/HeadingContext";
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 function formatDistance(meters: number): string {
@@ -24,6 +25,7 @@ function formatDistance(meters: number): string {
 
 export function HeadingBanner() {
   const colors = useColors();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const heading = useHeading();
@@ -85,12 +87,12 @@ export function HeadingBanner() {
         ]}
         accessibilityLabel={
           showNav
-            ? `Heading to ${headlinePlace.name}${
+            ? `${t.headingBanner.headingTo} ${headlinePlace.name}${
                 heading.distanceMeters != null
-                  ? `, ${formatDistance(heading.distanceMeters)} away`
+                  ? `, ${formatDistance(heading.distanceMeters)} ${t.headingBanner.awayAccessibility}`
                   : ""
               }`
-            : `Now playing deep dive about ${headlinePlace.name}`
+            : `${t.headingBanner.nowPlayingDeepDiveAboutAccessibility} ${headlinePlace.name}`
         }
       >
         <View
@@ -114,7 +116,7 @@ export function HeadingBanner() {
               style={[styles.label, { color: colors.mutedForeground }]}
               numberOfLines={1}
             >
-              {showNav ? "Heading to" : "Now playing"}
+              {showNav ? t.headingBanner.headingTo : t.walkMode.nowPlaying}
             </Text>
             {showNav && heading.distanceMeters != null && (
               <Text style={[styles.distance, { color: colors.primary }]}>
@@ -134,10 +136,10 @@ export function HeadingBanner() {
               onPress={onRetry}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Retry deep dive audio"
+              accessibilityLabel={t.headingBanner.retryAudioAccessibility}
             >
               <Text style={[styles.errorText, { color: colors.destructive }]}>
-                {heading.audioError} Tap to retry.
+                {heading.audioError} {t.headingBanner.tapToRetry}
               </Text>
             </Pressable>
           ) : null}
@@ -151,10 +153,10 @@ export function HeadingBanner() {
             accessibilityRole="button"
             accessibilityLabel={
               heading.isAudioLoading
-                ? "Loading audio"
+                ? t.headingBanner.loadingAudioAccessibility
                 : isPaused
-                  ? "Resume audio"
-                  : "Pause audio"
+                  ? t.headingBanner.resumeAudioAccessibility
+                  : t.headingBanner.pauseAudioAccessibility
             }
             style={({ pressed }) => [
               styles.iconBtn,
@@ -180,7 +182,7 @@ export function HeadingBanner() {
           onPress={onCancel}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Stop heading"
+          accessibilityLabel={t.headingBanner.stopHeadingAccessibility}
           style={({ pressed }) => [
             styles.iconBtn,
             {

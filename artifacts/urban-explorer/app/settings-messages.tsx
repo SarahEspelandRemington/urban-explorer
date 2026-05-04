@@ -14,30 +14,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import {
   clearCustomMessages,
   loadCustomMessages,
   saveCustomMessages,
 } from "@/lib/customMessages";
-
-const DEFAULT_DISCOVERY = [
-  "Digging through the archives...",
-  "Checking old maps and records...",
-  "Unearthing local secrets...",
-  "What's hiding in plain sight here...",
-  "Your personal time machine is warming up...",
-  "Building your personal history guide...",
-  "Every spot has a story — finding yours now...",
-  "Crafting discoveries just for this spot — hang tight...",
-];
-
-const DEFAULT_DETAIL = [
-  "Digging deeper into the archives...",
-  "Uncovering the full story...",
-  "Piecing together forgotten chapters...",
-  "Crafting a history just for this place...",
-];
 
 function MessageSection({
   title,
@@ -47,6 +30,12 @@ function MessageSection({
   onDelete,
   onAdd,
   onReset,
+  resetLabel,
+  resetAccessibilityLabel,
+  addMessageLabel,
+  addMessageAccessibilityLabel,
+  deleteMessageLabel,
+  messagePlaceholder,
   colors,
 }: {
   title: string;
@@ -56,6 +45,12 @@ function MessageSection({
   onDelete: (idx: number) => void;
   onAdd: () => void;
   onReset: () => void;
+  resetLabel: string;
+  resetAccessibilityLabel: string;
+  addMessageLabel: string;
+  addMessageAccessibilityLabel: string;
+  deleteMessageLabel: string;
+  messagePlaceholder: string;
   colors: any;
 }) {
   return (
@@ -75,11 +70,11 @@ function MessageSection({
             styles.resetBtn,
             { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
           ]}
-          accessibilityLabel="Reset to defaults"
+          accessibilityLabel={resetAccessibilityLabel}
         >
           <Feather name="refresh-ccw" size={12} color={colors.mutedForeground} />
           <Text style={[styles.resetBtnText, { color: colors.mutedForeground }]}>
-            Reset
+            {resetLabel}
           </Text>
         </Pressable>
       </View>
@@ -96,7 +91,7 @@ function MessageSection({
             style={[styles.messageInput, { color: colors.foreground }]}
             value={msg}
             onChangeText={(text) => onUpdate(i, text)}
-            placeholder="Enter a message..."
+            placeholder={messagePlaceholder}
             placeholderTextColor={colors.mutedForeground}
             multiline
             blurOnSubmit
@@ -105,7 +100,7 @@ function MessageSection({
             onPress={() => onDelete(i)}
             hitSlop={8}
             style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.6 : 1 }]}
-            accessibilityLabel={`Delete message ${i + 1}`}
+            accessibilityLabel={`${deleteMessageLabel} ${i + 1}`}
           >
             <Feather name="trash-2" size={16} color="#EF4444" />
           </Pressable>
@@ -122,11 +117,11 @@ function MessageSection({
             opacity: pressed ? 0.8 : 1,
           },
         ]}
-        accessibilityLabel="Add a new message"
+        accessibilityLabel={addMessageAccessibilityLabel}
       >
         <Feather name="plus" size={16} color={colors.primary} />
         <Text style={[styles.addBtnText, { color: colors.primary }]}>
-          Add Message
+          {addMessageLabel}
         </Text>
       </Pressable>
     </View>
@@ -135,19 +130,24 @@ function MessageSection({
 
 export default function SettingsMessagesScreen() {
   const colors = useColors();
+  const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [discovery, setDiscovery] = useState<string[]>(DEFAULT_DISCOVERY);
-  const [detail, setDetail] = useState<string[]>(DEFAULT_DETAIL);
+  const [discovery, setDiscovery] = useState<string[]>([]);
+  const [detail, setDetail] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     loadCustomMessages().then((custom) => {
       if (custom.discovery && custom.discovery.length > 0) setDiscovery(custom.discovery);
+      else setDiscovery(t.loadingMessages.discovery);
       if (custom.detail && custom.detail.length > 0) setDetail(custom.detail);
+      else setDetail(t.loadingMessages.detail);
       setLoaded(true);
     });
+    // Run once on mount; t is stable for the session lifetime
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const updateDiscovery = useCallback((idx: number, text: string) => {
@@ -179,8 +179,8 @@ export default function SettingsMessagesScreen() {
   const resetDiscovery = useCallback(async () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await clearCustomMessages("discovery");
-    setDiscovery(DEFAULT_DISCOVERY);
-  }, []);
+    setDiscovery(t.loadingMessages.discovery);
+  }, [t]);
 
   const updateDetail = useCallback((idx: number, text: string) => {
     setDetail((prev) => {
@@ -211,8 +211,8 @@ export default function SettingsMessagesScreen() {
   const resetDetail = useCallback(async () => {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await clearCustomMessages("detail");
-    setDetail(DEFAULT_DETAIL);
-  }, []);
+    setDetail(t.loadingMessages.detail);
+  }, [t]);
 
   if (!loaded) return null;
 
@@ -235,16 +235,16 @@ export default function SettingsMessagesScreen() {
           onPress={() => router.back()}
           hitSlop={12}
           style={styles.backButton}
-          accessibilityLabel="Back"
+          accessibilityLabel={t.settingsMessages.backAccessibility}
         >
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </Pressable>
         <View style={styles.headerText}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            Loading Messages
+            {t.settingsMessages.headerTitle}
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
-            Shown while the AI is thinking
+            {t.settingsMessages.headerSubtitle}
           </Text>
         </View>
       </View>
@@ -259,24 +259,36 @@ export default function SettingsMessagesScreen() {
         showsVerticalScrollIndicator={false}
       >
         <MessageSection
-          title="Discover Nearby"
-          subtitle="Shown while scanning for places around you"
+          title={t.settingsMessages.discoverNearby}
+          subtitle={t.settingsMessages.discoverNearbySubtitle}
           messages={discovery}
           onUpdate={updateDiscovery}
           onDelete={deleteDiscovery}
           onAdd={addDiscovery}
           onReset={resetDiscovery}
+          resetLabel={t.settingsMessages.reset}
+          resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
+          addMessageLabel={t.settingsMessages.addMessage}
+          addMessageAccessibilityLabel={t.settingsMessages.addMessageAccessibility}
+          deleteMessageLabel={t.settingsMessages.deleteMessage}
+          messagePlaceholder={t.settingsMessages.messagePlaceholder}
           colors={colors}
         />
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
         <MessageSection
-          title="Place Detail"
-          subtitle="Shown while loading a specific place's story"
+          title={t.settingsMessages.placeDetailTitle}
+          subtitle={t.settingsMessages.placeDetailSubtitle}
           messages={detail}
           onUpdate={updateDetail}
           onDelete={deleteDetail}
           onAdd={addDetail}
           onReset={resetDetail}
+          resetLabel={t.settingsMessages.reset}
+          resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
+          addMessageLabel={t.settingsMessages.addMessage}
+          addMessageAccessibilityLabel={t.settingsMessages.addMessageAccessibility}
+          deleteMessageLabel={t.settingsMessages.deleteMessage}
+          messagePlaceholder={t.settingsMessages.messagePlaceholder}
           colors={colors}
         />
       </ScrollView>

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 interface PlaceDetailMapProps {
@@ -15,6 +16,7 @@ interface PlaceDetailMapProps {
 
 export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDetailMapProps) {
   const colors = useColors();
+  const t = useT();
   const [coords, setCoords] = useState({ latitude, longitude });
 
   useEffect(() => {
@@ -98,7 +100,7 @@ export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDeta
       >
         <Feather name="navigation" size={16} color={colors.primaryForeground} />
         <Text style={[styles.directionsText, { color: colors.primaryForeground }]}>
-          Get Directions
+          {t.placeDetailMap.getDirections}
         </Text>
       </Pressable>
     </View>

@@ -27,7 +27,7 @@ export interface Strings {
     or: string;
     somethingWrong: string;
   };
-  tabs: { explore: string; saved: string };
+  tabs: { explore: string; saved: string; walk: string };
   explore: {
     discover: string;
     readyToExplore: string;
@@ -130,6 +130,12 @@ export interface Strings {
     moreFunFacts: string;
     nearbyRelated: string;
     couldNotLoad: string;
+    goBackAccessibility: string;
+    saveAccessibility: string;
+    removeSavedAccessibility: string;
+    photoOf: string;
+    retryHistoryAccessibility: string;
+    lookUp: string;
   };
   locationPermission: {
     titleSearch: string;
@@ -207,6 +213,37 @@ export interface Strings {
     title: string;
     link: string;
   };
+  headingBanner: {
+    headingTo: string;
+    tapToRetry: string;
+    retryAudioAccessibility: string;
+    awayAccessibility: string;
+    nowPlayingDeepDiveAboutAccessibility: string;
+    loadingAudioAccessibility: string;
+    resumeAudioAccessibility: string;
+    pauseAudioAccessibility: string;
+    stopHeadingAccessibility: string;
+  };
+  settingsMessages: {
+    headerTitle: string;
+    headerSubtitle: string;
+    reset: string;
+    resetAccessibility: string;
+    addMessage: string;
+    addMessageAccessibility: string;
+    messagePlaceholder: string;
+    deleteMessage: string;
+    backAccessibility: string;
+    discoverNearby: string;
+    discoverNearbySubtitle: string;
+    placeDetailTitle: string;
+    placeDetailSubtitle: string;
+  };
+  placeDetailMap: {
+    getDirections: string;
+    openInMaps: string;
+    getDirectionsSubtitle: string;
+  };
 }
 
 const en: Strings = {
@@ -219,7 +256,7 @@ const en: Strings = {
     or: "or",
     somethingWrong: "Something went wrong. Please try again.",
   },
-  tabs: { explore: "Explore", saved: "Saved" },
+  tabs: { explore: "Explore", saved: "Saved", walk: "Walk" },
   explore: {
     discover: "Discover",
     readyToExplore: "Ready to explore",
@@ -323,6 +360,12 @@ const en: Strings = {
     moreFunFacts: "More Fun Facts",
     nearbyRelated: "Nearby Related",
     couldNotLoad: "Could not load detailed history. Check your connection and try again.",
+    goBackAccessibility: "Go back",
+    saveAccessibility: "Save",
+    removeSavedAccessibility: "Remove from saved",
+    photoOf: "Photo of",
+    retryHistoryAccessibility: "Retry loading history",
+    lookUp: "Look up",
   },
   locationPermission: {
     titleSearch: "Search a Location",
@@ -420,6 +463,37 @@ const en: Strings = {
     title: "This screen doesn't exist.",
     link: "Go to home screen!",
   },
+  headingBanner: {
+    headingTo: "Heading to",
+    tapToRetry: "Tap to retry.",
+    retryAudioAccessibility: "Retry deep dive audio",
+    awayAccessibility: "away",
+    nowPlayingDeepDiveAboutAccessibility: "Now playing deep dive about",
+    loadingAudioAccessibility: "Loading audio",
+    resumeAudioAccessibility: "Resume audio",
+    pauseAudioAccessibility: "Pause audio",
+    stopHeadingAccessibility: "Stop heading",
+  },
+  settingsMessages: {
+    headerTitle: "Loading Messages",
+    headerSubtitle: "Shown while the AI is thinking",
+    reset: "Reset",
+    resetAccessibility: "Reset to defaults",
+    addMessage: "Add Message",
+    addMessageAccessibility: "Add a new message",
+    messagePlaceholder: "Enter a message...",
+    deleteMessage: "Delete message",
+    backAccessibility: "Back",
+    discoverNearby: "Discover Nearby",
+    discoverNearbySubtitle: "Shown while scanning for places around you",
+    placeDetailTitle: "Place Detail",
+    placeDetailSubtitle: "Shown while loading a specific place's story",
+  },
+  placeDetailMap: {
+    getDirections: "Get Directions",
+    openInMaps: "Open in Maps",
+    getDirectionsSubtitle: "Get directions to this spot",
+  },
 };
 
 const es: Strings = {
@@ -432,7 +506,7 @@ const es: Strings = {
     or: "o",
     somethingWrong: "Algo salió mal. Inténtalo de nuevo.",
   },
-  tabs: { explore: "Explorar", saved: "Guardados" },
+  tabs: { explore: "Explorar", saved: "Guardados", walk: "Caminar" },
   explore: {
     discover: "Descubrir",
     readyToExplore: "Listo para explorar",
@@ -537,6 +611,12 @@ const es: Strings = {
     moreFunFacts: "Más curiosidades",
     nearbyRelated: "Relacionados cerca",
     couldNotLoad: "No pudimos cargar la historia. Revisa tu conexión e inténtalo de nuevo.",
+    goBackAccessibility: "Volver",
+    saveAccessibility: "Guardar",
+    removeSavedAccessibility: "Eliminar de guardados",
+    photoOf: "Foto de",
+    retryHistoryAccessibility: "Reintentar cargar historia",
+    lookUp: "Buscar",
   },
   locationPermission: {
     titleSearch: "Buscar una ubicación",
@@ -635,6 +715,37 @@ const es: Strings = {
     title: "Esta pantalla no existe.",
     link: "¡Ir a la pantalla de inicio!",
   },
+  headingBanner: {
+    headingTo: "Yendo a",
+    tapToRetry: "Toca para reintentar.",
+    retryAudioAccessibility: "Reintentar audio de inmersión",
+    awayAccessibility: "de distancia",
+    nowPlayingDeepDiveAboutAccessibility: "Reproduciendo inmersión sobre",
+    loadingAudioAccessibility: "Cargando audio",
+    resumeAudioAccessibility: "Reanudar audio",
+    pauseAudioAccessibility: "Pausar audio",
+    stopHeadingAccessibility: "Cancelar navegación",
+  },
+  settingsMessages: {
+    headerTitle: "Mensajes de carga",
+    headerSubtitle: "Se muestran mientras la IA procesa",
+    reset: "Restablecer",
+    resetAccessibility: "Restablecer a predeterminados",
+    addMessage: "Agregar mensaje",
+    addMessageAccessibility: "Agregar nuevo mensaje",
+    messagePlaceholder: "Escribe un mensaje...",
+    deleteMessage: "Eliminar mensaje",
+    backAccessibility: "Atrás",
+    discoverNearby: "Descubrir cercanos",
+    discoverNearbySubtitle: "Se muestra mientras se buscan lugares",
+    placeDetailTitle: "Detalle del lugar",
+    placeDetailSubtitle: "Se muestra al cargar la historia de un lugar",
+  },
+  placeDetailMap: {
+    getDirections: "Cómo llegar",
+    openInMaps: "Abrir en mapas",
+    getDirectionsSubtitle: "Obtener indicaciones a este lugar",
+  },
 };
 
 const fr: Strings = {
@@ -647,7 +758,7 @@ const fr: Strings = {
     or: "ou",
     somethingWrong: "Une erreur est survenue. Veuillez réessayer.",
   },
-  tabs: { explore: "Explorer", saved: "Enregistrés" },
+  tabs: { explore: "Explorer", saved: "Enregistrés", walk: "Marcher" },
   explore: {
     discover: "Découvrir",
     readyToExplore: "Prêt à explorer",
@@ -752,6 +863,12 @@ const fr: Strings = {
     moreFunFacts: "Plus d'anecdotes",
     nearbyRelated: "Liens à proximité",
     couldNotLoad: "Impossible de charger l'histoire. Vérifiez votre connexion et réessayez.",
+    goBackAccessibility: "Retour",
+    saveAccessibility: "Enregistrer",
+    removeSavedAccessibility: "Retirer des favoris",
+    photoOf: "Photo de",
+    retryHistoryAccessibility: "Réessayer le chargement",
+    lookUp: "Rechercher",
   },
   locationPermission: {
     titleSearch: "Rechercher un lieu",
@@ -849,6 +966,37 @@ const fr: Strings = {
     title: "Cet écran n'existe pas.",
     link: "Retour à l'accueil !",
   },
+  headingBanner: {
+    headingTo: "En route vers",
+    tapToRetry: "Appuyer pour réessayer.",
+    retryAudioAccessibility: "Réessayer l'audio en profondeur",
+    awayAccessibility: "de distance",
+    nowPlayingDeepDiveAboutAccessibility: "Lecture approfondie sur",
+    loadingAudioAccessibility: "Chargement de l'audio",
+    resumeAudioAccessibility: "Reprendre l'audio",
+    pauseAudioAccessibility: "Mettre en pause",
+    stopHeadingAccessibility: "Arrêter la navigation",
+  },
+  settingsMessages: {
+    headerTitle: "Messages de chargement",
+    headerSubtitle: "Affichés pendant que l'IA réfléchit",
+    reset: "Réinitialiser",
+    resetAccessibility: "Réinitialiser les valeurs par défaut",
+    addMessage: "Ajouter un message",
+    addMessageAccessibility: "Ajouter un nouveau message",
+    messagePlaceholder: "Saisir un message...",
+    deleteMessage: "Supprimer le message",
+    backAccessibility: "Retour",
+    discoverNearby: "Découvrir à proximité",
+    discoverNearbySubtitle: "Affiché pendant la recherche de lieux",
+    placeDetailTitle: "Détail du lieu",
+    placeDetailSubtitle: "Affiché lors du chargement de l'histoire d'un lieu",
+  },
+  placeDetailMap: {
+    getDirections: "Itinéraire",
+    openInMaps: "Ouvrir dans Maps",
+    getDirectionsSubtitle: "Obtenir l'itinéraire vers cet endroit",
+  },
 };
 
 const de: Strings = {
@@ -861,7 +1009,7 @@ const de: Strings = {
     or: "oder",
     somethingWrong: "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
   },
-  tabs: { explore: "Entdecken", saved: "Gespeichert" },
+  tabs: { explore: "Entdecken", saved: "Gespeichert", walk: "Laufen" },
   explore: {
     discover: "Entdecken",
     readyToExplore: "Bereit zum Entdecken",
@@ -966,6 +1114,12 @@ const de: Strings = {
     moreFunFacts: "Weitere Fun Facts",
     nearbyRelated: "Verwandtes in der Nähe",
     couldNotLoad: "Geschichte konnte nicht geladen werden. Verbindung prüfen und erneut versuchen.",
+    goBackAccessibility: "Zurück",
+    saveAccessibility: "Speichern",
+    removeSavedAccessibility: "Aus Gespeicherten entfernen",
+    photoOf: "Foto von",
+    retryHistoryAccessibility: "Geschichte erneut laden",
+    lookUp: "Nachschlagen",
   },
   locationPermission: {
     titleSearch: "Ort suchen",
@@ -1063,6 +1217,37 @@ const de: Strings = {
     title: "Dieser Bildschirm existiert nicht.",
     link: "Zur Startseite!",
   },
+  headingBanner: {
+    headingTo: "Unterwegs zu",
+    tapToRetry: "Tippen zum Wiederholen.",
+    retryAudioAccessibility: "Deep-Dive-Audio wiederholen",
+    awayAccessibility: "entfernt",
+    nowPlayingDeepDiveAboutAccessibility: "Deep Dive läuft über",
+    loadingAudioAccessibility: "Audio wird geladen",
+    resumeAudioAccessibility: "Audio fortsetzen",
+    pauseAudioAccessibility: "Audio pausieren",
+    stopHeadingAccessibility: "Navigation stoppen",
+  },
+  settingsMessages: {
+    headerTitle: "Lademeldungen",
+    headerSubtitle: "Angezeigt während die KI lädt",
+    reset: "Zurücksetzen",
+    resetAccessibility: "Auf Standard zurücksetzen",
+    addMessage: "Nachricht hinzufügen",
+    addMessageAccessibility: "Neue Nachricht hinzufügen",
+    messagePlaceholder: "Nachricht eingeben...",
+    deleteMessage: "Nachricht löschen",
+    backAccessibility: "Zurück",
+    discoverNearby: "Nahes entdecken",
+    discoverNearbySubtitle: "Angezeigt beim Scannen nach Orten",
+    placeDetailTitle: "Ortsdetail",
+    placeDetailSubtitle: "Angezeigt beim Laden der Geschichte eines Ortes",
+  },
+  placeDetailMap: {
+    getDirections: "Route berechnen",
+    openInMaps: "In Karten öffnen",
+    getDirectionsSubtitle: "Route zu diesem Ort berechnen",
+  },
 };
 
 const it: Strings = {
@@ -1075,7 +1260,7 @@ const it: Strings = {
     or: "o",
     somethingWrong: "Qualcosa è andato storto. Riprova.",
   },
-  tabs: { explore: "Esplora", saved: "Salvati" },
+  tabs: { explore: "Esplora", saved: "Salvati", walk: "Camminare" },
   explore: {
     discover: "Scopri",
     readyToExplore: "Pronto a esplorare",
@@ -1180,6 +1365,12 @@ const it: Strings = {
     moreFunFacts: "Altre curiosità",
     nearbyRelated: "Correlati vicini",
     couldNotLoad: "Impossibile caricare la storia. Controlla la connessione e riprova.",
+    goBackAccessibility: "Indietro",
+    saveAccessibility: "Salva",
+    removeSavedAccessibility: "Rimuovi dai salvati",
+    photoOf: "Foto di",
+    retryHistoryAccessibility: "Riprova a caricare la storia",
+    lookUp: "Cerca",
   },
   locationPermission: {
     titleSearch: "Cerca un luogo",
@@ -1277,6 +1468,37 @@ const it: Strings = {
     title: "Questa schermata non esiste.",
     link: "Vai alla schermata principale!",
   },
+  headingBanner: {
+    headingTo: "Verso",
+    tapToRetry: "Tocca per riprovare.",
+    retryAudioAccessibility: "Riprova l'audio approfondito",
+    awayAccessibility: "di distanza",
+    nowPlayingDeepDiveAboutAccessibility: "Riproduzione approfondita su",
+    loadingAudioAccessibility: "Caricamento audio",
+    resumeAudioAccessibility: "Riprendi audio",
+    pauseAudioAccessibility: "Metti in pausa",
+    stopHeadingAccessibility: "Interrompi navigazione",
+  },
+  settingsMessages: {
+    headerTitle: "Messaggi di caricamento",
+    headerSubtitle: "Mostrati mentre l'IA elabora",
+    reset: "Ripristina",
+    resetAccessibility: "Ripristina impostazioni predefinite",
+    addMessage: "Aggiungi messaggio",
+    addMessageAccessibility: "Aggiungi un nuovo messaggio",
+    messagePlaceholder: "Inserisci un messaggio...",
+    deleteMessage: "Elimina messaggio",
+    backAccessibility: "Indietro",
+    discoverNearby: "Scopri vicino",
+    discoverNearbySubtitle: "Mostrato durante la ricerca di luoghi",
+    placeDetailTitle: "Dettaglio luogo",
+    placeDetailSubtitle: "Mostrato durante il caricamento della storia di un luogo",
+  },
+  placeDetailMap: {
+    getDirections: "Indicazioni",
+    openInMaps: "Apri in Mappe",
+    getDirectionsSubtitle: "Ottieni indicazioni per questo luogo",
+  },
 };
 
 const pt: Strings = {
@@ -1289,7 +1511,7 @@ const pt: Strings = {
     or: "ou",
     somethingWrong: "Algo deu errado. Tente novamente.",
   },
-  tabs: { explore: "Explorar", saved: "Salvos" },
+  tabs: { explore: "Explorar", saved: "Salvos", walk: "Caminhar" },
   explore: {
     discover: "Descobrir",
     readyToExplore: "Pronto para explorar",
@@ -1394,6 +1616,12 @@ const pt: Strings = {
     moreFunFacts: "Mais curiosidades",
     nearbyRelated: "Relacionados por perto",
     couldNotLoad: "Não foi possível carregar a história. Verifique a conexão e tente novamente.",
+    goBackAccessibility: "Voltar",
+    saveAccessibility: "Salvar",
+    removeSavedAccessibility: "Remover dos salvos",
+    photoOf: "Foto de",
+    retryHistoryAccessibility: "Tentar carregar história novamente",
+    lookUp: "Pesquisar",
   },
   locationPermission: {
     titleSearch: "Buscar um local",
@@ -1491,6 +1719,37 @@ const pt: Strings = {
     title: "Esta tela não existe.",
     link: "Voltar para o início!",
   },
+  headingBanner: {
+    headingTo: "Indo para",
+    tapToRetry: "Toque para tentar de novo.",
+    retryAudioAccessibility: "Repetir áudio detalhado",
+    awayAccessibility: "de distância",
+    nowPlayingDeepDiveAboutAccessibility: "Reproduzindo exploração sobre",
+    loadingAudioAccessibility: "Carregando áudio",
+    resumeAudioAccessibility: "Retomar áudio",
+    pauseAudioAccessibility: "Pausar áudio",
+    stopHeadingAccessibility: "Parar navegação",
+  },
+  settingsMessages: {
+    headerTitle: "Mensagens de carregamento",
+    headerSubtitle: "Exibidas enquanto a IA processa",
+    reset: "Redefinir",
+    resetAccessibility: "Redefinir para padrões",
+    addMessage: "Adicionar mensagem",
+    addMessageAccessibility: "Adicionar nova mensagem",
+    messagePlaceholder: "Insira uma mensagem...",
+    deleteMessage: "Excluir mensagem",
+    backAccessibility: "Voltar",
+    discoverNearby: "Descobrir por perto",
+    discoverNearbySubtitle: "Exibido durante a busca por lugares",
+    placeDetailTitle: "Detalhe do lugar",
+    placeDetailSubtitle: "Exibido ao carregar a história de um lugar",
+  },
+  placeDetailMap: {
+    getDirections: "Como chegar",
+    openInMaps: "Abrir no Maps",
+    getDirectionsSubtitle: "Obter direções para este local",
+  },
 };
 
 const nl: Strings = {
@@ -1503,7 +1762,7 @@ const nl: Strings = {
     or: "of",
     somethingWrong: "Er ging iets mis. Probeer het opnieuw.",
   },
-  tabs: { explore: "Verkennen", saved: "Opgeslagen" },
+  tabs: { explore: "Verkennen", saved: "Opgeslagen", walk: "Wandelen" },
   explore: {
     discover: "Ontdek",
     readyToExplore: "Klaar om te verkennen",
@@ -1607,6 +1866,12 @@ const nl: Strings = {
     moreFunFacts: "Meer leuke feitjes",
     nearbyRelated: "Verwant in de buurt",
     couldNotLoad: "Geschiedenis kon niet worden geladen. Controleer je verbinding en probeer opnieuw.",
+    goBackAccessibility: "Terug",
+    saveAccessibility: "Opslaan",
+    removeSavedAccessibility: "Verwijderen uit opgeslagen",
+    photoOf: "Foto van",
+    retryHistoryAccessibility: "Geschiedenis opnieuw laden",
+    lookUp: "Opzoeken",
   },
   locationPermission: {
     titleSearch: "Zoek een locatie",
@@ -1704,6 +1969,37 @@ const nl: Strings = {
     title: "Dit scherm bestaat niet.",
     link: "Naar het beginscherm!",
   },
+  headingBanner: {
+    headingTo: "Onderweg naar",
+    tapToRetry: "Tik om opnieuw te proberen.",
+    retryAudioAccessibility: "Deep-dive audio opnieuw proberen",
+    awayAccessibility: "verwijderd",
+    nowPlayingDeepDiveAboutAccessibility: "Deep-dive speelt over",
+    loadingAudioAccessibility: "Audio laden",
+    resumeAudioAccessibility: "Audio hervatten",
+    pauseAudioAccessibility: "Audio pauzeren",
+    stopHeadingAccessibility: "Navigatie stoppen",
+  },
+  settingsMessages: {
+    headerTitle: "Laadberichten",
+    headerSubtitle: "Getoond terwijl de AI nadenkt",
+    reset: "Herstellen",
+    resetAccessibility: "Herstellen naar standaard",
+    addMessage: "Bericht toevoegen",
+    addMessageAccessibility: "Nieuw bericht toevoegen",
+    messagePlaceholder: "Voer een bericht in...",
+    deleteMessage: "Bericht verwijderen",
+    backAccessibility: "Terug",
+    discoverNearby: "Ontdek in de buurt",
+    discoverNearbySubtitle: "Getoond tijdens het zoeken naar plekken",
+    placeDetailTitle: "Plekdetail",
+    placeDetailSubtitle: "Getoond bij het laden van de geschiedenis van een plek",
+  },
+  placeDetailMap: {
+    getDirections: "Route berekenen",
+    openInMaps: "Open in Maps",
+    getDirectionsSubtitle: "Routebeschrijving naar deze plek",
+  },
 };
 
 const ja: Strings = {
@@ -1716,7 +2012,7 @@ const ja: Strings = {
     or: "または",
     somethingWrong: "問題が発生しました。もう一度お試しください。",
   },
-  tabs: { explore: "探索", saved: "保存済み" },
+  tabs: { explore: "探索", saved: "保存済み", walk: "ウォーク" },
   explore: {
     discover: "発見",
     readyToExplore: "探索の準備ができました",
@@ -1820,6 +2116,12 @@ const ja: Strings = {
     moreFunFacts: "もっと豆知識",
     nearbyRelated: "近くの関連",
     couldNotLoad: "詳細な歴史を読み込めませんでした。接続を確認して再試行してください。",
+    goBackAccessibility: "戻る",
+    saveAccessibility: "保存",
+    removeSavedAccessibility: "保存済みから削除",
+    photoOf: "写真：",
+    retryHistoryAccessibility: "歴史を再読み込み",
+    lookUp: "調べる",
   },
   locationPermission: {
     titleSearch: "場所を検索",
@@ -1917,6 +2219,37 @@ const ja: Strings = {
     title: "この画面は存在しません。",
     link: "ホーム画面へ！",
   },
+  headingBanner: {
+    headingTo: "向かっています：",
+    tapToRetry: "タップして再試行。",
+    retryAudioAccessibility: "詳細音声を再試行",
+    awayAccessibility: "先",
+    nowPlayingDeepDiveAboutAccessibility: "再生中：",
+    loadingAudioAccessibility: "音声を読み込み中",
+    resumeAudioAccessibility: "音声を再開",
+    pauseAudioAccessibility: "音声を一時停止",
+    stopHeadingAccessibility: "案内を停止",
+  },
+  settingsMessages: {
+    headerTitle: "読み込みメッセージ",
+    headerSubtitle: "AIが処理中に表示",
+    reset: "リセット",
+    resetAccessibility: "デフォルトにリセット",
+    addMessage: "メッセージを追加",
+    addMessageAccessibility: "新しいメッセージを追加",
+    messagePlaceholder: "メッセージを入力...",
+    deleteMessage: "メッセージを削除",
+    backAccessibility: "戻る",
+    discoverNearby: "周辺を発見",
+    discoverNearbySubtitle: "近くの場所を検索中に表示",
+    placeDetailTitle: "場所の詳細",
+    placeDetailSubtitle: "場所の歴史を読み込み中に表示",
+  },
+  placeDetailMap: {
+    getDirections: "経路を調べる",
+    openInMaps: "マップで開く",
+    getDirectionsSubtitle: "この場所への道順を取得",
+  },
 };
 
 const ko: Strings = {
@@ -1929,7 +2262,7 @@ const ko: Strings = {
     or: "또는",
     somethingWrong: "문제가 발생했습니다. 다시 시도해 주세요.",
   },
-  tabs: { explore: "탐험", saved: "저장됨" },
+  tabs: { explore: "탐험", saved: "저장됨", walk: "걷기" },
   explore: {
     discover: "발견",
     readyToExplore: "탐험할 준비가 되었어요",
@@ -2033,6 +2366,12 @@ const ko: Strings = {
     moreFunFacts: "더 많은 흥미 사실",
     nearbyRelated: "주변 관련 장소",
     couldNotLoad: "상세 역사를 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
+    goBackAccessibility: "뒤로",
+    saveAccessibility: "저장",
+    removeSavedAccessibility: "저장에서 제거",
+    photoOf: "사진：",
+    retryHistoryAccessibility: "역사 다시 로드",
+    lookUp: "찾아보기",
   },
   locationPermission: {
     titleSearch: "위치 검색",
@@ -2130,6 +2469,37 @@ const ko: Strings = {
     title: "이 화면은 존재하지 않아요.",
     link: "홈 화면으로!",
   },
+  headingBanner: {
+    headingTo: "이동 중:",
+    tapToRetry: "탭하여 다시 시도.",
+    retryAudioAccessibility: "딥다이브 오디오 다시 시도",
+    awayAccessibility: "거리",
+    nowPlayingDeepDiveAboutAccessibility: "재생 중：",
+    loadingAudioAccessibility: "오디오 로딩 중",
+    resumeAudioAccessibility: "오디오 재개",
+    pauseAudioAccessibility: "오디오 일시정지",
+    stopHeadingAccessibility: "안내 중지",
+  },
+  settingsMessages: {
+    headerTitle: "로딩 메시지",
+    headerSubtitle: "AI가 처리하는 동안 표시",
+    reset: "초기화",
+    resetAccessibility: "기본값으로 초기화",
+    addMessage: "메시지 추가",
+    addMessageAccessibility: "새 메시지 추가",
+    messagePlaceholder: "메시지를 입력하세요...",
+    deleteMessage: "메시지 삭제",
+    backAccessibility: "뒤로",
+    discoverNearby: "주변 발견",
+    discoverNearbySubtitle: "주변 장소 검색 중 표시",
+    placeDetailTitle: "장소 상세",
+    placeDetailSubtitle: "장소 역사 로드 중 표시",
+  },
+  placeDetailMap: {
+    getDirections: "길 찾기",
+    openInMaps: "지도에서 열기",
+    getDirectionsSubtitle: "이 장소로 가는 길 찾기",
+  },
 };
 
 const zh: Strings = {
@@ -2142,7 +2512,7 @@ const zh: Strings = {
     or: "或",
     somethingWrong: "出了点问题，请再试一次。",
   },
-  tabs: { explore: "探索", saved: "已保存" },
+  tabs: { explore: "探索", saved: "已保存", walk: "步行" },
   explore: {
     discover: "发现",
     readyToExplore: "准备好探索了",
@@ -2245,6 +2615,12 @@ const zh: Strings = {
     moreFunFacts: "更多趣闻",
     nearbyRelated: "附近相关",
     couldNotLoad: "无法加载详细历史。请检查网络后重试。",
+    goBackAccessibility: "返回",
+    saveAccessibility: "收藏",
+    removeSavedAccessibility: "从收藏中移除",
+    photoOf: "照片：",
+    retryHistoryAccessibility: "重新加载历史",
+    lookUp: "查找",
   },
   locationPermission: {
     titleSearch: "搜索地点",
@@ -2338,6 +2714,37 @@ const zh: Strings = {
     stackTitle: "哎呀！",
     title: "此页面不存在。",
     link: "回到首页！",
+  },
+  headingBanner: {
+    headingTo: "前往",
+    tapToRetry: "点按重试。",
+    retryAudioAccessibility: "重试深度讲解音频",
+    awayAccessibility: "处",
+    nowPlayingDeepDiveAboutAccessibility: "正在播放：",
+    loadingAudioAccessibility: "加载音频",
+    resumeAudioAccessibility: "恢复音频",
+    pauseAudioAccessibility: "暂停音频",
+    stopHeadingAccessibility: "停止导航",
+  },
+  settingsMessages: {
+    headerTitle: "加载提示语",
+    headerSubtitle: "AI 思考时显示",
+    reset: "重置",
+    resetAccessibility: "重置为默认值",
+    addMessage: "添加消息",
+    addMessageAccessibility: "添加新消息",
+    messagePlaceholder: "输入消息...",
+    deleteMessage: "删除消息",
+    backAccessibility: "返回",
+    discoverNearby: "发现附近",
+    discoverNearbySubtitle: "扫描周围地点时显示",
+    placeDetailTitle: "地点详情",
+    placeDetailSubtitle: "加载地点历史时显示",
+  },
+  placeDetailMap: {
+    getDirections: "获取路线",
+    openInMaps: "在地图中打开",
+    getDirectionsSubtitle: "获取到达此地点的路线",
   },
 };
 

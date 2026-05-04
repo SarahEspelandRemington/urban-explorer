@@ -144,7 +144,7 @@ export default function PlaceDetailScreen() {
           onPress={() => router.back()}
           hitSlop={20}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t.placeDetail.goBackAccessibility}
           style={styles.topBarButton}
         >
           <Feather name="arrow-left" size={24} color={colors.foreground} />
@@ -153,7 +153,7 @@ export default function PlaceDetailScreen() {
           onPress={handleSave}
           hitSlop={20}
           accessibilityRole="button"
-          accessibilityLabel={saved ? `Remove ${params.name} from saved` : `Save ${params.name}`}
+          accessibilityLabel={saved ? `${t.placeDetail.removeSavedAccessibility} ${params.name}` : `${t.placeDetail.saveAccessibility} ${params.name}`}
           accessibilityState={{ selected: saved }}
           style={styles.topBarButton}
         >
@@ -174,7 +174,7 @@ export default function PlaceDetailScreen() {
             source={{ uri: params.photoUrl }}
             style={styles.heroImage}
             resizeMode="cover"
-            accessibilityLabel={`Photo of ${params.name}`}
+            accessibilityLabel={`${t.placeDetail.photoOf} ${params.name}`}
           />
         ) : null}
 
@@ -299,7 +299,7 @@ export default function PlaceDetailScreen() {
               }
               style={[styles.retryButton, { borderColor: colors.border }]}
               accessibilityRole="button"
-              accessibilityLabel="Retry loading history"
+              accessibilityLabel={t.placeDetail.retryHistoryAccessibility}
             >
               <Text style={[styles.retryText, { color: colors.accent }]}>{t.common.retry}</Text>
             </Pressable>
@@ -375,7 +375,7 @@ export default function PlaceDetailScreen() {
                         { backgroundColor: colors.muted, opacity: pressed ? 0.75 : 1 },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel={`Look up ${name}`}
+                      accessibilityLabel={`${t.placeDetail.lookUp} ${name}`}
                     >
                       <Feather name="map-pin" size={12} color={colors.primary} />
                       <Text style={[styles.relatedText, { color: colors.foreground }]}>{name}</Text>

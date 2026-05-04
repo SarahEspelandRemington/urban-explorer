@@ -7,22 +7,24 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
+import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 
 function NativeTabLayout() {
+  const t = useT();
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="walk">
         <Icon sf={{ default: "figure.walk", selected: "figure.walk.circle.fill" }} />
-        <Label>Walk</Label>
+        <Label>{t.tabs.walk}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "safari", selected: "safari.fill" }} />
-        <Label>Explore</Label>
+        <Label>{t.tabs.explore}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="saved">
         <Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
-        <Label>Saved</Label>
+        <Label>{t.tabs.saved}</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -30,6 +32,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
+  const t = useT();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
@@ -70,7 +73,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="walk"
         options={{
-          title: "Walk",
+          title: t.tabs.walk,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="figure.walk" tintColor={color} size={24} />
@@ -82,7 +85,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Explore",
+          title: t.tabs.explore,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="safari" tintColor={color} size={24} />
@@ -94,7 +97,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="saved"
         options={{
-          title: "Saved",
+          title: t.tabs.saved,
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="bookmark" tintColor={color} size={24} />
