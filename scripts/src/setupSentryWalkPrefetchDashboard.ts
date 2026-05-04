@@ -1,7 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import {
   SENTRY_HOST,
   type SentryDashboard,
@@ -14,6 +10,7 @@ import {
   getDetectionType,
   upsertAlertRule,
 } from "./lib/sentry.js";
+import { patchReplitMdUrls } from "./lib/replitMd.js";
 
 const METRIC_MRI = "c:custom/narration.prefetch_event@none";
 const METRIC_NAME_FOR_ALERT = "sum(c:custom/narration.prefetch_event@none)";
@@ -193,34 +190,25 @@ async function patchReplitMd(
   dashboardId: string,
   alertRuleId: string,
 ): Promise<void> {
-  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-  const replitMdPath = resolve(repoRoot, "replit.md");
-  const before = await readFile(replitMdPath, "utf8");
-
   const dashboardUrl = `${SENTRY_HOST}/organizations/${org}/dashboard/${dashboardId}/`;
   const alertUrl = `${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${alertRuleId}/`;
 
-  const dashboardLine = `    - **Dashboard URL**: ${dashboardUrl}`;
-  const alertLine = `    - **Alert URL**: ${alertUrl}`;
-
-  const after = before
-    .replace(
-      /^ {4}- \*\*Dashboard URL\*\*:.*$/m,
-      dashboardLine,
-    )
-    .replace(/^ {4}- \*\*Alert URL\*\*:.*$/m, alertLine);
-
-  if (after === before) {
-    console.warn(
-      "replit.md was not modified — could not find the Dashboard URL / Alert URL placeholder lines. " +
-        "Paste these manually:\n" +
-        `  ${dashboardUrl}\n  ${alertUrl}`,
-    );
-    return;
-  }
-
-  await writeFile(replitMdPath, after, "utf8");
-  console.log(`Updated replit.md with dashboard + alert URLs.`);
+  await patchReplitMdUrls({
+    replacements: [
+      {
+        regex: /^ {4}- \*\*Dashboard URL\*\*:.*$/m,
+        line: `    - **Dashboard URL**: ${dashboardUrl}`,
+        fallbackUrl: dashboardUrl,
+      },
+      {
+        regex: /^ {4}- \*\*Alert URL\*\*:.*$/m,
+        line: `    - **Alert URL**: ${alertUrl}`,
+        fallbackUrl: alertUrl,
+      },
+    ],
+    missingPlaceholderLabel: "Dashboard URL / Alert URL",
+    successMessage: "Updated replit.md with dashboard + alert URLs.",
+  });
 }
 
 async function main(): Promise<void> {

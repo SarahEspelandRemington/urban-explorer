@@ -1,7 +1,3 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import {
   SENTRY_HOST,
   type SentryDashboard,
@@ -16,6 +12,7 @@ import {
   getDetectionType,
   upsertAlertRule,
 } from "./lib/sentry.js";
+import { patchReplitMdUrls } from "./lib/replitMd.js";
 
 const FALLBACK_METRIC_MRI = "c:custom/narration.audio_fallback@none";
 const TOTAL_METRIC_MRI = "c:custom/narration.prefetch_event@none";
@@ -319,43 +316,33 @@ async function patchReplitMd(
   fetchAlertRuleId: string,
   playbackAlertRuleId: string,
 ): Promise<void> {
-  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-  const replitMdPath = resolve(repoRoot, "replit.md");
-  const before = await readFile(replitMdPath, "utf8");
-
   const dashboardUrl = `${SENTRY_HOST}/organizations/${org}/dashboard/${dashboardId}/`;
   const fetchAlertUrl = `${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${fetchAlertRuleId}/`;
   const playbackAlertUrl = `${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${playbackAlertRuleId}/`;
 
-  const dashboardLine = `    - **Audio Fallback Dashboard URL**: ${dashboardUrl}`;
-  const fetchAlertLine = `      - **Fetch-side Alert URL**: ${fetchAlertUrl}`;
-  const playbackAlertLine = `      - **Playback-side Alert URL**: ${playbackAlertUrl}`;
-
-  const after = before
-    .replace(
-      /^ {4}- \*\*Audio Fallback Dashboard URL\*\*:.*$/m,
-      dashboardLine,
-    )
-    .replace(
-      /^ {6}- \*\*Fetch-side Alert URL\*\*:.*$/m,
-      fetchAlertLine,
-    )
-    .replace(
-      /^ {6}- \*\*Playback-side Alert URL\*\*:.*$/m,
-      playbackAlertLine,
-    );
-
-  if (after === before) {
-    console.warn(
-      "replit.md was not modified — could not find the Audio Fallback Dashboard URL / Fetch-side Alert URL / Playback-side Alert URL placeholder lines. " +
-        "Paste these manually:\n" +
-        `  ${dashboardUrl}\n  ${fetchAlertUrl}\n  ${playbackAlertUrl}`,
-    );
-    return;
-  }
-
-  await writeFile(replitMdPath, after, "utf8");
-  console.log(`Updated replit.md with audio-fallback dashboard + per-side alert URLs.`);
+  await patchReplitMdUrls({
+    replacements: [
+      {
+        regex: /^ {4}- \*\*Audio Fallback Dashboard URL\*\*:.*$/m,
+        line: `    - **Audio Fallback Dashboard URL**: ${dashboardUrl}`,
+        fallbackUrl: dashboardUrl,
+      },
+      {
+        regex: /^ {6}- \*\*Fetch-side Alert URL\*\*:.*$/m,
+        line: `      - **Fetch-side Alert URL**: ${fetchAlertUrl}`,
+        fallbackUrl: fetchAlertUrl,
+      },
+      {
+        regex: /^ {6}- \*\*Playback-side Alert URL\*\*:.*$/m,
+        line: `      - **Playback-side Alert URL**: ${playbackAlertUrl}`,
+        fallbackUrl: playbackAlertUrl,
+      },
+    ],
+    missingPlaceholderLabel:
+      "Audio Fallback Dashboard URL / Fetch-side Alert URL / Playback-side Alert URL",
+    successMessage:
+      "Updated replit.md with audio-fallback dashboard + per-side alert URLs.",
+  });
 }
 
 async function main(): Promise<void> {
