@@ -1780,6 +1780,8 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   }
 
   // Step 1: get narration text (from cache if possible).
+  // Pass the abort signal so the LLM call is cancelled immediately if the
+  // client disconnects — avoiding wasted tokens on a response nobody will read.
   let narrationText: string | null = null;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
@@ -1813,8 +1815,9 @@ How to write for speech:
             content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
           },
         ],
-      });
+      }, { signal: abortController.signal });
     } catch (err: any) {
+      if (abortController.signal.aborted) return;
       const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
       res.status(status).json({ error: "Narration service temporarily unavailable. Please try again." });
       return;
@@ -1827,8 +1830,7 @@ How to write for speech:
 
   // Step 2: render narration text to natural-voice MP3 via OpenAI TTS.
   // Pass the abort signal so a client disconnect immediately cancels the
-  // OpenAI request (and, if audio format conversion via ffmpeg were needed,
-  // would also kill the ffmpeg process and clean up its temp files).
+  // in-flight OpenAI request and avoids sending a response to a gone client.
   let audioBytes: Buffer;
   try {
     audioBytes = await textToSpeech(narrationText, voice, "mp3", abortController.signal);
@@ -1859,6 +1861,12 @@ router.post("/explore/deep-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact } = parsed.data;
   const yearBuilt = typeof (req.body as any)?.yearBuilt === "string" ? (req.body as any).yearBuilt : undefined;
+
+  // Abort controller wired to the response close event so that the in-flight
+  // LLM call is cancelled immediately if the client disconnects, avoiding
+  // wasted tokens and preventing the response from being sent to a gone client.
+  const abortController = new AbortController();
+  res.on("close", () => abortController.abort());
 
   const deepCacheKey = `deep-narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
@@ -1894,8 +1902,9 @@ How to write for speech:
           content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}.\n\nWhat we already know: ${summary}${fact ? `\nAlso noted: ${fact}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
         },
       ],
-    });
+    }, { signal: abortController.signal });
   } catch (err: any) {
+    if (abortController.signal.aborted) return;
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
     res.status(status).json({ error: "Deep narration service temporarily unavailable. Please try again." });
     return;
