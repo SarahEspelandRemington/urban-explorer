@@ -386,3 +386,126 @@ describe("useNarration — audio watchdog is cancelled by teardownActive()", () 
     expect(stalePlayer.remove).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("useNarration — pause/resume suspend and resume the audio watchdog", () => {
+  // These tests rely on Jest's modern fake timers, which mock both setTimeout
+  // AND Date.now(). suspendAudioWatchdog uses Date.now() to compute elapsed
+  // time, and jest.advanceTimersByTime advances Date in lockstep.
+  beforeEach(() => { jest.useFakeTimers(); });
+  afterEach(() => { jest.useRealTimers(); });
+
+  test("pause() during audio playback suspends the watchdog; resume() re-arms with remaining time", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    expect(mockCreatedPlayers.length).toBe(1);
+    // Audio path arms the 60s watchdog and starts the player.
+    expect(jest.getTimerCount()).toBe(1);
+    const player = mockCreatedPlayers[0];
+    expect(player.play).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(true);
+
+    // 30s into the 60s window — watchdog still pending.
+    jest.advanceTimersByTime(30_000);
+    expect(jest.getTimerCount()).toBe(1);
+
+    // pause() must (a) pause the underlying player and (b) suspend the
+    // watchdog so the timer count drops to zero.
+    n.pause();
+    expect(player.pause).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+
+    // Even an extended pause well past the original 60s ceiling must not
+    // tear down the active playback — the suspended watchdog stays inert.
+    jest.advanceTimersByTime(120_000);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(player.remove).not.toHaveBeenCalled();
+    expect(getSpeaking()).toBe(true);
+
+    // resume() re-arms the watchdog with the ~30s remaining (60s - 30s
+    // elapsed before the pause). Player is also resumed.
+    n.resume();
+    expect(player.play).toHaveBeenCalledTimes(2);
+    expect(jest.getTimerCount()).toBe(1);
+
+    // Just shy of the 30s remaining — still hasn't fired.
+    jest.advanceTimersByTime(29_999);
+    expect(jest.getTimerCount()).toBe(1);
+    expect(getSpeaking()).toBe(true);
+    expect(player.remove).not.toHaveBeenCalled();
+
+    // One more ms tips it over: watchdog fires, onFinish runs, the player
+    // is removed and speakingRef clears. This proves the timer was armed
+    // for the REMAINING window, not a fresh 60s.
+    jest.advanceTimersByTime(1);
+    expect(player.remove).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(false);
+  });
+
+  test("beginInterruption()/endInterruption() perform the same suspend/resume cycle on the watchdog", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    expect(mockCreatedPlayers.length).toBe(1);
+    expect(jest.getTimerCount()).toBe(1);
+    const player = mockCreatedPlayers[0];
+    expect(player.play).toHaveBeenCalledTimes(1);
+
+    // 20s into the watchdog window before the system grabs the audio
+    // session (incoming phone call, Siri, navigation prompt).
+    jest.advanceTimersByTime(20_000);
+    expect(jest.getTimerCount()).toBe(1);
+
+    n.beginInterruption();
+    expect(player.pause).toHaveBeenCalledTimes(1);
+    // Watchdog suspended for the duration of the interruption.
+    expect(jest.getTimerCount()).toBe(0);
+
+    // Long phone call — well past 60s — must not let the watchdog skip
+    // the current narration. This is the regression the test guards.
+    jest.advanceTimersByTime(120_000);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(player.remove).not.toHaveBeenCalled();
+    expect(getSpeaking()).toBe(true);
+
+    // Interruption ends: re-arm with the ~40s remaining (60s - 20s).
+    n.endInterruption();
+    expect(player.play).toHaveBeenCalledTimes(2);
+    expect(jest.getTimerCount()).toBe(1);
+
+    // Just short of the remaining 40s — still pending.
+    jest.advanceTimersByTime(39_999);
+    expect(getSpeaking()).toBe(true);
+    expect(player.remove).not.toHaveBeenCalled();
+
+    // The final ms fires the (re-armed-for-40s) watchdog.
+    jest.advanceTimersByTime(1);
+    expect(player.remove).toHaveBeenCalledTimes(1);
+    expect(getSpeaking()).toBe(false);
+  });
+
+  test("watchdog never fires while paused, even when fake timers run far past the 60s ceiling", () => {
+    const n = useFreshNarrationHook();
+
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+    expect(mockCreatedPlayers.length).toBe(1);
+    expect(jest.getTimerCount()).toBe(1);
+    const player = mockCreatedPlayers[0];
+
+    // Pause almost immediately so essentially the entire pause window
+    // sits beyond the watchdog ceiling. This is the worst case: a user
+    // taps pause right after the narration begins and walks away.
+    n.pause();
+    expect(player.pause).toHaveBeenCalledTimes(1);
+    expect(jest.getTimerCount()).toBe(0);
+
+    // Three times the watchdog ceiling. Without the suspend bookkeeping,
+    // this is exactly the scenario that would silently skip the story.
+    jest.advanceTimersByTime(180_000);
+    expect(jest.getTimerCount()).toBe(0);
+    expect(player.remove).not.toHaveBeenCalled();
+    // speakingRef stays true throughout — onFinish never ran, so the
+    // narration is still considered active and ready to resume.
+    expect(getSpeaking()).toBe(true);
+  });
+});
