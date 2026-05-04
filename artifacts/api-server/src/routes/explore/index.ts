@@ -677,7 +677,11 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
  */
 async function fetchPhotosForPlaces(places: any[]): Promise<void> {
   if (places.length === 0) return;
-  const WALL_TIMEOUT_MS = 4000;
+  // Tight wall-clock cap so a slow Wikipedia response can't delay the discover
+  // reply on cold-cache requests. Photos are best-effort; the cache-hit path
+  // (see /explore/discover above) automatically backfills any places that
+  // returned without artwork on the next request for the same area.
+  const WALL_TIMEOUT_MS = 1500;
   try {
     await Promise.race([
       Promise.all(
@@ -812,25 +816,10 @@ router.post("/explore/discover", async (req, res) => {
   }
 
   const osmTimeLimit = isQuick ? 3000 : 4000;
-  let osmPlaces: OSMPlace[] = [];
-  try {
-    osmPlaces = await Promise.race([
-      fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick),
-      new Promise<OSMPlace[]>((resolve) => setTimeout(() => resolve([]), osmTimeLimit)),
-    ]);
-  } catch {
-    osmPlaces = [];
-  }
-
-  // Apply boring-building denylist now that we have the user's preferences.
-  if (effectiveDenylist.size > 0) {
-    osmPlaces = osmPlaces.filter((p) => {
-      const building = (p.tags["building"] ?? "").toLowerCase();
-      return !building || !effectiveDenylist.has(building);
-    });
-  }
-
-  const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
+  const osmPromise: Promise<OSMPlace[]> = Promise.race([
+    fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick).catch(() => [] as OSMPlace[]),
+    new Promise<OSMPlace[]>((resolve) => setTimeout(() => resolve([]), osmTimeLimit)),
+  ]);
 
   const placeCount = isQuick ? "8-12" : "8-12";
   const factCount = isQuick ? 2 : 3;
@@ -839,11 +828,15 @@ router.post("/explore/discover", async (req, res) => {
   // to give comfortable headroom without runaway generation.
   const maxTokens = isQuick ? 3000 : 4500;
 
-  // Two-step discovery for full mode: first brainstorm freely, then format.
-  // Brainstorming without schema constraints lets the model recall more obscure
-  // knowledge before it commits to JSON structure.
-  let brainstormContext = "";
-  if (!isQuick) {
+  // Two-step discovery for full mode: brainstorm freely, then format.
+  // Run the brainstorm IN PARALLEL with the Overpass fetch — both only need the
+  // raw coordinates, so there's no reason to serialize them. The brainstorm's
+  // job is to surface obscure coordinate-anchored historical knowledge that
+  // OSM data doesn't contain anyway. The main LLM call below still gets the
+  // full OSM context. This eliminates ~3-5 s of serial wait on cold full-mode
+  // requests (the most common new-user path).
+  const brainstormPromise: Promise<string> = (async () => {
+    if (isQuick) return "";
     try {
       const BRAINSTORM_TIMEOUT_MS = 9000;
       const brainstormAbort = new AbortController();
@@ -861,21 +854,34 @@ router.post("/explore/discover", async (req, res) => {
               },
               {
                 role: "user",
-                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?${osmContext}`,
+                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?`,
               },
             ],
           },
           { signal: brainstormAbort.signal },
         );
-        brainstormContext = brainstormResponse.choices[0]?.message?.content ?? "";
+        return brainstormResponse.choices[0]?.message?.content ?? "";
       } finally {
         clearTimeout(brainstormTimer);
       }
     } catch {
       // Brainstorm failure or timeout is non-fatal — proceed with single-step generation.
-      brainstormContext = "";
+      return "";
     }
+  })();
+
+  const [osmPlacesRaw, brainstormContext] = await Promise.all([osmPromise, brainstormPromise]);
+  let osmPlaces: OSMPlace[] = osmPlacesRaw;
+
+  // Apply boring-building denylist now that we have the user's preferences.
+  if (effectiveDenylist.size > 0) {
+    osmPlaces = osmPlaces.filter((p) => {
+      const building = (p.tags["building"] ?? "").toLowerCase();
+      return !building || !effectiveDenylist.has(building);
+    });
   }
+
+  const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
   const systemPrompt = `You are a hyper-local urban historian who specializes in obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces. You know the kind of details that only longtime residents, local historians, or architecture nerds would know.
 

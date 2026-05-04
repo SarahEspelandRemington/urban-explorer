@@ -263,14 +263,35 @@ export default function ExploreScreen() {
         }),
       ]);
     };
+
+    // Fast-path: if the OS has a recent cached fix (< 2 min old, < 200 m
+    // accuracy), seed the UI with it immediately so the map and discovery
+    // pipeline can start working while we still try for a fresher fix.
+    // This eliminates the up-to-10 s blocking GPS wait that new users
+    // would otherwise sit through on every cold launch.
+    let seeded: Location.LocationObject | null = null;
+    try {
+      const last = await Location.getLastKnownPositionAsync({
+        maxAge: 2 * 60 * 1000,
+        requiredAccuracy: 200,
+      });
+      if (last) {
+        seeded = last;
+        setLocation(last);
+      }
+    } catch {
+      /* ignore */
+    }
+
     try {
       let first: Location.LocationObject;
       try {
         first = await withTimeout(
           Location.getCurrentPositionAsync({ accuracy: accuracyPref }),
-          10000,
+          6000,
         );
       } catch {
+        if (seeded) return seeded;
         try {
           const last = await Location.getLastKnownPositionAsync();
           if (last) {
@@ -283,7 +304,7 @@ export default function ExploreScreen() {
         return null;
       }
       const firstAcc = first.coords.accuracy ?? 9999;
-      if (firstAcc <= 50) {
+      if (firstAcc <= 100) {
         setLocation(first);
         return first;
       }
@@ -291,7 +312,7 @@ export default function ExploreScreen() {
       try {
         const second = await withTimeout(
           Location.getCurrentPositionAsync({ accuracy: accuracyPref }),
-          6000,
+          3000,
         );
         const secondAcc = second.coords.accuracy ?? 9999;
         const best = secondAcc < firstAcc ? second : first;
