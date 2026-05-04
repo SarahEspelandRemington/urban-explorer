@@ -10,7 +10,8 @@
  *      audio temp file must be cleaned up before the new fetch fires.
  *      (As of the stale-pool change below, the discarded payload is first
  *      offered to the stale pool for short-window replay; only if the pool
- *      is unavailable does immediate cleanup run.)
+ *      is unavailable does immediate cleanup run. Either way the live
+ *      cache slot is cleared, so STALE_DISCARD telemetry still fires.)
  *
  *   2. STOP-WALK GUARD — if stopWalk runs while a prefetch is in flight,
  *      the resolved payload must NOT be written into the cache and any
@@ -28,6 +29,35 @@
  *   endpoint.  The stale pool keeps A's payload alive for a short TTL so a
  *   fast re-pick replays the cached audio instantly.  Entries that age out
  *   are still cleaned up via the scheduled timer so we don't leak temp files.
+ *
+ * Telemetry — every interesting transition in the pipeline emits a
+ * PrefetchEvent through the optional `onEvent` callback. WalkModeContext
+ * uses this to keep a per-walk counter (visible in the dev overlay) and
+ * to route Sentry breadcrumbs so we can detect regressions where the
+ * pipeline silently degrades to "fetch on demand for every place".
+ *
+ *   HIT               — fetchNarration consumed a cached payload for the
+ *                       requested place. Fired both for direct live-cache
+ *                       hits AND when the stale pool serves a recently-
+ *                       displaced payload for the requested place.
+ *   MISS              — fetchNarration found no usable cached payload (the
+ *                       live cache was empty and, when configured, the
+ *                       stale pool also did not hold the requested place).
+ *   STALE_DISCARD     — a cached payload existed but for the wrong place,
+ *                       so it was cleared from the live cache. Fired both
+ *                       when consumePrefetchedNarration removes a stale
+ *                       entry on a fetchNarration call AND when
+ *                       runPrefetchCycle clears a stale entry to make room
+ *                       for a fresh candidate. The displaced payload is
+ *                       parked in the stale pool when one is configured;
+ *                       otherwise its audio temp file is cleaned up.
+ *   STOP_WALK_DISCARD — runPrefetchCycle resolved AFTER stopWalk flipped
+ *                       isWalkingRef to false, OR after the candidate had
+ *                       already been narrated (skip / duplicate tick); the
+ *                       resolved payload was dropped.
+ *   DEDUPE            — runPrefetchCycle was invoked while a fetch for the
+ *                       same candidate was already in flight, and the
+ *                       second call was collapsed into the first.
  */
 
 export type NarrationPayload =
@@ -203,6 +233,25 @@ export function disposeStalePrefetchPool<P extends PrefetchPlaceLike>(
   pool.map.clear();
 }
 
+export type PrefetchEvent =
+  | "HIT"
+  | "MISS"
+  | "STALE_DISCARD"
+  | "STOP_WALK_DISCARD"
+  | "DEDUPE";
+
+export interface PrefetchCounters {
+  HIT: number;
+  MISS: number;
+  STALE_DISCARD: number;
+  STOP_WALK_DISCARD: number;
+  DEDUPE: number;
+}
+
+export function emptyPrefetchCounters(): PrefetchCounters {
+  return { HIT: 0, MISS: 0, STALE_DISCARD: 0, STOP_WALK_DISCARD: 0, DEDUPE: 0 };
+}
+
 export interface PrefetchPipelineDeps<P extends PrefetchPlaceLike> {
   isWalkingRef: { current: boolean };
   narratedIdsRef: { current: Map<string, number> };
@@ -215,6 +264,17 @@ export interface PrefetchPipelineDeps<P extends PrefetchPlaceLike> {
   // for short-window replay instead of immediately cleaned up, and a candidate
   // already in the pool is promoted to the live cache without a re-fetch.
   stalePool?: StalePrefetchPool<P>;
+  /**
+   * Optional telemetry sink. Invoked synchronously whenever the pipeline
+   * traverses one of the named transitions. Errors thrown by onEvent are
+   * swallowed so telemetry can never break the pipeline.
+   */
+  onEvent?: (event: PrefetchEvent) => void;
+}
+
+function emit(onEvent: ((e: PrefetchEvent) => void) | undefined, event: PrefetchEvent): void {
+  if (!onEvent) return;
+  try { onEvent(event); } catch {}
 }
 
 /**
@@ -231,7 +291,10 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
   // Already cached for this candidate — no need to re-fetch.
   if (deps.prefetchedNarrationRef.current?.placeId === candidate.id) return undefined;
   // Another request for this candidate is already in flight — DEDUPE.
-  if (deps.prefetchInFlightRef.current === candidate.id) return undefined;
+  if (deps.prefetchInFlightRef.current === candidate.id) {
+    emit(deps.onEvent, "DEDUPE");
+    return undefined;
+  }
 
   // Stale-pool revival: if we already have a recent payload for this candidate,
   // promote it back to the live cache and skip the network round-trip.  Any
@@ -241,8 +304,16 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
     const revived = reviveStalePrefetchedEntry(deps.stalePool, candidate.id);
     if (revived) {
       const displaced = deps.prefetchedNarrationRef.current;
-      if (displaced) parkStalePrefetchedEntry(deps.stalePool, displaced);
+      if (displaced) {
+        parkStalePrefetchedEntry(deps.stalePool, displaced);
+        // Live cache slot was cleared (entry was for a different place) —
+        // the parked payload may still be replayed, but from the live
+        // cache's perspective this is a discard.
+        emit(deps.onEvent, "STALE_DISCARD");
+      }
       deps.prefetchedNarrationRef.current = revived;
+      // The cached audio for `candidate` was reused without a new fetch.
+      emit(deps.onEvent, "HIT");
       return undefined;
     }
   }
@@ -257,6 +328,7 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
     } else if (stale.payload.kind === "audio") {
       try { stale.payload.cleanup?.(); } catch {}
     }
+    emit(deps.onEvent, "STALE_DISCARD");
   }
   deps.prefetchedNarrationRef.current = null;
 
@@ -272,6 +344,7 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
       // delete it before bailing.
       if (!deps.isWalkingRef.current || deps.narratedIdsRef.current.has(candidateId)) {
         if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
+        emit(deps.onEvent, "STOP_WALK_DISCARD");
         return;
       }
       deps.prefetchedNarrationRef.current = { placeId: candidateId, payload, place };
@@ -298,11 +371,18 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
  * caller's mismatched entry instead of running its cleanup outright.  This
  * is how a "skip then re-pick within the TTL" sequence replays the
  * already-fetched audio without another round-trip.
+ *
+ * `onEvent` is optional telemetry. A direct match emits HIT, a pool revival
+ * also emits HIT, and the absence of any usable payload emits MISS. Whenever
+ * the live cache held a non-null entry for a different place than requested
+ * the live slot is cleared — that always emits STALE_DISCARD, regardless of
+ * whether the displaced entry was parked in the pool or destroyed outright.
  */
 export function consumePrefetchedNarration<P extends PrefetchPlaceLike>(
   prefetched: PrefetchEntry<P> | null,
   requestedPlaceId: string,
   stalePool?: StalePrefetchPool<P>,
+  onEvent?: (event: PrefetchEvent) => void,
 ):
   // `source` distinguishes the two hit paths:
   //   "live"        — the live prefetch slot already held this place's payload
@@ -315,21 +395,30 @@ export function consumePrefetchedNarration<P extends PrefetchPlaceLike>(
   | { kind: "hit"; source: "live" | "staleReplay"; entry: PrefetchEntry<P> }
   | { kind: "miss" } {
   if (prefetched && prefetched.placeId === requestedPlaceId) {
+    emit(onEvent, "HIT");
     return { kind: "hit", source: "live", entry: prefetched };
   }
+  // Live cache held a mismatched entry — the live slot is being cleared.
+  if (prefetched) {
+    if (stalePool) {
+      parkStalePrefetchedEntry(stalePool, prefetched);
+    } else if (prefetched.payload.kind === "audio") {
+      try { prefetched.payload.cleanup?.(); } catch {}
+    }
+    emit(onEvent, "STALE_DISCARD");
+  }
+  // Stale-pool revival path: the mismatched live entry (if any) was already
+  // parked above, so we just need to look up the requested place.
   if (stalePool) {
     const revived = reviveStalePrefetchedEntry(stalePool, requestedPlaceId);
     if (revived) {
       // The mismatched live entry (if any) is still potentially useful —
       // park it so a follow-up re-pick can replay it too.
       if (prefetched) parkStalePrefetchedEntry(stalePool, prefetched);
+      emit(onEvent, "HIT");
       return { kind: "hit", source: "staleReplay", entry: revived };
     }
-    if (prefetched) parkStalePrefetchedEntry(stalePool, prefetched);
-    return { kind: "miss" };
   }
-  if (prefetched && prefetched.payload.kind === "audio") {
-    try { prefetched.payload.cleanup?.(); } catch {}
-  }
+  emit(onEvent, "MISS");
   return { kind: "miss" };
 }

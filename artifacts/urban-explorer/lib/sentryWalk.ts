@@ -50,6 +50,40 @@ export function trackNarrationFallback(reason: NarrationFallbackReason): void {
 }
 
 /**
+ * Record a narration prefetch pipeline event in Sentry. We emit BOTH a
+ * lightweight breadcrumb (so the event shows up in the timeline of any
+ * subsequent crash report) AND a metrics counter (so the Sentry dashboard
+ * tracks aggregate cache-hit rate over time).
+ *
+ *   HIT               — prefetched payload was consumed for the requested place
+ *   MISS              — fetchNarration found no cached payload at all
+ *   STALE_DISCARD     — cached payload existed but for a different place and
+ *                       was thrown away (wasted prefetch work)
+ *   STOP_WALK_DISCARD — prefetch resolved after the walk ended or the
+ *                       candidate was already narrated; payload was dropped
+ *   DEDUPE            — duplicate prefetch call for the same in-flight
+ *                       candidate was collapsed into the first
+ */
+export type PrefetchTelemetryEvent =
+  | "HIT"
+  | "MISS"
+  | "STALE_DISCARD"
+  | "STOP_WALK_DISCARD"
+  | "DEDUPE";
+
+export function trackPrefetchEvent(event: PrefetchTelemetryEvent): void {
+  if (!DSN) return;
+  Sentry.metrics.increment("narration.prefetch_event", 1, {
+    tags: { event },
+  });
+  Sentry.addBreadcrumb({
+    category: "walk.prefetch",
+    message: `prefetch ${event}`,
+    level: "info",
+  });
+}
+
+/**
  * Record a walk-lifecycle event as a Sentry breadcrumb.
  * Only call with opaque IDs and counts — never place names or coordinates.
  *

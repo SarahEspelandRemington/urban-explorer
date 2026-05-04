@@ -364,6 +364,25 @@ export default function WalkModeScreen() {
         <Text style={[styles.statsLine, { color: colors.mutedForeground }]}>
           {t.walkMode.storiesSoFar(walk.stats.placesNarrated)}
         </Text>
+        {__DEV__ ? (
+          <Text
+            style={[styles.debugLine, { color: colors.mutedForeground }]}
+            accessibilityLabel="Prefetch cache stats (dev)"
+          >
+            {(() => {
+              const s = walk.prefetchStats;
+              // Hit-rate denominator is HIT + MISS only — these are the
+              // events that come exclusively from fetchNarration's lookup
+              // path. STALE_DISCARD also fires when runPrefetchCycle
+              // overwrites a stale cache entry, so including it would
+              // conflate "lookup miss" with "prefetch churn" and
+              // understate the real lookup hit rate.
+              const lookups = s.HIT + s.MISS;
+              const rate = lookups > 0 ? Math.round((s.HIT / lookups) * 100) : 0;
+              return `prefetch  hit ${s.HIT}/${lookups} (${rate}%)  stale ${s.STALE_DISCARD}  stop ${s.STOP_WALK_DISCARD}  dedupe ${s.DEDUPE}`;
+            })()}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -490,6 +509,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statsLine: { fontSize: 12, fontFamily: "Inter_500Medium" },
+  debugLine: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    marginTop: 4,
+    opacity: 0.7,
+  },
   settingsBtn: {
     width: 32,
     height: 32,

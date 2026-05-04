@@ -10,14 +10,17 @@ import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/us
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
 import { fetchNarrationPayload as fetchNarrationPayloadUtil } from "@/lib/fetchNarrationPayload";
-import { addWalkBreadcrumb, setWalkScope } from "@/lib/sentryWalk";
+import { addWalkBreadcrumb, setWalkScope, trackPrefetchEvent } from "@/lib/sentryWalk";
 import { installSessionCallback, dispatchLocation } from "@/lib/walkSessionManager";
 import { executeStopWalkSync } from "@/lib/walkStopSession";
 import {
   consumePrefetchedNarration,
   createStalePrefetchPool,
   disposeStalePrefetchPool,
+  emptyPrefetchCounters,
+  type PrefetchCounters,
   type PrefetchEntry,
+  type PrefetchEvent,
   runPrefetchCycle,
   type StalePrefetchPool,
 } from "@/lib/narrationPrefetchPipeline";
@@ -98,6 +101,13 @@ interface WalkModeContextType {
   fetchPlacesAlongRoute: (geometry: number[][], maxPlaces?: number) => Promise<WalkPlace[]>;
   enabledBuildingGroups: Set<BuildingGroupKey>;
   setEnabledBuildingGroups: (groups: Set<BuildingGroupKey>) => void;
+  /**
+   * Per-walk running totals for the narration prefetch pipeline. Reset to
+   * zero on every startWalk. Surfaced in the dev debug overlay so we can
+   * eyeball cache hit rate during real walks and catch regressions where
+   * the pipeline silently degrades to "fetch on demand for every place".
+   */
+  prefetchStats: PrefetchCounters;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
@@ -375,6 +385,26 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // ghost-clears a new session's GPS handler.
   const walkSessionCallbackRef = useRef<{ stop: () => void } | null>(null);
 
+  // Per-walk prefetch pipeline counters. The ref carries the live mutable
+  // counts so repeated emits don't trigger React re-renders; the state
+  // mirror is what the dev overlay subscribes to (updated via a microtask
+  // batch on every emit so we don't render-storm during a burst).
+  const prefetchCountersRef = useRef<PrefetchCounters>(emptyPrefetchCounters());
+  const [prefetchStats, setPrefetchStats] = useState<PrefetchCounters>(emptyPrefetchCounters());
+  const prefetchStatsFlushQueuedRef = useRef(false);
+  const handlePrefetchEvent = useCallback((event: PrefetchEvent) => {
+    prefetchCountersRef.current[event] += 1;
+    trackPrefetchEvent(event);
+    if (!prefetchStatsFlushQueuedRef.current) {
+      prefetchStatsFlushQueuedRef.current = true;
+      // Coalesce bursts (e.g. rapid GPS ticks firing DEDUPE) into one render.
+      Promise.resolve().then(() => {
+        prefetchStatsFlushQueuedRef.current = false;
+        setPrefetchStats({ ...prefetchCountersRef.current });
+      });
+    }
+  }, []);
+
   const applyDensity = useCallback((d: WalkDensity) => {
     if (densityRef.current === d) return;
     densityRef.current = d;
@@ -595,7 +625,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // also runs the stale-cleanup when the cached entry is for a different place.
     const prefetched = prefetchedNarrationRef.current;
     prefetchedNarrationRef.current = null; // always consume / clear the cache
-    const lookup = consumePrefetchedNarration(prefetched, place.id, getStalePrefetchPool());
+    const lookup = consumePrefetchedNarration(
+      prefetched,
+      place.id,
+      getStalePrefetchPool(),
+      handlePrefetchEvent,
+    );
     if (lookup.kind === "hit") {
       if (__DEV__) {
         console.log(`[fetchNarration] cache HIT (${lookup.source}) for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`);
@@ -650,7 +685,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // Start pre-fetching the next candidate so it's ready when this
     // narration finishes and the movement gate clears.
     prefetchNextRef.current?.();
-  }, [enqueueNarration, fetchNarrationPayload]);
+  }, [enqueueNarration, fetchNarrationPayload, handlePrefetchEvent]);
 
   /**
    * Pick the best place to narrate next, given current location, heading, density.
@@ -758,8 +793,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       pickNext,
       fetchPayload: fetchNarrationPayload,
       stalePool: getStalePrefetchPool(),
+      onEvent: handlePrefetchEvent,
     });
-  }, [pickNext, fetchNarrationPayload, getStalePrefetchPool]);
+  }, [pickNext, fetchNarrationPayload, getStalePrefetchPool, handlePrefetchEvent]);
   useEffect(() => {
     prefetchNextRef.current = prefetchNext;
   }, [prefetchNext]);
@@ -1018,6 +1054,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (stalePrefetchPoolRef.current) {
       disposeStalePrefetchPool(stalePrefetchPoolRef.current);
     }
+    // Reset prefetch telemetry so each walk's counters start at zero.
+    prefetchCountersRef.current = emptyPrefetchCounters();
+    setPrefetchStats(emptyPrefetchCounters());
     // Start cooldown so we don't fire instantly before the user has even moved.
     // Use the largest cooldown across all densities so the 5-second initial
     // wait is preserved even if auto-density switches to a stricter tier right
@@ -1217,6 +1256,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         fetchPlacesAlongRoute,
         enabledBuildingGroups,
         setEnabledBuildingGroups,
+        prefetchStats,
       }}
     >
       {children}

@@ -346,11 +346,14 @@ import {
   consumePrefetchedNarration,
   createStalePrefetchPool,
   disposeStalePrefetchPool,
+  emptyPrefetchCounters,
   parkStalePrefetchedEntry,
   reviveStalePrefetchedEntry,
   runPrefetchCycle,
   type NarrationPayload,
+  type PrefetchCounters,
   type PrefetchEntry,
+  type PrefetchEvent,
   type StalePrefetchPool,
 } from "../lib/narrationPrefetchPipeline";
 
@@ -362,15 +365,20 @@ interface PipelineState {
   prefetchedNarrationRef: { current: PrefetchEntry<StressPlace> | null };
   prefetchInFlightRef: { current: string | null };
   placesRef: { current: StressPlace[] };
+  counters: PrefetchCounters;
+  onEvent: (event: PrefetchEvent) => void;
 }
 
 function buildPipelineState(places: StressPlace[]): PipelineState {
+  const counters = emptyPrefetchCounters();
   return {
     isWalkingRef: { current: true },
     narratedIdsRef: { current: new Map<string, number>() },
     prefetchedNarrationRef: { current: null },
     prefetchInFlightRef: { current: null },
     placesRef: { current: places },
+    counters,
+    onEvent: (event: PrefetchEvent) => { counters[event] += 1; },
   };
 }
 
@@ -392,11 +400,13 @@ describe("narration prefetch pipeline — race-condition guards", () => {
         place: { id: "place-A", name: "A" },
         payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: staleCleanup },
       };
+      const events: PrefetchEvent[] = [];
 
-      const result = consumePrefetchedNarration(stale, "place-B");
+      const result = consumePrefetchedNarration(stale, "place-B", undefined, (e) => events.push(e));
 
       expect(result.kind).toBe("miss");
       expect(staleCleanup).toHaveBeenCalledTimes(1);
+      expect(events).toEqual(["STALE_DISCARD"]);
     });
 
     test("stale text payload is dropped without cleanup (no temp file to delete)", () => {
@@ -418,8 +428,9 @@ describe("narration prefetch pipeline — race-condition guards", () => {
         place: { id: "place-B", name: "B" },
         payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup },
       };
+      const events: PrefetchEvent[] = [];
 
-      const result = consumePrefetchedNarration(cached, "place-B");
+      const result = consumePrefetchedNarration(cached, "place-B", undefined, (e) => events.push(e));
 
       expect(result.kind).toBe("hit");
       if (result.kind === "hit") {
@@ -430,11 +441,35 @@ describe("narration prefetch pipeline — race-condition guards", () => {
         expect(result.source).toBe("live");
       }
       expect(cleanup).not.toHaveBeenCalled();
+      expect(events).toEqual(["HIT"]);
     });
 
     test("null cache returns miss without throwing", () => {
+      const events: PrefetchEvent[] = [];
+      expect(() => consumePrefetchedNarration(null, "place-X", undefined, (e) => events.push(e))).not.toThrow();
+      expect(consumePrefetchedNarration(null, "place-X", undefined, (e) => events.push(e)).kind).toBe("miss");
+      expect(events).toEqual(["MISS", "MISS"]);
+    });
+
+    test("onEvent is optional — omitting it does not throw", () => {
       expect(() => consumePrefetchedNarration(null, "place-X")).not.toThrow();
-      expect(consumePrefetchedNarration(null, "place-X").kind).toBe("miss");
+      const stale: PrefetchEntry<StressPlace> = {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "text", text: "old" },
+      };
+      expect(() => consumePrefetchedNarration(stale, "place-B")).not.toThrow();
+    });
+
+    test("onEvent throw is swallowed so a buggy telemetry sink can never break the consumer", () => {
+      const stale: PrefetchEntry<StressPlace> = {
+        placeId: "place-A",
+        place: { id: "place-A", name: "A" },
+        payload: { kind: "text", text: "old" },
+      };
+      const onEvent = () => { throw new Error("sentry exploded"); };
+      expect(() => consumePrefetchedNarration(stale, "place-B", undefined, onEvent)).not.toThrow();
+      expect(() => consumePrefetchedNarration(null, "place-X", undefined, onEvent)).not.toThrow();
     });
 
     test("cleanup throw is swallowed so the consumer can continue", () => {
@@ -478,6 +513,10 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
     expect(staleCleanup).toHaveBeenCalledTimes(1);
     expect(state.prefetchedNarrationRef.current?.placeId).toBe("place-B");
+    // Overwriting a stale entry should be visible in the telemetry counters
+    // so we can spot a regression where the stale-clear branch silently
+    // stops firing (e.g. someone refactored the guard out).
+    expect(state.counters.STALE_DISCARD).toBe(1);
   });
 
   // --- Guard 2: STOP-WALK GUARD ------------------------------------------
@@ -514,6 +553,9 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       expect(state.prefetchedNarrationRef.current).toBeNull();
       // In-flight marker is cleared so a future cycle (e.g. next walk) can proceed.
       expect(state.prefetchInFlightRef.current).toBeNull();
+      // Telemetry: the stop-walk discard must be visible so production
+      // dashboards can spot regressions in the guard.
+      expect(state.counters.STOP_WALK_DISCARD).toBe(1);
     });
 
     test("text payload is silently dropped when stopWalk runs mid-flight (no cleanup to fire)", async () => {
@@ -601,6 +643,8 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       expect(fetchPayload).toHaveBeenCalledTimes(1);
       // The deduped call returns undefined since it short-circuits.
       expect(secondCycle).toBeUndefined();
+      // Telemetry: the dedupe should be counted exactly once.
+      expect(state.counters.DEDUPE).toBe(1);
 
       gate.resolve({ kind: "text", text: "D narration" });
       await firstCycle;
@@ -625,6 +669,8 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       for (let i = 1; i < cycles.length; i++) {
         expect(cycles[i]).toBeUndefined();
       }
+      // Telemetry: every collapsed call past the first should be a DEDUPE.
+      expect(state.counters.DEDUPE).toBe(cycles.length - 1);
 
       gate.resolve({ kind: "text", text: "Burst narration" });
       await cycles[0];
@@ -1142,6 +1188,68 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
       expect(aCleanup).toHaveBeenCalledTimes(1);
       expect(state.prefetchedNarrationRef.current?.placeId).toBe("place-B");
+    });
+  });
+
+  // --- Telemetry counter behaviour ---------------------------------------
+  //
+  // These tests focus specifically on the per-event counter increments. They
+  // give us a single place to scan when chasing a "Sentry dashboard isn't
+  // moving" report — if any of these regress, the dev overlay and the
+  // Sentry counter both go silent.
+
+  describe("prefetch event counters", () => {
+    test("a fresh state starts every counter at zero", () => {
+      const counters = emptyPrefetchCounters();
+      expect(counters).toEqual({
+        HIT: 0,
+        MISS: 0,
+        STALE_DISCARD: 0,
+        STOP_WALK_DISCARD: 0,
+        DEDUPE: 0,
+      });
+    });
+
+    test("a successful prefetch followed by a matching consume produces exactly one HIT and zero misses", async () => {
+      const places: StressPlace[] = [{ id: "place-H", name: "H" }];
+      const state = buildPipelineState(places);
+      const fetchPayload = jest.fn(async (): Promise<NarrationPayload> => ({
+        kind: "text",
+        text: "Hit narration",
+      }));
+
+      await runPrefetchCycle({
+        ...state,
+        pickNext: () => places[0],
+        fetchPayload,
+      });
+
+      // Now simulate fetchNarration consuming the cached entry for the
+      // same place. The cache must be cleared by the caller first to
+      // mirror the production "always consume / clear the cache" pattern.
+      const cached = state.prefetchedNarrationRef.current;
+      state.prefetchedNarrationRef.current = null;
+      const result = consumePrefetchedNarration(cached, "place-H", undefined, state.onEvent);
+
+      expect(result.kind).toBe("hit");
+      expect(state.counters.HIT).toBe(1);
+      expect(state.counters.MISS).toBe(0);
+      expect(state.counters.STALE_DISCARD).toBe(0);
+      expect(state.counters.STOP_WALK_DISCARD).toBe(0);
+      expect(state.counters.DEDUPE).toBe(0);
+    });
+
+    test("an empty cache lookup increments MISS without touching other counters", () => {
+      const state = buildPipelineState([]);
+      consumePrefetchedNarration(null, "place-anything", undefined, state.onEvent);
+
+      expect(state.counters).toEqual({
+        HIT: 0,
+        MISS: 1,
+        STALE_DISCARD: 0,
+        STOP_WALK_DISCARD: 0,
+        DEDUPE: 0,
+      });
     });
   });
 });
