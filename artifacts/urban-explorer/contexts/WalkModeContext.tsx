@@ -2,7 +2,6 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
-import { File, Paths } from "expo-file-system";
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 
@@ -10,7 +9,10 @@ import { useLocale } from "@/contexts/LocaleContext";
 import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
-import { addWalkBreadcrumb, setWalkScope, trackNarrationFallback } from "@/lib/sentryWalk";
+import { fetchNarrationPayload as fetchNarrationPayloadUtil } from "@/lib/fetchNarrationPayload";
+import { addWalkBreadcrumb, setWalkScope } from "@/lib/sentryWalk";
+import { installSessionCallback, dispatchLocation } from "@/lib/walkSessionManager";
+import { executeStopWalkSync } from "@/lib/walkStopSession";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
 import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/buildingTypeGroups";
 
@@ -19,23 +21,18 @@ import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/bui
 // after a process restart, before any React tree has mounted.
 const BACKGROUND_LOCATION_TASK = "urban-explorer-background-location";
 
-// Bridge between the OS task callback and the active WalkModeProvider instance.
-// We never want stale callbacks holding refs to torn-down providers, so the
-// provider sets this on startWalk and clears it on stopWalk.
-let activeLocationCallback:
-  | ((location: Location.LocationObject) => void)
-  | null = null;
-
+// Register the background GPS task at module scope (required by expo-task-manager).
+// Location events are forwarded to whichever session is active via
+// walkSessionManager.dispatchLocation — the CAS logic in walkSessionManager
+// ensures stale sessions cannot ghost-clear the current session's callback.
 if (Platform.OS !== "web" && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK)) {
   TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     if (error) return;
     if (!data) return;
     const { locations } = data as { locations: Location.LocationObject[] };
     if (!locations || locations.length === 0) return;
-    const cb = activeLocationCallback;
-    if (!cb) return;
     // Only forward the freshest sample; the tick loop doesn't need history.
-    cb(locations[locations.length - 1]);
+    dispatchLocation(locations[locations.length - 1]);
   });
 }
 
@@ -329,11 +326,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Tracks which place ID is currently being pre-fetched, so repeated calls
   // to prefetchNext before the first resolves don't issue parallel duplicates.
   const prefetchInFlightRef = useRef<string | null>(null);
-  // Tracks the exact callback reference that was installed as activeLocationCallback
-  // for the current walk session. Used by stopWalk for a compare-and-swap so a
-  // delayed stop from a prior session cannot accidentally clear the callback of
-  // a new walk that has already started.
-  const walkSessionCallbackRef = useRef<((loc: Location.LocationObject) => void) | null>(null);
+  // Holds the stop() function returned by installSessionCallback for the current
+  // walk session. Calling stop() removes the callback via CAS inside
+  // walkSessionManager, so a delayed stopWalk from an old session never
+  // ghost-clears a new session's GPS handler.
+  const walkSessionCallbackRef = useRef<{ stop: () => void } | null>(null);
 
   const applyDensity = useCallback((d: WalkDensity) => {
     if (densityRef.current === d) return;
@@ -534,105 +531,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Single source of truth for "go fetch a narration for this place". On web
   // (and as a fallback when the audio endpoint errors) returns text. On native
   // returns a path to a freshly-written MP3 file plus a cleanup that deletes
-  // the file once playback is done.
-  const fetchNarrationPayload = useCallback(async (place: WalkPlace): Promise<NarrationPayload | null> => {
-    const body = JSON.stringify({
-      placeName: place.name,
-      category: place.category,
-      summary: place.summary,
-      fact: place.facts[0],
-    });
-    const headers = { "Content-Type": "application/json", ...await authHeaders() };
-
-    // Native: try the natural-voice MP3 endpoint first.
-    // Skipped in Expo Go: the bundled native runtime may not match the JS
-    // package versions, which can cause a native crash on file write / playback.
-    if (Platform.OS !== "web" && !IS_EXPO_GO) {
-      try {
-        if (__DEV__) console.log(`[fetchNarrationPayload] POST walk-narration-audio for "${place.name}"`);
-        const audioController = new AbortController();
-        const audioTimeout = setTimeout(() => audioController.abort(), 15_000);
-        let res: Response;
-        try {
-          res = await fetch(`${API_BASE}/api/explore/walk-narration-audio`, { method: "POST", headers, body, signal: audioController.signal });
-        } finally {
-          clearTimeout(audioTimeout);
-        }
-        if (__DEV__) console.log(`[fetchNarrationPayload] audio response status=${res.status} for "${place.name}"`);
-        if (res.ok) {
-          const buf = await res.arrayBuffer();
-          if (buf.byteLength > 0) {
-            // Write the bytes to a unique cache file so concurrent prefetches
-            // never collide on the same path. Cleanup deletes the file when
-            // playback finishes (or is cancelled via stop/skip).
-            const fileName = `walk-narr-${place.id.replace(/[^a-zA-Z0-9_-]/g, "_")}-${Date.now()}.mp3`;
-            try {
-              const file = new File(Paths.cache, fileName);
-              file.write(new Uint8Array(buf));
-              if (__DEV__) console.log(`[fetchNarrationPayload] wrote ${buf.byteLength} bytes to ${file.uri}`);
-              const cleanup = () => { try { file.delete(); } catch {} };
-              return { kind: "audio", audioUri: file.uri, cleanup };
-            } catch (writeErr) {
-              if (__DEV__) console.log(`[fetchNarrationPayload] file.write failed, will fall back to text:`, writeErr);
-              addWalkBreadcrumb(
-                "narration audio write failed",
-                { errorType: writeErr instanceof Error ? writeErr.constructor.name : typeof writeErr },
-                "warning",
-              );
-              trackNarrationFallback("write_failure");
-              // fall through to text endpoint below
-            }
-          } else {
-            if (__DEV__) console.log(`[fetchNarrationPayload] audio response was empty, falling back to text`);
-            addWalkBreadcrumb("narration audio response empty", {}, "warning");
-            trackNarrationFallback("bad_response");
-          }
-        } else {
-          if (__DEV__) console.log(`[fetchNarrationPayload] audio endpoint non-ok status=${res.status}, falling back to text`);
-          addWalkBreadcrumb("narration audio bad status", { status: res.status }, "warning");
-          trackNarrationFallback("bad_response");
-        }
-      } catch (err) {
-        if (__DEV__) console.log(`[fetchNarrationPayload] audio fetch threw, will fall back to text:`, err);
-        addWalkBreadcrumb(
-          "narration audio endpoint error",
-          { errorType: err instanceof Error ? err.constructor.name : typeof err },
-          "warning",
-        );
-        trackNarrationFallback("endpoint_error");
-      }
-    }
-
-    // Text path (web, or native fallback if audio failed).
-    try {
-      if (__DEV__) console.log(`[fetchNarrationPayload] POST walk-narration (text) for "${place.name}"`);
-      const textController = new AbortController();
-      const textTimeout = setTimeout(() => textController.abort(), 12_000);
-      try {
-        const res = await fetch(`${API_BASE}/api/explore/walk-narration`, { method: "POST", headers, body, signal: textController.signal });
-        if (__DEV__) console.log(`[fetchNarrationPayload] text response status=${res.status} for "${place.name}"`);
-        if (!res.ok) {
-          addWalkBreadcrumb("narration fetch failed", { status: res.status }, "error");
-          return null;
-        }
-        const data = await res.json();
-        if (typeof data?.narration !== "string" || !data.narration.trim()) {
-          addWalkBreadcrumb("narration payload null or empty", {}, "error");
-          return null;
-        }
-        return { kind: "text", text: data.narration };
-      } finally {
-        clearTimeout(textTimeout);
-      }
-    } catch (err) {
-      if (__DEV__) console.log(`[fetchNarrationPayload] text fetch threw:`, err);
-      addWalkBreadcrumb(
-        "narration fetch threw",
-        { errorType: err instanceof Error ? err.constructor.name : typeof err },
-        "error",
-      );
-      return null;
-    }
+  // the file once playback is done.  The actual fetch/write logic lives in
+  // lib/fetchNarrationPayload.ts so it can be tested without React.
+  const fetchNarrationPayload = useCallback((place: WalkPlace): Promise<NarrationPayload | null> => {
+    return fetchNarrationPayloadUtil(place, { apiBase: API_BASE, isExpoGo: IS_EXPO_GO });
   }, []);
 
   const fetchNarration = useCallback(async (place: WalkPlace) => {
@@ -1118,16 +1020,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // location stream alive when the screen locks (iOS uses the "location"
       // background mode; Android keeps the process alive via the foreground
       // service notification we configure here).
-      // Compare-and-swap handoff: capture any pre-existing callback so we can
-      // warn if a previous walk didn't finish teardown before we started again.
-      // Storing our callback in walkSessionCallbackRef allows stopWalk to do a
-      // precise CAS and avoid clearing a callback that belongs to a newer session.
-      const prevCallback = activeLocationCallback;
-      activeLocationCallback = handleLocationUpdate;
-      walkSessionCallbackRef.current = handleLocationUpdate;
-      if (prevCallback !== null) {
-        if (__DEV__) console.warn("[WalkMode] startWalk: activeLocationCallback was non-null — prior walk may not have cleaned up fully");
-      }
+      // Install this session's GPS callback via walkSessionManager.
+      // installSessionCallback returns a stop() that removes the pointer via
+      // CAS — a late-arriving stopWalk from a previous session will not clear
+      // a callback that already belongs to the new walk.
+      const session = installSessionCallback(handleLocationUpdate);
+      walkSessionCallbackRef.current = session;
       try {
         const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(
           BACKGROUND_LOCATION_TASK,
@@ -1190,19 +1088,18 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   }, [handleLocationUpdate]);
 
   const stopWalk = useCallback(() => {
-    isWalkingRef.current = false;
+    // executeStopWalkSync enforces the exact stop-ordering that prevents
+    // NowPlaying lock-screen widget races (verified by walkModeStress tests):
+    //   isWalkingRef=false → nowPlayingUnsub → NowPlaying.clear → narration.stop
+    executeStopWalkSync({
+      isWalkingRef,
+      nowPlayingUnsub: nowPlayingUnsubRef.current,
+      nowPlayingClear: NowPlaying.clear,
+      narrationStop: narration.stop,
+    });
+    nowPlayingUnsubRef.current = null;
     setIsWalking(false);
     addWalkBreadcrumb("walk stopped");
-    // Clear the lock-screen widget synchronously as the very first side-effect
-    // so that any React effect that re-renders due to narration state settling
-    // will see isWalkingRef.current === false and skip the setNowPlaying call,
-    // preventing a race where a late effect re-instates the widget after stopWalk.
-    if (nowPlayingUnsubRef.current) {
-      nowPlayingUnsubRef.current();
-      nowPlayingUnsubRef.current = null;
-    }
-    NowPlaying.clear();
-    narration.stop();
     // Discard any prefetch that was in-flight or cached when the walk ended.
     // The in-flight guard (isWalkingRef.current check in the async closure) will
     // handle the async case, but also clean up whatever already landed so we
@@ -1224,15 +1121,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (Platform.OS !== "web") {
       // Tear down the background task so the foreground-service notification
       // disappears and we stop draining battery the moment the walk ends.
-      // Compare-and-swap: only clear the module-level callback if it still
-      // belongs to this walk session. If a rapid stop-then-start already
-      // installed a new callback, leave it untouched so the new walk keeps
-      // receiving GPS events.
-      if (activeLocationCallback === walkSessionCallbackRef.current) {
-        activeLocationCallback = null;
-      } else if (__DEV__ && walkSessionCallbackRef.current !== null) {
-        console.warn("[WalkMode] stopWalk: activeLocationCallback was replaced by a newer session — skipping clear");
-      }
+      // stop() uses CAS: it only nulls the module-level pointer when it still
+      // equals the callback THIS session installed.  A rapid stop-then-start
+      // that already installed a new callback is therefore left untouched.
+      walkSessionCallbackRef.current?.stop();
       walkSessionCallbackRef.current = null;
       Location.hasStartedLocationUpdatesAsync(BACKGROUND_LOCATION_TASK)
         .then((running) => {
