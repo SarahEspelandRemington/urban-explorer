@@ -1,5 +1,6 @@
 export * from "./generated/api";
-// RatePlaceResponse is intentionally excluded here — it's already exported as a
+export * from "./generated/types";
+ly excluded here — it's already exported as a
 // Zod schema (value) from ./generated/api and re-exporting the interface of the
 // same name causes a TS2308 ambiguity. Consumers needing the inferred type can
 // use `z.infer<typeof RatePlaceResponse>` from the Zod schema instead.
