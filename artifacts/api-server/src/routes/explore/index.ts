@@ -926,7 +926,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v1:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v2:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1013,7 +1013,7 @@ router.post("/explore/discover", async (req, res) => {
               {
                 role: "system",
                 content:
-                  "You are a hyper-local urban historian with encyclopedic knowledge of streets, buildings, and blocks. When given GPS coordinates, brainstorm freely — without worrying about format — everything you know about the immediate surroundings: historical occupants, architectural details, former uses, local figures, infrastructure oddities, buried waterways, ghost signs, community organizations, scandals, events, transitions. Include obscure and surprising facts. Name names and dates when you know them. This is an internal brainstorm; quality and specificity matter more than completeness.",
+                  "You are a hyper-local urban historian with encyclopedic knowledge of streets, buildings, and blocks. When given GPS coordinates, brainstorm freely — without worrying about format — everything you know about the immediate surroundings: historical occupants, architectural details, former uses, local figures, infrastructure oddities, buried waterways, ghost signs, community organizations, scandals, events, transitions. Include obscure and surprising facts. Name names and dates when you know them. This is an internal brainstorm; quality and specificity matter more than completeness.\n\nCRITICAL: Never invent street names. If you are unsure of an exact address, refer to the nearest known intersection or cross-streets instead. A place anchored to a real intersection is always better than one with a fabricated street name.",
               },
               {
                 role: "user",
@@ -1061,7 +1061,7 @@ SPECIFICITY RULES — every fact must include at least one: specific year/decade
 
 COORDINATES: 5 decimal places (±1 m). Coordinates and address must agree. Never describe a multi-building phenomenon without picking one surviving example.
 
-HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhood accounts…"). Fewer verified places beats more invented ones.
+HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhood accounts…"). Fewer verified places beats more invented ones. NEVER invent a street name — if you cannot confirm the exact address, anchor to the nearest real cross-street intersection instead (e.g. "NW corner of Green St & N 22nd St"). An invented street name is always worse than an honest intersection.
 
 OSM DATA: The user message includes nearby OpenStreetMap features. Use each named feature as a prompt — what non-obvious story lies beneath what OSM calls "commercial"? Do not re-describe the OSM data; surface the obscure layer underneath.
 
