@@ -9,19 +9,26 @@ type AnimationVariant = "fadeIn" | "fadeInDown";
 interface StillLoadingHintProps {
   hint: string;
   variant?: AnimationVariant;
+  duration?: number;
 }
 
-const ANIMATIONS: Record<AnimationVariant, React.ComponentProps<typeof Animated.Text>["entering"]> = {
-  fadeIn: FadeIn.duration(600),
-  fadeInDown: FadeInDown.duration(600),
-};
+const DEFAULT_DURATION = 600;
 
-export function StillLoadingHint({ hint, variant = "fadeInDown" }: StillLoadingHintProps) {
+function buildAnimation(variant: AnimationVariant, duration: number) {
+  switch (variant) {
+    case "fadeIn":
+      return FadeIn.duration(duration);
+    case "fadeInDown":
+      return FadeInDown.duration(duration);
+  }
+}
+
+export function StillLoadingHint({ hint, variant = "fadeInDown", duration = DEFAULT_DURATION }: StillLoadingHintProps) {
   const colors = useColors();
 
   return (
     <Animated.Text
-      entering={ANIMATIONS[variant]}
+      entering={buildAnimation(variant, duration)}
       style={[styles.text, { color: colors.mutedForeground }]}
     >
       {hint}
