@@ -786,7 +786,7 @@ export default function ExploreScreen() {
                 { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Look up a building by address"
+              accessibilityLabel="Investigate a building by address"
             >
               <Feather name="book-open" size={17} color={colors.foreground} />
               <Text
@@ -795,7 +795,7 @@ export default function ExploreScreen() {
                   { color: colors.mutedForeground },
                 ]}
               >
-                Lookup
+                Investigate
               </Text>
             </Pressable>
             <Pressable

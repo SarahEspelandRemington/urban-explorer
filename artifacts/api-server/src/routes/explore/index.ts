@@ -162,6 +162,7 @@ const LLM_CACHE_MAX_SIZE = 200;
 // only one LLM/TTS call is made. The second caller awaits the first's promise and
 // reuses its result — preventing duplicate paid API calls on cold-cache surges.
 // inflight:v7: (pure-refactor — no LLM output change; version bump satisfies manifest guard)
+// narration-cache:v8: (narration key v1→v2; OSRM error semantics fix; audio dedup complete)
 const inFlightNarration = new Map<string, Promise<string>>();
 const inFlightAudio = new Map<string, Promise<Buffer>>();
 const inFlightDetail = new Map<string, Promise<any>>();
@@ -2035,7 +2036,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact } = parsed.data;
 
-  const narrationCacheKey = `narration:v1:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v2:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2181,7 +2182,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v1:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v2:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = getAudioCache(audioCacheKey);
@@ -2201,16 +2202,31 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   if (cachedNarration) {
     narrationText = cachedNarration.narration;
   } else {
-    let textResp: Awaited<ReturnType<typeof openai.chat.completions.create>>;
-    try {
-      textResp = await openai.chat.completions.create(
-        {
-          model: "gpt-4.1-nano",
-          max_completion_tokens: 256,
-          messages: [
-            {
-              role: "system",
-              content: `You are a warm, curious friend who happens to know a lot about cities and history. You're walking alongside someone and you just noticed something interesting. Speak naturally — the way you'd actually talk to a person, not the way you'd write a caption.
+    // Coalesce concurrent LLM narration calls for the same key — shared with
+    // the /walk-narration text endpoint via the same inFlightNarration map.
+    const existingNarrationFlight = inFlightNarration.get(narrationCacheKey);
+    if (existingNarrationFlight) {
+      try {
+        narrationText = await existingNarrationFlight;
+      } catch (err: any) {
+        if (abortController.signal.aborted) return;
+        const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+        if (!res.headersSent)
+          res.status(status).json({
+            error: "Narration service temporarily unavailable. Please try again.",
+          });
+        return;
+      }
+    } else {
+      const audioNarrationPromise = openai.chat.completions
+        .create(
+          {
+            model: "gpt-4.1-nano",
+            max_completion_tokens: 256,
+            messages: [
+              {
+                role: "system",
+                content: `You are a warm, curious friend who happens to know a lot about cities and history. You're walking alongside someone and you just noticed something interesting. Speak naturally — the way you'd actually talk to a person, not the way you'd write a caption.
 
 Your words will be read aloud by a text-to-speech engine. That means every word choice affects how natural it sounds.
 
@@ -2224,30 +2240,44 @@ How to write for speech:
 - Vary how you open. Some options: lead with the place itself, lead with a surprising fact, lead with a person who was connected to it, lead with what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
 - End with something specific — a detail to notice, a question to sit with, a contrast between then and now. Not a generic "isn't that fascinating."
 - If you're not certain of a detail, say "supposedly" or "the story goes" rather than stating it as fact.`,
-            },
-            {
-              role: "user",
-              content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
-            },
-          ],
-        },
-        { signal: abortController.signal },
+              },
+              {
+                role: "user",
+                content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+              },
+            ],
+          },
+          { signal: abortController.signal },
+        )
+        .then((r) => {
+          const text = r.choices[0]?.message?.content;
+          if (!text) throw new Error("empty_content");
+          return text.trim();
+        });
+
+      inFlightNarration.set(narrationCacheKey, audioNarrationPromise);
+      audioNarrationPromise.finally(() =>
+        inFlightNarration.delete(narrationCacheKey),
       );
-    } catch (err: any) {
-      if (abortController.signal.aborted) return;
-      const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-      res.status(status).json({
-        error: "Narration service temporarily unavailable. Please try again.",
-      });
-      return;
+
+      try {
+        narrationText = await audioNarrationPromise;
+      } catch (err: any) {
+        if (abortController.signal.aborted) return;
+        if (err?.message === "empty_content") {
+          if (!res.headersSent)
+            res.status(500).json({ error: "Failed to generate narration" });
+          return;
+        }
+        const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+        if (!res.headersSent)
+          res.status(status).json({
+            error: "Narration service temporarily unavailable. Please try again.",
+          });
+        return;
+      }
+      setLLMCache(narrationCacheKey, { narration: narrationText });
     }
-    const content = textResp.choices[0]?.message?.content;
-    if (!content) {
-      res.status(500).json({ error: "Failed to generate narration" });
-      return;
-    }
-    narrationText = content.trim();
-    setLLMCache(narrationCacheKey, { narration: narrationText });
   }
 
   // Step 2: render narration text to natural-voice MP3 via OpenAI TTS.
@@ -2454,25 +2484,39 @@ router.post("/explore/route", async (req, res) => {
   // Race all providers simultaneously — first successful response wins.
   // This eliminates the sequential timeout penalty (up to 4.5 s per provider)
   // when the primary server is slow or temporarily unavailable.
+  // Track raw results so we can distinguish 404 (provider reachable, no route)
+  // from 502 (all providers unreachable/failed) in the fallback path.
+  const providerResults: (OsrmResponse | null)[] = [];
   let json: OsrmResponse;
   let providerUsed: string;
   try {
     const winner = await Promise.any(
-      OSRM_PROVIDERS.map(async (provider) => {
+      OSRM_PROVIDERS.map(async (provider, i) => {
         const result = await fetchRouteFromProvider(provider.base, coords);
-        if (!result?.routes?.[0]) throw new Error("no route");
+        providerResults[i] = result;
+        if (!result?.routes?.[0]) throw new Error("no_route");
         return { json: result, name: provider.name };
       }),
     );
     json = winner.json;
     providerUsed = winner.name;
   } catch {
-    // AggregateError — all providers failed or returned no route
-    res.status(502).json({ error: "Routing service unavailable" });
+    // AggregateError — all providers either failed or returned no route.
+    // If at least one provider responded (non-null result), there are no
+    // walkable routes between the points → 404. If all returned null the
+    // service itself is unavailable → 502.
+    const anyReachable = providerResults.some((r) => r !== undefined);
+    if (anyReachable) {
+      res
+        .status(404)
+        .json({ error: "No walking route could be found between those points" });
+    } else {
+      res.status(502).json({ error: "Routing service unavailable" });
+    }
     return;
   }
 
-  const route = json.routes[0];
+  const route = json.routes![0];
 
   const geometry = route.geometry.coordinates.map(
     ([lng, lat]) => [lat, lng] as [number, number],
