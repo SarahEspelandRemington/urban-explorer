@@ -130,11 +130,11 @@ export default function ExploreScreen() {
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // 25 s client-side cap so the mutation surfaces an error (and shows the
-  // retry button) before the 30 s global fetch default.  The server-side LLM
-  // cap is 15 s; total worst-case wall-clock is ~24 s, so 25 s gives a 1 s
-  // buffer without letting the client hang noticeably longer.
-  const discoverMutation = useDiscoverPlaces({ request: { timeout: 25_000 } });
+  // 45 s client-side cap. Server uses gpt-4.1-mini with a 35 s LLM timeout;
+  // parallel phase adds up to 9 s → worst-case total ~44 s. 45 s lets the
+  // server timeout fire first so the mutation gets a clean 503 and shows the
+  // retry button rather than a generic network error.
+  const discoverMutation = useDiscoverPlaces({ request: { timeout: 45_000 } });
   const mapDiscoverMutation = useDiscoverPlaces();
   const geocodeMutation = useGeocodeLocation();
 
