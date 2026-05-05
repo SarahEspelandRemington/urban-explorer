@@ -51,6 +51,10 @@ export default function PlaceDetailScreen() {
     facts: string;
     address: string;
     photoUrl: string;
+    /** Uniqueness token injected by related-place navigation so expo-router treats
+     *  each drill-down as a distinct stack entry rather than reusing the existing
+     *  place-detail entry. Never read at runtime; only present in the URL. */
+    _push?: string;
   }>();
 
   const lat = parseFloat(params.latitude || "0");
@@ -398,6 +402,9 @@ export default function PlaceDetailScreen() {
                                 latitude: String(relatedLat),
                                 longitude: String(relatedLng),
                                 category: relatedCategory ?? "",
+                                // Unique token so expo-router pushes a new stack entry
+                                // instead of reusing the existing place-detail screen.
+                                _push: String(Date.now()),
                               },
                             });
                           } else {
