@@ -19,7 +19,6 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -83,53 +82,6 @@ function haversineMeters(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const OSM_CATEGORY_LABELS: Record<string, string> = {
-  arts_centre: "Arts Center",
-  place_of_worship: "Place of Worship",
-  fast_food: "Fast Food",
-  fire_station: "Fire Station",
-  town_hall: "Town Hall",
-  water_tower: "Water Tower",
-  community_centre: "Community Center",
-  social_facility: "Social Facility",
-  parking_space: "Parking",
-  parking_entrance: "Parking",
-  bus_station: "Bus Station",
-  railway_station: "Train Station",
-  subway_entrance: "Subway",
-  toilets: "Public Restroom",
-  waste_basket: "Waste Bin",
-  bicycle_parking: "Bike Parking",
-  fuel: "Gas Station",
-  car_wash: "Car Wash",
-  charging_station: "Charging Station",
-  ice_cream: "Ice Cream",
-  food_court: "Food Court",
-};
-
-function formatCategoryLabel(cat: string): string {
-  if (!cat) return "";
-  const key = cat.toLowerCase().trim();
-  if (OSM_CATEGORY_LABELS[key]) return OSM_CATEGORY_LABELS[key];
-  return key.replace(/_+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function getEra(yearBuilt?: string): string | null {
-  if (!yearBuilt || yearBuilt === "unknown") return null;
-  const match = yearBuilt.match(/\d{4}|\d{3}0s/);
-  if (!match) return null;
-  const yearStr = match[0];
-  const year = yearStr.endsWith("s")
-    ? parseInt(yearStr.slice(0, -1), 10)
-    : parseInt(yearStr, 10);
-  if (isNaN(year)) return null;
-  if (year < 1850) return "Pre-1850";
-  if (year < 1900) return "1850–1900";
-  if (year < 1930) return "1900–1930";
-  if (year < 1960) return "1930–1960";
-  if (year < 1990) return "1960–1990";
-  return "1990+";
-}
 
 type ViewMode = "list" | "map";
 
@@ -154,8 +106,6 @@ export default function ExploreScreen() {
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [showLocationSearch, setShowLocationSearch] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set());
-
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // 45 s client-side cap. Server uses gpt-4.1-mini with a 35 s LLM timeout;
@@ -184,56 +134,10 @@ export default function ExploreScreen() {
     });
   }, [places, mapPlaces]);
 
-  const filterGroups = useMemo(() => {
-    const cats = [...new Set(places.map((p) => p.category))].sort();
-    const eras = [
-      ...new Set(places.map((p) => getEra(p.yearBuilt)).filter(Boolean)),
-    ] as string[];
-    const eraOrder = [
-      "Pre-1850",
-      "1850–1900",
-      "1900–1930",
-      "1930–1960",
-      "1960–1990",
-      "1990+",
-    ];
-    eras.sort((a, b) => eraOrder.indexOf(a) - eraOrder.indexOf(b));
-    const allTags = places.flatMap((p) => p.tags || []);
-    const tagCounts = new Map<string, number>();
-    allTags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) || 0) + 1));
-    const tags = [...tagCounts.keys()].sort(
-      (a, b) => (tagCounts.get(b) || 0) - (tagCounts.get(a) || 0),
-    );
-    return { categories: cats, eras, tags };
-  }, [places]);
-
-  const allFilters = useMemo(
-    () => [
-      ...filterGroups.categories,
-      ...filterGroups.eras,
-      ...filterGroups.tags,
-    ],
-    [filterGroups],
+  const sortedPlaces = useMemo(
+    () => [...places].sort((a, b) => (b.netScore ?? 0) - (a.netScore ?? 0)),
+    [places],
   );
-
-  const filteredPlaces = useMemo(() => {
-    const filtered =
-      activeFilters.size === 0
-        ? places
-        : places.filter((p) => {
-            const placeEra = getEra(p.yearBuilt);
-            const placeTags = new Set([
-              p.category,
-              ...(placeEra ? [placeEra] : []),
-              ...(p.tags || []),
-            ]);
-            for (const f of activeFilters) {
-              if (placeTags.has(f)) return true;
-            }
-            return false;
-          });
-    return [...filtered].sort((a, b) => (b.netScore ?? 0) - (a.netScore ?? 0));
-  }, [places, activeFilters]);
 
   const [showStillLoading, setShowStillLoading] = useState(false);
 
@@ -494,7 +398,6 @@ export default function ExploreScreen() {
       lastDiscoverCoordsRef.current = { latitude: lat, longitude: lng };
       lastSetDriftRef.current = 0;
       setDriftMeters(0);
-      setActiveFilters(new Set());
       setExpandedId(null);
       setMapPlaces([]);
       mapPlacesRef.current = [];
@@ -938,198 +841,6 @@ export default function ExploreScreen() {
         </View>
       )}
 
-      {showContent && allFilters.length > 1 && (
-        <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterScroll}
-          >
-            <Pressable
-              onPress={() => {
-                setActiveFilters(new Set());
-                if (Platform.OS !== "web")
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor:
-                    activeFilters.size === 0 ? colors.foreground : colors.muted,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Show all categories"
-              accessibilityState={{ selected: activeFilters.size === 0 }}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  {
-                    color:
-                      activeFilters.size === 0
-                        ? colors.background
-                        : colors.mutedForeground,
-                  },
-                ]}
-              >
-                {t.explore.all}
-              </Text>
-            </Pressable>
-            {filterGroups.categories.length > 1 &&
-              filterGroups.categories.map((cat) => {
-                const isActive = activeFilters.has(cat);
-                return (
-                  <Pressable
-                    key={`cat-${cat}`}
-                    onPress={() => {
-                      setActiveFilters((prev) => {
-                        const next = new Set(prev);
-                        if (next.has(cat)) next.delete(cat);
-                        else next.add(cat);
-                        return next;
-                      });
-                      if (Platform.OS !== "web")
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    style={[
-                      styles.filterChip,
-                      {
-                        backgroundColor: isActive
-                          ? colors.foreground
-                          : colors.muted,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Filter by ${formatCategoryLabel(cat)}`}
-                    accessibilityState={{ selected: isActive }}
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        {
-                          color: isActive
-                            ? colors.background
-                            : colors.mutedForeground,
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {formatCategoryLabel(cat)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            {filterGroups.eras.length > 0 && (
-              <View
-                style={[
-                  styles.filterDivider,
-                  { backgroundColor: colors.border },
-                ]}
-              />
-            )}
-            {filterGroups.eras.map((era) => {
-              const isActive = activeFilters.has(era);
-              return (
-                <Pressable
-                  key={`era-${era}`}
-                  onPress={() => {
-                    setActiveFilters((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(era)) next.delete(era);
-                      else next.add(era);
-                      return next;
-                    });
-                    if (Platform.OS !== "web")
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.filterChip,
-                    styles.filterChipEra,
-                    {
-                      backgroundColor: isActive
-                        ? colors.primary
-                        : colors.primary + "15",
-                      borderColor: colors.primary + "30",
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Filter by era: ${era}`}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Feather
-                    name="clock"
-                    size={11}
-                    color={isActive ? colors.primaryForeground : colors.primary}
-                  />
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      {
-                        color: isActive
-                          ? colors.primaryForeground
-                          : colors.primary,
-                      },
-                    ]}
-                  >
-                    {era}
-                  </Text>
-                </Pressable>
-              );
-            })}
-            {filterGroups.tags.length > 0 && (
-              <View
-                style={[
-                  styles.filterDivider,
-                  { backgroundColor: colors.border },
-                ]}
-              />
-            )}
-            {filterGroups.tags.map((tag) => {
-              const isActive = activeFilters.has(tag);
-              return (
-                <Pressable
-                  key={`tag-${tag}`}
-                  onPress={() => {
-                    setActiveFilters((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(tag)) next.delete(tag);
-                      else next.add(tag);
-                      return next;
-                    });
-                    if (Platform.OS !== "web")
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: isActive
-                        ? colors.foreground
-                        : colors.muted,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Filter by tag: ${tag}`}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Text
-                    style={[
-                      styles.filterChipText,
-                      {
-                        color: isActive
-                          ? colors.background
-                          : colors.mutedForeground,
-                      },
-                    ]}
-                  >
-                    #{tag}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
 
       {showDriftBanner && (
         <Animated.View
@@ -1174,7 +885,7 @@ export default function ExploreScreen() {
         />
       ) : (
         <FlatList
-          data={filteredPlaces}
+          data={sortedPlaces}
           keyExtractor={(item) => item.id}
           renderItem={renderPlaceItem}
           contentContainerStyle={[
@@ -1587,10 +1298,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  filterRow: {
-    borderBottomWidth: 1,
-    paddingVertical: 10,
-  },
   radiusRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1618,31 +1325,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     letterSpacing: 0.2,
     flexShrink: 0,
-  },
-  filterScroll: {
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  filterChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  filterChipEra: {
-    borderWidth: 1,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.2,
-  },
-  filterDivider: {
-    width: 1,
-    height: 20,
-    alignSelf: "center",
   },
   cardRow: {
     flexDirection: "row",
