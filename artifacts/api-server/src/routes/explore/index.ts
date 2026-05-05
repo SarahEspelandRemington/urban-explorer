@@ -56,24 +56,40 @@ const DEFAULT_BORING_BUILDING_TYPES = [
 
 function loadBoringBuildingTypes(): Set<string> {
   if (process.env.BORING_BUILDING_TYPES) {
-    const types = process.env.BORING_BUILDING_TYPES.split(",").map((t) => t.trim()).filter(Boolean);
-    logger.info({ count: types.length }, "Loaded BORING_BUILDING_TYPES from environment variable");
+    const types = process.env.BORING_BUILDING_TYPES.split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    logger.info(
+      { count: types.length },
+      "Loaded BORING_BUILDING_TYPES from environment variable",
+    );
     return new Set(types);
   }
 
   const configPath = process.env.BORING_BUILDING_TYPES_FILE
     ? resolve(process.env.BORING_BUILDING_TYPES_FILE)
-    : resolve(new URL("../config/boring-building-types.json", import.meta.url).pathname);
+    : resolve(
+        new URL("../config/boring-building-types.json", import.meta.url)
+          .pathname,
+      );
 
   try {
     const raw = readFileSync(configPath, "utf-8");
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) throw new Error("Expected a JSON array");
-    const types = (parsed as unknown[]).filter((v): v is string => typeof v === "string" && v.trim() !== "").map((v) => v.toLowerCase().trim());
-    logger.info({ path: configPath, count: types.length }, "Loaded BORING_BUILDING_TYPES from config file");
+    const types = (parsed as unknown[])
+      .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+      .map((v) => v.toLowerCase().trim());
+    logger.info(
+      { path: configPath, count: types.length },
+      "Loaded BORING_BUILDING_TYPES from config file",
+    );
     return new Set(types);
   } catch {
-    logger.info({ path: configPath }, "Config file not found or invalid, using default BORING_BUILDING_TYPES");
+    logger.info(
+      { path: configPath },
+      "Config file not found or invalid, using default BORING_BUILDING_TYPES",
+    );
     return new Set(DEFAULT_BORING_BUILDING_TYPES);
   }
 }
@@ -112,9 +128,15 @@ function loadWalkConfig(): WalkConfig {
     : WALK_CONFIG_DEFAULTS.offAxisPenaltyMeters;
 
   const cfg: WalkConfig = {
-    forwardBiasMeters: isFinite(forwardBiasMeters) ? forwardBiasMeters : WALK_CONFIG_DEFAULTS.forwardBiasMeters,
-    offAxisPenaltyDeg: isFinite(offAxisPenaltyDeg) ? offAxisPenaltyDeg : WALK_CONFIG_DEFAULTS.offAxisPenaltyDeg,
-    offAxisPenaltyMeters: isFinite(offAxisPenaltyMeters) ? offAxisPenaltyMeters : WALK_CONFIG_DEFAULTS.offAxisPenaltyMeters,
+    forwardBiasMeters: isFinite(forwardBiasMeters)
+      ? forwardBiasMeters
+      : WALK_CONFIG_DEFAULTS.forwardBiasMeters,
+    offAxisPenaltyDeg: isFinite(offAxisPenaltyDeg)
+      ? offAxisPenaltyDeg
+      : WALK_CONFIG_DEFAULTS.offAxisPenaltyDeg,
+    offAxisPenaltyMeters: isFinite(offAxisPenaltyMeters)
+      ? offAxisPenaltyMeters
+      : WALK_CONFIG_DEFAULTS.offAxisPenaltyMeters,
   };
 
   logger.info(cfg, "Walk Mode heading-bias config loaded");
@@ -154,8 +176,10 @@ function setLLMCache(key: string, data: any): void {
   llmCache.set(key, { data, timestamp: Date.now() });
 }
 
-
-function getOSMCacheKey(lat: number, lng: number): { key: string; places: OSMPlace[] } | null {
+function getOSMCacheKey(
+  lat: number,
+  lng: number,
+): { key: string; places: OSMPlace[] } | null {
   const now = Date.now();
   for (const [key, entry] of osmCache) {
     if (now - entry.timestamp > OSM_CACHE_TTL) {
@@ -163,7 +187,9 @@ function getOSMCacheKey(lat: number, lng: number): { key: string; places: OSMPla
       continue;
     }
     const [cachedLat, cachedLng] = key.split(",").map(Number);
-    if (haversineDistance(lat, lng, cachedLat, cachedLng) < OSM_CACHE_DISTANCE) {
+    if (
+      haversineDistance(lat, lng, cachedLat, cachedLng) < OSM_CACHE_DISTANCE
+    ) {
       return { key, places: entry.places };
     }
   }
@@ -204,7 +230,7 @@ out center body 40;
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
+        Accept: "application/json",
         "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
       },
       body: `data=${encodeURIComponent(query)}`,
@@ -214,7 +240,7 @@ out center body 40;
 
     if (!resp.ok) return [];
 
-    const json = await resp.json() as { elements?: any[] };
+    const json = (await resp.json()) as { elements?: any[] };
     if (!json.elements) return [];
 
     const seen = new Set<string>();
@@ -251,7 +277,10 @@ out center body 40;
     }
 
     const finalResults = results.slice(0, 40);
-    osmCache.set(`${lat},${lng}`, { places: finalResults, timestamp: Date.now() });
+    osmCache.set(`${lat},${lng}`, {
+      places: finalResults,
+      timestamp: Date.now(),
+    });
     return finalResults;
   } catch {
     clearTimeout(timeout);
@@ -262,12 +291,19 @@ out center body 40;
 function sanitizeOSMText(raw: string, maxLen = 80): string {
   return raw
     .replace(/[\n\r\t]/g, " ")
-    .replace(/[^\x20-\x7E\u00C0-\u024F\u0400-\u04FF\u4E00-\u9FFF\u3040-\u30FF]/g, "")
+    .replace(
+      /[^\x20-\x7E\u00C0-\u024F\u0400-\u04FF\u4E00-\u9FFF\u3040-\u30FF]/g,
+      "",
+    )
     .trim()
     .slice(0, maxLen);
 }
 
-function formatOSMContext(places: OSMPlace[], userLat: number, userLng: number): string {
+function formatOSMContext(
+  places: OSMPlace[],
+  userLat: number,
+  userLng: number,
+): string {
   if (places.length === 0) return "";
 
   const lines = places.map((p, i) => {
@@ -279,12 +315,19 @@ function formatOSMContext(places: OSMPlace[], userLat: number, userLng: number):
       const street = sanitizeOSMText(p.tags["addr:street"], 60);
       details.push(`address: ${num} ${street}`.trim());
     }
-    if (p.tags.start_date) details.push(`built: ${sanitizeOSMText(p.tags.start_date, 20)}`);
-    if (p.tags.architect) details.push(`architect: ${sanitizeOSMText(p.tags.architect, 60)}`);
+    if (p.tags.start_date)
+      details.push(`built: ${sanitizeOSMText(p.tags.start_date, 20)}`);
+    if (p.tags.architect)
+      details.push(`architect: ${sanitizeOSMText(p.tags.architect, 60)}`);
     if (p.tags.heritage) details.push(`heritage site`);
-    if (p.tags.historic) details.push(`historic: ${sanitizeOSMText(p.tags.historic, 30)}`);
-    if (p.tags["building:levels"]) details.push(`${sanitizeOSMText(p.tags["building:levels"], 5)} stories`);
-    if (p.tags["building:material"]) details.push(`material: ${sanitizeOSMText(p.tags["building:material"], 30)}`);
+    if (p.tags.historic)
+      details.push(`historic: ${sanitizeOSMText(p.tags.historic, 30)}`);
+    if (p.tags["building:levels"])
+      details.push(`${sanitizeOSMText(p.tags["building:levels"], 5)} stories`);
+    if (p.tags["building:material"])
+      details.push(
+        `material: ${sanitizeOSMText(p.tags["building:material"], 30)}`,
+      );
     if (p.tags.wikidata) {
       const wd = p.tags.wikidata.match(/^Q\d{1,12}$/);
       if (wd) details.push(`wikidata: ${wd[0]}`);
@@ -297,8 +340,10 @@ function formatOSMContext(places: OSMPlace[], userLat: number, userLng: number):
 }
 
 function haversineDistance(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
 ): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -321,7 +366,7 @@ function normalizeText(s: string): string {
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
 const NOMINATIM_HEADERS = {
   "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
-  "Accept": "application/json",
+  Accept: "application/json",
 };
 
 interface NominatimResult {
@@ -336,7 +381,10 @@ interface NominatimResult {
 /** Shorten "West 53rd Street, Manhattan, New York County, New York, 10019, United States"
  *  → "West 53rd Street, Manhattan" for display in the suggestion list. */
 function formatNominatimDisplayName(raw: string): string {
-  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const parts = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   if (parts.length <= 2) return parts.join(", ");
   const keep = parts.slice(0, 2).join(", ");
   return keep;
@@ -369,7 +417,10 @@ function nominatimTypeLabel(r: NominatimResult): string {
     village: "Village",
     county: "County",
   };
-  return map[t.toLowerCase()] || (t ? t.charAt(0).toUpperCase() + t.slice(1) : "Place");
+  return (
+    map[t.toLowerCase()] ||
+    (t ? t.charAt(0).toUpperCase() + t.slice(1) : "Place")
+  );
 }
 
 async function nominatimSearch(
@@ -387,7 +438,10 @@ async function nominatimSearch(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, { signal: controller.signal, headers: NOMINATIM_HEADERS });
+    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, {
+      signal: controller.signal,
+      headers: NOMINATIM_HEADERS,
+    });
     clearTimeout(timer);
     if (!resp.ok) return [];
     const data = (await resp.json()) as NominatimResult[];
@@ -408,34 +462,54 @@ const NEAR_COORD_TTL_SUCCESS_MS = 30 * 60 * 1000;
 const NEAR_COORD_TTL_FAILURE_MS = 2 * 60 * 1000;
 const nearLocationCoordCache = new Map<string, NearCoordCacheEntry>();
 
-function setNearCoordCache(key: string, value: { lat: number; lon: number } | null): void {
+function setNearCoordCache(
+  key: string,
+  value: { lat: number; lon: number } | null,
+): void {
   if (nearLocationCoordCache.size >= NEAR_COORD_CACHE_MAX) {
     const firstKey = nearLocationCoordCache.keys().next().value;
     if (firstKey !== undefined) nearLocationCoordCache.delete(firstKey);
   }
   nearLocationCoordCache.set(key, {
     value,
-    expiresAt: Date.now() + (value ? NEAR_COORD_TTL_SUCCESS_MS : NEAR_COORD_TTL_FAILURE_MS),
+    expiresAt:
+      Date.now() +
+      (value ? NEAR_COORD_TTL_SUCCESS_MS : NEAR_COORD_TTL_FAILURE_MS),
   });
 }
 
 /** Geocode an address string to coordinates. Results are cached per-process:
  *  successful lookups for 30 min, failures for 2 min (so transient errors
  *  don't permanently disable viewbox bias). Cache is capped at 500 entries. */
-async function geocodeNearLocation(address: string): Promise<{ lat: number; lon: number } | null> {
+async function geocodeNearLocation(
+  address: string,
+): Promise<{ lat: number; lon: number } | null> {
   const key = address.toLowerCase();
   const cached = nearLocationCoordCache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
-  const params = new URLSearchParams({ q: address, format: "jsonv2", limit: "1" });
+  const params = new URLSearchParams({
+    q: address,
+    format: "jsonv2",
+    limit: "1",
+  });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 3000);
   try {
-    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, { signal: controller.signal, headers: NOMINATIM_HEADERS });
+    const resp = await fetch(`${NOMINATIM_BASE}/search?${params.toString()}`, {
+      signal: controller.signal,
+      headers: NOMINATIM_HEADERS,
+    });
     clearTimeout(timer);
-    if (!resp.ok) { setNearCoordCache(key, null); return null; }
+    if (!resp.ok) {
+      setNearCoordCache(key, null);
+      return null;
+    }
     const json = await resp.json();
     const first = Array.isArray(json) ? json[0] : null;
-    if (!first) { setNearCoordCache(key, null); return null; }
+    if (!first) {
+      setNearCoordCache(key, null);
+      return null;
+    }
     const result = { lat: parseFloat(first.lat), lon: parseFloat(first.lon) };
     setNearCoordCache(key, result);
     return result;
@@ -487,13 +561,20 @@ async function verifyPlaceCoordinates(places: any[]): Promise<void> {
   await Promise.allSettled(
     candidates.map((p) =>
       scheduleNominatimCall(async () => {
-        const results = await nominatimSearch(p.address.trim(), 1, { countrycodes: "us" });
+        const results = await nominatimSearch(p.address.trim(), 1, {
+          countrycodes: "us",
+        });
         if (results.length === 0) return;
         const { lat, lon } = results[0];
         const geocodedLat = parseFloat(lat);
         const geocodedLon = parseFloat(lon);
         if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) return;
-        const dist = haversineDistance(p.latitude, p.longitude, geocodedLat, geocodedLon);
+        const dist = haversineDistance(
+          p.latitude,
+          p.longitude,
+          geocodedLat,
+          geocodedLon,
+        );
         if (dist > COORD_CORRECTION_THRESHOLD_M) {
           // Coords don't match the address — replace and demote confidence.
           p.latitude = geocodedLat;
@@ -514,10 +595,11 @@ async function postProcessPlaces(
   options: { skipVerification?: boolean } = {},
 ): Promise<any[]> {
   const validConfidence = new Set(["high", "medium", "low"]);
-  const maxDist = searchRadius * 1.10;
+  const maxDist = searchRadius * 1.1;
 
   let processed = places.filter((p: any) => {
-    if (typeof p.latitude !== "number" || typeof p.longitude !== "number") return false;
+    if (typeof p.latitude !== "number" || typeof p.longitude !== "number")
+      return false;
     if (!p.name || typeof p.name !== "string") return false;
     if (!p.summary || typeof p.summary !== "string") return false;
     if (!Array.isArray(p.facts) || p.facts.length === 0) return false;
@@ -542,10 +624,13 @@ async function postProcessPlaces(
     const normName = normalizeText(p.name);
     for (const [existingName, existingPlace] of seen) {
       if (normName === existingName) return false;
-      if (normName.includes(existingName) || existingName.includes(normName)) return false;
+      if (normName.includes(existingName) || existingName.includes(normName))
+        return false;
       const coordDist = haversineDistance(
-        p.latitude, p.longitude,
-        existingPlace.latitude, existingPlace.longitude,
+        p.latitude,
+        p.longitude,
+        existingPlace.latitude,
+        existingPlace.longitude,
       );
       if (coordDist < 10) return false;
     }
@@ -555,15 +640,24 @@ async function postProcessPlaces(
 
   processed = processed.filter((p: any) => {
     const vague = [
-      "interesting history", "rich history", "long history",
-      "has a story", "worth a visit", "notable building",
-      "historic building", "old building",
+      "interesting history",
+      "rich history",
+      "long history",
+      "has a story",
+      "worth a visit",
+      "notable building",
+      "historic building",
+      "old building",
     ];
     const summaryLower = p.summary.toLowerCase();
-    const isVague = vague.some((v) => summaryLower === v || summaryLower === v + ".");
+    const isVague = vague.some(
+      (v) => summaryLower === v || summaryLower === v + ".",
+    );
     if (isVague) return false;
-    const allFactsGeneric = p.facts.every((f: string) =>
-      f.length < 20 || /^(this|the) (place|building|site) (is|was|has)/i.test(f)
+    const allFactsGeneric = p.facts.every(
+      (f: string) =>
+        f.length < 20 ||
+        /^(this|the) (place|building|site) (is|was|has)/i.test(f),
     );
     if (allFactsGeneric) return false;
     return true;
@@ -609,7 +703,10 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
   // --- L2: database cache ---
   try {
     const rows = await db
-      .select({ photoUrl: placePhotos.photoUrl, fetchedAt: placePhotos.fetchedAt })
+      .select({
+        photoUrl: placePhotos.photoUrl,
+        fetchedAt: placePhotos.fetchedAt,
+      })
       .from(placePhotos)
       .where(eq(placePhotos.placeKey, cacheKey))
       .limit(1);
@@ -626,7 +723,10 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
     }
   } catch (err) {
     // DB unavailable — fall through to live fetch.
-    logger.warn({ err: err instanceof Error ? err.message : err }, "[photo-cache] DB read failed, falling back to live fetch");
+    logger.warn(
+      { err: err instanceof Error ? err.message : err },
+      "[photo-cache] DB read failed, falling back to live fetch",
+    );
   }
 
   // --- Live fetch from Wikipedia ---
@@ -641,12 +741,12 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
       signal: controller.signal,
       headers: {
         "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
     });
     clearTimeout(timer);
     if (resp.ok) {
-      const data = await resp.json() as { thumbnail?: { source?: string } };
+      const data = (await resp.json()) as { thumbnail?: { source?: string } };
       photoUrl = data.thumbnail?.source ?? null;
     }
   } catch {
@@ -664,7 +764,10 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
       set: { photoUrl, fetchedAt: new Date() },
     })
     .catch((err: unknown) => {
-      logger.warn({ err: err instanceof Error ? err.message : err }, "[photo-cache] DB write failed");
+      logger.warn(
+        { err: err instanceof Error ? err.message : err },
+        "[photo-cache] DB write failed",
+      );
     });
 
   return photoUrl;
@@ -701,31 +804,49 @@ async function fetchPhotosForPlaces(places: any[]): Promise<void> {
 // Lightweight rating enrichment + sort — called on both fresh and cached results
 // ---------------------------------------------------------------------------
 
-function placeIdFor(place: { name: string; latitude: number; longitude: number }): string {
+function placeIdFor(place: {
+  name: string;
+  latitude: number;
+  longitude: number;
+}): string {
   return `${place.name}-${place.latitude}-${place.longitude}`;
 }
 
 const RATING_BOOST_M = 80;
 const MAX_BOOST_M = 400;
 
-interface PlaceRatingEntry { up: number; down: number; netScore: number }
+interface PlaceRatingEntry {
+  up: number;
+  down: number;
+  netScore: number;
+}
 
 /**
  * Batch-fetch ratings from the database for a set of places.
  * Returns a Map of placeId -> { up, down, netScore }.
  * Silently returns an empty Map on database errors so discovery still works.
  */
-async function fetchRatingsMap(places: any[]): Promise<Map<string, PlaceRatingEntry>> {
+async function fetchRatingsMap(
+  places: any[],
+): Promise<Map<string, PlaceRatingEntry>> {
   if (places.length === 0) return new Map();
   const ids = places.map(placeIdFor);
   try {
     const rows = await db
-      .select({ placeId: placeRatings.placeId, up: placeRatings.up, down: placeRatings.down })
+      .select({
+        placeId: placeRatings.placeId,
+        up: placeRatings.up,
+        down: placeRatings.down,
+      })
       .from(placeRatings)
       .where(inArray(placeRatings.placeId, ids));
     const map = new Map<string, PlaceRatingEntry>();
     for (const row of rows) {
-      map.set(row.placeId, { up: row.up, down: row.down, netScore: row.up - row.down });
+      map.set(row.placeId, {
+        up: row.up,
+        down: row.down,
+        netScore: row.up - row.down,
+      });
     }
     return map;
   } catch {
@@ -739,16 +860,29 @@ async function fetchRatingsMap(places: any[]): Promise<Map<string, PlaceRatingEn
  * (distance minus rating boost). Callers must pass a cloned array when the source
  * is a cached object.
  */
-function applyRatingSortWithMap(places: any[], ratingsMap: Map<string, PlaceRatingEntry>): void {
+function applyRatingSortWithMap(
+  places: any[],
+  ratingsMap: Map<string, PlaceRatingEntry>,
+): void {
   for (const p of places) {
-    const rating = ratingsMap.get(placeIdFor(p)) ?? { up: 0, down: 0, netScore: 0 };
+    const rating = ratingsMap.get(placeIdFor(p)) ?? {
+      up: 0,
+      down: 0,
+      netScore: 0,
+    };
     p.netScore = rating.netScore;
     p.communityRating = rating;
   }
   places.sort((a: any, b: any) => {
-    const aBoost = Math.max(-MAX_BOOST_M, Math.min(MAX_BOOST_M, (a.netScore ?? 0) * RATING_BOOST_M));
-    const bBoost = Math.max(-MAX_BOOST_M, Math.min(MAX_BOOST_M, (b.netScore ?? 0) * RATING_BOOST_M));
-    return (a.distanceMeters - aBoost) - (b.distanceMeters - bBoost);
+    const aBoost = Math.max(
+      -MAX_BOOST_M,
+      Math.min(MAX_BOOST_M, (a.netScore ?? 0) * RATING_BOOST_M),
+    );
+    const bBoost = Math.max(
+      -MAX_BOOST_M,
+      Math.min(MAX_BOOST_M, (b.netScore ?? 0) * RATING_BOOST_M),
+    );
+    return a.distanceMeters - aBoost - (b.distanceMeters - bBoost);
   });
 }
 
@@ -759,7 +893,8 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const { latitude, longitude, radius, mode, accuracy, includeBuildingTypes } = parsed.data;
+  const { latitude, longitude, radius, mode, accuracy, includeBuildingTypes } =
+    parsed.data;
   const isQuick = mode === "quick";
   const requestedRadius = radius ?? (isQuick ? 500 : 300);
   const searchRadius = Math.max(50, Math.min(1000, requestedRadius));
@@ -768,8 +903,12 @@ router.post("/explore/discover", async (req, res) => {
 
   // Compute the effective denylist: start from the module-level set and
   // remove any types the user has opted into. Normalise to lowercase.
-  const userIncludes = new Set((includeBuildingTypes ?? []).map((t) => t.toLowerCase()));
-  const effectiveDenylist = new Set([...BORING_BUILDING_TYPES].filter((t: string) => !userIncludes.has(t)));
+  const userIncludes = new Set(
+    (includeBuildingTypes ?? []).map((t) => t.toLowerCase()),
+  );
+  const effectiveDenylist = new Set(
+    [...BORING_BUILDING_TYPES].filter((t: string) => !userIncludes.has(t)),
+  );
 
   // ±55m cache grid (toFixed(3) ≈ 111m per unit → 0.5 unit = ~55m).
   // This means any two queries within ~55m of each other share the same
@@ -781,12 +920,17 @@ router.post("/explore/discover", async (req, res) => {
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   const discoverCacheKey = `${modeKey}:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
-  const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(discoverCacheKey);
+  const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
+    discoverCacheKey,
+  );
   if (cachedDiscover) {
     // Re-apply current ratings on every cache hit so newly-submitted ratings
     // immediately affect the sort order and communityRating display without
     // waiting for cache expiry. Clone places so we never mutate the cached object.
-    if (Array.isArray(cachedDiscover.places) && cachedDiscover.places.length > 0) {
+    if (
+      Array.isArray(cachedDiscover.places) &&
+      cachedDiscover.places.length > 0
+    ) {
       const refreshedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
       const ratingsMap = await fetchRatingsMap(refreshedPlaces);
       applyRatingSortWithMap(refreshedPlaces, ratingsMap);
@@ -795,7 +939,9 @@ router.post("/explore/discover", async (req, res) => {
       // Background: if any cached places are missing photos (e.g. the original
       // request hit the wall-clock timeout before Wikipedia responded), try again
       // now and update the cache so the next hit gets artwork.
-      const missingPhotos = cachedDiscover.places.filter((p: any) => !p.photoUrl);
+      const missingPhotos = cachedDiscover.places.filter(
+        (p: any) => !p.photoUrl,
+      );
       if (missingPhotos.length > 0) {
         (async () => {
           try {
@@ -817,8 +963,12 @@ router.post("/explore/discover", async (req, res) => {
 
   const osmTimeLimit = isQuick ? 3000 : 4000;
   const osmPromise: Promise<OSMPlace[]> = Promise.race([
-    fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick).catch(() => [] as OSMPlace[]),
-    new Promise<OSMPlace[]>((resolve) => setTimeout(() => resolve([]), osmTimeLimit)),
+    fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick).catch(
+      () => [] as OSMPlace[],
+    ),
+    new Promise<OSMPlace[]>((resolve) =>
+      setTimeout(() => resolve([]), osmTimeLimit),
+    ),
   ]);
 
   // Full mode: 5-7 places with 2 facts each → ~200 tokens/place × 6 = ~1 200
@@ -843,7 +993,10 @@ router.post("/explore/discover", async (req, res) => {
     try {
       const BRAINSTORM_TIMEOUT_MS = 9000;
       const brainstormAbort = new AbortController();
-      const brainstormTimer = setTimeout(() => brainstormAbort.abort(), BRAINSTORM_TIMEOUT_MS);
+      const brainstormTimer = setTimeout(
+        () => brainstormAbort.abort(),
+        BRAINSTORM_TIMEOUT_MS,
+      );
       try {
         const brainstormResponse = await openai.chat.completions.create(
           {
@@ -873,7 +1026,10 @@ router.post("/explore/discover", async (req, res) => {
     }
   })();
 
-  const [osmPlacesRaw, brainstormContext] = await Promise.all([osmPromise, brainstormPromise]);
+  const [osmPlacesRaw, brainstormContext] = await Promise.all([
+    osmPromise,
+    brainstormPromise,
+  ]);
   let osmPlaces: OSMPlace[] = osmPlacesRaw;
 
   // Apply boring-building denylist now that we have the user's preferences.
@@ -913,7 +1069,10 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   // headroom; total worst-case is ~44 s, covered by the client's 45 s cap.
   const DISCOVER_LLM_TIMEOUT_MS = 35_000;
   const discoverAbort = new AbortController();
-  const discoverTimer = setTimeout(() => discoverAbort.abort(), DISCOVER_LLM_TIMEOUT_MS);
+  const discoverTimer = setTimeout(
+    () => discoverAbort.abort(),
+    DISCOVER_LLM_TIMEOUT_MS,
+  );
   // Cancel in-flight call immediately when the client navigates away.
   res.on("close", () => discoverAbort.abort());
 
@@ -944,12 +1103,21 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
       // response write when headers haven't been sent and the socket is still
       // open — otherwise we'd produce a write-after-close log noise.
       if (!res.headersSent && res.socket?.writable) {
-        res.status(503).json({ error: "Discovery service temporarily unavailable. Please try again." });
+        res
+          .status(503)
+          .json({
+            error:
+              "Discovery service temporarily unavailable. Please try again.",
+          });
       }
       return;
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Discovery service temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error: "Discovery service temporarily unavailable. Please try again.",
+      });
     return;
   } finally {
     clearTimeout(discoverTimer);
@@ -975,9 +1143,15 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     // filter), respond to the client immediately, then verify coordinates in the
     // background and update the cache so the NEXT request for this area gets corrected
     // pins. For the current caller the coordinates from GPT-4.1 are accurate enough.
-    data.places = await postProcessPlaces(data.places, latitude, longitude, searchRadius, {
-      skipVerification: true,
-    });
+    data.places = await postProcessPlaces(
+      data.places,
+      latitude,
+      longitude,
+      searchRadius,
+      {
+        skipVerification: true,
+      },
+    );
     // Fetch Wikipedia photos in parallel for all places. Runs concurrently with
     // ratings enrichment (below) and races a wall-clock timeout so it never
     // materially slows down a response that's already taken time for LLM calls.
@@ -1011,9 +1185,11 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
       try {
         await verifyPlaceCoordinates(data.places);
         // Re-filter: a corrected coordinate might have moved a place outside radius.
-        const maxDist = searchRadius * 1.10;
+        const maxDist = searchRadius * 1.1;
         data.places = data.places.filter(
-          (p: any) => haversineDistance(latitude, longitude, p.latitude, p.longitude) <= maxDist,
+          (p: any) =>
+            haversineDistance(latitude, longitude, p.latitude, p.longitude) <=
+            maxDist,
         );
         setLLMCache(discoverCacheKey, data);
       } catch {
@@ -1051,7 +1227,8 @@ router.post("/explore/suggest-locations", async (req, res) => {
   // results using a viewbox + bounded=1 so that queries like "53rd and 6th" without
   // an explicit city name still return local results rather than random global ones.
   // Fallback: free-text query with nearLocation appended (original behaviour).
-  const shouldTryNominatim = nearTrimmed.length > 0 || query.trim().length >= 15;
+  const shouldTryNominatim =
+    nearTrimmed.length > 0 || query.trim().length >= 15;
 
   let nominatimResults: NominatimResult[] = [];
   if (shouldTryNominatim) {
@@ -1066,10 +1243,16 @@ router.post("/explore/suggest-locations", async (req, res) => {
           nearCoords.lon + delta,
           nearCoords.lat - delta,
         ].join(",");
-        nominatimResults = await nominatimSearch(query, 5, { viewbox, bounded: "1" });
+        nominatimResults = await nominatimSearch(query, 5, {
+          viewbox,
+          bounded: "1",
+        });
         // If viewbox search yields nothing useful, fall back to free-text with city context.
         if (nominatimResults.length === 0) {
-          nominatimResults = await nominatimSearch(`${query}, ${nearTrimmed}`, 5);
+          nominatimResults = await nominatimSearch(
+            `${query}, ${nearTrimmed}`,
+            5,
+          );
         }
       } else {
         nominatimResults = await nominatimSearch(`${query}, ${nearTrimmed}`, 5);
@@ -1145,7 +1328,10 @@ Return exactly 5 suggestions. Each name should be specific enough to geocode. Ke
 
   const merged = [
     ...nominatimSuggestions,
-    ...(Array.isArray(llmData?.suggestions) ? llmData.suggestions : []).slice(0, 5 - nominatimSuggestions.length),
+    ...(Array.isArray(llmData?.suggestions) ? llmData.suggestions : []).slice(
+      0,
+      5 - nominatimSuggestions.length,
+    ),
   ];
   const result = { suggestions: merged };
   setLLMCache(suggestCacheKey, result);
@@ -1223,7 +1409,11 @@ Be as accurate as possible with coordinates. For neighborhoods, use the center p
     }
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Geocoding service temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error: "Geocoding service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
@@ -1269,7 +1459,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     });
     clearTimeout(timer);
     if (!resp.ok) throw new Error("Nominatim error");
-    const data = await resp.json() as Record<string, any>;
+    const data = (await resp.json()) as Record<string, any>;
     const addr = data.address || {};
     const parts: string[] = [];
     if (addr.house_number && addr.road) {
@@ -1298,7 +1488,11 @@ router.post("/explore/investigate-address", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { address, latitude: providedLat, longitude: providedLng } = parsed.data;
+  const {
+    address,
+    latitude: providedLat,
+    longitude: providedLng,
+  } = parsed.data;
   const trimmedAddress = address.trim();
 
   // Geocode if no coords supplied. Use Nominatim — authoritative for real addresses.
@@ -1315,7 +1509,11 @@ router.post("/explore/investigate-address", async (req, res) => {
         nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
       );
     } catch {
-      res.status(503).json({ error: "Address lookup temporarily unavailable. Please try again." });
+      res
+        .status(503)
+        .json({
+          error: "Address lookup temporarily unavailable. Please try again.",
+        });
       return;
     }
     if (results.length === 0) {
@@ -1328,7 +1526,8 @@ router.post("/explore/investigate-address", async (req, res) => {
     const r = results[0];
     lat = parseFloat(r.lat);
     lng = parseFloat(r.lon);
-    canonicalAddress = formatNominatimDisplayName(r.display_name) || trimmedAddress;
+    canonicalAddress =
+      formatNominatimDisplayName(r.display_name) || trimmedAddress;
   }
 
   // Cache key: normalized address + coord bucket. Investigations are deterministic
@@ -1351,7 +1550,8 @@ router.post("/explore/investigate-address", async (req, res) => {
         .slice(0, 8)
         .map((p) => {
           const dist = Math.round(haversineDistance(lat, lng, p.lat, p.lon));
-          const built = p.tags["start_date"] || p.tags["construction_date"] || "";
+          const built =
+            p.tags["start_date"] || p.tags["construction_date"] || "";
           return `- ${p.name} (${p.type}${built ? `, built ${built}` : ""}, ${dist}m away)`;
         })
         .join("\n");
@@ -1405,7 +1605,12 @@ What is this building? What was it originally? What should I look at?`,
     });
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Investigation service temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error:
+          "Investigation service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
@@ -1427,14 +1632,23 @@ What is this building? What was it originally? What should I look at?`,
     address: canonicalAddress,
     latitude: lat,
     longitude: lng,
-    buildingName: typeof data.buildingName === "string" ? data.buildingName : "",
+    buildingName:
+      typeof data.buildingName === "string" ? data.buildingName : "",
     yearBuilt: typeof data.yearBuilt === "string" ? data.yearBuilt : "",
-    architecturalStyle: typeof data.architecturalStyle === "string" ? data.architecturalStyle : "",
+    architecturalStyle:
+      typeof data.architecturalStyle === "string"
+        ? data.architecturalStyle
+        : "",
     originalUse: typeof data.originalUse === "string" ? data.originalUse : "",
     currentUse: typeof data.currentUse === "string" ? data.currentUse : "",
     history: typeof data.history === "string" ? data.history : "",
-    facts: Array.isArray(data.facts) ? data.facts.filter((f: unknown) => typeof f === "string") : [],
-    neighborhoodContext: typeof data.neighborhoodContext === "string" ? data.neighborhoodContext : "",
+    facts: Array.isArray(data.facts)
+      ? data.facts.filter((f: unknown) => typeof f === "string")
+      : [],
+    neighborhoodContext:
+      typeof data.neighborhoodContext === "string"
+        ? data.neighborhoodContext
+        : "",
     uncertainty: typeof data.uncertainty === "string" ? data.uncertainty : "",
   };
 
@@ -1465,13 +1679,14 @@ router.post("/explore/place-detail", async (req, res) => {
 
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      max_completion_tokens: 2048,
-      messages: [
-        {
-          role: "system",
-          content: `You are a hyper-local urban historian who specializes in obscure, overlooked details. Provide rich, deeply specific information about this place — the kind of details you'd only learn from a longtime local or a historian who's spent years researching this specific block.
+    response = await openai.chat.completions.create(
+      {
+        model: "gpt-4.1-mini",
+        max_completion_tokens: 2048,
+        messages: [
+          {
+            role: "system",
+            content: `You are a hyper-local urban historian who specializes in obscure, overlooked details. Provide rich, deeply specific information about this place — the kind of details you'd only learn from a longtime local or a historian who's spent years researching this specific block.
 
 Focus on:
 - What was on this exact spot before the current structure
@@ -1494,22 +1709,32 @@ Respond in JSON format:
 }
 
 Every detail should feel like a local secret worth knowing.`,
-        },
-        {
-          role: "user",
-          content: `Tell me everything interesting about "${placeName}" (${category || "place"}) located near ${latitude}, ${longitude}`,
-        },
-      ],
-      response_format: { type: "json_object" },
-    }, { signal: detailController.signal });
+          },
+          {
+            role: "user",
+            content: `Tell me everything interesting about "${placeName}" (${category || "place"}) located near ${latitude}, ${longitude}`,
+          },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { signal: detailController.signal },
+    );
   } catch (err: any) {
     clearTimeout(detailTimeout);
     if (detailController.signal.aborted) {
-      if (!res.headersSent && res.socket?.writable) res.status(504).json({ error: "Place detail request timed out. Please try again." });
+      if (!res.headersSent && res.socket?.writable)
+        res
+          .status(504)
+          .json({ error: "Place detail request timed out. Please try again." });
       return;
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Place detail service temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error:
+          "Place detail service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
@@ -1604,7 +1829,11 @@ Create 4-6 eras spanning the full history. Each era should feel distinct and ali
     });
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Timeline service temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error: "Timeline service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
@@ -1624,7 +1853,8 @@ Create 4-6 eras spanning the full history. Each era should feel distinct and ali
 
   if (data.eras && Array.isArray(data.eras)) {
     data.eras = data.eras.filter(
-      (era: any) => era.period && era.title && era.description && era.atmosphere,
+      (era: any) =>
+        era.period && era.title && era.description && era.atmosphere,
     );
   }
 
@@ -1682,7 +1912,11 @@ How to write for speech:
     });
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Narration service temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error: "Narration service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
@@ -1699,14 +1933,20 @@ How to write for speech:
 
 // --- Audio narration cache --------------------------------------------------
 // Audio bytes can be 50-200 KB each; cap at ~50 entries (~10 MB) to bound RAM.
-interface AudioCacheEntry { bytes: Buffer; timestamp: number; }
+interface AudioCacheEntry {
+  bytes: Buffer;
+  timestamp: number;
+}
 const audioCache = new Map<string, AudioCacheEntry>();
 const AUDIO_CACHE_TTL = 30 * 60 * 1000; // 30 min — TTS is expensive, cache longer
 const AUDIO_CACHE_MAX_SIZE = 50;
 function getAudioCache(key: string): Buffer | null {
   const entry = audioCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.timestamp > AUDIO_CACHE_TTL) { audioCache.delete(key); return null; }
+  if (Date.now() - entry.timestamp > AUDIO_CACHE_TTL) {
+    audioCache.delete(key);
+    return null;
+  }
   return entry.bytes;
 }
 function setAudioCache(key: string, bytes: Buffer): void {
@@ -1723,7 +1963,10 @@ function setAudioCache(key: string, bytes: Buffer): void {
 // human-sounding voice instead of the iOS robotic system speech engine.
 router.post("/explore/walk-narration-audio", async (req, res) => {
   const parsed = GetWalkNarrationBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: "Invalid request body" }); return; }
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
+    return;
+  }
   const { placeName, category, summary, fact } = parsed.data;
 
   // Abort controller wired to the response close event so that any in-flight
@@ -1735,11 +1978,22 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   // Voice is configurable via query param so we can A/B test without redeploying.
   // Defaults to "nova" — warm, conversational, energetic. Other good options for
   // walking-tour narration: "shimmer" (calm female), "fable" (British storyteller).
-  const requestedVoice = typeof req.query["voice"] === "string" ? req.query["voice"] : "nova";
-  const allowedVoices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"] as const;
-  type Voice = typeof allowedVoices[number];
-  const voice: Voice = (allowedVoices as readonly string[]).includes(requestedVoice)
-    ? (requestedVoice as Voice) : "nova";
+  const requestedVoice =
+    typeof req.query["voice"] === "string" ? req.query["voice"] : "nova";
+  const allowedVoices = [
+    "alloy",
+    "echo",
+    "fable",
+    "onyx",
+    "nova",
+    "shimmer",
+  ] as const;
+  type Voice = (typeof allowedVoices)[number];
+  const voice: Voice = (allowedVoices as readonly string[]).includes(
+    requestedVoice,
+  )
+    ? (requestedVoice as Voice)
+    : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
   const narrationCacheKey = `narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
@@ -1764,13 +2018,14 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   } else {
     let textResp: Awaited<ReturnType<typeof openai.chat.completions.create>>;
     try {
-      textResp = await openai.chat.completions.create({
-        model: "gpt-4.1-nano",
-        max_completion_tokens: 256,
-        messages: [
-          {
-            role: "system",
-            content: `You are a warm, curious friend who happens to know a lot about cities and history. You're walking alongside someone and you just noticed something interesting. Speak naturally — the way you'd actually talk to a person, not the way you'd write a caption.
+      textResp = await openai.chat.completions.create(
+        {
+          model: "gpt-4.1-nano",
+          max_completion_tokens: 256,
+          messages: [
+            {
+              role: "system",
+              content: `You are a warm, curious friend who happens to know a lot about cities and history. You're walking alongside someone and you just noticed something interesting. Speak naturally — the way you'd actually talk to a person, not the way you'd write a caption.
 
 Your words will be read aloud by a text-to-speech engine. That means every word choice affects how natural it sounds.
 
@@ -1784,21 +2039,30 @@ How to write for speech:
 - Vary how you open. Some options: lead with the place itself, lead with a surprising fact, lead with a person who was connected to it, lead with what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
 - End with something specific — a detail to notice, a question to sit with, a contrast between then and now. Not a generic "isn't that fascinating."
 - If you're not certain of a detail, say "supposedly" or "the story goes" rather than stating it as fact.`,
-          },
-          {
-            role: "user",
-            content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
-          },
-        ],
-      }, { signal: abortController.signal });
+            },
+            {
+              role: "user",
+              content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+            },
+          ],
+        },
+        { signal: abortController.signal },
+      );
     } catch (err: any) {
       if (abortController.signal.aborted) return;
       const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-      res.status(status).json({ error: "Narration service temporarily unavailable. Please try again." });
+      res
+        .status(status)
+        .json({
+          error: "Narration service temporarily unavailable. Please try again.",
+        });
       return;
     }
     const content = textResp.choices[0]?.message?.content;
-    if (!content) { res.status(500).json({ error: "Failed to generate narration" }); return; }
+    if (!content) {
+      res.status(500).json({ error: "Failed to generate narration" });
+      return;
+    }
     narrationText = content.trim();
     setLLMCache(narrationCacheKey, { narration: narrationText });
   }
@@ -1808,12 +2072,21 @@ How to write for speech:
   // in-flight OpenAI request and avoids sending a response to a gone client.
   let audioBytes: Buffer;
   try {
-    audioBytes = await textToSpeech(narrationText, voice, "mp3", abortController.signal);
+    audioBytes = await textToSpeech(
+      narrationText,
+      voice,
+      "mp3",
+      abortController.signal,
+    );
   } catch (err: any) {
     if (abortController.signal.aborted) return;
     logger.error({ err, placeName, voice }, "TTS generation failed");
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Voice synthesis temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error: "Voice synthesis temporarily unavailable. Please try again.",
+      });
     return;
   }
   if (!audioBytes || audioBytes.length === 0) {
@@ -1835,7 +2108,10 @@ router.post("/explore/deep-narration", async (req, res) => {
     return;
   }
   const { placeName, category, summary, fact } = parsed.data;
-  const yearBuilt = typeof (req.body as any)?.yearBuilt === "string" ? (req.body as any).yearBuilt : undefined;
+  const yearBuilt =
+    typeof (req.body as any)?.yearBuilt === "string"
+      ? (req.body as any).yearBuilt
+      : undefined;
 
   // Abort controller wired to the response close event so that the in-flight
   // LLM call is cancelled immediately if the client disconnects, avoiding
@@ -1854,13 +2130,14 @@ router.post("/explore/deep-narration", async (req, res) => {
 
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
-    response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      max_completion_tokens: 700,
-      messages: [
-        {
-          role: "system",
-          content: `You are a warm, knowledgeable friend giving someone a proper deep-dive on a single place as they walk toward it. You know a lot, you're genuinely excited about this particular spot, and you talk like a person, not a tour pamphlet. Your words will be read aloud by a text-to-speech engine, so every choice you make about words and rhythm directly affects how natural it sounds.
+    response = await openai.chat.completions.create(
+      {
+        model: "gpt-4.1-mini",
+        max_completion_tokens: 700,
+        messages: [
+          {
+            role: "system",
+            content: `You are a warm, knowledgeable friend giving someone a proper deep-dive on a single place as they walk toward it. You know a lot, you're genuinely excited about this particular spot, and you talk like a person, not a tour pamphlet. Your words will be read aloud by a text-to-speech engine, so every choice you make about words and rhythm directly affects how natural it sounds.
 
 How to write for speech:
 - Target 150 to 220 words. That's roughly sixty to ninety seconds spoken aloud.
@@ -1873,21 +2150,33 @@ How to write for speech:
 - Weave in: when and why it was built, who used it, one or two specific human moments connected to it, what makes it distinctive, and how it sits in the neighborhood now.
 - If a detail is uncertain, say so naturally: "the story goes," "supposedly," "nobody's quite sure, but."
 - End with something concrete — a detail to notice right now, a question to carry, a before-and-after that lands.`,
-        },
-        {
-          role: "user",
-          content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}.\n\nWhat we already know: ${summary}${fact ? `\nAlso noted: ${fact}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
-        },
-      ],
-    }, { signal: abortController.signal });
+          },
+          {
+            role: "user",
+            content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}.\n\nWhat we already know: ${summary}${fact ? `\nAlso noted: ${fact}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
+          },
+        ],
+      },
+      { signal: abortController.signal },
+    );
   } catch (err: any) {
     clearTimeout(deepTimeout);
     if (abortController.signal.aborted) {
-      if (!res.headersSent && res.socket?.writable) res.status(504).json({ error: "Deep narration request timed out. Please try again." });
+      if (!res.headersSent && res.socket?.writable)
+        res
+          .status(504)
+          .json({
+            error: "Deep narration request timed out. Please try again.",
+          });
       return;
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({ error: "Deep narration service temporarily unavailable. Please try again." });
+    res
+      .status(status)
+      .json({
+        error:
+          "Deep narration service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
@@ -1909,7 +2198,10 @@ How to write for speech:
 // instance. Each provider gets a short timeout so a single failure can't stall
 // the whole request — total worst-case is ~3 * PROVIDER_TIMEOUT_MS.
 const OSRM_PROVIDERS = [
-  { name: "fossgis-foot", base: "https://routing.openstreetmap.de/routed-foot" },
+  {
+    name: "fossgis-foot",
+    base: "https://routing.openstreetmap.de/routed-foot",
+  },
   { name: "osrm-demo", base: "https://router.project-osrm.org" },
 ] as const;
 const PROVIDER_TIMEOUT_MS = 4500;
@@ -1951,7 +2243,10 @@ router.post("/explore/route", async (req, res) => {
   const safeWaypoints = (waypoints || []).slice(0, 10);
   const points = [
     { lat: start.latitude, lng: start.longitude },
-    ...safeWaypoints.map((w: { latitude: number; longitude: number }) => ({ lat: w.latitude, lng: w.longitude })),
+    ...safeWaypoints.map((w: { latitude: number; longitude: number }) => ({
+      lat: w.latitude,
+      lng: w.longitude,
+    })),
     { lat: end.latitude, lng: end.longitude },
   ];
 
@@ -1974,7 +2269,9 @@ router.post("/explore/route", async (req, res) => {
 
   const route = json.routes?.[0];
   if (!route) {
-    res.status(404).json({ error: "No walking route could be found between those points" });
+    res
+      .status(404)
+      .json({ error: "No walking route could be found between those points" });
     return;
   }
 
@@ -2010,7 +2307,9 @@ function pointToRouteDistance(
   if (geometry.length === 0) return { distance: Infinity, progress: 0 };
   const [originLat, originLng] = geometry[0];
 
-  const projected = geometry.map(([la, ln]) => projectToMeters(la, ln, originLat, originLng));
+  const projected = geometry.map(([la, ln]) =>
+    projectToMeters(la, ln, originLat, originLng),
+  );
   const target = projectToMeters(lat, lng, originLat, originLng);
 
   let bestDist = Infinity;
@@ -2050,7 +2349,10 @@ function routeBoundingBox(
   paddingMeters: number,
 ): { south: number; west: number; north: number; east: number } | null {
   if (geometry.length === 0) return null;
-  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  let minLat = Infinity,
+    maxLat = -Infinity,
+    minLng = Infinity,
+    maxLng = -Infinity;
   for (const [la, ln] of geometry) {
     if (la < minLat) minLat = la;
     if (la > maxLat) maxLat = la;
@@ -2058,7 +2360,9 @@ function routeBoundingBox(
     if (ln > maxLng) maxLng = ln;
   }
   const latPad = paddingMeters / 111320;
-  const lngPad = paddingMeters / (111320 * Math.cos(((minLat + maxLat) / 2) * Math.PI / 180));
+  const lngPad =
+    paddingMeters /
+    (111320 * Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180));
   return {
     south: minLat - latPad,
     west: minLng - lngPad,
@@ -2071,7 +2375,12 @@ async function fetchOSMPlacesInBoundingBox(
   bbox: { south: number; west: number; north: number; east: number },
   corridorMeters: number = 70,
   routeLengthKm?: number,
-): Promise<{ places: OSMPlace[]; osmCandidatesCap: number; corridorCap: number; lengthCap: number }> {
+): Promise<{
+  places: OSMPlace[];
+  osmCandidatesCap: number;
+  corridorCap: number;
+  lengthCap: number;
+}> {
   const { south, west, north, east } = bbox;
 
   // Scale the Overpass result limit and candidate cap with corridor width.
@@ -2082,13 +2391,14 @@ async function fetchOSMPlacesInBoundingBox(
   //   t = 0  →  corridor = 70 m  (narrow / packed)
   //   t = 1  →  corridor = 300 m (wide  / relaxed)
   const t = Math.min(1, Math.max(0, (corridorMeters - 70) / 230));
-  const overpassLimit = Math.round(300 - 150 * t);   // 300 → 150
-  const corridorCap = Math.round(100 - 60 * t);      // 100 → 40
+  const overpassLimit = Math.round(300 - 150 * t); // 300 → 150
+  const corridorCap = Math.round(100 - 60 * t); // 100 → 40
   // Also constrain by route length: ~15 candidates per km, min 15, max 75.
   // Take the minimum so both density and length constraints are respected.
-  const lengthCap = routeLengthKm !== undefined
-    ? Math.min(75, Math.max(15, Math.round(routeLengthKm * 15)))
-    : corridorCap;
+  const lengthCap =
+    routeLengthKm !== undefined
+      ? Math.min(75, Math.max(15, Math.round(routeLengthKm * 15)))
+      : corridorCap;
   const osmCandidatesCap = Math.min(corridorCap, lengthCap);
 
   const query = `
@@ -2114,17 +2424,19 @@ out center body ${overpassLimit};
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
+        Accept: "application/json",
         "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
       },
       body: `data=${encodeURIComponent(query)}`,
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!resp.ok) return { places: [], osmCandidatesCap, corridorCap, lengthCap };
+    if (!resp.ok)
+      return { places: [], osmCandidatesCap, corridorCap, lengthCap };
 
     const json = (await resp.json()) as { elements?: any[] };
-    if (!json.elements) return { places: [], osmCandidatesCap, corridorCap, lengthCap };
+    if (!json.elements)
+      return { places: [], osmCandidatesCap, corridorCap, lengthCap };
 
     const seen = new Set<string>();
     const results: OSMPlace[] = [];
@@ -2134,7 +2446,8 @@ out center body ${overpassLimit};
       const normKey = name.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (seen.has(normKey)) continue;
       const buildingTag = el.tags?.building as string | undefined;
-      if (buildingTag && BORING_BUILDING_TYPES.has(buildingTag.toLowerCase())) continue;
+      if (buildingTag && BORING_BUILDING_TYPES.has(buildingTag.toLowerCase()))
+        continue;
       seen.add(normKey);
       const elLat = el.lat ?? el.center?.lat;
       const elLon = el.lon ?? el.center?.lon;
@@ -2192,10 +2505,17 @@ router.post("/explore/places-along-route", async (req, res) => {
   const rawGeom = (geometry as unknown[]).slice(0, 500);
   const geom = rawGeom.filter(
     (c): c is [number, number] =>
-      Array.isArray(c) && c.length === 2 && typeof c[0] === "number" && typeof c[1] === "number",
+      Array.isArray(c) &&
+      c.length === 2 &&
+      typeof c[0] === "number" &&
+      typeof c[1] === "number",
   );
   if (geom.length < 2) {
-    res.status(400).json({ error: "Route geometry must have at least 2 valid coordinate pairs" });
+    res
+      .status(400)
+      .json({
+        error: "Route geometry must have at least 2 valid coordinate pairs",
+      });
     return;
   }
 
@@ -2229,16 +2549,42 @@ router.post("/explore/places-along-route", async (req, res) => {
   // scale the candidates cap proportionally alongside the corridor-based cap.
   let routeLengthKm = 0;
   for (let i = 1; i < geom.length; i++) {
-    routeLengthKm += haversineDistance(geom[i - 1][0], geom[i - 1][1], geom[i][0], geom[i][1]) / 1000;
+    routeLengthKm +=
+      haversineDistance(
+        geom[i - 1][0],
+        geom[i - 1][1],
+        geom[i][0],
+        geom[i][1],
+      ) / 1000;
   }
 
-  const { places: osmPlaces, osmCandidatesCap, corridorCap, lengthCap } = await fetchOSMPlacesInBoundingBox(bbox, corridor, routeLengthKm);
-  logger.info({ geomPoints: geom.length, corridorM: corridor, routeLengthKm: routeLengthKm.toFixed(2), corridorCap, lengthCap, osmCandidatesCap, osmPlaces: osmPlaces.length }, "[places-along-route] OSM fetch");
+  const {
+    places: osmPlaces,
+    osmCandidatesCap,
+    corridorCap,
+    lengthCap,
+  } = await fetchOSMPlacesInBoundingBox(bbox, corridor, routeLengthKm);
+  logger.info(
+    {
+      geomPoints: geom.length,
+      corridorM: corridor,
+      routeLengthKm: routeLengthKm.toFixed(2),
+      corridorCap,
+      lengthCap,
+      osmCandidatesCap,
+      osmPlaces: osmPlaces.length,
+    },
+    "[places-along-route] OSM fetch",
+  );
 
   const candidates = osmPlaces
     .map((p) => {
       const { distance, progress } = pointToRouteDistance(geom, p.lat, p.lon);
-      return { place: p, offsetMeters: Math.round(distance), progressMeters: Math.round(progress) };
+      return {
+        place: p,
+        offsetMeters: Math.round(distance),
+        progressMeters: Math.round(progress),
+      };
     })
     .filter((c) => c.offsetMeters <= corridor)
     .sort((a, b) => a.progressMeters - b.progressMeters);
@@ -2257,14 +2603,24 @@ router.post("/explore/places-along-route", async (req, res) => {
   }
 
   const finalCandidates = spaced.slice(0, cap);
-  logger.info({ candidates: candidates.length, spaced: spaced.length, final: finalCandidates.length }, "[places-along-route] filtered");
+  logger.info(
+    {
+      candidates: candidates.length,
+      spaced: spaced.length,
+      final: finalCandidates.length,
+    },
+    "[places-along-route] filtered",
+  );
 
   if (finalCandidates.length === 0) {
     res.json({ places: [] });
     return;
   }
 
-  const formatCandidateLine = (c: typeof finalCandidates[number], i: number) => {
+  const formatCandidateLine = (
+    c: (typeof finalCandidates)[number],
+    i: number,
+  ) => {
     const t = c.place.tags;
     const details: string[] = [];
     if (t["addr:street"]) {
@@ -2272,10 +2628,13 @@ router.post("/explore/places-along-route", async (req, res) => {
       const street = sanitizeOSMText(t["addr:street"], 60);
       details.push(`address: ${num} ${street}`.trim());
     }
-    if (t.start_date) details.push(`built: ${sanitizeOSMText(t.start_date, 20)}`);
-    if (t.architect) details.push(`architect: ${sanitizeOSMText(t.architect, 60)}`);
+    if (t.start_date)
+      details.push(`built: ${sanitizeOSMText(t.start_date, 20)}`);
+    if (t.architect)
+      details.push(`architect: ${sanitizeOSMText(t.architect, 60)}`);
     if (t.heritage) details.push(`heritage site`);
-    if (t.historic) details.push(`historic: ${sanitizeOSMText(t.historic, 30)}`);
+    if (t.historic)
+      details.push(`historic: ${sanitizeOSMText(t.historic, 30)}`);
     const extra = details.length ? ` (${details.join(", ")})` : "";
     return `  ${i + 1}. "${sanitizeOSMText(c.place.name, 100)}" [${sanitizeOSMText(c.place.type, 30)}] at ${c.place.lat.toFixed(5)},${c.place.lon.toFixed(5)}${extra}`;
   };
@@ -2345,7 +2704,9 @@ Return one entry per input place, in the same order. Be concise — these blurbs
       let chunkPlaces: any[] = [];
       try {
         const parsedChunk = JSON.parse(c);
-        chunkPlaces = Array.isArray(parsedChunk.places) ? parsedChunk.places : [];
+        chunkPlaces = Array.isArray(parsedChunk.places)
+          ? parsedChunk.places
+          : [];
       } catch {
         return;
       }
@@ -2358,22 +2719,37 @@ Return one entry per input place, in the same order. Be concise — these blurbs
     }),
   );
 
-  const failedChunks = chunkResults.filter((r) => r.status === "rejected").length;
+  const failedChunks = chunkResults.filter(
+    (r) => r.status === "rejected",
+  ).length;
   if (failedChunks > 0) {
-    logger.warn({ failedChunks, total: chunks.length }, "[places-along-route] some LLM chunks failed — affected places will use OSM fallback names");
+    logger.warn(
+      { failedChunks, total: chunks.length },
+      "[places-along-route] some LLM chunks failed — affected places will use OSM fallback names",
+    );
   }
   // If every chunk failed, return a graceful error rather than an empty/fallback-only list
   if (failedChunks === chunks.length && chunks.length > 0) {
-    res.status(503).json({ error: "Route narration temporarily unavailable. Please try again." });
+    res
+      .status(503)
+      .json({
+        error: "Route narration temporarily unavailable. Please try again.",
+      });
     return;
   }
-  logger.info({ chunks: chunks.length, durationMs: Date.now() - t0, failedChunks }, "[places-along-route] LLM complete");
+  logger.info(
+    { chunks: chunks.length, durationMs: Date.now() - t0, failedChunks },
+    "[places-along-route] LLM complete",
+  );
 
   // Match LLM output back to candidates by position (same order); fall back to nearest by name
   const enriched = finalCandidates.map((c, i) => {
     const llm = llmPlaces[i] || {};
     return {
-      id: typeof llm.id === "string" && llm.id ? llm.id : `route-place-${i}-${Math.round(c.place.lat * 1e4)}-${Math.round(c.place.lon * 1e4)}`,
+      id:
+        typeof llm.id === "string" && llm.id
+          ? llm.id
+          : `route-place-${i}-${Math.round(c.place.lat * 1e4)}-${Math.round(c.place.lon * 1e4)}`,
       name: c.place.name,
       category: typeof llm.category === "string" ? llm.category : c.place.type,
       yearBuilt: typeof llm.yearBuilt === "string" ? llm.yearBuilt : undefined,
@@ -2382,12 +2758,18 @@ Return one entry per input place, in the same order. Be concise — these blurbs
         typeof llm.summary === "string" && llm.summary.trim().length > 0
           ? llm.summary.trim()
           : `A notable ${c.place.type} along your route.`,
-      facts: Array.isArray(llm.facts) && llm.facts.length > 0
-        ? llm.facts.slice(0, 3).map(String)
-        : ["A real place verified on OpenStreetMap, but we don't have detailed history yet."],
+      facts:
+        Array.isArray(llm.facts) && llm.facts.length > 0
+          ? llm.facts.slice(0, 3).map(String)
+          : [
+              "A real place verified on OpenStreetMap, but we don't have detailed history yet.",
+            ],
       latitude: c.place.lat,
       longitude: c.place.lon,
-      address: typeof llm.address === "string" && llm.address ? llm.address : undefined,
+      address:
+        typeof llm.address === "string" && llm.address
+          ? llm.address
+          : undefined,
       progressMeters: c.progressMeters,
       offsetMeters: c.offsetMeters,
     };
@@ -2404,7 +2786,10 @@ Return one entry per input place, in the same order. Be concise — these blurbs
 
 const RATE_PLACE_WINDOW_MS = 15 * 60 * 1000;
 const RATE_PLACE_LIMIT = 20;
-const RATE_PLACE_MESSAGE = { error: "Too many rating requests. Please wait a few minutes before trying again." };
+const RATE_PLACE_MESSAGE = {
+  error:
+    "Too many rating requests. Please wait a few minutes before trying again.",
+};
 
 // Expose the rate-limit config so the client can derive its warning threshold
 // dynamically without hardcoding constants that may drift from the server.
@@ -2440,82 +2825,97 @@ const ratePlaceDeviceLimiter = rateLimit({
   store: new PgRateLimitStore(),
 });
 
-router.post("/explore/rate-place", ratePlaceIpLimiter, ratePlaceDeviceLimiter, async (req, res) => {
-  const parsed = RatePlaceBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
-
-  const { placeId, placeName, category, latitude, longitude, rating, previousRating } = parsed.data;
-  const userId = req.isAuthenticated() ? req.user.id : null;
-
-  const upDelta = (rating === "up" ? 1 : 0) - (previousRating === "up" ? 1 : 0);
-  const downDelta = (rating === "down" ? 1 : 0) - (previousRating === "down" ? 1 : 0);
-
-  if (rating === "none") {
-    const [updated] = await db
-      .update(placeRatings)
-      .set({
-        up: sql`GREATEST(0, ${placeRatings.up} + ${upDelta})`,
-        down: sql`GREATEST(0, ${placeRatings.down} + ${downDelta})`,
-        lastRatedAt: new Date(),
-      })
-      .where(eq(placeRatings.placeId, placeId))
-      .returning();
-
-    if (userId) {
-      await db
-        .delete(userPlaceRatings)
-        .where(
-          and(
-            eq(userPlaceRatings.userId, userId),
-            eq(userPlaceRatings.placeId, placeId),
-          ),
-        );
-    }
-
-    if (!updated) {
-      res.json({ ok: true, placeId, up: 0, down: 0 });
+router.post(
+  "/explore/rate-place",
+  ratePlaceIpLimiter,
+  ratePlaceDeviceLimiter,
+  async (req, res) => {
+    const parsed = RatePlaceBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid request body" });
       return;
     }
-    res.json({ ok: true, placeId, up: updated.up, down: updated.down });
-    return;
-  }
 
-  const [updated] = await db
-    .insert(placeRatings)
-    .values({
+    const {
       placeId,
       placeName,
       category,
       latitude,
       longitude,
-      up: rating === "up" ? 1 : 0,
-      down: rating === "down" ? 1 : 0,
-    })
-    .onConflictDoUpdate({
-      target: placeRatings.placeId,
-      set: {
-        up: sql`GREATEST(0, ${placeRatings.up} + ${upDelta})`,
-        down: sql`GREATEST(0, ${placeRatings.down} + ${downDelta})`,
-        lastRatedAt: new Date(),
-      },
-    })
-    .returning();
+      rating,
+      previousRating,
+    } = parsed.data;
+    const userId = req.isAuthenticated() ? req.user.id : null;
 
-  if (userId) {
-    await db
-      .insert(userPlaceRatings)
-      .values({ userId, placeId, rating, updatedAt: new Date() })
+    const upDelta =
+      (rating === "up" ? 1 : 0) - (previousRating === "up" ? 1 : 0);
+    const downDelta =
+      (rating === "down" ? 1 : 0) - (previousRating === "down" ? 1 : 0);
+
+    if (rating === "none") {
+      const [updated] = await db
+        .update(placeRatings)
+        .set({
+          up: sql`GREATEST(0, ${placeRatings.up} + ${upDelta})`,
+          down: sql`GREATEST(0, ${placeRatings.down} + ${downDelta})`,
+          lastRatedAt: new Date(),
+        })
+        .where(eq(placeRatings.placeId, placeId))
+        .returning();
+
+      if (userId) {
+        await db
+          .delete(userPlaceRatings)
+          .where(
+            and(
+              eq(userPlaceRatings.userId, userId),
+              eq(userPlaceRatings.placeId, placeId),
+            ),
+          );
+      }
+
+      if (!updated) {
+        res.json({ ok: true, placeId, up: 0, down: 0 });
+        return;
+      }
+      res.json({ ok: true, placeId, up: updated.up, down: updated.down });
+      return;
+    }
+
+    const [updated] = await db
+      .insert(placeRatings)
+      .values({
+        placeId,
+        placeName,
+        category,
+        latitude,
+        longitude,
+        up: rating === "up" ? 1 : 0,
+        down: rating === "down" ? 1 : 0,
+      })
       .onConflictDoUpdate({
-        target: [userPlaceRatings.userId, userPlaceRatings.placeId],
-        set: { rating, updatedAt: new Date() },
-      });
-  }
+        target: placeRatings.placeId,
+        set: {
+          up: sql`GREATEST(0, ${placeRatings.up} + ${upDelta})`,
+          down: sql`GREATEST(0, ${placeRatings.down} + ${downDelta})`,
+          lastRatedAt: new Date(),
+        },
+      })
+      .returning();
 
-  res.json({ ok: true, placeId, up: updated.up, down: updated.down });
-});
+    if (userId) {
+      await db
+        .insert(userPlaceRatings)
+        .values({ userId, placeId, rating, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: [userPlaceRatings.userId, userPlaceRatings.placeId],
+          set: { rating, updatedAt: new Date() },
+        });
+    }
+
+    res.json({ ok: true, placeId, up: updated.up, down: updated.down });
+  },
+);
 
 // ---------------------------------------------------------------------------
 // GET /explore/user-ratings — fetch all ratings submitted by the current user
@@ -2529,7 +2929,10 @@ router.get("/explore/user-ratings", async (req, res) => {
 
   const userId = req.user.id;
   const rows = await db
-    .select({ placeId: userPlaceRatings.placeId, rating: userPlaceRatings.rating })
+    .select({
+      placeId: userPlaceRatings.placeId,
+      rating: userPlaceRatings.rating,
+    })
     .from(userPlaceRatings)
     .where(eq(userPlaceRatings.userId, userId));
 
@@ -2547,7 +2950,11 @@ router.get("/explore/user-ratings", async (req, res) => {
 router.get("/explore/ratings", async (_req, res) => {
   const rows = await db.select().from(placeRatings);
   const entries = rows
-    .map((e) => ({ ...e, lastRatedAt: e.lastRatedAt.toISOString(), netScore: e.up - e.down }))
+    .map((e) => ({
+      ...e,
+      lastRatedAt: e.lastRatedAt.toISOString(),
+      netScore: e.up - e.down,
+    }))
     .sort((a, b) => b.netScore - a.netScore);
 
   res.json({ ratings: entries, total: entries.length });
@@ -2571,20 +2978,23 @@ router.get("/explore/walk-config", (_req, res) => {
 // indefinitely on a long-running server. Each cache already checks TTL on
 // individual get() calls; this sweep ensures the memory is actually reclaimed.
 // ---------------------------------------------------------------------------
-setInterval(() => {
-  const now = Date.now();
+setInterval(
+  () => {
+    const now = Date.now();
 
-  for (const [key, entry] of llmCache) {
-    if (now - entry.timestamp > LLM_CACHE_TTL) llmCache.delete(key);
-  }
+    for (const [key, entry] of llmCache) {
+      if (now - entry.timestamp > LLM_CACHE_TTL) llmCache.delete(key);
+    }
 
-  for (const [key, entry] of osmCache) {
-    if (now - entry.timestamp > OSM_CACHE_TTL) osmCache.delete(key);
-  }
+    for (const [key, entry] of osmCache) {
+      if (now - entry.timestamp > OSM_CACHE_TTL) osmCache.delete(key);
+    }
 
-  for (const [key, entry] of audioCache) {
-    if (now - entry.timestamp > AUDIO_CACHE_TTL) audioCache.delete(key);
-  }
-}, 5 * 60 * 1000).unref(); // unref so the interval doesn't keep the process alive
+    for (const [key, entry] of audioCache) {
+      if (now - entry.timestamp > AUDIO_CACHE_TTL) audioCache.delete(key);
+    }
+  },
+  5 * 60 * 1000,
+).unref(); // unref so the interval doesn't keep the process alive
 
 export default router;

@@ -12,6 +12,7 @@
     "check:conflicts": "sh scripts/check-conflicts.sh",
     "lint": "pnpm run check:conflicts && eslint \"artifacts/urban-explorer/**/*.{ts,tsx}\" \"artifacts/api-server/**/*.{ts,tsx}\"",
     "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs",
+    "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "packageManager": "pnpm@10.26.1",

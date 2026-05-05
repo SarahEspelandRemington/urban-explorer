@@ -1,4 +1,9 @@
-import express, { type Express, type Request, type Response, type NextFunction } from "express";
+import express, {
+  type Express,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
@@ -53,10 +58,16 @@ const aiLimiter = rateLimit({
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: "Too many requests to AI endpoints, please try again later." },
+  message: {
+    error: "Too many requests to AI endpoints, please try again later.",
+  },
 });
 
-function requireAuthenticated(req: Request, res: Response, next: NextFunction): void {
+function requireAuthenticated(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
   if (!req.isAuthenticated()) {
     res.status(401).json({ error: "Authentication required" });
     return;

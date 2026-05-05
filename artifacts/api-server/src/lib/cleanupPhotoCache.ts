@@ -7,10 +7,7 @@ const rawMaxAgeDays = Number(process.env["PHOTO_CACHE_MAX_AGE_DAYS"] ?? "7");
 const PHOTO_CACHE_MAX_AGE_DAYS =
   Number.isFinite(rawMaxAgeDays) && rawMaxAgeDays > 0 ? rawMaxAgeDays : 7;
 
-if (
-  !Number.isFinite(rawMaxAgeDays) ||
-  rawMaxAgeDays <= 0
-) {
+if (!Number.isFinite(rawMaxAgeDays) || rawMaxAgeDays <= 0) {
   logger.warn(
     { value: process.env["PHOTO_CACHE_MAX_AGE_DAYS"] },
     "PHOTO_CACHE_MAX_AGE_DAYS is invalid; defaulting to 7 days",

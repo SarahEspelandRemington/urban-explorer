@@ -29,7 +29,10 @@ export class PgRateLimitStore implements Store {
     this.fallback.init(options);
 
     this.ensureTable().catch((err: unknown) => {
-      logger.warn({ err }, "pgRateLimitStore: could not ensure rate_limit_store table exists");
+      logger.warn(
+        { err },
+        "pgRateLimitStore: could not ensure rate_limit_store table exists",
+      );
     });
   }
 
@@ -69,7 +72,10 @@ export class PgRateLimitStore implements Store {
         resetTime: new Date(row.reset_time),
       };
     } catch (err) {
-      logger.warn({ err, key }, "pgRateLimitStore: DB error in increment — falling back to in-memory store");
+      logger.warn(
+        { err, key },
+        "pgRateLimitStore: DB error in increment — falling back to in-memory store",
+      );
       return this.fallback.increment(key);
     }
   }
@@ -83,7 +89,10 @@ export class PgRateLimitStore implements Store {
         [key],
       );
     } catch (err) {
-      logger.warn({ err, key }, "pgRateLimitStore: DB error in decrement — falling back to in-memory store");
+      logger.warn(
+        { err, key },
+        "pgRateLimitStore: DB error in decrement — falling back to in-memory store",
+      );
       await this.fallback.decrement(key);
     }
   }
@@ -92,7 +101,10 @@ export class PgRateLimitStore implements Store {
     try {
       await pool.query(`DELETE FROM rate_limit_store WHERE key = $1`, [key]);
     } catch (err) {
-      logger.warn({ err, key }, "pgRateLimitStore: DB error in resetKey — falling back to in-memory store");
+      logger.warn(
+        { err, key },
+        "pgRateLimitStore: DB error in resetKey — falling back to in-memory store",
+      );
       await this.fallback.resetKey(key);
     }
   }
@@ -101,7 +113,10 @@ export class PgRateLimitStore implements Store {
     try {
       await pool.query(`TRUNCATE rate_limit_store`);
     } catch (err) {
-      logger.warn({ err }, "pgRateLimitStore: DB error in resetAll — falling back to in-memory store");
+      logger.warn(
+        { err },
+        "pgRateLimitStore: DB error in resetAll — falling back to in-memory store",
+      );
       await this.fallback.resetAll();
     }
   }
