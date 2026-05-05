@@ -380,25 +380,43 @@ export default function PlaceDetailScreen() {
                   {t.placeDetail.nearbyRelated}
                 </Text>
                 <View style={styles.relatedRow}>
-                  {detail.nearbyRelated.map((name: string, i: number) => (
-                    <Pressable
-                      key={i}
-                      onPress={() => {
-                        if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        router.push({ pathname: "/investigate", params: { prefillAddress: name } });
-                      }}
-                      style={({ pressed }) => [
-                        styles.relatedChip,
-                        { backgroundColor: colors.muted, opacity: pressed ? 0.75 : 1 },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${t.placeDetail.lookUp} ${name}`}
-                    >
-                      <Feather name="map-pin" size={12} color={colors.primary} />
-                      <Text style={[styles.relatedText, { color: colors.foreground }]}>{name}</Text>
-                      <Feather name="chevron-right" size={12} color={colors.mutedForeground} />
-                    </Pressable>
-                  ))}
+                  {detail.nearbyRelated.map((related, i) => {
+                    const relatedName = typeof related === "string" ? related : related.name;
+                    const relatedLat = typeof related === "string" ? null : related.latitude;
+                    const relatedLng = typeof related === "string" ? null : related.longitude;
+                    const relatedCategory = typeof related === "string" ? undefined : related.category;
+                    return (
+                      <Pressable
+                        key={i}
+                        onPress={() => {
+                          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          if (relatedLat != null && relatedLng != null) {
+                            router.push({
+                              pathname: "/place-detail",
+                              params: {
+                                name: relatedName,
+                                latitude: String(relatedLat),
+                                longitude: String(relatedLng),
+                                category: relatedCategory ?? "",
+                              },
+                            });
+                          } else {
+                            router.push({ pathname: "/investigate", params: { prefillAddress: relatedName } });
+                          }
+                        }}
+                        style={({ pressed }) => [
+                          styles.relatedChip,
+                          { backgroundColor: colors.muted, opacity: pressed ? 0.75 : 1 },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${t.placeDetail.lookUp} ${relatedName}`}
+                      >
+                        <Feather name="map-pin" size={12} color={colors.primary} />
+                        <Text style={[styles.relatedText, { color: colors.foreground }]}>{relatedName}</Text>
+                        <Feather name="chevron-right" size={12} color={colors.mutedForeground} />
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </>
             ) : null}

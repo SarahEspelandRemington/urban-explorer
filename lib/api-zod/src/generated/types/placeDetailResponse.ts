@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { PlaceDetailResponseNearbyRelatedItem } from "./placeDetailResponseNearbyRelatedItem";
 
 export interface PlaceDetailResponse {
   name: string;
@@ -13,6 +14,6 @@ export interface PlaceDetailResponse {
   architecturalStyle?: string;
   notableEvents?: string[];
   funFacts: string[];
-  /** Names of related nearby places worth visiting */
-  nearbyRelated?: string[];
+  /** Nearby related places worth visiting, with coordinates */
+  nearbyRelated?: PlaceDetailResponseNearbyRelatedItem[];
 }

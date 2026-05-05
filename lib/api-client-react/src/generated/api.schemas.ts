@@ -39,6 +39,8 @@ export interface DiscoverRequest {
   accuracy?: number;
   /** Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning */
   mode?: DiscoverRequestMode;
+  /** Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in. */
+  includeBuildingTypes?: string[];
 }
 
 /**
@@ -73,6 +75,8 @@ export interface Place {
   distanceMeters?: number;
   /** How confident the AI is about this place's existence and details */
   confidence?: PlaceConfidence;
+  /** URL of a representative photo for this place, when available (sourced from Wikipedia) */
+  photoUrl?: string;
 }
 
 export interface DiscoverResponse {
@@ -159,6 +163,13 @@ export interface PlaceDetailRequest {
   category?: string;
 }
 
+export type PlaceDetailResponseNearbyRelatedItem = {
+  name: string;
+  latitude: number;
+  longitude: number;
+  category?: string;
+};
+
 export interface PlaceDetailResponse {
   name: string;
   /** Rich historical narrative about the place */
@@ -166,8 +177,8 @@ export interface PlaceDetailResponse {
   architecturalStyle?: string;
   notableEvents?: string[];
   funFacts: string[];
-  /** Names of related nearby places worth visiting */
-  nearbyRelated?: string[];
+  /** Nearby related places worth visiting, with coordinates */
+  nearbyRelated?: PlaceDetailResponseNearbyRelatedItem[];
 }
 
 export interface PlaceTimelineRequest {
@@ -316,23 +327,78 @@ export interface ErrorEnvelope {
   error: string;
 }
 
-export type RatePlaceRating = "up" | "down" | "none";
+/**
+ * 'up' or 'down' to cast a vote; 'none' to remove an existing vote
+ */
+export type RatePlaceRating =
+  (typeof RatePlaceRating)[keyof typeof RatePlaceRating];
+
+export const RatePlaceRating = {
+  up: "up",
+  down: "down",
+  none: "none",
+} as const;
+
+/**
+ * The user's prior rating for this place, used to compute accurate deltas (decrement old, increment new)
+ */
+export type RatePlaceRequestPreviousRating =
+  (typeof RatePlaceRequestPreviousRating)[keyof typeof RatePlaceRequestPreviousRating];
+
+export const RatePlaceRequestPreviousRating = {
+  up: "up",
+  down: "down",
+} as const;
 
 export interface RatePlaceRequest {
+  /**
+   * @minLength 1
+   * @maxLength 500
+   */
   placeId: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
   placeName: string;
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
   category: string;
   latitude: number;
   longitude: number;
   rating: RatePlaceRating;
-  previousRating?: "up" | "down";
+  /** The user's prior rating for this place, used to compute accurate deltas (decrement old, increment new) */
+  previousRating?: RatePlaceRequestPreviousRating;
 }
 
 export interface RatePlaceResponse {
   ok: boolean;
   placeId: string;
+  /** Total up votes after this action */
+  up: number;
+  /** Total down votes after this action */
+  down: number;
+}
+
+export interface PlaceRatingEntry {
+  placeId: string;
+  placeName: string;
+  category: string;
+  latitude: number;
+  longitude: number;
   up: number;
   down: number;
+  lastRatedAt: string;
+  /** up minus down */
+  netScore: number;
+}
+
+export interface RatingsResponse {
+  /** Places sorted by netScore descending */
+  ratings: PlaceRatingEntry[];
+  total: number;
 }
 
 /**

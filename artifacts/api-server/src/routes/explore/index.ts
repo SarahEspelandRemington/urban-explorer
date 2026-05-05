@@ -1490,7 +1490,7 @@ Respond in JSON format:
   "architecturalStyle": "Specific architectural details — not just 'Art Deco' but what specific elements to look for, unusual features, or what the design choices reveal about the era",
   "notableEvents": ["Specific obscure event with year", "Another lesser-known event"],
   "funFacts": ["Hyper-specific fact 1", "Surprising detail 2", "Hidden detail 3", "Local secret 4"],
-  "nearbyRelated": ["Related nearby obscure place 1", "Related nearby obscure place 2"]
+  "nearbyRelated": [{"name": "Related Place Name", "latitude": 40.12345, "longitude": -73.12345, "category": "building"}, {"name": "Another Nearby Place", "latitude": 40.12400, "longitude": -73.12300, "category": "former site"}]
 }
 
 Every detail should feel like a local secret worth knowing.`,

@@ -26,4 +26,6 @@ export interface DiscoverRequest {
   accuracy?: number;
   /** Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning */
   mode?: DiscoverRequestMode;
+  /** Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in. */
+  includeBuildingTypes?: string[];
 }

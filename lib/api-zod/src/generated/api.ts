@@ -54,7 +54,7 @@ export const DiscoverPlacesBody = zod.object({
     .array(zod.string())
     .optional()
     .describe(
-      "Building types from the default denylist to allow through — e.g. ['barn','greenhouse']. Unrecognised values are silently ignored.",
+      "Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in.",
     ),
 });
 
@@ -90,6 +90,12 @@ export const DiscoverPlacesResponse = zod.object({
         .optional()
         .describe(
           "How confident the AI is about this place's existence and details",
+        ),
+      photoUrl: zod
+        .string()
+        .optional()
+        .describe(
+          "URL of a representative photo for this place, when available (sourced from Wikipedia)",
         ),
     }),
   ),
@@ -240,9 +246,16 @@ export const GetPlaceDetailResponse = zod.object({
   notableEvents: zod.array(zod.string()).optional(),
   funFacts: zod.array(zod.string()),
   nearbyRelated: zod
-    .array(zod.string())
+    .array(
+      zod.object({
+        name: zod.string(),
+        latitude: zod.number(),
+        longitude: zod.number(),
+        category: zod.string().optional(),
+      }),
+    )
     .optional()
-    .describe("Names of related nearby places worth visiting"),
+    .describe("Nearby related places worth visiting, with coordinates"),
 });
 
 /**
@@ -418,6 +431,65 @@ export const GetPlacesAlongRouteResponse = zod.object({
 });
 
 /**
+ * Submit a thumbs-up or thumbs-down rating for a discovered place. Supports toggling off an existing rating (rating="none") and switching between ratings via the optional previousRating field.
+ * @summary Rate a place
+ */
+export const ratePlaceBodyPlaceIdMax = 500;
+
+export const ratePlaceBodyPlaceNameMax = 200;
+
+export const ratePlaceBodyCategoryMax = 100;
+
+export const RatePlaceBody = zod.object({
+  placeId: zod.string().min(1).max(ratePlaceBodyPlaceIdMax),
+  placeName: zod.string().min(1).max(ratePlaceBodyPlaceNameMax),
+  category: zod.string().min(1).max(ratePlaceBodyCategoryMax),
+  latitude: zod.number(),
+  longitude: zod.number(),
+  rating: zod
+    .enum(["up", "down", "none"])
+    .describe(
+      "'up' or 'down' to cast a vote; 'none' to remove an existing vote",
+    ),
+  previousRating: zod
+    .enum(["up", "down"])
+    .optional()
+    .describe(
+      "The user's prior rating for this place, used to compute accurate deltas (decrement old, increment new)",
+    ),
+});
+
+export const RatePlaceResponse = zod.object({
+  ok: zod.boolean(),
+  placeId: zod.string(),
+  up: zod.number().describe("Total up votes after this action"),
+  down: zod.number().describe("Total down votes after this action"),
+});
+
+/**
+ * Returns all rated places sorted by net score (up minus down)
+ * @summary Get aggregate rating data
+ */
+export const GetRatingsResponse = zod.object({
+  ratings: zod
+    .array(
+      zod.object({
+        placeId: zod.string(),
+        placeName: zod.string(),
+        category: zod.string(),
+        latitude: zod.number(),
+        longitude: zod.number(),
+        up: zod.number(),
+        down: zod.number(),
+        lastRatedAt: zod.coerce.date(),
+        netScore: zod.number().describe("up minus down"),
+      }),
+    )
+    .describe("Places sorted by netScore descending"),
+  total: zod.number(),
+});
+
+/**
  * @summary Get the currently authenticated user
  */
 export const GetCurrentAuthUserHeader = zod.object({
@@ -490,17 +562,4 @@ export const LogoutMobileSessionHeader = zod.object({
 
 export const LogoutMobileSessionResponse = zod.object({
   success: zod.boolean(),
-});
-
-/**
- * @summary Rate a discovered place (thumbs up or down) or remove an existing rating
- */
-export const RatePlaceBody = zod.object({
-  placeId: zod.string().min(1).max(500),
-  placeName: zod.string().min(1).max(200),
-  category: zod.string().min(1).max(100),
-  latitude: zod.number(),
-  longitude: zod.number(),
-  rating: zod.enum(["up", "down", "none"]),
-  previousRating: zod.enum(["up", "down"]).optional(),
 });

@@ -377,6 +377,11 @@ components:
           type: string
           enum: [full, quick]
           description: "Discovery mode — 'full' uses the most capable model (default), 'quick' uses a faster model for map panning"
+        includeBuildingTypes:
+          type: array
+          items:
+            type: string
+          description: "Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in."
       required:
         - latitude
         - longitude
@@ -596,8 +601,21 @@ components:
         nearbyRelated:
           type: array
           items:
-            type: string
-          description: "Names of related nearby places worth visiting"
+            type: object
+            properties:
+              name:
+                type: string
+              latitude:
+                type: number
+              longitude:
+                type: number
+              category:
+                type: string
+            required:
+              - name
+              - latitude
+              - longitude
+          description: "Nearby related places worth visiting, with coordinates"
       required:
         - name
         - fullHistory

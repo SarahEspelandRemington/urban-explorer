@@ -1,2 +1,49 @@
 export * from "./generated/api";
-export * from "./generated/types";
+
+// Re-export TS types from generated types barrel.
+// RatePlaceResponse is intentionally excluded here — it's already exported as a
+// Zod schema (value) from ./generated/api and re-exporting the interface of the
+// same name causes a TS2308 ambiguity. Consumers needing the inferred type can
+// use `z.infer<typeof RatePlaceResponse>` from the Zod schema instead.
+export type {
+  AddressInvestigationRequest,
+  AddressInvestigationResponse,
+  AuthorizationSessionHeaderParameter,
+  AuthUser,
+  AuthUserEnvelope,
+  BeginBrowserLoginParams,
+  DiscoverRequest,
+  DiscoverRequestMode,
+  DiscoverResponse,
+  ErrorEnvelope,
+  GeocodeRequest,
+  GeocodeResponse,
+  HealthStatus,
+  LatLng,
+  LocationSuggestion,
+  LogoutSuccess,
+  MobileTokenExchangeRequest,
+  MobileTokenExchangeSuccess,
+  Place,
+  PlaceConfidence,
+  PlaceDetailRequest,
+  PlaceDetailResponse,
+  PlaceDetailResponseNearbyRelatedItem,
+  PlaceRatingEntry,
+  PlacesAlongRouteRequest,
+  PlacesAlongRouteResponse,
+  PlaceTimelineRequest,
+  PlaceTimelineResponse,
+  RatePlaceRating,
+  RatePlaceRequest,
+  RatePlaceRequestPreviousRating,
+  RatingsResponse,
+  RoutePlace,
+  RouteRequest,
+  RouteResponse,
+  SuggestionsResult,
+  SuggestLocationsRequest,
+  TimelineEra,
+  WalkNarrationRequest,
+  WalkNarrationResponse,
+} from "./generated/types";
