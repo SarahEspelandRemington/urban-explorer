@@ -645,6 +645,21 @@ async function postProcessPlaces(
     return true;
   });
 
+  // Strip raw GPS coordinates from summary and facts — a common LLM failure
+  // mode where the model writes "at 39.96507,-75.17780" verbatim into text.
+  // The user is standing there; they don't need to read back their own coords.
+  const COORD_PATTERN = /-?\d{1,3}\.\d{4,},\s*-?\d{1,3}\.\d{4,}/g;
+  for (const p of processed) {
+    if (typeof p.summary === "string") {
+      p.summary = p.summary.replace(COORD_PATTERN, "this location").trim();
+    }
+    if (Array.isArray(p.facts)) {
+      p.facts = p.facts
+        .filter((f: unknown) => typeof f === "string")
+        .map((f: string) => f.replace(COORD_PATTERN, "this location").trim());
+    }
+  }
+
   processed = processed.filter((p: any) => {
     const vague = [
       "interesting history",
@@ -926,7 +941,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v3:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v5:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1075,7 +1090,7 @@ AVOID: famous tourist landmarks (Statue of Liberty, Empire State Building as a s
 
 SPECIFICITY RULES — every fact must include at least one: specific year/decade, person's name, verifiable detail, or concrete event. BAD: "This building has a rich history." GOOD: "The Italianate cornice was added in 1887 when dry-goods merchant Samuel Hewitt converted the ground floor from a livery stable." Social history needs an address: BAD: "The Westies controlled Hell's Kitchen." GOOD: "596 10th Ave was the Westies' base — Jimmy Coonan ran the crew from this corner through the late 1970s."
 
-COORDINATES: 5 decimal places (±1 m). Coordinates and address must agree. Never describe a multi-building phenomenon without picking one surviving example.
+COORDINATES: 5 decimal places (±1 m). Coordinates and address must agree. Never describe a multi-building phenomenon without picking one surviving example. NEVER write raw GPS coordinates (e.g. "39.96507, -75.17780") in any text field — not in summary, not in facts. The user is standing there; they don't need to read numbers. If you reference a location in text, use the street address or cross-street intersection.
 
 HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhood accounts…"). Fewer verified places beats more invented ones. NEVER invent a street name — if you cannot confirm the exact address, anchor to the nearest real cross-street intersection instead (e.g. "NW corner of Green St & N 22nd St"). An invented street name is always worse than an honest intersection.
 
