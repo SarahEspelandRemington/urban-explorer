@@ -13,6 +13,7 @@
     "lint": "pnpm run check:conflicts && eslint \"artifacts/urban-explorer/**/*.{ts,tsx}\" \"artifacts/api-server/**/*.{ts,tsx}\"",
     "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs"
   },
+  "packageManager": "pnpm@10.26.1",
   "private": true,
   "devDependencies": {
     "@eslint/js": "^10.0.1",
