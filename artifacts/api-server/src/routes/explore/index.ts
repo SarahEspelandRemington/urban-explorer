@@ -1690,7 +1690,7 @@ router.post("/explore/place-detail", async (req, res) => {
   const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
   res.on("close", () => detailController.abort());
 
-  const detailCacheKey = `detail:v1:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const detailCacheKey = `detail:v4:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -1709,22 +1709,32 @@ router.post("/explore/place-detail", async (req, res) => {
             role: "system",
             content: `You are a hyper-local urban historian. Your role is to share real, grounded knowledge about places — and to be scrupulously honest when that knowledge is limited.
 
+HARD FORMATTING RULES — these apply to every text field, no exceptions:
+- NEVER write raw GPS coordinates (e.g. "39.96533, -75.17239") in any field. The user is standing there; they don't need coordinates.
+- NEVER write AI-meta phrases like "at the given coordinates", "around these coordinates", "at this location's coordinates", or similar. Write about the place, not about coordinate data.
+- NEVER write "there is no widely documented historical record", "no documented history exists for", "little is known about this specific", or similar disclaimers about your knowledge limits in the main text fields. If documented history is sparse, OMIT — then pivot directly to what IS known about the block, building type, or era. Spare the user the AI's self-narration.
+
 HONESTY RULES — follow these strictly, without exception:
 1. DOCUMENTED HISTORY: If something is a matter of historical record, state it directly and specifically.
 2. LOCAL LORE / ORAL TRADITION: If something is neighborhood folklore, an oral account, or local tradition rather than documented record, you MUST frame it explicitly every time: "Local lore holds...", "Neighborhood accounts suggest...", "Oral tradition in this area says...", "Old-timers in the neighborhood recall...", "Community memory has it that...", etc. Never present oral tradition as fact.
 3. ARCHITECTURAL INFERENCE: You may describe architectural features that are physically observable and note what era or style they suggest, but frame it as inference: "The corbeled brickwork suggests...", "This appears to date from...", "The facade is consistent with..."
-4. OMIT rather than invent: If you do not have reliable knowledge about this specific place or location, say so briefly or omit the detail. NEVER fill gaps with plausible-sounding invented content. A shorter honest response is always better than a longer fabricated one.
+4. OMIT rather than pad: If you do not have reliable knowledge about this specific place, write shorter — don't pad with neighborhood-wide generalities ("known for its rich architectural heritage", "a hub for small family-owned storefronts") that could apply to any block in any city. Every sentence must be anchored to THIS address, this building type, or a named person or event connected to this spot.
+
+CURRENT USE: Note that a business or use named in the request may no longer be operating. Focus on what the building's history reveals — not on praising a current tenant that may have closed. If current use is uncertain, say "current use unknown" rather than describing a potentially defunct business.
 
 ARCHITECTURAL STYLE RULE:
 Only populate architecturalStyle if the place is a permanent physical structure with genuine, observable architectural character — a building, bridge, monument, or similar. For markets, parks, outdoor venues, vacant lots, temporary spaces, institutions without a distinct permanent building, event spaces, or any non-architectural place, return an empty string for architecturalStyle.
 
+FUN FACTS RULE — strict:
+Each fact in funFacts must be SPECIFIC to this address — it must contain at least one of: a person's name, a specific year or decade, a verifiable event, or a concrete detail about this building or corner that a visitor could look up or look for. Generic observations about naming conventions ("places with 'Philly' in their name celebrate Philly food culture"), neighborhood patterns ("this corridor has had small storefronts for decades"), or broad cultural commentary do NOT qualify as fun facts. If no specific fun facts exist for this place, return an empty array — do NOT pad with generalities.
+
 Respond in JSON format:
 {
   "name": "Place Name",
-  "fullHistory": "2-3 paragraph narrative. Lead with documented history where it exists. Use explicit lore-framing language (see rules above) for any unverified neighborhood accounts or oral tradition. If documented history for this specific location is sparse, say so plainly — then share what IS known about the broader block, neighborhood, or era. Do not invent specifics to fill gaps.",
+  "fullHistory": "2-3 paragraph narrative. Lead with documented history where it exists. Use explicit lore-framing language (see rules above) for any unverified neighborhood accounts or oral tradition. If documented history for this specific location is sparse, pivot directly to what IS known about the block, building type, or era — no disclaimers about knowledge limits. Do not invent specifics to fill gaps. No raw coordinates. No AI-meta phrases.",
   "architecturalStyle": "For permanent structures only: specific observable details and what they reveal about the era or intent. Return empty string for non-buildings, outdoor venues, markets, parks, institutions, etc.",
   "notableEvents": ["Documented event with year — or label as 'reportedly' / 'local accounts say' if unverified. Omit entirely if you have nothing grounded."],
-  "funFacts": ["Verified fact, or clearly labeled as lore/oral tradition. No invented specifics."],
+  "funFacts": ["Specific verified fact or clearly labeled lore — must name a person, date, event, or verifiable detail unique to THIS address. Return empty array if none exist."],
   "nearbyRelated": [{"name": "Related Place Name", "latitude": 40.12345, "longitude": -73.12345, "category": "building"}]
 }
 
@@ -1732,7 +1742,7 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
           },
           {
             role: "user",
-            content: `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located near ${latitude}, ${longitude}`,
+            content: `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located in this area of ${latitude.toFixed(3)}, ${longitude.toFixed(3)}`,
           },
         ],
         response_format: { type: "json_object" },
@@ -1768,6 +1778,39 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
   } catch {
     res.status(500).json({ error: "Failed to parse place detail results" });
     return;
+  }
+  // Safety filter: strip funFacts that slipped through the prompt guardrails.
+  // These patterns are the most common LLM failure modes:
+  //   1. Raw GPS coordinates written verbatim into a fact
+  //   2. "Around these coordinates" / AI-meta location language
+  //   3. Admission-of-ignorance phrases that belong in the uncertainty field
+  //   4. Pure generic observations with no specific anchor (no year, name, or event)
+  if (Array.isArray(data.funFacts)) {
+    const COORD_RE = /-?\d{1,3}\.\d{4,},\s*-?\d{1,3}\.\d{4,}/;
+    const META_RE =
+      /these coordinates|at the given coord|no widely documented|no documented hist|little is known about this specific|no historical record/i;
+    const GENERIC_RE =
+      /^(local lore holds that |community memory has it that |neighborhood accounts suggest that ).{0,120}$/i;
+    const hasAnchor = (s: string) =>
+      /\b(18|19|20)\d{2}\b/.test(s) ||
+      /\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(s);
+    data.funFacts = data.funFacts.filter((f: unknown) => {
+      if (typeof f !== "string") return false;
+      if (COORD_RE.test(f)) return false;
+      if (META_RE.test(f)) return false;
+      if (GENERIC_RE.test(f) && !hasAnchor(f)) return false;
+      return true;
+    });
+  }
+  // Strip raw coordinates from the fullHistory narrative as a safety net.
+  if (typeof data.fullHistory === "string") {
+    data.fullHistory = data.fullHistory
+      .replace(/-?\d{1,3}\.\d{5,},\s*-?\d{1,3}\.\d{5,}/g, "this location")
+      .replace(
+        /\b(there is no widely documented|no documented historical record|little is known about this specific|no historical record specific to)[^.]*\.\s*/gi,
+        "",
+      )
+      .trim();
   }
   const photoUrl = await fetchWikipediaPhoto(placeName);
   if (photoUrl) {
