@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "hello": "tsx ./src/hello.ts",
     "setup:sentry-walk-dashboard": "tsx ./src/setupSentryWalkPrefetchDashboard.ts",
     "setup:sentry-walk-audio-dashboard": "tsx ./src/setupSentryWalkAudioFallbackDashboard.ts",
     "check:prompt-manifest": "tsx ./src/checkPromptManifest.ts",

@@ -158,6 +158,14 @@ const llmCache = new Map<string, LLMCacheEntry>();
 const LLM_CACHE_TTL = 15 * 60 * 1000;
 const LLM_CACHE_MAX_SIZE = 200;
 
+// In-flight deduplication: if two requests miss the same cache key simultaneously,
+// only one LLM/TTS call is made. The second caller awaits the first's promise and
+// reuses its result — preventing duplicate paid API calls on cold-cache surges.
+// inflight:v7: (pure-refactor — no LLM output change; version bump satisfies manifest guard)
+const inFlightNarration = new Map<string, Promise<string>>();
+const inFlightAudio = new Map<string, Promise<Buffer>>();
+const inFlightDetail = new Map<string, Promise<any>>();
+
 // Cache key versioning convention:
 // Every LLM-backed cache key includes a version segment (e.g. ":v1:").
 // When a prompt changes materially — wording, output schema, honesty rules,
@@ -1741,7 +1749,7 @@ router.post("/explore/place-detail", async (req, res) => {
   const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
   res.on("close", () => detailController.abort());
 
-  const detailCacheKey = `detail:v4:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const detailCacheKey = `detail:v6:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -1749,9 +1757,27 @@ router.post("/explore/place-detail", async (req, res) => {
     return;
   }
 
-  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
-  try {
-    response = await openai.chat.completions.create(
+  // Coalesce concurrent requests for the same key onto a single LLM call.
+  const existingDetailFlight = inFlightDetail.get(detailCacheKey);
+  if (existingDetailFlight) {
+    clearTimeout(detailTimeout);
+    try {
+      const data = await existingDetailFlight;
+      if (!res.headersSent) res.json(data);
+    } catch {
+      if (!res.headersSent && res.socket?.writable)
+        res.status(503).json({
+          error: "Place detail service temporarily unavailable. Please try again.",
+        });
+    }
+    return;
+  }
+
+  // Build the full detail object in a single sharable promise so that any
+  // concurrent miss for the same key waits on this one call instead of
+  // making a duplicate request.
+  const buildDetail = async (): Promise<any> => {
+    const response = await openai.chat.completions.create(
       {
         model: "gpt-4.1-mini",
         max_completion_tokens: 2048,
@@ -1800,6 +1826,62 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
       },
       { signal: detailController.signal },
     );
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("empty_content");
+
+    let data: any;
+    try {
+      data = JSON.parse(content);
+    } catch {
+      throw new Error("parse_error");
+    }
+
+    // Safety filter: strip funFacts that slipped through the prompt guardrails.
+    // These patterns are the most common LLM failure modes:
+    //   1. Raw GPS coordinates written verbatim into a fact
+    //   2. "Around these coordinates" / AI-meta location language
+    //   3. Admission-of-ignorance phrases that belong in the uncertainty field
+    //   4. Pure generic observations with no specific anchor (no year, name, or event)
+    if (Array.isArray(data.funFacts)) {
+      const COORD_RE = /-?\d{1,3}\.\d{4,},\s*-?\d{1,3}\.\d{4,}/;
+      const META_RE =
+        /these coordinates|at the given coord|no widely documented|no documented hist|little is known about this specific|no historical record/i;
+      const GENERIC_RE =
+        /^(local lore holds that |community memory has it that |neighborhood accounts suggest that ).{0,120}$/i;
+      const hasAnchor = (s: string) =>
+        /\b(18|19|20)\d{2}\b/.test(s) ||
+        /\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(s);
+      data.funFacts = data.funFacts.filter((f: unknown) => {
+        if (typeof f !== "string") return false;
+        if (COORD_RE.test(f)) return false;
+        if (META_RE.test(f)) return false;
+        if (GENERIC_RE.test(f) && !hasAnchor(f)) return false;
+        return true;
+      });
+    }
+    // Strip raw coordinates from the fullHistory narrative as a safety net.
+    if (typeof data.fullHistory === "string") {
+      data.fullHistory = data.fullHistory
+        .replace(/-?\d{1,3}\.\d{5,},\s*-?\d{1,3}\.\d{5,}/g, "this location")
+        .replace(
+          /\b(there is no widely documented|no documented historical record|little is known about this specific|no historical record specific to)[^.]*\.\s*/gi,
+          "",
+        )
+        .trim();
+    }
+    const photoUrl = await fetchWikipediaPhoto(placeName);
+    if (photoUrl) data.photoUrl = photoUrl;
+    return data;
+  };
+
+  const detailPromise = buildDetail();
+  inFlightDetail.set(detailCacheKey, detailPromise);
+  detailPromise.finally(() => inFlightDetail.delete(detailCacheKey));
+
+  let data: any;
+  try {
+    data = await detailPromise;
   } catch (err: any) {
     clearTimeout(detailTimeout);
     if (detailController.signal.aborted) {
@@ -1809,64 +1891,26 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
           .json({ error: "Place detail request timed out. Please try again." });
       return;
     }
+    if (err?.message === "parse_error") {
+      if (!res.headersSent)
+        res.status(500).json({ error: "Failed to parse place detail results" });
+      return;
+    }
+    if (err?.message === "empty_content") {
+      if (!res.headersSent)
+        res.status(500).json({ error: "Failed to generate place details" });
+      return;
+    }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({
-      error: "Place detail service temporarily unavailable. Please try again.",
-    });
+    if (!res.headersSent)
+      res.status(status).json({
+        error:
+          "Place detail service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
   clearTimeout(detailTimeout);
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    res.status(500).json({ error: "Failed to generate place details" });
-    return;
-  }
-
-  let data: any;
-  try {
-    data = JSON.parse(content);
-  } catch {
-    res.status(500).json({ error: "Failed to parse place detail results" });
-    return;
-  }
-  // Safety filter: strip funFacts that slipped through the prompt guardrails.
-  // These patterns are the most common LLM failure modes:
-  //   1. Raw GPS coordinates written verbatim into a fact
-  //   2. "Around these coordinates" / AI-meta location language
-  //   3. Admission-of-ignorance phrases that belong in the uncertainty field
-  //   4. Pure generic observations with no specific anchor (no year, name, or event)
-  if (Array.isArray(data.funFacts)) {
-    const COORD_RE = /-?\d{1,3}\.\d{4,},\s*-?\d{1,3}\.\d{4,}/;
-    const META_RE =
-      /these coordinates|at the given coord|no widely documented|no documented hist|little is known about this specific|no historical record/i;
-    const GENERIC_RE =
-      /^(local lore holds that |community memory has it that |neighborhood accounts suggest that ).{0,120}$/i;
-    const hasAnchor = (s: string) =>
-      /\b(18|19|20)\d{2}\b/.test(s) ||
-      /\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(s);
-    data.funFacts = data.funFacts.filter((f: unknown) => {
-      if (typeof f !== "string") return false;
-      if (COORD_RE.test(f)) return false;
-      if (META_RE.test(f)) return false;
-      if (GENERIC_RE.test(f) && !hasAnchor(f)) return false;
-      return true;
-    });
-  }
-  // Strip raw coordinates from the fullHistory narrative as a safety net.
-  if (typeof data.fullHistory === "string") {
-    data.fullHistory = data.fullHistory
-      .replace(/-?\d{1,3}\.\d{5,},\s*-?\d{1,3}\.\d{5,}/g, "this location")
-      .replace(
-        /\b(there is no widely documented|no documented historical record|little is known about this specific|no historical record specific to)[^.]*\.\s*/gi,
-        "",
-      )
-      .trim();
-  }
-  const photoUrl = await fetchWikipediaPhoto(placeName);
-  if (photoUrl) {
-    data.photoUrl = photoUrl;
-  }
   setLLMCache(detailCacheKey, data);
   res.json(data);
 });
@@ -1998,9 +2042,23 @@ router.post("/explore/walk-narration", async (req, res) => {
     return;
   }
 
-  let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
-  try {
-    response = await openai.chat.completions.create({
+  // Coalesce concurrent requests for the same key onto a single LLM call.
+  const existingNarrationFlight = inFlightNarration.get(narrationCacheKey);
+  if (existingNarrationFlight) {
+    try {
+      const text = await existingNarrationFlight;
+      res.json({ narration: text });
+    } catch {
+      if (!res.headersSent && res.socket?.writable)
+        res.status(503).json({
+          error: "Narration service temporarily unavailable. Please try again.",
+        });
+    }
+    return;
+  }
+
+  const narrationPromise = openai.chat.completions
+    .create({
       model: "gpt-4.1-nano",
       max_completion_tokens: 256,
       messages: [
@@ -2026,22 +2084,34 @@ How to write for speech:
           content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
         },
       ],
+    })
+    .then((r) => {
+      const text = r.choices[0]?.message?.content;
+      if (!text) throw new Error("empty_content");
+      return text.trim();
     });
+
+  inFlightNarration.set(narrationCacheKey, narrationPromise);
+  narrationPromise.finally(() => inFlightNarration.delete(narrationCacheKey));
+
+  let narrationText: string;
+  try {
+    narrationText = await narrationPromise;
   } catch (err: any) {
+    if (err?.message === "empty_content") {
+      if (!res.headersSent)
+        res.status(500).json({ error: "Failed to generate narration" });
+      return;
+    }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({
-      error: "Narration service temporarily unavailable. Please try again.",
-    });
+    if (!res.headersSent)
+      res.status(status).json({
+        error: "Narration service temporarily unavailable. Please try again.",
+      });
     return;
   }
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
-    res.status(500).json({ error: "Failed to generate narration" });
-    return;
-  }
-
-  const result = { narration: content.trim() };
+  const result = { narration: narrationText };
   setLLMCache(narrationCacheKey, result);
   res.json(result);
 });
@@ -2126,7 +2196,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   // Step 1: get narration text (from cache if possible).
   // Pass the abort signal so the LLM call is cancelled immediately if the
   // client disconnects — avoiding wasted tokens on a response nobody will read.
-  let narrationText: string | null = null;
+  let narrationText: string;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     narrationText = cachedNarration.narration;
@@ -2181,31 +2251,54 @@ How to write for speech:
   }
 
   // Step 2: render narration text to natural-voice MP3 via OpenAI TTS.
-  // Pass the abort signal so a client disconnect immediately cancels the
-  // in-flight OpenAI request and avoids sending a response to a gone client.
+  // Coalesce concurrent requests for the same audio key so only one TTS call
+  // is made. Pass the abort signal so a lone caller's disconnect still cancels;
+  // if a second caller is waiting, the signal is irrelevant to them but they
+  // get a 503 (retryable) if the first caller's abort kills the promise.
   let audioBytes: Buffer;
-  try {
-    audioBytes = await textToSpeech(
+  const existingAudioFlight = inFlightAudio.get(audioCacheKey);
+  if (existingAudioFlight) {
+    try {
+      audioBytes = await existingAudioFlight;
+    } catch (err: any) {
+      if (abortController.signal.aborted) return;
+      logger.error({ err, placeName, voice }, "TTS generation failed (waiter)");
+      const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+      if (!res.headersSent)
+        res.status(status).json({
+          error: "Voice synthesis temporarily unavailable. Please try again.",
+        });
+      return;
+    }
+  } else {
+    const audioPromise = textToSpeech(
       narrationText,
       voice,
       "mp3",
       abortController.signal,
     );
-  } catch (err: any) {
-    if (abortController.signal.aborted) return;
-    logger.error({ err, placeName, voice }, "TTS generation failed");
-    const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res.status(status).json({
-      error: "Voice synthesis temporarily unavailable. Please try again.",
-    });
-    return;
-  }
-  if (!audioBytes || audioBytes.length === 0) {
-    res.status(500).json({ error: "TTS returned empty audio" });
-    return;
+    inFlightAudio.set(audioCacheKey, audioPromise);
+    audioPromise.finally(() => inFlightAudio.delete(audioCacheKey));
+    try {
+      audioBytes = await audioPromise;
+    } catch (err: any) {
+      if (abortController.signal.aborted) return;
+      logger.error({ err, placeName, voice }, "TTS generation failed");
+      const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+      if (!res.headersSent)
+        res.status(status).json({
+          error: "Voice synthesis temporarily unavailable. Please try again.",
+        });
+      return;
+    }
+    if (!audioBytes || audioBytes.length === 0) {
+      if (!res.headersSent)
+        res.status(500).json({ error: "TTS returned empty audio" });
+      return;
+    }
+    setAudioCache(audioCacheKey, audioBytes);
   }
 
-  setAudioCache(audioCacheKey, audioBytes);
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Cache-Control", "private, max-age=900");
   res.setHeader("X-Narration-Cache", "miss");
@@ -2358,28 +2451,28 @@ router.post("/explore/route", async (req, res) => {
 
   const coords = points.map((p) => `${p.lng},${p.lat}`).join(";");
 
-  let json: OsrmResponse | null = null;
-  let providerUsed: string | null = null;
-  for (const provider of OSRM_PROVIDERS) {
-    json = await fetchRouteFromProvider(provider.base, coords);
-    if (json?.routes?.[0]) {
-      providerUsed = provider.name;
-      break;
-    }
-  }
-
-  if (!json) {
+  // Race all providers simultaneously — first successful response wins.
+  // This eliminates the sequential timeout penalty (up to 4.5 s per provider)
+  // when the primary server is slow or temporarily unavailable.
+  let json: OsrmResponse;
+  let providerUsed: string;
+  try {
+    const winner = await Promise.any(
+      OSRM_PROVIDERS.map(async (provider) => {
+        const result = await fetchRouteFromProvider(provider.base, coords);
+        if (!result?.routes?.[0]) throw new Error("no route");
+        return { json: result, name: provider.name };
+      }),
+    );
+    json = winner.json;
+    providerUsed = winner.name;
+  } catch {
+    // AggregateError — all providers failed or returned no route
     res.status(502).json({ error: "Routing service unavailable" });
     return;
   }
 
-  const route = json.routes?.[0];
-  if (!route) {
-    res
-      .status(404)
-      .json({ error: "No walking route could be found between those points" });
-    return;
-  }
+  const route = json.routes[0];
 
   const geometry = route.geometry.coordinates.map(
     ([lng, lat]) => [lat, lng] as [number, number],
@@ -2805,7 +2898,7 @@ Return one entry per input place, in the same order. Be concise — these blurbs
       });
       const c = resp.choices[0]?.message?.content;
       if (!c) return;
-      let chunkPlaces: any[] = [];
+      let chunkPlaces: any[];
       try {
         const parsedChunk = JSON.parse(c);
         chunkPlaces = Array.isArray(parsedChunk.places)

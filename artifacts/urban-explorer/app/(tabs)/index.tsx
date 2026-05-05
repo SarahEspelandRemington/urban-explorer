@@ -774,6 +774,32 @@ export default function ExploreScreen() {
             </Pressable>
             <Pressable
               onPress={() => {
+                if (Platform.OS !== "web")
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({
+                  pathname: "/investigate",
+                  params: areaName ? { nearLocation: areaName } : {},
+                });
+              }}
+              style={({ pressed }) => [
+                styles.labeledHeaderBtn,
+                { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Look up a building by address"
+            >
+              <Feather name="book-open" size={17} color={colors.foreground} />
+              <Text
+                style={[
+                  styles.labeledHeaderBtnText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                Lookup
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
                 setGeocodeError(null);
                 setShowLocationSearch(true);
               }}
