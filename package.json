@@ -11,7 +11,8 @@
     "spec-sync": "pnpm run codegen && pnpm run typecheck",
     "check:conflicts": "sh scripts/check-conflicts.sh",
     "lint": "pnpm run check:conflicts && eslint \"artifacts/urban-explorer/**/*.{ts,tsx}\" \"artifacts/api-server/**/*.{ts,tsx}\"",
-    "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs"
+    "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs",
+    "format:check": "prettier --check ."
   },
   "packageManager": "pnpm@10.26.1",
   "private": true,
