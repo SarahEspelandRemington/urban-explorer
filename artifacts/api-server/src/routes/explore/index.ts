@@ -926,7 +926,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v2:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v3:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -978,15 +978,31 @@ router.post("/explore/discover", async (req, res) => {
     ),
   ]);
 
-  // Full mode: 5-7 places with 2 facts each → ~200 tokens/place × 6 = ~1 200
-  // output tokens. Quick mode: 8-12 places, 2 facts each → ~2 000 tokens.
-  // Keeping output small is critical: the system prompt alone is ~3 000 input
-  // tokens, which raises TTFT enough that larger outputs consistently exceed
-  // the LLM wall-clock cap.
-  const placeCount = isQuick ? "8-12" : "5-7";
+  // Place count and token budget scale inversely with radius for full mode.
+  // At 150 m the post-filter (radius × 1.1 = 165 m cutoff) can discard several
+  // AI-generated places whose coordinates land just outside the ring, so we
+  // request more up front to guarantee a dense result set in dense areas.
+  //   Close  (≤150 m): 8-12 places, 2500 tokens  (matches quick-mode budget)
+  //   Medium (≤300 m): 6-9  places, 2000 tokens
+  //   Wide   (>300 m): 5-7  places, 1800 tokens
+  // Quick mode (map pan) keeps its own 8-12 / 2500 budget unchanged.
+  let placeCount: string;
+  let maxTokens: number;
+  if (isQuick) {
+    placeCount = "8-12";
+    maxTokens = 2500;
+  } else if (searchRadius <= 150) {
+    placeCount = "8-12";
+    maxTokens = 2500;
+  } else if (searchRadius <= 300) {
+    placeCount = "6-9";
+    maxTokens = 2000;
+  } else {
+    placeCount = "5-7";
+    maxTokens = 1800;
+  }
   const factCount = 2;
   const modelName = "gpt-4.1-mini";
-  const maxTokens = isQuick ? 2500 : 1800;
 
   // Two-step discovery for full mode: brainstorm freely, then format.
   // Run the brainstorm IN PARALLEL with the Overpass fetch — both only need the
