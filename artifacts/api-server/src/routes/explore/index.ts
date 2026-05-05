@@ -1563,23 +1563,33 @@ router.post("/explore/investigate-address", async (req, res) => {
 
 CRITICAL RULES — these override everything else:
 1. FOCUS ON THE EXACT ADDRESS PROVIDED. Do NOT drift to famous landmarks nearby. Do NOT substitute a more famous building from a few blocks away. If the user asks about 538 W 38th St, your answer is about 538 W 38th St — not the Javits Center, not Hudson Yards, not the Lincoln Tunnel.
-2. BE HONEST ABOUT UNCERTAINTY. If you don't know specific details about THIS building, say so in the "uncertainty" field. Use phrases like "based on the era and neighborhood" or "typical for this block" rather than inventing names, dates, or owners. NEVER invent a person's name (e.g. "Samuel Hewitt") to make a story sound authoritative.
-3. PRIORITIZE PHYSICAL EVIDENCE the user could verify by looking: brick patterns, ghost signs, segmental arch windows, corbeled cornices, loading bay openings, hayloft doors, horse-stall ventilation, original signage, etc. Tell them what to LOOK FOR.
-4. Use neighborhood and era to reason about likely original use. A wide ground-floor opening with a hayloft door above on a side street between 10th and 11th in the 1880s-1890s = almost certainly a livery stable. Be confident about TYPE inferences from physical/contextual evidence; be cautious about specific NAMES, OWNERS, and DATES.
-5. If the building is currently a livery stable for Central Park horses, NYC carriage horse stables, or similar working horse facility, MENTION THAT — it's a continuity worth highlighting.
+2. PRIORITIZE PHYSICAL EVIDENCE the user could verify by looking: brick patterns, ghost signs, segmental arch windows, corbeled cornices, loading bay openings, hayloft doors, horse-stall ventilation, original signage, etc. Tell them what to LOOK FOR.
+3. Use neighborhood and era to reason about likely original use. A wide ground-floor opening with a hayloft door above on a side street between 10th and 11th in the 1880s-1890s = almost certainly a livery stable. Be confident about TYPE inferences from physical/contextual evidence; be cautious about specific NAMES, OWNERS, and DATES.
+4. If the building is currently a livery stable for Central Park horses, NYC carriage horse stables, or similar working horse facility, MENTION THAT — it's a continuity worth highlighting.
+
+HONESTY RULES — follow these strictly, without exception:
+1. DOCUMENTED HISTORY: If something is a matter of historical record, state it directly and specifically.
+2. LOCAL LORE / ORAL TRADITION: If something is neighborhood folklore, an oral account, or local tradition rather than documented record, you MUST frame it explicitly every time: "Local lore holds...", "Neighborhood accounts suggest...", "Oral tradition in this area says...", "Old-timers in the neighborhood recall...", "Community memory has it that...", etc. Never present oral tradition as fact.
+3. ARCHITECTURAL INFERENCE: You may describe architectural features that are physically observable and note what era or style they suggest, but frame it as inference: "The corbeled brickwork suggests...", "This appears to date from...", "The facade is consistent with..."
+4. OMIT rather than invent: If you do not have reliable knowledge about this specific address, say so in the "uncertainty" field or omit the detail. NEVER fill gaps with plausible-sounding invented content — no invented names, dates, owners, or architectural movements. A shorter honest response is always better than a longer fabricated one.
+
+ARCHITECTURAL STYLE RULE:
+Only populate architecturalStyle if the location is a permanent physical structure with genuine, observable architectural character — a building, bridge, monument, or similar. For vacant lots, parking structures with no architectural distinction, temporary spaces, open land, or any non-permanent or non-architectural location, return an empty string for architecturalStyle.
 
 Respond in JSON:
 {
   "buildingName": "Common name if known, else empty string",
   "yearBuilt": "Year/era like '1887' or 'late 1880s', or empty string if unknown",
-  "architecturalStyle": "Style + concrete details to look for (e.g., 'Romanesque Revival brick — segmental-arch windows, corbeled cornice, wide ground-floor stable doorway')",
-  "originalUse": "What it was originally built for (1-2 sentences, evidence-based)",
+  "architecturalStyle": "For permanent structures only: specific observable details and what they reveal about the era or intent (e.g., 'Romanesque Revival brick — segmental-arch windows, corbeled cornice, wide ground-floor stable doorway'). Return empty string for vacant lots, non-buildings, or locations without distinct architectural character.",
+  "originalUse": "What it was originally built for (1-2 sentences, evidence-based). Frame any speculation explicitly.",
   "currentUse": "What it appears to be today (1 sentence)",
-  "history": "2-3 paragraph rich narrative about THIS specific building. Tie to neighborhood history. If you must speculate, frame it ('Buildings like this typically...', 'Records from the era suggest...').",
-  "facts": ["4-6 specific facts. Mark speculation with 'likely' / 'typical of'. Each fact should be something the user could verify or look for."],
+  "history": "2-3 paragraph narrative about THIS specific building. Lead with documented history where it exists. Use explicit lore-framing language for any unverified neighborhood accounts (see HONESTY RULES). If documented history for this specific address is sparse, say so plainly — then share what IS known about the broader block, neighborhood, or era. Do not invent specifics to fill gaps.",
+  "facts": ["4-6 specific facts. Each fact is either documented (state directly) or labeled as lore/inference ('reportedly', 'local accounts say', 'the facade suggests'). Each should be something the user could verify or look for."],
   "neighborhoodContext": "How this building fits into the historical fabric of THIS block (1-2 sentences)",
   "uncertainty": "Honest disclosure of what's unknown vs documented. Empty string only if you have high confidence in everything stated."
-}`,
+}
+
+NEVER invent: names, dates, architectural movements, organizations, or events that you cannot support with documented history or explicitly labeled lore. Presenting speculation as fact is always worse than acknowledging uncertainty.`,
         },
         {
           role: "user",
