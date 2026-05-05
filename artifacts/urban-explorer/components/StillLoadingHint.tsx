@@ -37,6 +37,14 @@ interface StillLoadingHintProps {
    * `bounceIn`, or `zoomIn`.
    */
   initialOffset?: number;
+  /**
+   * How long to wait (in milliseconds) before the entrance animation begins.
+   * Callers that show the hint immediately can pass a small value for a snappier
+   * feel; screens where content arrives slowly can pass a larger value to avoid
+   * the hint flickering in before real content has had a chance to load.
+   * Defaults to 0 (no delay).
+   */
+  delay?: number;
 }
 
 const DEFAULT_DURATION = 600;
@@ -46,11 +54,14 @@ function buildAnimation(
   duration: number,
   easing?: EasingFunction,
   initialOffset?: number,
+  delay?: number,
 ) {
   switch (variant) {
     case "fadeIn": {
-      const anim = FadeIn.duration(duration);
-      return easing ? anim.easing(easing) : anim;
+      let anim = FadeIn.duration(duration);
+      if (easing) anim = anim.easing(easing);
+      if (delay !== undefined) anim = anim.delay(delay);
+      return anim;
     }
     case "fadeInDown": {
       let anim = FadeInDown.duration(duration);
@@ -58,6 +69,7 @@ function buildAnimation(
       if (initialOffset !== undefined) {
         anim = anim.withInitialValues({ transform: [{ translateY: -initialOffset }] });
       }
+      if (delay !== undefined) anim = anim.delay(delay);
       return anim;
     }
     case "fadeInUp": {
@@ -66,6 +78,7 @@ function buildAnimation(
       if (initialOffset !== undefined) {
         anim = anim.withInitialValues({ transform: [{ translateY: initialOffset }] });
       }
+      if (delay !== undefined) anim = anim.delay(delay);
       return anim;
     }
     case "slideInLeft": {
@@ -74,6 +87,7 @@ function buildAnimation(
       if (initialOffset !== undefined) {
         anim = anim.withInitialValues({ transform: [{ translateX: -initialOffset }] });
       }
+      if (delay !== undefined) anim = anim.delay(delay);
       return anim;
     }
     case "slideInRight": {
@@ -82,17 +96,22 @@ function buildAnimation(
       if (initialOffset !== undefined) {
         anim = anim.withInitialValues({ transform: [{ translateX: initialOffset }] });
       }
+      if (delay !== undefined) anim = anim.delay(delay);
       return anim;
     }
     case "bounceIn": {
       // BounceIn uses internal withSequence/withTiming calls for its spring
       // physics, so the easing prop has no meaningful effect and is intentionally
       // not forwarded here.
-      return BounceIn.duration(duration);
+      let anim = BounceIn.duration(duration);
+      if (delay !== undefined) anim = anim.delay(delay);
+      return anim;
     }
     case "zoomIn": {
-      const anim = ZoomIn.duration(duration);
-      return easing ? anim.easing(easing) : anim;
+      let anim = ZoomIn.duration(duration);
+      if (easing) anim = anim.easing(easing);
+      if (delay !== undefined) anim = anim.delay(delay);
+      return anim;
     }
   }
 }
@@ -103,12 +122,13 @@ export function StillLoadingHint({
   duration = DEFAULT_DURATION,
   easing,
   initialOffset,
+  delay,
 }: StillLoadingHintProps) {
   const colors = useColors();
 
   return (
     <Animated.Text
-      entering={buildAnimation(variant, duration, easing, initialOffset)}
+      entering={buildAnimation(variant, duration, easing, initialOffset, delay)}
       style={[styles.text, { color: colors.mutedForeground }]}
     >
       {hint}
