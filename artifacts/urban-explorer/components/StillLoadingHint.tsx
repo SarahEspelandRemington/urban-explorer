@@ -1,4 +1,4 @@
-import React from "react";
+import React, { ComponentProps } from "react";
 import { StyleSheet } from "react-native";
 import Animated, {
   BounceIn,
@@ -45,6 +45,12 @@ interface StillLoadingHintProps {
    * Defaults to 0 (no delay).
    */
   delay?: number;
+  /**
+   * Exit animation to play when the hint is unmounted. Accepts any
+   * `Animated.Text`-compatible exiting value (e.g. `FadeOut`, `FadeOut.duration(300)`).
+   * When omitted the hint disappears immediately, preserving the existing behaviour.
+   */
+  exiting?: ComponentProps<typeof Animated.Text>["exiting"];
 }
 
 const DEFAULT_DURATION = 600;
@@ -123,12 +129,14 @@ export function StillLoadingHint({
   easing,
   initialOffset,
   delay,
+  exiting,
 }: StillLoadingHintProps) {
   const colors = useColors();
 
   return (
     <Animated.Text
       entering={buildAnimation(variant, duration, easing, initialOffset, delay)}
+      exiting={exiting}
       style={[styles.text, { color: colors.mutedForeground }]}
     >
       {hint}
