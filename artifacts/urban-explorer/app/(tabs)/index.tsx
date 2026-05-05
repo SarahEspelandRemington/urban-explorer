@@ -1063,7 +1063,7 @@ export default function ExploreScreen() {
                 <PlaceCardSkeleton count={4} />
                 <LoadingMessages variant="discovery" />
                 {showStillLoading ? (
-                  <StillLoadingHint hint={t.explore.stillLoading} variant="fadeIn" />
+                  <StillLoadingHint hint={t.explore.stillLoading} variant="fadeIn" exiting={FadeOut.duration(300)} />
                 ) : null}
               </Animated.View>
             ) : discoverMutation.isError ? (

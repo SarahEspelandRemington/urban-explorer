@@ -12,7 +12,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInUp, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LoadingMessages } from "@/components/LoadingMessages";
@@ -294,7 +294,7 @@ export default function PlaceDetailScreen() {
             <ActivityIndicator size="small" color={colors.primary} />
             <LoadingMessages variant="detail" />
             {showStillLoading ? (
-              <StillLoadingHint hint={t.placeDetail.stillLoading} variant="fadeInDown" />
+              <StillLoadingHint hint={t.placeDetail.stillLoading} variant="fadeInDown" exiting={FadeOut.duration(300)} />
             ) : null}
           </View>
         ) : detailMutation.isError ? (
