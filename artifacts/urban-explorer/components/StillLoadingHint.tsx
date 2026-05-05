@@ -1,10 +1,26 @@
 import React from "react";
 import { StyleSheet } from "react-native";
-import Animated, { EasingFunction, FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, {
+  BounceIn,
+  EasingFunction,
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  SlideInLeft,
+  SlideInRight,
+  ZoomIn,
+} from "react-native-reanimated";
 
 import { useColors } from "@/hooks/useColors";
 
-type AnimationVariant = "fadeIn" | "fadeInDown";
+type AnimationVariant =
+  | "fadeIn"
+  | "fadeInDown"
+  | "fadeInUp"
+  | "slideInLeft"
+  | "slideInRight"
+  | "bounceIn"
+  | "zoomIn";
 
 interface StillLoadingHintProps {
   hint: string;
@@ -23,6 +39,28 @@ function buildAnimation(variant: AnimationVariant, duration: number, easing?: Ea
     }
     case "fadeInDown": {
       const anim = FadeInDown.duration(duration);
+      return easing ? anim.easing(easing) : anim;
+    }
+    case "fadeInUp": {
+      const anim = FadeInUp.duration(duration);
+      return easing ? anim.easing(easing) : anim;
+    }
+    case "slideInLeft": {
+      const anim = SlideInLeft.duration(duration);
+      return easing ? anim.easing(easing) : anim;
+    }
+    case "slideInRight": {
+      const anim = SlideInRight.duration(duration);
+      return easing ? anim.easing(easing) : anim;
+    }
+    case "bounceIn": {
+      // BounceIn uses internal withSequence/withTiming calls for its spring
+      // physics, so the easing prop has no meaningful effect and is intentionally
+      // not forwarded here.
+      return BounceIn.duration(duration);
+    }
+    case "zoomIn": {
+      const anim = ZoomIn.duration(duration);
       return easing ? anim.easing(easing) : anim;
     }
   }
