@@ -546,18 +546,32 @@ function scheduleNominatimCall<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
-async function verifyPlaceCoordinates(places: any[]): Promise<void> {
-  // Only correct coords when the geocoded address is very far from the AI's claimed
-  // position — 250m catches clear hallucinations (e.g., famous church claimed to be
-  // near the user but actually 8 blocks away) while leaving minor block-level
-  // discrepancies alone so legitimate nearby places aren't filtered out.
-  const COORD_CORRECTION_THRESHOLD_M = 250;
+async function verifyPlaceCoordinates(
+  places: any[],
+  userLat: number,
+  userLng: number,
+  searchRadius: number,
+): Promise<void> {
+  // Correct coords that disagree with Nominatim by more than this.
+  // 80 m ≈ half a city block — catches real pin errors while tolerating
+  // Nominatim's own address-number imprecision.
+  const COORD_CORRECTION_THRESHOLD_M = 80;
+  // Only accept a Nominatim result if it is plausibly near the user — this
+  // stops us correcting to a same-named church in another city.
+  const MAX_ACCEPT_DIST_M = searchRadius * 2;
+  // Viewbox biases Nominatim ranking toward the user's neighbourhood.
+  // bounded=0 (default) lets it still match if OSM's bounding box sits just
+  // outside; we filter by distance ourselves.
+  const BOX_DEG = 0.06; // ≈6.7 km side — covers any search radius we use
+  const viewbox = `${(userLng - BOX_DEG).toFixed(6)},${(userLat - BOX_DEG).toFixed(6)},${(userLng + BOX_DEG).toFixed(6)},${(userLat + BOX_DEG).toFixed(6)}`;
 
-  // Verify ALL places that include an address — even "high" confidence ones, because
-  // the AI sometimes labels famous places as "high" while hallucinating their coordinates
-  // near the user's current location. Nominatim requires max 1 req/sec — enforce delay.
+  // Verify all places that have a name or address — named POIs (churches,
+  // sculptures, storefronts) are best matched by name; addresses help
+  // disambiguate common names.
   const candidates = places.filter(
-    (p) => typeof p.address === "string" && p.address.trim().length > 5,
+    (p) =>
+      (typeof p.name === "string" && p.name.trim().length > 3) ||
+      (typeof p.address === "string" && p.address.trim().length > 5),
   );
 
   // Schedule all Nominatim lookups upfront so each candidate gets its own
@@ -568,24 +582,46 @@ async function verifyPlaceCoordinates(places: any[]): Promise<void> {
   await Promise.allSettled(
     candidates.map((p) =>
       scheduleNominatimCall(async () => {
-        const results = await nominatimSearch(p.address.trim(), 1, {
+        // Combine name + address for a rich free-text POI query.
+        // A named place (e.g. "Olivet Covenant Presbyterian Church")
+        // resolves far more accurately by name than by a vague address.
+        const query = [p.name?.trim(), p.address?.trim()]
+          .filter(Boolean)
+          .join(" ");
+        const results = await nominatimSearch(query, 5, {
           countrycodes: "us",
+          viewbox,
         });
         if (results.length === 0) return;
-        const { lat, lon } = results[0];
-        const geocodedLat = parseFloat(lat);
-        const geocodedLon = parseFloat(lon);
-        if (!isFinite(geocodedLat) || !isFinite(geocodedLon)) return;
-        const dist = haversineDistance(
+
+        // Among all returned results, pick the one closest to the user
+        // that is still within the plausible search area.  We do NOT pick
+        // the result closest to the AI's claimed coords — those may be wrong.
+        let bestLat = NaN;
+        let bestLon = NaN;
+        let bestDist = Infinity;
+        for (const r of results) {
+          const rLat = parseFloat(r.lat);
+          const rLon = parseFloat(r.lon);
+          if (!isFinite(rLat) || !isFinite(rLon)) continue;
+          const d = haversineDistance(userLat, userLng, rLat, rLon);
+          if (d <= MAX_ACCEPT_DIST_M && d < bestDist) {
+            bestDist = d;
+            bestLat = rLat;
+            bestLon = rLon;
+          }
+        }
+        if (!isFinite(bestLat)) return;
+
+        const moveBy = haversineDistance(
           p.latitude,
           p.longitude,
-          geocodedLat,
-          geocodedLon,
+          bestLat,
+          bestLon,
         );
-        if (dist > COORD_CORRECTION_THRESHOLD_M) {
-          // Coords don't match the address — replace and demote confidence.
-          p.latitude = geocodedLat;
-          p.longitude = geocodedLon;
+        if (moveBy > COORD_CORRECTION_THRESHOLD_M) {
+          p.latitude = bestLat;
+          p.longitude = bestLon;
           p.confidence = "low";
           p.coordSource = "nominatim-corrected";
         }
@@ -617,7 +653,7 @@ async function postProcessPlaces(
   });
 
   if (!options.skipVerification) {
-    await verifyPlaceCoordinates(processed);
+    await verifyPlaceCoordinates(processed, userLat, userLng, searchRadius);
   }
 
   processed = processed.filter((p: any) => {
@@ -1216,7 +1252,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   if (!isEmpty) {
     (async () => {
       try {
-        await verifyPlaceCoordinates(data.places);
+        await verifyPlaceCoordinates(data.places, latitude, longitude, searchRadius);
         // Re-filter: a corrected coordinate might have moved a place outside radius.
         const maxDist = searchRadius * 1.1;
         data.places = data.places.filter(
