@@ -13,15 +13,21 @@
     "lint": "pnpm run check:conflicts && eslint \"artifacts/urban-explorer/**/*.{ts,tsx}\" \"artifacts/api-server/**/*.{ts,tsx}\"",
     "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "packageManager": "pnpm@10.26.1",
   "private": true,
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,md,yaml,yml}": "prettier --write"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^15.15.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.58.2"
