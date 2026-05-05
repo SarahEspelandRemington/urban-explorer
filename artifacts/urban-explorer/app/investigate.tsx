@@ -11,7 +11,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInUp, FadeOut } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeInUp, FadeOutDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddressInput } from "@/components/AddressInput";
@@ -217,7 +217,7 @@ export default function InvestigateScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
             <LoadingMessages variant="discovery" />
             {showStillLoading ? (
-              <StillLoadingHint hint={t.investigate.stillLoading} variant="fadeInDown" exiting={FadeOut.duration(300)} />
+              <StillLoadingHint hint={t.investigate.stillLoading} variant="fadeInDown" exiting={FadeOutDown.duration(300)} />
             ) : null}
           </View>
         )}

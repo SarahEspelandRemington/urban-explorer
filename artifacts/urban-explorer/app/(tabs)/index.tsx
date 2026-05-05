@@ -14,7 +14,7 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut, FadeOutDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
@@ -1063,7 +1063,7 @@ export default function ExploreScreen() {
                 <PlaceCardSkeleton count={4} />
                 <LoadingMessages variant="discovery" />
                 {showStillLoading ? (
-                  <StillLoadingHint hint={t.explore.stillLoading} variant="fadeIn" exiting={FadeOut.duration(300)} />
+                  <StillLoadingHint hint={t.explore.stillLoading} variant="fadeIn" exiting={FadeOutDown.duration(300)} />
                 ) : null}
               </Animated.View>
             ) : discoverMutation.isError ? (
