@@ -1764,7 +1764,8 @@ router.post("/explore/place-timeline", async (req, res) => {
   const { placeName, latitude, longitude, category, yearBuilt } = parsed.data;
   const yearContext = yearBuilt ? ` It was built around ${yearBuilt}.` : "";
 
-  const timelineCacheKey = `timeline:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${yearBuilt || ""}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  // v2: versioned to bust cache entries generated before the honesty-rule prompt update (Task #270)
+  const timelineCacheKey = `timeline:v2:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${yearBuilt || ""}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedTimeline = getLLMCache(timelineCacheKey);
   if (cachedTimeline) {
     res.json(cachedTimeline);
