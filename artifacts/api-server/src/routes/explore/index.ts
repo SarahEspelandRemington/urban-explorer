@@ -163,6 +163,7 @@ const LLM_CACHE_MAX_SIZE = 200;
 // reuses its result — preventing duplicate paid API calls on cold-cache surges.
 // inflight:v7: (pure-refactor — no LLM output change; version bump satisfies manifest guard)
 // narration-cache:v8: (narration key v1→v2; OSRM error semantics fix; audio dedup complete)
+// osrm-null-fix:v9: (fixed anyReachable check: r !== null instead of r !== undefined)
 const inFlightNarration = new Map<string, Promise<string>>();
 const inFlightAudio = new Map<string, Promise<Buffer>>();
 const inFlightDetail = new Map<string, Promise<any>>();
@@ -2505,7 +2506,7 @@ router.post("/explore/route", async (req, res) => {
     // If at least one provider responded (non-null result), there are no
     // walkable routes between the points → 404. If all returned null the
     // service itself is unavailable → 502.
-    const anyReachable = providerResults.some((r) => r !== undefined);
+    const anyReachable = providerResults.some((r) => r !== null);
     if (anyReachable) {
       res
         .status(404)
