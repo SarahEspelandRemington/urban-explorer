@@ -148,11 +148,19 @@ export default function ExploreScreen() {
 
   const allMapPlaces = useMemo(() => {
     const combined = [...places, ...mapPlaces];
-    const seen = new Set<string>();
+    const seenIds = new Set<string>();
+    const seenCoords = new Set<string>();
     return combined.filter((p) => {
-      const key = `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
+      // Dedup by id first — PlaceMapView uses id as the React key, so any
+      // duplicate id produces a "two children with the same key" error even
+      // when coordinates differ slightly (e.g. after Nominatim correction).
+      if (seenIds.has(p.id)) return false;
+      seenIds.add(p.id);
+      // Also dedup by name+coords to catch places the AI returned with
+      // different ids but pointing to the same physical location.
+      const coordKey = `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`;
+      if (seenCoords.has(coordKey)) return false;
+      seenCoords.add(coordKey);
       return true;
     });
   }, [places, mapPlaces]);
