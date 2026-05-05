@@ -21,6 +21,7 @@ import { useRouter } from "expo-router";
 
 import { LanguagePickerModal } from "@/components/LanguagePickerModal";
 import { LoadingMessages } from "@/components/LoadingMessages";
+import { StillLoadingHint } from "@/components/StillLoadingHint";
 import { LocationPermission } from "@/components/LocationPermission";
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceCardSkeleton } from "@/components/PlaceCardSkeleton";
@@ -1062,12 +1063,7 @@ export default function ExploreScreen() {
                 <PlaceCardSkeleton count={4} />
                 <LoadingMessages variant="discovery" />
                 {showStillLoading ? (
-                  <Animated.Text
-                    entering={FadeIn.duration(600)}
-                    style={[styles.stillLoadingText, { color: colors.mutedForeground }]}
-                  >
-                    {t.explore.stillLoading}
-                  </Animated.Text>
+                  <StillLoadingHint hint={t.explore.stillLoading} entering={FadeIn.duration(600)} />
                 ) : null}
               </Animated.View>
             ) : discoverMutation.isError ? (
@@ -1352,13 +1348,7 @@ const styles = StyleSheet.create({
     gap: 16,
     alignItems: "stretch",
   },
-  stillLoadingText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    opacity: 0.7,
-    marginTop: 4,
-  },
+
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",

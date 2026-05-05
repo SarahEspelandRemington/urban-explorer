@@ -6,14 +6,15 @@ import { useColors } from "@/hooks/useColors";
 
 interface StillLoadingHintProps {
   hint: string;
+  entering?: React.ComponentProps<typeof Animated.Text>["entering"];
 }
 
-export function StillLoadingHint({ hint }: StillLoadingHintProps) {
+export function StillLoadingHint({ hint, entering = FadeInDown.duration(600) }: StillLoadingHintProps) {
   const colors = useColors();
 
   return (
     <Animated.Text
-      entering={FadeInDown.duration(600)}
+      entering={entering}
       style={[styles.text, { color: colors.mutedForeground }]}
     >
       {hint}
