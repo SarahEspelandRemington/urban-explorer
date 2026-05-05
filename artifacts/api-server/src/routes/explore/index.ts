@@ -158,6 +158,13 @@ const llmCache = new Map<string, LLMCacheEntry>();
 const LLM_CACHE_TTL = 15 * 60 * 1000;
 const LLM_CACHE_MAX_SIZE = 200;
 
+// Cache key versioning convention:
+// Every LLM-backed cache key includes a version segment (e.g. ":v1:").
+// When a prompt changes materially — wording, output schema, honesty rules,
+// model selection — increment that endpoint's version so stale cached
+// responses are never served to users of the updated prompt.
+// Start at v1 for a new key; bump to v2, v3, etc. after each material change.
+// The timeline key is already at v2 after its prompt update (Task #270).
 function getLLMCache<T>(key: string): T | null {
   const entry = llmCache.get(key);
   if (!entry) return null;
@@ -919,7 +926,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v1:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1209,7 +1216,7 @@ router.post("/explore/suggest-locations", async (req, res) => {
   }
 
   const nearTrimmed = (nearLocation ?? "").trim().slice(0, 200);
-  const suggestCacheKey = `suggest:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
+  const suggestCacheKey = `suggest:v1:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
   const cachedSuggest = getLLMCache(suggestCacheKey);
   if (cachedSuggest) {
     res.json(cachedSuggest);
@@ -1342,7 +1349,7 @@ router.post("/explore/geocode", async (req, res) => {
 
   const { query } = parsed.data;
 
-  const geocodeCacheKey = `geocode:${query.trim().toLowerCase()}`;
+  const geocodeCacheKey = `geocode:v1:${query.trim().toLowerCase()}`;
   const cachedGeocode = getLLMCache(geocodeCacheKey);
   if (cachedGeocode) {
     res.json(cachedGeocode);
@@ -1429,7 +1436,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     return;
   }
 
-  const cacheKey = `revgeo:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cacheKey = `revgeo:v1:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
   if (cached) {
     res.json(cached);
@@ -1523,7 +1530,7 @@ router.post("/explore/investigate-address", async (req, res) => {
 
   // Cache key: normalized address + coord bucket. Investigations are deterministic
   // per-building so a longer TTL is fine; share the LLM cache.
-  const investigateCacheKey = `investigate:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const investigateCacheKey = `investigate:v1:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
   const cached = getLLMCache(investigateCacheKey);
   if (cached) {
     res.json(cached);
@@ -1667,7 +1674,7 @@ router.post("/explore/place-detail", async (req, res) => {
   const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
   res.on("close", () => detailController.abort());
 
-  const detailCacheKey = `detail:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const detailCacheKey = `detail:v1:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -1874,7 +1881,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact } = parsed.data;
 
-  const narrationCacheKey = `narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v1:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -1994,7 +2001,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v1:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = getAudioCache(audioCacheKey);
@@ -2114,7 +2121,7 @@ router.post("/explore/deep-narration", async (req, res) => {
   const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
-  const deepCacheKey = `deep-narration:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const deepCacheKey = `deep-narration:v1:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
@@ -2525,7 +2532,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v1:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     res.json(cached);
