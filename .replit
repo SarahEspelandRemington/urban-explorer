@@ -36,6 +36,10 @@ args = "typecheck"
 task = "workflow.run"
 args = "conflict-markers"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "spec-sync"
+
 [[workflows.workflow]]
 name = "privacy-tests"
 author = "agent"
@@ -74,12 +78,12 @@ isValidation = true
 name = "typecheck"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm run typecheck"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run spec-sync"
 
 [[workflows.workflow]]
 name = "conflict-markers"
@@ -88,6 +92,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm run check:conflicts"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "spec-sync"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run spec-sync"
 
 [workflows.workflow.metadata]
 isValidation = true

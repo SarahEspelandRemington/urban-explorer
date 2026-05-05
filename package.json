@@ -7,6 +7,8 @@
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "codegen": "pnpm --filter @workspace/api-spec run codegen",
+    "spec-sync": "pnpm run codegen && pnpm run typecheck",
     "check:conflicts": "sh scripts/check-conflicts.sh",
     "lint": "pnpm run check:conflicts && eslint \"artifacts/urban-explorer/**/*.{ts,tsx}\" \"artifacts/api-server/**/*.{ts,tsx}\"",
     "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs"
