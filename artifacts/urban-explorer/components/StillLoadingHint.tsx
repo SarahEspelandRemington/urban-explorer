@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, { EasingFunction, FadeIn, FadeInDown } from "react-native-reanimated";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -10,25 +10,30 @@ interface StillLoadingHintProps {
   hint: string;
   variant?: AnimationVariant;
   duration?: number;
+  easing?: EasingFunction;
 }
 
 const DEFAULT_DURATION = 600;
 
-function buildAnimation(variant: AnimationVariant, duration: number) {
+function buildAnimation(variant: AnimationVariant, duration: number, easing?: EasingFunction) {
   switch (variant) {
-    case "fadeIn":
-      return FadeIn.duration(duration);
-    case "fadeInDown":
-      return FadeInDown.duration(duration);
+    case "fadeIn": {
+      const anim = FadeIn.duration(duration);
+      return easing ? anim.easing(easing) : anim;
+    }
+    case "fadeInDown": {
+      const anim = FadeInDown.duration(duration);
+      return easing ? anim.easing(easing) : anim;
+    }
   }
 }
 
-export function StillLoadingHint({ hint, variant = "fadeInDown", duration = DEFAULT_DURATION }: StillLoadingHintProps) {
+export function StillLoadingHint({ hint, variant = "fadeInDown", duration = DEFAULT_DURATION, easing }: StillLoadingHintProps) {
   const colors = useColors();
 
   return (
     <Animated.Text
-      entering={buildAnimation(variant, duration)}
+      entering={buildAnimation(variant, duration, easing)}
       style={[styles.text, { color: colors.mutedForeground }]}
     >
       {hint}
