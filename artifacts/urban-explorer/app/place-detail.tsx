@@ -294,7 +294,7 @@ export default function PlaceDetailScreen() {
             <ActivityIndicator size="small" color={colors.primary} />
             <LoadingMessages variant="detail" />
             {showStillLoading ? (
-              <StillLoadingHint hint={t.placeDetail.stillLoading} />
+              <StillLoadingHint hint={t.placeDetail.stillLoading} variant="fadeInDown" />
             ) : null}
           </View>
         ) : detailMutation.isError ? (

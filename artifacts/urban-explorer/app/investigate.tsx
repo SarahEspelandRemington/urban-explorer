@@ -217,7 +217,7 @@ export default function InvestigateScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
             <LoadingMessages variant="discovery" />
             {showStillLoading ? (
-              <StillLoadingHint hint={t.investigate.stillLoading} />
+              <StillLoadingHint hint={t.investigate.stillLoading} variant="fadeInDown" />
             ) : null}
           </View>
         )}
