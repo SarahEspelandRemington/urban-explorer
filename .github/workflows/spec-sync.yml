@@ -1,0 +1,29 @@
+name: Spec Sync
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  spec-sync:
+    name: Codegen + Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run spec-sync (codegen + typecheck)
+        run: pnpm run spec-sync
