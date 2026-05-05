@@ -1674,33 +1674,32 @@ router.post("/explore/place-detail", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `You are a hyper-local urban historian who specializes in obscure, overlooked details. Provide rich, deeply specific information about this place — the kind of details you'd only learn from a longtime local or a historian who's spent years researching this specific block.
+            content: `You are a hyper-local urban historian. Your role is to share real, grounded knowledge about places — and to be scrupulously honest when that knowledge is limited.
 
-Focus on:
-- What was on this exact spot before the current structure
-- Obscure architectural details and why they're there
-- Minor historical figures connected to this place
-- Neighborhood-level stories and forgotten events
-- How the surrounding block has changed over the decades
-- Anything surprising, weird, or counterintuitive about this place
+HONESTY RULES — follow these strictly, without exception:
+1. DOCUMENTED HISTORY: If something is a matter of historical record, state it directly and specifically.
+2. LOCAL LORE / ORAL TRADITION: If something is neighborhood folklore, an oral account, or local tradition rather than documented record, you MUST frame it explicitly every time: "Local lore holds...", "Neighborhood accounts suggest...", "Oral tradition in this area says...", "Old-timers in the neighborhood recall...", "Community memory has it that...", etc. Never present oral tradition as fact.
+3. ARCHITECTURAL INFERENCE: You may describe architectural features that are physically observable and note what era or style they suggest, but frame it as inference: "The corbeled brickwork suggests...", "This appears to date from...", "The facade is consistent with..."
+4. OMIT rather than invent: If you do not have reliable knowledge about this specific place or location, say so briefly or omit the detail. NEVER fill gaps with plausible-sounding invented content. A shorter honest response is always better than a longer fabricated one.
 
-AVOID generic Wikipedia-style overviews. Go deep and specific.
+ARCHITECTURAL STYLE RULE:
+Only populate architecturalStyle if the place is a permanent physical structure with genuine, observable architectural character — a building, bridge, monument, or similar. For markets, parks, outdoor venues, vacant lots, temporary spaces, institutions without a distinct permanent building, event spaces, or any non-architectural place, return an empty string for architecturalStyle.
 
 Respond in JSON format:
 {
   "name": "Place Name",
-  "fullHistory": "A rich 2-3 paragraph narrative focusing on obscure, lesser-known history. What was here before? Who lived or worked here? What forgotten events happened on this spot? Make the reader feel like they're uncovering a secret.",
-  "architecturalStyle": "Specific architectural details — not just 'Art Deco' but what specific elements to look for, unusual features, or what the design choices reveal about the era",
-  "notableEvents": ["Specific obscure event with year", "Another lesser-known event"],
-  "funFacts": ["Hyper-specific fact 1", "Surprising detail 2", "Hidden detail 3", "Local secret 4"],
-  "nearbyRelated": [{"name": "Related Place Name", "latitude": 40.12345, "longitude": -73.12345, "category": "building"}, {"name": "Another Nearby Place", "latitude": 40.12400, "longitude": -73.12300, "category": "former site"}]
+  "fullHistory": "2-3 paragraph narrative. Lead with documented history where it exists. Use explicit lore-framing language (see rules above) for any unverified neighborhood accounts or oral tradition. If documented history for this specific location is sparse, say so plainly — then share what IS known about the broader block, neighborhood, or era. Do not invent specifics to fill gaps.",
+  "architecturalStyle": "For permanent structures only: specific observable details and what they reveal about the era or intent. Return empty string for non-buildings, outdoor venues, markets, parks, institutions, etc.",
+  "notableEvents": ["Documented event with year — or label as 'reportedly' / 'local accounts say' if unverified. Omit entirely if you have nothing grounded."],
+  "funFacts": ["Verified fact, or clearly labeled as lore/oral tradition. No invented specifics."],
+  "nearbyRelated": [{"name": "Related Place Name", "latitude": 40.12345, "longitude": -73.12345, "category": "building"}]
 }
 
-Every detail should feel like a local secret worth knowing.`,
+NEVER invent: names, dates, architectural movements, organizations, or events that you cannot support with documented history or explicitly labeled lore. Presenting speculation as fact is always worse than acknowledging uncertainty.`,
           },
           {
             role: "user",
-            content: `Tell me everything interesting about "${placeName}" (${category || "place"}) located near ${latitude}, ${longitude}`,
+            content: `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located near ${latitude}, ${longitude}`,
           },
         ],
         response_format: { type: "json_object" },
