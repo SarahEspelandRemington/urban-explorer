@@ -1,7 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import React, { useEffect, useState } from "react";
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import MapView, { Marker, PROVIDER_DEFAULT } from "react-native-maps";
 
 import { useT } from "@/contexts/LocaleContext";
@@ -14,7 +21,12 @@ interface PlaceDetailMapProps {
   address?: string;
 }
 
-export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDetailMapProps) {
+export function PlaceDetailMap({
+  latitude,
+  longitude,
+  name,
+  address,
+}: PlaceDetailMapProps) {
   const colors = useColors();
   const t = useT();
   const [coords, setCoords] = useState({ latitude, longitude });
@@ -26,11 +38,16 @@ export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDeta
       try {
         const results = await Location.geocodeAsync(address);
         if (!cancelled && results.length > 0) {
-          setCoords({ latitude: results[0].latitude, longitude: results[0].longitude });
+          setCoords({
+            latitude: results[0].latitude,
+            longitude: results[0].longitude,
+          });
         }
       } catch {}
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [address]);
 
   const handleOpenMaps = async () => {
@@ -81,11 +98,7 @@ export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDeta
           showsUserLocation
           provider={PROVIDER_DEFAULT}
         >
-          <Marker
-            coordinate={coords}
-            title={name}
-            pinColor={colors.primary}
-          />
+          <Marker coordinate={coords} title={name} pinColor={colors.primary} />
         </MapView>
       </View>
       <Pressable
@@ -99,7 +112,9 @@ export function PlaceDetailMap({ latitude, longitude, name, address }: PlaceDeta
         ]}
       >
         <Feather name="navigation" size={16} color={colors.primaryForeground} />
-        <Text style={[styles.directionsText, { color: colors.primaryForeground }]}>
+        <Text
+          style={[styles.directionsText, { color: colors.primaryForeground }]}
+        >
           {t.placeDetailMap.getDirections}
         </Text>
       </Pressable>

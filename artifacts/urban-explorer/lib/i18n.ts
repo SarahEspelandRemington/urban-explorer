@@ -242,7 +242,10 @@ export interface Strings {
     pauseAudioAccessibility: string;
     stopHeadingAccessibility: string;
     headingToPlaceAccessibility: (place: string) => string;
-    headingToPlaceWithDistanceAccessibility: (place: string, distance: string) => string;
+    headingToPlaceWithDistanceAccessibility: (
+      place: string,
+      distance: string,
+    ) => string;
     nowPlayingDeepDivePlaceAccessibility: (place: string) => string;
   };
   settingsMessages: {
@@ -304,9 +307,11 @@ const en: Strings = {
     tryRange: (r) => `Try ${r}m range`,
     searchAgain: "Search again",
     startExploringTitle: "Start Exploring",
-    startExploringDetail: "Tap the compass to discover interesting places around you",
+    startExploringDetail:
+      "Tap the compass to discover interesting places around you",
     locationNotFound: "Couldn't find that location. Try being more specific.",
-    locationServiceBusy: "Location service is temporarily unavailable — try again in a moment.",
+    locationServiceBusy:
+      "Location service is temporarily unavailable — try again in a moment.",
     stillLoading: "Taking longer than usual…",
   },
   saved: {
@@ -331,7 +336,8 @@ const en: Strings = {
     swipeToDelete: "Delete",
     noteModalTitle: "Saved",
     noteModalLabel: "Add a personal note (optional)",
-    noteModalPlaceholder: "e.g. visited on a rainy Tuesday, loved the architecture…",
+    noteModalPlaceholder:
+      "e.g. visited on a rainy Tuesday, loved the architecture…",
     noteModalSave: "Save note",
     noteModalDone: "Done",
   },
@@ -351,7 +357,8 @@ const en: Strings = {
     buildingFilters: "Building Filters",
     buildingFiltersDescription: "Include these building types in walk stories",
     showPrefetchStats: "Show prefetch stats",
-    showPrefetchStatsDescription: "Display the cache hit-rate counter at the bottom of the screen",
+    showPrefetchStatsDescription:
+      "Display the cache hit-rate counter at the bottom of the screen",
     buildingGroupResidential: "Residential",
     buildingGroupResidentialDesc: "Huts, sheds, roof structures",
     buildingGroupAgricultural: "Agricultural",
@@ -383,7 +390,8 @@ const en: Strings = {
     routeError: "Couldn't find a route. Check your addresses and try again.",
     geocodeError: "Couldn't locate that address. Try being more specific.",
     previewLabel: "Along your route",
-    emptyRouteNote: "No stops were pre-loaded — GPS discovery will find stories as you walk.",
+    emptyRouteNote:
+      "No stops were pre-loaded — GPS discovery will find stories as you walk.",
   },
   placeDetail: {
     quickFacts: "Quick Facts",
@@ -392,7 +400,8 @@ const en: Strings = {
     notableEvents: "Notable Events",
     moreFunFacts: "More Fun Facts",
     nearbyRelated: "Nearby Related",
-    couldNotLoad: "Could not load detailed history. Check your connection and try again.",
+    couldNotLoad:
+      "Could not load detailed history. Check your connection and try again.",
     goBackAccessibility: "Go back",
     saveAccessibility: "Save",
     removeSavedAccessibility: "Remove from saved",
@@ -404,7 +413,8 @@ const en: Strings = {
   locationPermission: {
     titleSearch: "Search a Location",
     titleEnable: "Enable Location",
-    descriptionSearch: "Enter a city, neighborhood, intersection, or address to explore.",
+    descriptionSearch:
+      "Enter a city, neighborhood, intersection, or address to explore.",
     descriptionEnable:
       "Urban Explorer needs your location to discover interesting buildings and historical sites near you.",
     placeholder: "e.g. Greenwich Village, NYC",
@@ -433,7 +443,8 @@ const en: Strings = {
     walkFt: (n) => `${n} ft`,
     walkMi: (s) => `${s} mi`,
     rateLimitTitle: "Slow down a bit",
-    rateLimitBody: "You've rated a lot of places recently — try again in a few minutes.",
+    rateLimitBody:
+      "You've rated a lot of places recently — try again in a few minutes.",
     saveErrTitle: "Couldn't save your rating",
     saveErrBody: "Something went wrong — check your connection and try again.",
   },
@@ -472,8 +483,7 @@ const en: Strings = {
     headerSubtitle: "Curious about a specific building? Ask the historian.",
     placeholder: "e.g., 538 W 38th St, New York, NY",
     investigate: "Investigate",
-    hint:
-      "Best for older or non-landmark buildings you've noticed in person — the AI will reason from the architecture and neighborhood when records are sparse.",
+    hint: "Best for older or non-landmark buildings you've noticed in person — the AI will reason from the architecture and neighborhood when records are sparse.",
     notFoundError:
       "Couldn't find that address. Try including a city or zip (e.g., '538 W 38th St, New York, NY').",
     busyError: "We're a bit busy — give it a moment and try again.",
@@ -569,7 +579,8 @@ const es: Strings = {
     investigateSubtitle: "¿Curioso por un edificio en particular? Búscalo.",
     ratingPaceWarning: "Estás valorando muy rápido — tómate un respiro",
     busyTitle: "Estamos un poco ocupados",
-    busyDetail: "Hay mucha actividad ahora — vuelve a intentarlo en un momento.",
+    busyDetail:
+      "Hay mucha actividad ahora — vuelve a intentarlo en un momento.",
     errorTitle: "Algo salió mal",
     errorDetail: "No pudimos encontrar lugares cerca. Inténtalo de nuevo.",
     nothingFoundTitle: "Nada encontrado por aquí",
@@ -578,8 +589,10 @@ const es: Strings = {
     tryRange: (r) => `Probar rango de ${r} m`,
     searchAgain: "Buscar otra vez",
     startExploringTitle: "Empieza a explorar",
-    startExploringDetail: "Toca la brújula para descubrir lugares interesantes cerca de ti",
-    locationNotFound: "No encontramos esa ubicación. Intenta ser más específico.",
+    startExploringDetail:
+      "Toca la brújula para descubrir lugares interesantes cerca de ti",
+    locationNotFound:
+      "No encontramos esa ubicación. Intenta ser más específico.",
     locationServiceBusy:
       "El servicio de ubicación no está disponible — inténtalo de nuevo en un momento.",
     stillLoading: "Tarda más de lo habitual…",
@@ -606,7 +619,8 @@ const es: Strings = {
     swipeToDelete: "Eliminar",
     noteModalTitle: "Guardado",
     noteModalLabel: "Añadir una nota personal (opcional)",
-    noteModalPlaceholder: "p. ej. visité un martes lluvioso, me encantó la arquitectura…",
+    noteModalPlaceholder:
+      "p. ej. visité un martes lluvioso, me encantó la arquitectura…",
     noteModalSave: "Guardar nota",
     noteModalDone: "Listo",
   },
@@ -622,11 +636,14 @@ const es: Strings = {
     keepWalking: "Sigue caminando",
     storiesOften: "Las historias sonarán con frecuencia",
     storiesAsYouGo: "Las historias sonarán mientras avanzas",
-    storiesSoFar: (n) => `${n} ${n === 1 ? "historia" : "historias"} hasta ahora`,
+    storiesSoFar: (n) =>
+      `${n} ${n === 1 ? "historia" : "historias"} hasta ahora`,
     buildingFilters: "Filtros de edificios",
-    buildingFiltersDescription: "Incluir estos tipos de edificios en las historias",
+    buildingFiltersDescription:
+      "Incluir estos tipos de edificios en las historias",
     showPrefetchStats: "Mostrar estadísticas de precarga",
-    showPrefetchStatsDescription: "Mostrar el contador de aciertos de caché al pie de la pantalla",
+    showPrefetchStatsDescription:
+      "Mostrar el contador de aciertos de caché al pie de la pantalla",
     buildingGroupResidential: "Residencial",
     buildingGroupResidentialDesc: "Cabañas, cobertizos, cubiertas",
     buildingGroupAgricultural: "Agrícola",
@@ -658,7 +675,8 @@ const es: Strings = {
     routeError: "No se pudo encontrar la ruta. Verifica las direcciones.",
     geocodeError: "No se pudo localizar esa dirección. Sé más específico.",
     previewLabel: "A lo largo de tu ruta",
-    emptyRouteNote: "No se precargaron paradas — el GPS encontrará historias mientras caminas.",
+    emptyRouteNote:
+      "No se precargaron paradas — el GPS encontrará historias mientras caminas.",
   },
   placeDetail: {
     quickFacts: "Datos rápidos",
@@ -667,7 +685,8 @@ const es: Strings = {
     notableEvents: "Eventos destacados",
     moreFunFacts: "Más curiosidades",
     nearbyRelated: "Relacionados cerca",
-    couldNotLoad: "No pudimos cargar la historia. Revisa tu conexión e inténtalo de nuevo.",
+    couldNotLoad:
+      "No pudimos cargar la historia. Revisa tu conexión e inténtalo de nuevo.",
     goBackAccessibility: "Volver",
     saveAccessibility: "Guardar",
     removeSavedAccessibility: "Eliminar de guardados",
@@ -709,7 +728,8 @@ const es: Strings = {
     walkFt: (n) => `${n} ft`,
     walkMi: (s) => `${s} mi`,
     rateLimitTitle: "Tómalo con calma",
-    rateLimitBody: "Has valorado muchos lugares — vuelve a intentarlo en unos minutos.",
+    rateLimitBody:
+      "Has valorado muchos lugares — vuelve a intentarlo en unos minutos.",
     saveErrTitle: "No se pudo guardar tu valoración",
     saveErrBody: "Algo salió mal — revisa tu conexión e inténtalo de nuevo.",
   },
@@ -723,7 +743,8 @@ const es: Strings = {
     title: "Viaje en el tiempo",
     subtitle: "Mira cómo este lugar ha evolucionado a lo largo de la historia",
     loading: "Viajando en el tiempo...",
-    error: "No se pudo cargar la cronología. Revisa tu conexión e inténtalo de nuevo.",
+    error:
+      "No se pudo cargar la cronología. Revisa tu conexión e inténtalo de nuevo.",
   },
   loadingMessages: {
     discovery: [
@@ -745,14 +766,15 @@ const es: Strings = {
   },
   investigate: {
     headerTitle: "Investigar una dirección",
-    headerSubtitle: "¿Curioso por un edificio en particular? Pregunta al historiador.",
+    headerSubtitle:
+      "¿Curioso por un edificio en particular? Pregunta al historiador.",
     placeholder: "p. ej., 538 W 38th St, New York, NY",
     investigate: "Investigar",
-    hint:
-      "Ideal para edificios antiguos o no famosos que hayas visto en persona — la IA razonará a partir de la arquitectura y el barrio cuando los registros sean escasos.",
+    hint: "Ideal para edificios antiguos o no famosos que hayas visto en persona — la IA razonará a partir de la arquitectura y el barrio cuando los registros sean escasos.",
     notFoundError:
       "No encontramos esa dirección. Intenta incluir una ciudad o código postal.",
-    busyError: "Estamos un poco ocupados — espera un momento e inténtalo de nuevo.",
+    busyError:
+      "Estamos un poco ocupados — espera un momento e inténtalo de nuevo.",
     genericError: "Algo salió mal. Inténtalo de nuevo en un momento.",
     originallyPrefix: "Originalmente:",
     sectionOriginally: "Originalmente",
@@ -819,7 +841,8 @@ const es: Strings = {
 
 const fr: Strings = {
   notificationTitle: "Urban Explorer explore avec vous",
-  notificationBody: "À l'écoute des lieux proches à raconter pendant votre marche.",
+  notificationBody:
+    "À l'écoute des lieux proches à raconter pendant votre marche.",
   common: {
     retry: "Réessayer",
     ok: "OK",
@@ -854,8 +877,10 @@ const fr: Strings = {
     tryRange: (r) => `Essayer un rayon de ${r} m`,
     searchAgain: "Rechercher à nouveau",
     startExploringTitle: "Commencez à explorer",
-    startExploringDetail: "Touchez la boussole pour découvrir des lieux intéressants",
-    locationNotFound: "Impossible de trouver ce lieu. Essayez d'être plus précis.",
+    startExploringDetail:
+      "Touchez la boussole pour découvrir des lieux intéressants",
+    locationNotFound:
+      "Impossible de trouver ce lieu. Essayez d'être plus précis.",
     locationServiceBusy:
       "Service de localisation indisponible — réessayez dans un instant.",
     stillLoading: "Plus long que d'habitude…",
@@ -865,7 +890,8 @@ const fr: Strings = {
     placeOne: "lieu",
     placeMany: "lieux",
     emptyTitle: "Aucun lieu enregistré",
-    emptyDetail: "Marquez les lieux que vous découvrez pour les retrouver plus tard",
+    emptyDetail:
+      "Marquez les lieux que vous découvrez pour les retrouver plus tard",
     noResults: "Aucun résultat",
     noResultsDetail: "Essayez une autre recherche ou un autre filtre",
     searchPlaceholder: "Rechercher des lieux enregistrés…",
@@ -882,7 +908,8 @@ const fr: Strings = {
     swipeToDelete: "Supprimer",
     noteModalTitle: "Enregistré",
     noteModalLabel: "Ajouter une note personnelle (facultatif)",
-    noteModalPlaceholder: "ex. visité un mardi pluvieux, j'ai adoré l'architecture…",
+    noteModalPlaceholder:
+      "ex. visité un mardi pluvieux, j'ai adoré l'architecture…",
     noteModalSave: "Enregistrer la note",
     noteModalDone: "Terminé",
   },
@@ -900,9 +927,11 @@ const fr: Strings = {
     storiesAsYouGo: "Les histoires se déclencheront en chemin",
     storiesSoFar: (n) => `${n} ${n === 1 ? "histoire" : "histoires"} jusqu'ici`,
     buildingFilters: "Filtres de bâtiments",
-    buildingFiltersDescription: "Inclure ces types de bâtiments dans les histoires",
+    buildingFiltersDescription:
+      "Inclure ces types de bâtiments dans les histoires",
     showPrefetchStats: "Afficher les stats de préchargement",
-    showPrefetchStatsDescription: "Afficher le compteur de cache en bas de l'écran",
+    showPrefetchStatsDescription:
+      "Afficher le compteur de cache en bas de l'écran",
     buildingGroupResidential: "Résidentiel",
     buildingGroupResidentialDesc: "Cabanes, remises, toits",
     buildingGroupAgricultural: "Agricole",
@@ -922,7 +951,8 @@ const fr: Strings = {
   },
   walkPlan: {
     title: "Planifier une balade",
-    subtitle: "Entrez départ et destination pour charger les histoires à l'avance",
+    subtitle:
+      "Entrez départ et destination pour charger les histoires à l'avance",
     startPlaceholder: "Point de départ",
     endPlaceholder: "Destination",
     findRoute: "Trouver l'itinéraire",
@@ -934,7 +964,8 @@ const fr: Strings = {
     routeError: "Impossible de trouver un itinéraire. Vérifiez les adresses.",
     geocodeError: "Impossible de localiser cette adresse. Soyez plus précis.",
     previewLabel: "Sur votre parcours",
-    emptyRouteNote: "Aucun arrêt pré-chargé — le GPS trouvera des histoires pendant votre marche.",
+    emptyRouteNote:
+      "Aucun arrêt pré-chargé — le GPS trouvera des histoires pendant votre marche.",
   },
   placeDetail: {
     quickFacts: "Faits rapides",
@@ -943,7 +974,8 @@ const fr: Strings = {
     notableEvents: "Événements marquants",
     moreFunFacts: "Plus d'anecdotes",
     nearbyRelated: "Liens à proximité",
-    couldNotLoad: "Impossible de charger l'histoire. Vérifiez votre connexion et réessayez.",
+    couldNotLoad:
+      "Impossible de charger l'histoire. Vérifiez votre connexion et réessayez.",
     goBackAccessibility: "Retour",
     saveAccessibility: "Enregistrer",
     removeSavedAccessibility: "Retirer des favoris",
@@ -955,7 +987,8 @@ const fr: Strings = {
   locationPermission: {
     titleSearch: "Rechercher un lieu",
     titleEnable: "Activer la localisation",
-    descriptionSearch: "Entrez une ville, un quartier, un croisement ou une adresse.",
+    descriptionSearch:
+      "Entrez une ville, un quartier, un croisement ou une adresse.",
     descriptionEnable:
       "Urban Explorer a besoin de votre position pour trouver des bâtiments intéressants et des sites historiques près de vous.",
     placeholder: "ex. Greenwich Village, NYC",
@@ -984,9 +1017,11 @@ const fr: Strings = {
     walkFt: (n) => `${n} ft`,
     walkMi: (s) => `${s} mi`,
     rateLimitTitle: "Doucement",
-    rateLimitBody: "Vous avez noté beaucoup de lieux — réessayez dans quelques minutes.",
+    rateLimitBody:
+      "Vous avez noté beaucoup de lieux — réessayez dans quelques minutes.",
     saveErrTitle: "Impossible d'enregistrer votre note",
-    saveErrBody: "Une erreur est survenue — vérifiez votre connexion et réessayez.",
+    saveErrBody:
+      "Une erreur est survenue — vérifiez votre connexion et réessayez.",
   },
   placeActions: {
     playing: "Lecture",
@@ -998,7 +1033,8 @@ const fr: Strings = {
     title: "Voyage dans le temps",
     subtitle: "Voyez comment ce lieu a évolué à travers l'histoire",
     loading: "Voyage dans le temps...",
-    error: "Impossible de charger la chronologie. Vérifiez votre connexion et réessayez.",
+    error:
+      "Impossible de charger la chronologie. Vérifiez votre connexion et réessayez.",
   },
   loadingMessages: {
     discovery: [
@@ -1023,8 +1059,7 @@ const fr: Strings = {
     headerSubtitle: "Curieux d'un bâtiment précis ? Demandez à l'historien.",
     placeholder: "ex., 538 W 38th St, New York, NY",
     investigate: "Enquêter",
-    hint:
-      "Idéal pour les bâtiments anciens ou non emblématiques que vous avez remarqués — l'IA raisonne à partir de l'architecture et du quartier quand les archives sont rares.",
+    hint: "Idéal pour les bâtiments anciens ou non emblématiques que vous avez remarqués — l'IA raisonne à partir de l'architecture et du quartier quand les archives sont rares.",
     notFoundError:
       "Adresse introuvable. Essayez d'inclure une ville ou un code postal.",
     busyError: "Nous sommes occupés — patientez un instant et réessayez.",
@@ -1129,7 +1164,8 @@ const de: Strings = {
     tryRange: (r) => `${r} m Umkreis versuchen`,
     searchAgain: "Erneut suchen",
     startExploringTitle: "Loslegen",
-    startExploringDetail: "Tippe auf den Kompass, um spannende Orte zu entdecken",
+    startExploringDetail:
+      "Tippe auf den Kompass, um spannende Orte zu entdecken",
     locationNotFound: "Ort nicht gefunden. Sei etwas genauer.",
     locationServiceBusy:
       "Standortdienst gerade nicht verfügbar — bitte gleich erneut versuchen.",
@@ -1157,7 +1193,8 @@ const de: Strings = {
     swipeToDelete: "Löschen",
     noteModalTitle: "Gespeichert",
     noteModalLabel: "Persönliche Notiz hinzufügen (optional)",
-    noteModalPlaceholder: "z. B. an einem regnerischen Dienstag besucht, tolle Architektur…",
+    noteModalPlaceholder:
+      "z. B. an einem regnerischen Dienstag besucht, tolle Architektur…",
     noteModalSave: "Notiz speichern",
     noteModalDone: "Fertig",
   },
@@ -1173,11 +1210,14 @@ const de: Strings = {
     keepWalking: "Geh weiter",
     storiesOften: "Geschichten werden häufig abgespielt",
     storiesAsYouGo: "Geschichten kommen unterwegs",
-    storiesSoFar: (n) => `${n} ${n === 1 ? "Geschichte" : "Geschichten"} bisher`,
+    storiesSoFar: (n) =>
+      `${n} ${n === 1 ? "Geschichte" : "Geschichten"} bisher`,
     buildingFilters: "Gebäudefilter",
-    buildingFiltersDescription: "Diese Gebäudetypen in Geschichten einschließen",
+    buildingFiltersDescription:
+      "Diese Gebäudetypen in Geschichten einschließen",
     showPrefetchStats: "Prefetch-Statistik anzeigen",
-    showPrefetchStatsDescription: "Cache-Trefferquote unten am Bildschirm anzeigen",
+    showPrefetchStatsDescription:
+      "Cache-Trefferquote unten am Bildschirm anzeigen",
     buildingGroupResidential: "Wohngebäude",
     buildingGroupResidentialDesc: "Hütten, Schuppen, Dachaufbauten",
     buildingGroupAgricultural: "Landwirtschaft",
@@ -1209,7 +1249,8 @@ const de: Strings = {
     routeError: "Route konnte nicht gefunden werden. Adressen prüfen.",
     geocodeError: "Adresse konnte nicht gefunden werden. Präziser eingeben.",
     previewLabel: "Entlang Ihrer Route",
-    emptyRouteNote: "Keine Haltestellen vorgeladen — GPS findet Geschichten während Sie laufen.",
+    emptyRouteNote:
+      "Keine Haltestellen vorgeladen — GPS findet Geschichten während Sie laufen.",
   },
   placeDetail: {
     quickFacts: "Kurzfakten",
@@ -1218,7 +1259,8 @@ const de: Strings = {
     notableEvents: "Wichtige Ereignisse",
     moreFunFacts: "Weitere Fun Facts",
     nearbyRelated: "Verwandtes in der Nähe",
-    couldNotLoad: "Geschichte konnte nicht geladen werden. Verbindung prüfen und erneut versuchen.",
+    couldNotLoad:
+      "Geschichte konnte nicht geladen werden. Verbindung prüfen und erneut versuchen.",
     goBackAccessibility: "Zurück",
     saveAccessibility: "Speichern",
     removeSavedAccessibility: "Aus Gespeicherten entfernen",
@@ -1230,7 +1272,8 @@ const de: Strings = {
   locationPermission: {
     titleSearch: "Ort suchen",
     titleEnable: "Standort aktivieren",
-    descriptionSearch: "Gib eine Stadt, ein Viertel, eine Kreuzung oder Adresse ein.",
+    descriptionSearch:
+      "Gib eine Stadt, ein Viertel, eine Kreuzung oder Adresse ein.",
     descriptionEnable:
       "Urban Explorer braucht deinen Standort, um interessante Gebäude und historische Orte in deiner Nähe zu finden.",
     placeholder: "z. B. Greenwich Village, NYC",
@@ -1259,9 +1302,11 @@ const de: Strings = {
     walkFt: (n) => `${n} ft`,
     walkMi: (s) => `${s} mi`,
     rateLimitTitle: "Etwas langsamer",
-    rateLimitBody: "Du hast viele Orte bewertet — bitte in ein paar Minuten erneut versuchen.",
+    rateLimitBody:
+      "Du hast viele Orte bewertet — bitte in ein paar Minuten erneut versuchen.",
     saveErrTitle: "Bewertung nicht gespeichert",
-    saveErrBody: "Etwas ist schiefgelaufen — Verbindung prüfen und erneut versuchen.",
+    saveErrBody:
+      "Etwas ist schiefgelaufen — Verbindung prüfen und erneut versuchen.",
   },
   placeActions: {
     playing: "Läuft",
@@ -1273,7 +1318,8 @@ const de: Strings = {
     title: "Zeitreise",
     subtitle: "Sieh, wie sich dieser Ort durch die Geschichte entwickelt hat",
     loading: "Reise durch die Zeit...",
-    error: "Zeitstrahl konnte nicht geladen werden. Verbindung prüfen und erneut versuchen.",
+    error:
+      "Zeitstrahl konnte nicht geladen werden. Verbindung prüfen und erneut versuchen.",
   },
   loadingMessages: {
     discovery: [
@@ -1295,11 +1341,11 @@ const de: Strings = {
   },
   investigate: {
     headerTitle: "Adresse untersuchen",
-    headerSubtitle: "Neugierig auf ein bestimmtes Gebäude? Frag den Historiker.",
+    headerSubtitle:
+      "Neugierig auf ein bestimmtes Gebäude? Frag den Historiker.",
     placeholder: "z. B. 538 W 38th St, New York, NY",
     investigate: "Untersuchen",
-    hint:
-      "Am besten für ältere oder unbekannte Gebäude, die du gesehen hast — die KI schließt aus Architektur und Umgebung, wenn Quellen knapp sind.",
+    hint: "Am besten für ältere oder unbekannte Gebäude, die du gesehen hast — die KI schließt aus Architektur und Umgebung, wenn Quellen knapp sind.",
     notFoundError:
       "Adresse nicht gefunden. Versuche es mit Stadt oder Postleitzahl.",
     busyError: "Wir sind etwas beschäftigt — kurz warten und erneut versuchen.",
@@ -1369,7 +1415,8 @@ const de: Strings = {
 
 const it: Strings = {
   notificationTitle: "Urban Explorer sta esplorando con te",
-  notificationBody: "In ascolto dei luoghi vicini da raccontare mentre cammini.",
+  notificationBody:
+    "In ascolto dei luoghi vicini da raccontare mentre cammini.",
   common: {
     retry: "Riprova",
     ok: "OK",
@@ -1404,8 +1451,10 @@ const it: Strings = {
     tryRange: (r) => `Prova raggio di ${r} m`,
     searchAgain: "Cerca di nuovo",
     startExploringTitle: "Inizia a esplorare",
-    startExploringDetail: "Tocca la bussola per scoprire luoghi interessanti vicino a te",
-    locationNotFound: "Non abbiamo trovato quel luogo. Prova a essere più specifico.",
+    startExploringDetail:
+      "Tocca la bussola per scoprire luoghi interessanti vicino a te",
+    locationNotFound:
+      "Non abbiamo trovato quel luogo. Prova a essere più specifico.",
     locationServiceBusy:
       "Servizio di localizzazione non disponibile — riprova tra poco.",
     stillLoading: "Ci vuole più del solito…",
@@ -1432,7 +1481,8 @@ const it: Strings = {
     swipeToDelete: "Elimina",
     noteModalTitle: "Salvato",
     noteModalLabel: "Aggiungi una nota personale (facoltativo)",
-    noteModalPlaceholder: "es. visitato un martedì piovoso, architettura fantastica…",
+    noteModalPlaceholder:
+      "es. visitato un martedì piovoso, architettura fantastica…",
     noteModalSave: "Salva nota",
     noteModalDone: "Fine",
   },
@@ -1452,7 +1502,8 @@ const it: Strings = {
     buildingFilters: "Filtri edifici",
     buildingFiltersDescription: "Includi questi tipi di edifici nelle storie",
     showPrefetchStats: "Mostra statistiche di prefetch",
-    showPrefetchStatsDescription: "Mostra il contatore di cache in fondo allo schermo",
+    showPrefetchStatsDescription:
+      "Mostra il contatore di cache in fondo allo schermo",
     buildingGroupResidential: "Residenziale",
     buildingGroupResidentialDesc: "Capanne, rimesse, strutture sul tetto",
     buildingGroupAgricultural: "Agricolo",
@@ -1472,7 +1523,8 @@ const it: Strings = {
   },
   walkPlan: {
     title: "Pianifica una passeggiata",
-    subtitle: "Inserisci partenza e destinazione per caricare le storie in anticipo",
+    subtitle:
+      "Inserisci partenza e destinazione per caricare le storie in anticipo",
     startPlaceholder: "Punto di partenza",
     endPlaceholder: "Destinazione",
     findRoute: "Trova percorso",
@@ -1484,7 +1536,8 @@ const it: Strings = {
     routeError: "Impossibile trovare il percorso. Controlla gli indirizzi.",
     geocodeError: "Impossibile trovare quell'indirizzo. Sii più specifico.",
     previewLabel: "Lungo il tuo percorso",
-    emptyRouteNote: "Nessuna tappa precaricata — il GPS troverà storie durante la passeggiata.",
+    emptyRouteNote:
+      "Nessuna tappa precaricata — il GPS troverà storie durante la passeggiata.",
   },
   placeDetail: {
     quickFacts: "Fatti rapidi",
@@ -1493,7 +1546,8 @@ const it: Strings = {
     notableEvents: "Eventi notevoli",
     moreFunFacts: "Altre curiosità",
     nearbyRelated: "Correlati vicini",
-    couldNotLoad: "Impossibile caricare la storia. Controlla la connessione e riprova.",
+    couldNotLoad:
+      "Impossibile caricare la storia. Controlla la connessione e riprova.",
     goBackAccessibility: "Indietro",
     saveAccessibility: "Salva",
     removeSavedAccessibility: "Rimuovi dai salvati",
@@ -1505,7 +1559,8 @@ const it: Strings = {
   locationPermission: {
     titleSearch: "Cerca un luogo",
     titleEnable: "Abilita posizione",
-    descriptionSearch: "Inserisci una città, quartiere, incrocio o indirizzo da esplorare.",
+    descriptionSearch:
+      "Inserisci una città, quartiere, incrocio o indirizzo da esplorare.",
     descriptionEnable:
       "Urban Explorer ha bisogno della tua posizione per scoprire edifici e siti storici interessanti vicini a te.",
     placeholder: "es. Greenwich Village, NYC",
@@ -1536,7 +1591,8 @@ const it: Strings = {
     rateLimitTitle: "Rallenta un po'",
     rateLimitBody: "Hai votato molti luoghi — riprova tra qualche minuto.",
     saveErrTitle: "Voto non salvato",
-    saveErrBody: "Qualcosa è andato storto — controlla la connessione e riprova.",
+    saveErrBody:
+      "Qualcosa è andato storto — controlla la connessione e riprova.",
   },
   placeActions: {
     playing: "In riproduzione",
@@ -1548,7 +1604,8 @@ const it: Strings = {
     title: "Viaggio nel tempo",
     subtitle: "Scopri come questo luogo è cambiato nel tempo",
     loading: "Viaggio nel tempo...",
-    error: "Impossibile caricare la cronologia. Controlla la connessione e riprova.",
+    error:
+      "Impossibile caricare la cronologia. Controlla la connessione e riprova.",
   },
   loadingMessages: {
     discovery: [
@@ -1573,8 +1630,7 @@ const it: Strings = {
     headerSubtitle: "Curioso di un edificio? Chiedi allo storico.",
     placeholder: "es., 538 W 38th St, New York, NY",
     investigate: "Indaga",
-    hint:
-      "Ideale per edifici vecchi o non famosi che hai notato — l'IA ragiona sull'architettura e il quartiere quando le fonti sono scarse.",
+    hint: "Ideale per edifici vecchi o non famosi che hai notato — l'IA ragiona sull'architettura e il quartiere quando le fonti sono scarse.",
     notFoundError:
       "Indirizzo non trovato. Prova a includere città o codice postale.",
     busyError: "Siamo un po' impegnati — aspetta e riprova.",
@@ -1633,7 +1689,8 @@ const it: Strings = {
     discoverNearby: "Scopri vicino",
     discoverNearbySubtitle: "Mostrato durante la ricerca di luoghi",
     placeDetailTitle: "Dettaglio luogo",
-    placeDetailSubtitle: "Mostrato durante il caricamento della storia di un luogo",
+    placeDetailSubtitle:
+      "Mostrato durante il caricamento della storia di un luogo",
   },
   placeDetailMap: {
     getDirections: "Indicazioni",
@@ -1644,7 +1701,8 @@ const it: Strings = {
 
 const pt: Strings = {
   notificationTitle: "Urban Explorer está explorando com você",
-  notificationBody: "Ouvindo lugares próximos para narrar enquanto você caminha.",
+  notificationBody:
+    "Ouvindo lugares próximos para narrar enquanto você caminha.",
   common: {
     retry: "Tentar de novo",
     ok: "OK",
@@ -1679,7 +1737,8 @@ const pt: Strings = {
     tryRange: (r) => `Tentar alcance de ${r} m`,
     searchAgain: "Buscar de novo",
     startExploringTitle: "Comece a explorar",
-    startExploringDetail: "Toque na bússola para descobrir lugares interessantes ao seu redor",
+    startExploringDetail:
+      "Toque na bússola para descobrir lugares interessantes ao seu redor",
     locationNotFound: "Não encontramos esse local. Tente ser mais específico.",
     locationServiceBusy:
       "Serviço de localização indisponível — tente novamente em instantes.",
@@ -1707,7 +1766,8 @@ const pt: Strings = {
     swipeToDelete: "Apagar",
     noteModalTitle: "Salvo",
     noteModalLabel: "Adicionar uma nota pessoal (opcional)",
-    noteModalPlaceholder: "ex. visitei numa terça chuvosa, adorei a arquitetura…",
+    noteModalPlaceholder:
+      "ex. visitei numa terça chuvosa, adorei a arquitetura…",
     noteModalSave: "Salvar nota",
     noteModalDone: "Concluído",
   },
@@ -1725,9 +1785,11 @@ const pt: Strings = {
     storiesAsYouGo: "As histórias virão enquanto você caminha",
     storiesSoFar: (n) => `${n} ${n === 1 ? "história" : "histórias"} até agora`,
     buildingFilters: "Filtros de edifícios",
-    buildingFiltersDescription: "Incluir estes tipos de edifícios nas histórias",
+    buildingFiltersDescription:
+      "Incluir estes tipos de edifícios nas histórias",
     showPrefetchStats: "Mostrar estatísticas de pré-busca",
-    showPrefetchStatsDescription: "Exibir o contador de cache na parte inferior da tela",
+    showPrefetchStatsDescription:
+      "Exibir o contador de cache na parte inferior da tela",
     buildingGroupResidential: "Residencial",
     buildingGroupResidentialDesc: "Cabanas, galpões, telhados",
     buildingGroupAgricultural: "Agrícola",
@@ -1754,12 +1816,15 @@ const pt: Strings = {
     startWalk: "Iniciar passeio",
     searching: "Buscando rota…",
     fetchingStops: "Carregando histórias na rota…",
-    stopsFound: (n) => `${n} ${n === 1 ? "parada carregada" : "paradas carregadas"}`,
+    stopsFound: (n) =>
+      `${n} ${n === 1 ? "parada carregada" : "paradas carregadas"}`,
     noRoute: "Nenhuma rota a pé encontrada entre esses pontos.",
     routeError: "Não foi possível encontrar a rota. Verifique os endereços.",
-    geocodeError: "Não foi possível localizar esse endereço. Seja mais específico.",
+    geocodeError:
+      "Não foi possível localizar esse endereço. Seja mais específico.",
     previewLabel: "Ao longo da sua rota",
-    emptyRouteNote: "Nenhuma parada pré-carregada — o GPS encontrará histórias enquanto você caminha.",
+    emptyRouteNote:
+      "Nenhuma parada pré-carregada — o GPS encontrará histórias enquanto você caminha.",
   },
   placeDetail: {
     quickFacts: "Fatos rápidos",
@@ -1768,7 +1833,8 @@ const pt: Strings = {
     notableEvents: "Eventos notáveis",
     moreFunFacts: "Mais curiosidades",
     nearbyRelated: "Relacionados por perto",
-    couldNotLoad: "Não foi possível carregar a história. Verifique a conexão e tente novamente.",
+    couldNotLoad:
+      "Não foi possível carregar a história. Verifique a conexão e tente novamente.",
     goBackAccessibility: "Voltar",
     saveAccessibility: "Salvar",
     removeSavedAccessibility: "Remover dos salvos",
@@ -1780,7 +1846,8 @@ const pt: Strings = {
   locationPermission: {
     titleSearch: "Buscar um local",
     titleEnable: "Ativar localização",
-    descriptionSearch: "Digite uma cidade, bairro, cruzamento ou endereço para explorar.",
+    descriptionSearch:
+      "Digite uma cidade, bairro, cruzamento ou endereço para explorar.",
     descriptionEnable:
       "O Urban Explorer precisa da sua localização para descobrir prédios e locais históricos interessantes perto de você.",
     placeholder: "ex. Greenwich Village, NYC",
@@ -1809,7 +1876,8 @@ const pt: Strings = {
     walkFt: (n) => `${n} pés`,
     walkMi: (s) => `${s} mi`,
     rateLimitTitle: "Vai com calma",
-    rateLimitBody: "Você avaliou muitos lugares — tente de novo em alguns minutos.",
+    rateLimitBody:
+      "Você avaliou muitos lugares — tente de novo em alguns minutos.",
     saveErrTitle: "Não salvou sua avaliação",
     saveErrBody: "Algo deu errado — verifique a conexão e tente novamente.",
   },
@@ -1823,7 +1891,8 @@ const pt: Strings = {
     title: "Viagem no tempo",
     subtitle: "Veja como este lugar evoluiu ao longo da história",
     loading: "Viajando no tempo...",
-    error: "Não foi possível carregar a linha do tempo. Verifique a conexão e tente novamente.",
+    error:
+      "Não foi possível carregar a linha do tempo. Verifique a conexão e tente novamente.",
   },
   loadingMessages: {
     discovery: [
@@ -1845,14 +1914,14 @@ const pt: Strings = {
   },
   investigate: {
     headerTitle: "Investigar um endereço",
-    headerSubtitle: "Curioso sobre um prédio específico? Pergunte ao historiador.",
+    headerSubtitle:
+      "Curioso sobre um prédio específico? Pergunte ao historiador.",
     placeholder: "ex., 538 W 38th St, New York, NY",
     investigate: "Investigar",
-    hint:
-      "Ideal para prédios antigos ou não famosos que você notou — a IA raciocina pela arquitetura e o bairro quando faltam registros.",
-    notFoundError:
-      "Endereço não encontrado. Tente incluir cidade ou CEP.",
-    busyError: "Estamos um pouco ocupados — aguarde um momento e tente de novo.",
+    hint: "Ideal para prédios antigos ou não famosos que você notou — a IA raciocina pela arquitetura e o bairro quando faltam registros.",
+    notFoundError: "Endereço não encontrado. Tente incluir cidade ou CEP.",
+    busyError:
+      "Estamos um pouco ocupados — aguarde um momento e tente de novo.",
     genericError: "Algo deu errado. Tente de novo em instantes.",
     originallyPrefix: "Originalmente:",
     sectionOriginally: "Originalmente",
@@ -1861,7 +1930,8 @@ const pt: Strings = {
     sectionHistory: "História",
     sectionFacts: "Fatos e detalhes",
     sectionBlockContext: "Contexto do bairro",
-    stillLoading: "Está demorando mais que o normal… ainda estamos a trabalhar.",
+    stillLoading:
+      "Está demorando mais que o normal… ainda estamos a trabalhar.",
   },
   login: {
     title: "Urban Explorer",
@@ -1919,7 +1989,8 @@ const pt: Strings = {
 
 const nl: Strings = {
   notificationTitle: "Urban Explorer verkent met je mee",
-  notificationBody: "Luistert naar plekken in de buurt om te vertellen terwijl je loopt.",
+  notificationBody:
+    "Luistert naar plekken in de buurt om te vertellen terwijl je loopt.",
   common: {
     retry: "Opnieuw",
     ok: "OK",
@@ -1954,9 +2025,11 @@ const nl: Strings = {
     tryRange: (r) => `Probeer ${r} m bereik`,
     searchAgain: "Opnieuw zoeken",
     startExploringTitle: "Begin met verkennen",
-    startExploringDetail: "Tik op het kompas om interessante plekken te ontdekken",
+    startExploringDetail:
+      "Tik op het kompas om interessante plekken te ontdekken",
     locationNotFound: "Locatie niet gevonden. Probeer specifieker te zijn.",
-    locationServiceBusy: "Locatiedienst niet beschikbaar — probeer het zo opnieuw.",
+    locationServiceBusy:
+      "Locatiedienst niet beschikbaar — probeer het zo opnieuw.",
     stillLoading: "Duurt langer dan gebruikelijk…",
   },
   saved: {
@@ -1981,7 +2054,8 @@ const nl: Strings = {
     swipeToDelete: "Verwijderen",
     noteModalTitle: "Opgeslagen",
     noteModalLabel: "Voeg een persoonlijke notitie toe (optioneel)",
-    noteModalPlaceholder: "bijv. bezocht op een regenachtige dinsdag, dol op de architectuur…",
+    noteModalPlaceholder:
+      "bijv. bezocht op een regenachtige dinsdag, dol op de architectuur…",
     noteModalSave: "Notitie opslaan",
     noteModalDone: "Klaar",
   },
@@ -2033,7 +2107,8 @@ const nl: Strings = {
     routeError: "Route kon niet worden gevonden. Controleer de adressen.",
     geocodeError: "Adres kon niet worden gevonden. Wees specifieker.",
     previewLabel: "Langs uw route",
-    emptyRouteNote: "Geen stops voorgeladen — GPS vindt verhalen terwijl u loopt.",
+    emptyRouteNote:
+      "Geen stops voorgeladen — GPS vindt verhalen terwijl u loopt.",
   },
   placeDetail: {
     quickFacts: "Korte feiten",
@@ -2042,7 +2117,8 @@ const nl: Strings = {
     notableEvents: "Opvallende gebeurtenissen",
     moreFunFacts: "Meer leuke feitjes",
     nearbyRelated: "Verwant in de buurt",
-    couldNotLoad: "Geschiedenis kon niet worden geladen. Controleer je verbinding en probeer opnieuw.",
+    couldNotLoad:
+      "Geschiedenis kon niet worden geladen. Controleer je verbinding en probeer opnieuw.",
     goBackAccessibility: "Terug",
     saveAccessibility: "Opslaan",
     removeSavedAccessibility: "Verwijderen uit opgeslagen",
@@ -2054,7 +2130,8 @@ const nl: Strings = {
   locationPermission: {
     titleSearch: "Zoek een locatie",
     titleEnable: "Locatie inschakelen",
-    descriptionSearch: "Voer een stad, buurt, kruising of adres in om te verkennen.",
+    descriptionSearch:
+      "Voer een stad, buurt, kruising of adres in om te verkennen.",
     descriptionEnable:
       "Urban Explorer heeft je locatie nodig om interessante gebouwen en historische plekken in de buurt te vinden.",
     placeholder: "bijv. Greenwich Village, NYC",
@@ -2083,9 +2160,11 @@ const nl: Strings = {
     walkFt: (n) => `${n} ft`,
     walkMi: (s) => `${s} mi`,
     rateLimitTitle: "Even rustig aan",
-    rateLimitBody: "Je hebt veel plekken beoordeeld — probeer het over een paar minuten opnieuw.",
+    rateLimitBody:
+      "Je hebt veel plekken beoordeeld — probeer het over een paar minuten opnieuw.",
     saveErrTitle: "Beoordeling niet opgeslagen",
-    saveErrBody: "Er ging iets mis — controleer je verbinding en probeer opnieuw.",
+    saveErrBody:
+      "Er ging iets mis — controleer je verbinding en probeer opnieuw.",
   },
   placeActions: {
     playing: "Speelt",
@@ -2097,7 +2176,8 @@ const nl: Strings = {
     title: "Tijdreis",
     subtitle: "Zie hoe deze plek door de geschiedenis is veranderd",
     loading: "Reizen door de tijd...",
-    error: "Tijdlijn kon niet worden geladen. Controleer je verbinding en probeer opnieuw.",
+    error:
+      "Tijdlijn kon niet worden geladen. Controleer je verbinding en probeer opnieuw.",
   },
   loadingMessages: {
     discovery: [
@@ -2122,10 +2202,8 @@ const nl: Strings = {
     headerSubtitle: "Nieuwsgierig naar een gebouw? Vraag het de historicus.",
     placeholder: "bijv., 538 W 38th St, New York, NY",
     investigate: "Onderzoek",
-    hint:
-      "Ideaal voor oudere of onbekende gebouwen die je hebt opgemerkt — de AI redeneert vanuit architectuur en buurt als bronnen schaars zijn.",
-    notFoundError:
-      "Adres niet gevonden. Voeg een stad of postcode toe.",
+    hint: "Ideaal voor oudere of onbekende gebouwen die je hebt opgemerkt — de AI redeneert vanuit architectuur en buurt als bronnen schaars zijn.",
+    notFoundError: "Adres niet gevonden. Voeg een stad of postcode toe.",
     busyError: "Het is even druk — wacht een momentje en probeer opnieuw.",
     genericError: "Er ging iets mis. Probeer het zo opnieuw.",
     originallyPrefix: "Oorspronkelijk:",
@@ -2182,7 +2260,8 @@ const nl: Strings = {
     discoverNearby: "Ontdek in de buurt",
     discoverNearbySubtitle: "Getoond tijdens het zoeken naar plekken",
     placeDetailTitle: "Plekdetail",
-    placeDetailSubtitle: "Getoond bij het laden van de geschiedenis van een plek",
+    placeDetailSubtitle:
+      "Getoond bij het laden van de geschiedenis van een plek",
   },
   placeDetailMap: {
     getDirections: "Route berekenen",
@@ -2228,9 +2307,12 @@ const ja: Strings = {
     tryRange: (r) => `${r}m の範囲を試す`,
     searchAgain: "再検索",
     startExploringTitle: "探索を始めよう",
-    startExploringDetail: "コンパスをタップして、まわりの面白い場所を発見しよう",
-    locationNotFound: "その場所が見つかりませんでした。もう少し具体的に入力してください。",
-    locationServiceBusy: "位置情報サービスが利用できません — しばらくしてから再試行してください。",
+    startExploringDetail:
+      "コンパスをタップして、まわりの面白い場所を発見しよう",
+    locationNotFound:
+      "その場所が見つかりませんでした。もう少し具体的に入力してください。",
+    locationServiceBusy:
+      "位置情報サービスが利用できません — しばらくしてから再試行してください。",
     stillLoading: "いつもより時間がかかっています…",
   },
   saved: {
@@ -2275,7 +2357,8 @@ const ja: Strings = {
     buildingFilters: "建物フィルター",
     buildingFiltersDescription: "ウォークストーリーに含める建物タイプを選択",
     showPrefetchStats: "プリフェッチ統計を表示",
-    showPrefetchStatsDescription: "画面下部にキャッシュのヒット率カウンターを表示",
+    showPrefetchStatsDescription:
+      "画面下部にキャッシュのヒット率カウンターを表示",
     buildingGroupResidential: "住宅系",
     buildingGroupResidentialDesc: "小屋、物置、屋根構造物",
     buildingGroupAgricultural: "農業系",
@@ -2307,7 +2390,8 @@ const ja: Strings = {
     routeError: "ルートが見つかりません。住所を確認してください。",
     geocodeError: "住所が見つかりません。より具体的に入力してください。",
     previewLabel: "ルート沿い",
-    emptyRouteNote: "ストップは事前に読み込まれませんでした — 歩きながらGPSが物語を見つけます。",
+    emptyRouteNote:
+      "ストップは事前に読み込まれませんでした — 歩きながらGPSが物語を見つけます。",
   },
   placeDetail: {
     quickFacts: "簡単な事実",
@@ -2316,7 +2400,8 @@ const ja: Strings = {
     notableEvents: "注目の出来事",
     moreFunFacts: "もっと豆知識",
     nearbyRelated: "近くの関連",
-    couldNotLoad: "詳細な歴史を読み込めませんでした。接続を確認して再試行してください。",
+    couldNotLoad:
+      "詳細な歴史を読み込めませんでした。接続を確認して再試行してください。",
     goBackAccessibility: "戻る",
     saveAccessibility: "保存",
     removeSavedAccessibility: "保存済みから削除",
@@ -2328,7 +2413,8 @@ const ja: Strings = {
   locationPermission: {
     titleSearch: "場所を検索",
     titleEnable: "位置情報を有効化",
-    descriptionSearch: "都市、地区、交差点、または住所を入力して探索してください。",
+    descriptionSearch:
+      "都市、地区、交差点、または住所を入力して探索してください。",
     descriptionEnable:
       "Urban Explorer が周辺の興味深い建物や歴史的な場所を発見するために、位置情報が必要です。",
     placeholder: "例：Greenwich Village, NYC",
@@ -2357,7 +2443,8 @@ const ja: Strings = {
     walkFt: (n) => `${n} ft`,
     walkMi: (s) => `${s} mi`,
     rateLimitTitle: "少し休みましょう",
-    rateLimitBody: "最近たくさんの場所を評価しました — 数分後にお試しください。",
+    rateLimitBody:
+      "最近たくさんの場所を評価しました — 数分後にお試しください。",
     saveErrTitle: "評価を保存できませんでした",
     saveErrBody: "問題が発生しました — 接続を確認して再試行してください。",
   },
@@ -2371,7 +2458,8 @@ const ja: Strings = {
     title: "タイムトラベル",
     subtitle: "この場所が歴史を通じてどう変わってきたかを見る",
     loading: "時を旅しています...",
-    error: "タイムラインを読み込めませんでした。接続を確認して再試行してください。",
+    error:
+      "タイムラインを読み込めませんでした。接続を確認して再試行してください。",
   },
   loadingMessages: {
     discovery: [
@@ -2396,8 +2484,7 @@ const ja: Strings = {
     headerSubtitle: "気になる建物がありますか？歴史家に聞いてみましょう。",
     placeholder: "例：538 W 38th St, New York, NY",
     investigate: "調査する",
-    hint:
-      "実際に見かけた古い建物や知られていない建物に最適 — 記録が少ない時は、AIが建築や周辺から推測します。",
+    hint: "実際に見かけた古い建物や知られていない建物に最適 — 記録が少ない時は、AIが建築や周辺から推測します。",
     notFoundError:
       "その住所が見つかりません。市区町村や郵便番号を含めてみてください。",
     busyError: "少し混み合っています — 少し待ってから再試行してください。",
@@ -2504,7 +2591,8 @@ const ko: Strings = {
     startExploringTitle: "탐험을 시작하세요",
     startExploringDetail: "나침반을 눌러 주변의 흥미로운 장소를 발견하세요",
     locationNotFound: "해당 위치를 찾지 못했어요. 더 구체적으로 입력해 주세요.",
-    locationServiceBusy: "위치 서비스가 일시적으로 사용 불가합니다 — 잠시 후 다시 시도해 주세요.",
+    locationServiceBusy:
+      "위치 서비스가 일시적으로 사용 불가합니다 — 잠시 후 다시 시도해 주세요.",
     stillLoading: "평소보다 오래 걸리고 있어요…",
   },
   saved: {
@@ -2581,7 +2669,8 @@ const ko: Strings = {
     routeError: "경로를 찾을 수 없습니다. 주소를 확인하세요.",
     geocodeError: "주소를 찾을 수 없습니다. 더 구체적으로 입력하세요.",
     previewLabel: "경로를 따라",
-    emptyRouteNote: "정류장이 사전 로드되지 않았습니다 — GPS가 걸으면서 이야기를 찾습니다.",
+    emptyRouteNote:
+      "정류장이 사전 로드되지 않았습니다 — GPS가 걸으면서 이야기를 찾습니다.",
   },
   placeDetail: {
     quickFacts: "간단한 사실",
@@ -2590,7 +2679,8 @@ const ko: Strings = {
     notableEvents: "주요 사건",
     moreFunFacts: "더 많은 흥미 사실",
     nearbyRelated: "주변 관련 장소",
-    couldNotLoad: "상세 역사를 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
+    couldNotLoad:
+      "상세 역사를 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.",
     goBackAccessibility: "뒤로",
     saveAccessibility: "저장",
     removeSavedAccessibility: "저장에서 제거",
@@ -2670,10 +2760,8 @@ const ko: Strings = {
     headerSubtitle: "특정 건물이 궁금한가요? 역사가에게 물어보세요.",
     placeholder: "예: 538 W 38th St, New York, NY",
     investigate: "조사하기",
-    hint:
-      "실제로 본 오래되거나 잘 알려지지 않은 건물에 가장 적합해요 — 자료가 부족할 때 AI가 건축과 동네를 통해 추론합니다.",
-    notFoundError:
-      "주소를 찾지 못했어요. 도시나 우편번호를 포함해 보세요.",
+    hint: "실제로 본 오래되거나 잘 알려지지 않은 건물에 가장 적합해요 — 자료가 부족할 때 AI가 건축과 동네를 통해 추론합니다.",
+    notFoundError: "주소를 찾지 못했어요. 도시나 우편번호를 포함해 보세요.",
     busyError: "조금 바빠요 — 잠시 후 다시 시도해 주세요.",
     genericError: "문제가 발생했어요. 잠시 후 다시 시도해 주세요.",
     originallyPrefix: "원래:",
@@ -2884,8 +2972,7 @@ const zh: Strings = {
     backToResults: "返回结果",
     useCurrentInstead: "使用我当前的位置",
     openSettings: "打开设置",
-    deniedWeb:
-      "位置访问被拒绝。请在浏览器设置中启用，或在下方搜索地点。",
+    deniedWeb: "位置访问被拒绝。请在浏览器设置中启用，或在下方搜索地点。",
     allow: "允许位置访问",
     searchByLocation: "按位置搜索",
     startWalking: "开始步行",
@@ -2942,8 +3029,7 @@ const zh: Strings = {
     headerSubtitle: "对某个建筑感兴趣？请教历史学家。",
     placeholder: "如：538 W 38th St, New York, NY",
     investigate: "开始调查",
-    hint:
-      "最适合你亲眼见过的老建筑或非地标 — 资料稀缺时，AI 会从建筑风格和街区背景推断。",
+    hint: "最适合你亲眼见过的老建筑或非地标 — 资料稀缺时，AI 会从建筑风格和街区背景推断。",
     notFoundError: "没找到该地址。请尝试加上城市或邮编。",
     busyError: "我们有点忙 — 请稍候再试。",
     genericError: "出了点问题，请稍后再试。",
@@ -2964,7 +3050,8 @@ const zh: Strings = {
   },
   walk: {
     welcomeTitle: "欢迎来到漫步模式",
-    welcomeBody: "点击「开始漫步」聆听沿途地点的故事,或点击「规划路线」预先加载路径。",
+    welcomeBody:
+      "点击「开始漫步」聆听沿途地点的故事,或点击「规划路线」预先加载路径。",
     welcomeDismiss: "知道了",
   },
   notFound: {

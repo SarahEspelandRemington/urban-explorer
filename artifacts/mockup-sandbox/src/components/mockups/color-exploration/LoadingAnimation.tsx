@@ -17,7 +17,15 @@ const MESSAGES = [
   "Every spot has a story — finding yours now...",
 ];
 
-function BuildingLine({ delay, height, width }: { delay: number; height: number; width: number }) {
+function BuildingLine({
+  delay,
+  height,
+  width,
+}: {
+  delay: number;
+  height: number;
+  width: number;
+}) {
   return (
     <div
       style={{

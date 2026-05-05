@@ -73,7 +73,9 @@ function buildAnimation(
       let anim = FadeInDown.duration(duration);
       if (easing) anim = anim.easing(easing);
       if (initialOffset !== undefined) {
-        anim = anim.withInitialValues({ transform: [{ translateY: -initialOffset }] });
+        anim = anim.withInitialValues({
+          transform: [{ translateY: -initialOffset }],
+        });
       }
       if (delay !== undefined) anim = anim.delay(delay);
       return anim;
@@ -82,7 +84,9 @@ function buildAnimation(
       let anim = FadeInUp.duration(duration);
       if (easing) anim = anim.easing(easing);
       if (initialOffset !== undefined) {
-        anim = anim.withInitialValues({ transform: [{ translateY: initialOffset }] });
+        anim = anim.withInitialValues({
+          transform: [{ translateY: initialOffset }],
+        });
       }
       if (delay !== undefined) anim = anim.delay(delay);
       return anim;
@@ -91,7 +95,9 @@ function buildAnimation(
       let anim = SlideInLeft.duration(duration);
       if (easing) anim = anim.easing(easing);
       if (initialOffset !== undefined) {
-        anim = anim.withInitialValues({ transform: [{ translateX: -initialOffset }] });
+        anim = anim.withInitialValues({
+          transform: [{ translateX: -initialOffset }],
+        });
       }
       if (delay !== undefined) anim = anim.delay(delay);
       return anim;
@@ -100,7 +106,9 @@ function buildAnimation(
       let anim = SlideInRight.duration(duration);
       if (easing) anim = anim.easing(easing);
       if (initialOffset !== undefined) {
-        anim = anim.withInitialValues({ transform: [{ translateX: initialOffset }] });
+        anim = anim.withInitialValues({
+          transform: [{ translateX: initialOffset }],
+        });
       }
       if (delay !== undefined) anim = anim.delay(delay);
       return anim;

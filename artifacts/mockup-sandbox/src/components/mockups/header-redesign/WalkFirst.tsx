@@ -1,4 +1,12 @@
-import { Search, Footprints, Compass, Globe, Navigation, Map, List } from "lucide-react";
+import {
+  Search,
+  Footprints,
+  Compass,
+  Globe,
+  Navigation,
+  Map,
+  List,
+} from "lucide-react";
 
 const BG = "#0f1117";
 const CARD = "#1a1d2b";
@@ -40,7 +48,14 @@ export function WalkFirst() {
           }}
         >
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: FG, letterSpacing: "-0.4px" }}>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: FG,
+                letterSpacing: "-0.4px",
+              }}
+            >
               Discover
             </div>
             <div style={{ fontSize: 11, color: MUTED_FG, marginTop: 2 }}>
@@ -87,8 +102,12 @@ export function WalkFirst() {
                 <Footprints size={19} color={WALK_COLOR} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: FG }}>Walk Mode</div>
-                <div style={{ fontSize: 10, color: MUTED_FG }}>Audio narration</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: FG }}>
+                  Walk Mode
+                </div>
+                <div style={{ fontSize: 10, color: MUTED_FG }}>
+                  Audio narration
+                </div>
               </div>
             </div>
             <div
@@ -101,7 +120,9 @@ export function WalkFirst() {
               }}
             >
               <Navigation size={12} color={WALK_COLOR} />
-              <span style={{ fontSize: 11, color: WALK_COLOR, fontWeight: 600 }}>
+              <span
+                style={{ fontSize: 11, color: WALK_COLOR, fontWeight: 600 }}
+              >
                 Plan a Route
               </span>
             </div>
@@ -124,8 +145,12 @@ export function WalkFirst() {
           >
             <Compass size={24} color={PRIMARY_FG} />
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: PRIMARY_FG }}>Discover</div>
-              <div style={{ fontSize: 10, color: `${PRIMARY_FG}aa` }}>Find nearby</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: PRIMARY_FG }}>
+                Discover
+              </div>
+              <div style={{ fontSize: 10, color: `${PRIMARY_FG}aa` }}>
+                Find nearby
+              </div>
             </div>
           </div>
         </div>
@@ -205,7 +230,14 @@ export function WalkFirst() {
               border: `1px solid ${BORDER}`,
             }}
           >
-            <div style={{ fontSize: 15, fontWeight: 600, color: FG, marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: FG,
+                marginBottom: 4,
+              }}
+            >
               {p.name}
             </div>
             <div style={{ fontSize: 12, color: MUTED_FG }}>{p.kind}</div>
@@ -229,10 +261,12 @@ export function WalkFirst() {
       >
         <span style={{ fontSize: 16 }}>✓</span>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#a89cff" }}>FIX: Walk + Discover equal weight</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#a89cff" }}>
+            FIX: Walk + Discover equal weight
+          </div>
           <div style={{ fontSize: 11, color: MUTED_FG, marginTop: 2 }}>
-            Walk Mode card has built-in "Plan Route" link · No duplicate map icons ·
-            Language + search as quiet top-right icons
+            Walk Mode card has built-in "Plan Route" link · No duplicate map
+            icons · Language + search as quiet top-right icons
           </div>
         </div>
       </div>

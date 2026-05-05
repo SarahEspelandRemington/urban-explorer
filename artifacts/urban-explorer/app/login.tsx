@@ -36,10 +36,7 @@ export default function LoginScreen() {
     >
       <View style={styles.content}>
         <View
-          style={[
-            styles.iconWrap,
-            { backgroundColor: colors.primary + "18" },
-          ]}
+          style={[styles.iconWrap, { backgroundColor: colors.primary + "18" }]}
         >
           <Feather name="compass" size={40} color={colors.primary} />
         </View>
@@ -67,8 +64,7 @@ export default function LoginScreen() {
             styles.loginButton,
             {
               backgroundColor: colors.primary,
-              opacity:
-                pressed || busy || isDiscovering ? 0.75 : 1,
+              opacity: pressed || busy || isDiscovering ? 0.75 : 1,
             },
           ]}
           accessibilityRole="button"

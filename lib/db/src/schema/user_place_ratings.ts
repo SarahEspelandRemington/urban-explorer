@@ -6,8 +6,12 @@ export const userPlaceRatings = pgTable(
     userId: text("user_id").notNull(),
     placeId: text("place_id").notNull(),
     rating: text("rating", { enum: ["up", "down"] }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.placeId] })],
 );

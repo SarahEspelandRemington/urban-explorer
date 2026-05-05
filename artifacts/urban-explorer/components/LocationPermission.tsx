@@ -130,7 +130,9 @@ export function LocationPermission({
           <Feather name="map-pin" size={36} color={colors.primary} />
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>
-          {showSearch ? t.locationPermission.titleSearch : t.locationPermission.titleEnable}
+          {showSearch
+            ? t.locationPermission.titleSearch
+            : t.locationPermission.titleEnable}
         </Text>
         <Text style={[styles.description, { color: colors.mutedForeground }]}>
           {showSearch
@@ -152,7 +154,11 @@ export function LocationPermission({
                   },
                 ]}
               >
-                <Feather name="search" size={18} color={colors.mutedForeground} />
+                <Feather
+                  name="search"
+                  size={18}
+                  color={colors.mutedForeground}
+                />
                 <TextInput
                   style={[styles.input, { color: colors.foreground }]}
                   placeholder={t.locationPermission.placeholder}
@@ -165,20 +171,29 @@ export function LocationPermission({
                   editable={!isGeocoding}
                 />
                 {suggestMutation.isPending && (
-                  <ActivityIndicator size="small" color={colors.mutedForeground} />
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.mutedForeground}
+                  />
                 )}
-                {query.length > 0 && !isGeocoding && !suggestMutation.isPending && (
-                  <Pressable
-                    onPress={() => {
-                      setQuery("");
-                      setSuggestions([]);
-                      setShowSuggestions(false);
-                    }}
-                    hitSlop={8}
-                  >
-                    <Feather name="x" size={16} color={colors.mutedForeground} />
-                  </Pressable>
-                )}
+                {query.length > 0 &&
+                  !isGeocoding &&
+                  !suggestMutation.isPending && (
+                    <Pressable
+                      onPress={() => {
+                        setQuery("");
+                        setSuggestions([]);
+                        setShowSuggestions(false);
+                      }}
+                      hitSlop={8}
+                    >
+                      <Feather
+                        name="x"
+                        size={16}
+                        color={colors.mutedForeground}
+                      />
+                    </Pressable>
+                  )}
               </View>
 
               {showSuggestions && suggestions.length > 0 && (
@@ -200,22 +215,36 @@ export function LocationPermission({
                       style={({ pressed }) => [
                         styles.suggestionItem,
                         {
-                          backgroundColor: pressed ? colors.muted : "transparent",
-                          borderTopWidth: index > 0 ? StyleSheet.hairlineWidth : 0,
+                          backgroundColor: pressed
+                            ? colors.muted
+                            : "transparent",
+                          borderTopWidth:
+                            index > 0 ? StyleSheet.hairlineWidth : 0,
                           borderTopColor: colors.border,
                         },
                       ]}
                     >
-                      <Feather name="map-pin" size={14} color={colors.primary} style={styles.suggestionIcon} />
+                      <Feather
+                        name="map-pin"
+                        size={14}
+                        color={colors.primary}
+                        style={styles.suggestionIcon}
+                      />
                       <View style={styles.suggestionText}>
                         <Text
-                          style={[styles.suggestionName, { color: colors.foreground }]}
+                          style={[
+                            styles.suggestionName,
+                            { color: colors.foreground },
+                          ]}
                           numberOfLines={1}
                         >
                           {suggestion.name}
                         </Text>
                         <Text
-                          style={[styles.suggestionDesc, { color: colors.mutedForeground }]}
+                          style={[
+                            styles.suggestionDesc,
+                            { color: colors.mutedForeground },
+                          ]}
                           numberOfLines={1}
                         >
                           {suggestion.description}
@@ -240,20 +269,34 @@ export function LocationPermission({
                 styles.button,
                 {
                   backgroundColor: colors.primary,
-                  opacity: !query.trim() || isGeocoding ? 0.5 : pressed ? 0.85 : 1,
+                  opacity:
+                    !query.trim() || isGeocoding ? 0.5 : pressed ? 0.85 : 1,
                 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={isGeocoding ? "Finding location" : "Explore this location"}
+              accessibilityLabel={
+                isGeocoding ? "Finding location" : "Explore this location"
+              }
               accessibilityState={{ disabled: !query.trim() || isGeocoding }}
             >
               {isGeocoding ? (
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primaryForeground}
+                />
               ) : (
-                <Feather name="compass" size={18} color={colors.primaryForeground} />
+                <Feather
+                  name="compass"
+                  size={18}
+                  color={colors.primaryForeground}
+                />
               )}
-              <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                {isGeocoding ? t.locationPermission.finding : t.locationPermission.exploreThis}
+              <Text
+                style={[styles.buttonText, { color: colors.primaryForeground }]}
+              >
+                {isGeocoding
+                  ? t.locationPermission.finding
+                  : t.locationPermission.exploreThis}
               </Text>
             </Pressable>
 
@@ -317,13 +360,24 @@ export function LocationPermission({
                   accessibilityRole="button"
                   accessibilityLabel="Open device settings to enable location"
                 >
-                  <Feather name="settings" size={18} color={colors.primaryForeground} />
-                  <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                  <Feather
+                    name="settings"
+                    size={18}
+                    color={colors.primaryForeground}
+                  />
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
                     {t.locationPermission.openSettings}
                   </Text>
                 </Pressable>
               ) : (
-                <Text style={[styles.deniedText, { color: colors.mutedForeground }]}>
+                <Text
+                  style={[styles.deniedText, { color: colors.mutedForeground }]}
+                >
                   {t.locationPermission.deniedWeb}
                 </Text>
               )
@@ -341,17 +395,34 @@ export function LocationPermission({
                 accessibilityLabel="Allow location access"
                 accessibilityHint="Grants the app permission to use your GPS location"
               >
-                <Feather name="navigation" size={18} color={colors.primaryForeground} />
-                <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                <Feather
+                  name="navigation"
+                  size={18}
+                  color={colors.primaryForeground}
+                />
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: colors.primaryForeground },
+                  ]}
+                >
                   {t.locationPermission.allow}
                 </Text>
               </Pressable>
             )}
 
             <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-              <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t.common.or}</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <View
+                style={[styles.dividerLine, { backgroundColor: colors.border }]}
+              />
+              <Text
+                style={[styles.dividerText, { color: colors.mutedForeground }]}
+              >
+                {t.common.or}
+              </Text>
+              <View
+                style={[styles.dividerLine, { backgroundColor: colors.border }]}
+              />
             </View>
 
             <Pressable
@@ -369,7 +440,9 @@ export function LocationPermission({
               accessibilityHint="Enter a city or address to explore manually"
             >
               <Feather name="search" size={18} color={colors.primary} />
-              <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+              <Text
+                style={[styles.secondaryButtonText, { color: colors.primary }]}
+              >
                 {t.locationPermission.searchByLocation}
               </Text>
             </Pressable>
@@ -377,9 +450,26 @@ export function LocationPermission({
             {onWalkMode && (
               <>
                 <View style={styles.dividerRow}>
-                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                  <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t.common.or}</Text>
-                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.dividerText,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {t.common.or}
+                  </Text>
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
+                  />
                 </View>
 
                 <Pressable
@@ -398,12 +488,26 @@ export function LocationPermission({
                   accessibilityLabel="Start Walking"
                   accessibilityHint="Start walking with audio narration of nearby places"
                 >
-                  <Feather name="headphones" size={18} color={colors.primaryForeground} />
+                  <Feather
+                    name="headphones"
+                    size={18}
+                    color={colors.primaryForeground}
+                  />
                   <View style={styles.walkButtonText}>
-                    <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                    <Text
+                      style={[
+                        styles.buttonText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
                       {t.locationPermission.startWalking}
                     </Text>
-                    <Text style={[styles.walkSubtext, { color: colors.primaryForeground + "bb" }]}>
+                    <Text
+                      style={[
+                        styles.walkSubtext,
+                        { color: colors.primaryForeground + "bb" },
+                      ]}
+                    >
                       {t.locationPermission.walkSubtext}
                     </Text>
                   </View>
@@ -414,9 +518,26 @@ export function LocationPermission({
             {onWalkPlan && (
               <>
                 <View style={styles.dividerRow}>
-                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                  <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t.common.or}</Text>
-                  <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.dividerText,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {t.common.or}
+                  </Text>
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
+                  />
                 </View>
 
                 <Pressable
@@ -434,7 +555,12 @@ export function LocationPermission({
                   accessibilityHint="Pre-fetch stops along a planned route before walking"
                 >
                   <Feather name="map" size={18} color={colors.primary} />
-                  <Text style={[styles.secondaryButtonText, { color: colors.primary }]}>
+                  <Text
+                    style={[
+                      styles.secondaryButtonText,
+                      { color: colors.primary },
+                    ]}
+                  >
                     {t.walkPlan.title}
                   </Text>
                 </Pressable>

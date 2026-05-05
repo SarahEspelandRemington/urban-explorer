@@ -20,7 +20,10 @@ export const CATEGORY_ICONS: Record<string, string> = {
   theatre: "drama-masks",
 };
 
-export type CategoryColorKey = "categorySage" | "categoryTerracotta" | "categoryMauve";
+export type CategoryColorKey =
+  | "categorySage"
+  | "categoryTerracotta"
+  | "categoryMauve";
 
 export const CATEGORY_COLOR_MAP: Record<string, CategoryColorKey> = {
   building: "categorySage",

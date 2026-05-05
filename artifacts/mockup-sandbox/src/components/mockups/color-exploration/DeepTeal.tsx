@@ -1,4 +1,10 @@
-import { Building2, Search, Headphones, Navigation, MapPin } from "lucide-react";
+import {
+  Building2,
+  Search,
+  Headphones,
+  Navigation,
+  MapPin,
+} from "lucide-react";
 
 const colors = {
   background: "#F3F5F4",

@@ -64,7 +64,11 @@ function RootLayoutNav() {
       <Stack.Screen name="place-detail" options={{ headerShown: false }} />
       <Stack.Screen
         name="walk-mode"
-        options={{ headerShown: false, gestureEnabled: false, animation: "slide_from_bottom" }}
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
+          animation: "slide_from_bottom",
+        }}
       />
       <Stack.Screen
         name="walk-plan"
@@ -135,21 +139,21 @@ function RootLayout() {
         <AuthProvider>
           <QueryClientProvider client={queryClient}>
             <LocaleProvider>
-            <UserRatingsProvider>
-            <DiscoveryProvider>
-              <WalkModeProvider>
-                <HeadingProvider>
-                  <GestureHandlerRootView>
-                    <KeyboardProvider>
-                      <RootLayoutNav />
-                      <HeadingBanner />
-                      <DevBuildBanner />
-                    </KeyboardProvider>
-                  </GestureHandlerRootView>
-                </HeadingProvider>
-              </WalkModeProvider>
-            </DiscoveryProvider>
-            </UserRatingsProvider>
+              <UserRatingsProvider>
+                <DiscoveryProvider>
+                  <WalkModeProvider>
+                    <HeadingProvider>
+                      <GestureHandlerRootView>
+                        <KeyboardProvider>
+                          <RootLayoutNav />
+                          <HeadingBanner />
+                          <DevBuildBanner />
+                        </KeyboardProvider>
+                      </GestureHandlerRootView>
+                    </HeadingProvider>
+                  </WalkModeProvider>
+                </DiscoveryProvider>
+              </UserRatingsProvider>
             </LocaleProvider>
           </QueryClientProvider>
         </AuthProvider>

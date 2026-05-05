@@ -174,7 +174,11 @@ describe("beforeSend integration", () => {
       breadcrumbs: [
         { category: "console", message: "hello", data: {} },
         { category: "navigation", message: "went somewhere" },
-        { category: "walk", message: "place visited", data: { placeId: "abc" } },
+        {
+          category: "walk",
+          message: "place visited",
+          data: { placeId: "abc" },
+        },
       ],
     });
     const result = beforeSend(event);
@@ -249,7 +253,9 @@ describe("beforeSend integration", () => {
       ],
     });
     const result = beforeSend(event);
-    expect(result.breadcrumbs![0].message).not.toContain("The old coffee house");
+    expect(result.breadcrumbs![0].message).not.toContain(
+      "The old coffee house",
+    );
     expect(result.breadcrumbs![0].message).toContain("[redacted]");
   });
 
@@ -313,12 +319,16 @@ describe("beforeSend integration", () => {
       } as ErrorEvent["contexts"],
     });
     const result = beforeSend(event);
-    const walk = (result.contexts as Record<string, unknown>)!["walk"] as Record<string, unknown>;
+    const walk = (result.contexts as Record<string, unknown>)![
+      "walk"
+    ] as Record<string, unknown>;
     expect(walk).toHaveProperty("isWalking", true);
     expect(walk).toHaveProperty("currentPlaceId", "p42");
     expect(walk).toHaveProperty("placeCount", 7);
 
-    const leak = (result.contexts as Record<string, unknown>)!["leak"] as Record<string, unknown>;
+    const leak = (result.contexts as Record<string, unknown>)![
+      "leak"
+    ] as Record<string, unknown>;
     expect(leak).not.toHaveProperty("placeName");
     expect(leak).not.toHaveProperty("lat");
   });

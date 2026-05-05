@@ -31,7 +31,9 @@ export class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: { componentStack: string }): void {
-    captureException(error, { contexts: { react: { componentStack: info.componentStack } } });
+    captureException(error, {
+      contexts: { react: { componentStack: info.componentStack } },
+    });
     if (typeof this.props.onError === "function") {
       this.props.onError(error, info.componentStack);
     }

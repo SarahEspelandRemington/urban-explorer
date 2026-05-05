@@ -24,9 +24,25 @@
  */
 
 const PII_FIELDS = [
-  "lat", "lon", "lng", "coord", "location", "place", "address",
-  "destination", "origin", "route", "street", "city", "geo",
-  "name", "summary", "narration", "altitude", "heading", "speed",
+  "lat",
+  "lon",
+  "lng",
+  "coord",
+  "location",
+  "place",
+  "address",
+  "destination",
+  "origin",
+  "route",
+  "street",
+  "city",
+  "geo",
+  "name",
+  "summary",
+  "narration",
+  "altitude",
+  "heading",
+  "speed",
 ];
 
 const SENTRY_FUNCTIONS = new Set([
@@ -43,7 +59,10 @@ function isPiiName(name) {
 
 function getCalleeName(calleeNode) {
   if (calleeNode.type === "Identifier") return calleeNode.name;
-  if (calleeNode.type === "MemberExpression" && calleeNode.property.type === "Identifier") {
+  if (
+    calleeNode.type === "MemberExpression" &&
+    calleeNode.property.type === "Identifier"
+  ) {
     return calleeNode.property.name;
   }
   return null;
@@ -81,8 +100,8 @@ function findPiiExpressions(exprNode) {
         prop.type === "Identifier"
           ? prop.name
           : prop.type === "Literal"
-          ? String(prop.value)
-          : null;
+            ? String(prop.value)
+            : null;
       if (propName !== null) {
         if (isPiiName(propName)) {
           hits.push({ node: exprNode, field: propName });

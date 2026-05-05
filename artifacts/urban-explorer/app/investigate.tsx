@@ -11,7 +11,11 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInUp, FadeOutDown } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  FadeOutDown,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddressInput } from "@/components/AddressInput";
@@ -35,7 +39,10 @@ export default function InvestigateScreen() {
   const t = useT();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ nearLocation?: string; prefillAddress?: string }>();
+  const params = useLocalSearchParams<{
+    nearLocation?: string;
+    prefillAddress?: string;
+  }>();
 
   const [address, setAddress] = useState(params.prefillAddress ?? "");
   const [pickedCoords, setPickedCoords] = useState<{
@@ -46,7 +53,10 @@ export default function InvestigateScreen() {
 
   const investigate = useInvestigateAddress();
   const result = investigate.data;
-  const error = investigate.error as { status?: number; message?: string } | null;
+  const error = investigate.error as {
+    status?: number;
+    message?: string;
+  } | null;
   const showStillLoading = useStillLoading(investigate.isPending);
 
   const handleSelectSuggestion = useCallback((s: Suggestion) => {
@@ -65,7 +75,8 @@ export default function InvestigateScreen() {
     setPickedCoords((prev) => {
       if (!prev) return null;
       const trimmedText = text.trim();
-      if (trimmedText === prev.name || trimmedText.startsWith(prev.name)) return prev;
+      if (trimmedText === prev.name || trimmedText.startsWith(prev.name))
+        return prev;
       return null;
     });
   }, []);
@@ -74,11 +85,14 @@ export default function InvestigateScreen() {
     const trimmed = address.trim();
     if (trimmed.length < 3) return;
     Keyboard.dismiss();
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     investigate.mutate({
       data: {
         address: trimmed,
-        ...(pickedCoords ? { latitude: pickedCoords.lat, longitude: pickedCoords.lng } : {}),
+        ...(pickedCoords
+          ? { latitude: pickedCoords.lat, longitude: pickedCoords.lng }
+          : {}),
       },
     });
   }, [address, pickedCoords, investigate]);
@@ -128,7 +142,9 @@ export default function InvestigateScreen() {
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             {t.investigate.headerTitle}
           </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
+          >
             {t.investigate.headerSubtitle}
           </Text>
         </View>
@@ -176,13 +192,19 @@ export default function InvestigateScreen() {
                 <Feather
                   name="search"
                   size={16}
-                  color={canSubmit ? colors.primaryForeground : colors.mutedForeground}
+                  color={
+                    canSubmit
+                      ? colors.primaryForeground
+                      : colors.mutedForeground
+                  }
                 />
                 <Text
                   style={[
                     styles.submitText,
                     {
-                      color: canSubmit ? colors.primaryForeground : colors.mutedForeground,
+                      color: canSubmit
+                        ? colors.primaryForeground
+                        : colors.mutedForeground,
                     },
                   ]}
                 >
@@ -205,7 +227,11 @@ export default function InvestigateScreen() {
               { backgroundColor: colors.card, borderColor: colors.border },
             ]}
           >
-            <Feather name="alert-circle" size={18} color={colors.mutedForeground} />
+            <Feather
+              name="alert-circle"
+              size={18}
+              color={colors.mutedForeground}
+            />
             <Text style={[styles.errorText, { color: colors.foreground }]}>
               {errorMessage}
             </Text>
@@ -217,7 +243,11 @@ export default function InvestigateScreen() {
             <ActivityIndicator size="large" color={colors.primary} />
             <LoadingMessages variant="discovery" />
             {showStillLoading ? (
-              <StillLoadingHint hint={t.investigate.stillLoading} variant="fadeInDown" exiting={FadeOutDown.duration(300)} />
+              <StillLoadingHint
+                hint={t.investigate.stillLoading}
+                variant="fadeInDown"
+                exiting={FadeOutDown.duration(300)}
+              />
             ) : null}
           </View>
         )}
@@ -230,7 +260,9 @@ export default function InvestigateScreen() {
               { backgroundColor: colors.card, borderColor: colors.border },
             ]}
           >
-            <Text style={[styles.resultAddress, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.resultAddress, { color: colors.mutedForeground }]}
+            >
               {result.address}
             </Text>
 
@@ -243,7 +275,11 @@ export default function InvestigateScreen() {
             <View style={styles.metaRow}>
               {result.yearBuilt ? (
                 <View style={[styles.chip, { backgroundColor: colors.muted }]}>
-                  <Feather name="clock" size={12} color={colors.mutedForeground} />
+                  <Feather
+                    name="clock"
+                    size={12}
+                    color={colors.mutedForeground}
+                  />
                   <Text style={[styles.chipText, { color: colors.foreground }]}>
                     {result.yearBuilt}
                   </Text>
@@ -251,37 +287,64 @@ export default function InvestigateScreen() {
               ) : null}
               {result.originalUse ? (
                 <View style={[styles.chip, { backgroundColor: colors.muted }]}>
-                  <Feather name="home" size={12} color={colors.mutedForeground} />
+                  <Feather
+                    name="home"
+                    size={12}
+                    color={colors.mutedForeground}
+                  />
                   <Text
                     style={[styles.chipText, { color: colors.foreground }]}
                     numberOfLines={1}
                   >
-                    {t.investigate.originallyPrefix} {summarize(result.originalUse, 40)}
+                    {t.investigate.originallyPrefix}{" "}
+                    {summarize(result.originalUse, 40)}
                   </Text>
                 </View>
               ) : null}
             </View>
 
-            <Section title={t.investigate.sectionOriginally} colors={colors} body={result.originalUse} />
-            <Section title={t.investigate.sectionToday} colors={colors} body={result.currentUse} />
+            <Section
+              title={t.investigate.sectionOriginally}
+              colors={colors}
+              body={result.originalUse}
+            />
+            <Section
+              title={t.investigate.sectionToday}
+              colors={colors}
+              body={result.currentUse}
+            />
             <Section
               title={t.investigate.sectionWhatToLookFor}
               colors={colors}
               body={result.architecturalStyle}
             />
-            <Section title={t.investigate.sectionHistory} colors={colors} body={result.history} />
+            <Section
+              title={t.investigate.sectionHistory}
+              colors={colors}
+              body={result.history}
+            />
 
             {result.facts && result.facts.length > 0 ? (
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+                <Text
+                  style={[
+                    styles.sectionTitle,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
                   {t.investigate.sectionFacts}
                 </Text>
                 {result.facts.map((f: string, i: number) => (
                   <View key={i} style={styles.factRow}>
                     <View
-                      style={[styles.factDot, { backgroundColor: colors.primary }]}
+                      style={[
+                        styles.factDot,
+                        { backgroundColor: colors.primary },
+                      ]}
                     />
-                    <Text style={[styles.factText, { color: colors.foreground }]}>
+                    <Text
+                      style={[styles.factText, { color: colors.foreground }]}
+                    >
                       {f}
                     </Text>
                   </View>
@@ -303,7 +366,12 @@ export default function InvestigateScreen() {
                 ]}
               >
                 <Feather name="info" size={14} color={colors.mutedForeground} />
-                <Text style={[styles.uncertaintyText, { color: colors.mutedForeground }]}>
+                <Text
+                  style={[
+                    styles.uncertaintyText,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
                   {result.uncertainty}
                 </Text>
               </View>
@@ -327,8 +395,12 @@ function Section({
   if (!body) return null;
   return (
     <View style={styles.section}>
-      <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{title}</Text>
-      <Text style={[styles.sectionBody, { color: colors.foreground }]}>{body}</Text>
+      <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+        {title}
+      </Text>
+      <Text style={[styles.sectionBody, { color: colors.foreground }]}>
+        {body}
+      </Text>
     </View>
   );
 }

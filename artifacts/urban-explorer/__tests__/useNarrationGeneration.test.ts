@@ -49,7 +49,8 @@ jest.mock("react", () => {
       return [
         states[i] as T,
         (v: T | ((prev: T) => T)) => {
-          states[i] = typeof v === "function" ? (v as (p: T) => T)(states[i] as T) : v;
+          states[i] =
+            typeof v === "function" ? (v as (p: T) => T)(states[i] as T) : v;
         },
       ];
     },
@@ -308,8 +309,12 @@ describe("useNarration — stop() bumps generation, stale callbacks are ignored"
 });
 
 describe("useNarration — skip() bumps generation and drains the queue for the next item", () => {
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   test("skip() bumps gen, then NEXT item starts on the deferred drain", () => {
     const n = useFreshNarrationHook();
@@ -372,8 +377,12 @@ describe("useNarration — skip() bumps generation and drains the queue for the 
 });
 
 describe("useNarration — audio watchdog is cancelled by teardownActive()", () => {
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   test("watchdog timer is cleared when didJustFinish fires (gen check passes)", () => {
     const n = useFreshNarrationHook();
@@ -441,8 +450,12 @@ describe("useNarration — pause/resume suspend and resume the audio watchdog", 
   // These tests rely on Jest's modern fake timers, which mock both setTimeout
   // AND Date.now(). suspendAudioWatchdog uses Date.now() to compute elapsed
   // time, and jest.advanceTimersByTime advances Date in lockstep.
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   test("pause() during audio playback suspends the watchdog; resume() re-arms with remaining time", () => {
     const n = useFreshNarrationHook();
@@ -561,8 +574,12 @@ describe("useNarration — pause/resume suspend and resume the audio watchdog", 
 });
 
 describe("useNarration — audio watchdog FIRES after 60s and unblocks the queue", () => {
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   // This is the missing-coverage path: the existing tests verify the
   // watchdog gets cancelled on natural finish / on stop(), but if the
@@ -677,8 +694,12 @@ describe("useNarration — audio watchdog FIRES after 60s and unblocks the queue
 // fetch-side reasons ("write_failure" / "endpoint_error" / "bad_response").
 
 describe("useNarration — playback-side silent skips emit trackNarrationFallback", () => {
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   test("createAudioPlayer throw emits 'playback_create' and advances the queue", () => {
     const n = useFreshNarrationHook();
@@ -724,7 +745,9 @@ describe("useNarration — playback-side silent skips emit trackNarrationFallbac
     mockCreateAudioPlayer.mockImplementationOnce(() => {
       const listeners: Listener[] = [];
       const player: FakePlayer = {
-        play: jest.fn(() => { throw new Error("audio session lost"); }),
+        play: jest.fn(() => {
+          throw new Error("audio session lost");
+        }),
         pause: jest.fn(),
         remove: jest.fn(),
         addListener: jest.fn((_event: string, l: Listener) => {
@@ -773,7 +796,9 @@ describe("useNarration — playback-side silent skips emit trackNarrationFallbac
     player.__listeners[0]({ playbackState: "error" });
 
     // Telemetry: the silent skip is reported with the right reason.
-    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_status_error");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith(
+      "playback_status_error",
+    );
     expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
 
     // onFinish ran — the broken player was removed and item 2 began
@@ -798,7 +823,9 @@ describe("useNarration — playback-side silent skips emit trackNarrationFallbac
     jest.advanceTimersByTime(60_000);
 
     // Telemetry: the silent skip is reported with the right reason.
-    expect(mockTrackNarrationFallback).toHaveBeenCalledWith("playback_watchdog");
+    expect(mockTrackNarrationFallback).toHaveBeenCalledWith(
+      "playback_watchdog",
+    );
     expect(mockTrackNarrationFallback).toHaveBeenCalledTimes(1);
 
     // The watchdog tore down the stuck player and started item 2.
@@ -833,8 +860,12 @@ describe("useNarration — playback-side silent skips emit trackNarrationFallbac
 // the dashboard's `group by reason` panel keeps surfacing every failure mode.
 
 describe("useNarration — text-path silent skips emit trackNarrationFallback", () => {
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   test("Speech.speak onError on native emits 'text_speak_error' and advances the queue", () => {
     const n = useFreshNarrationHook();
@@ -923,7 +954,9 @@ describe("useNarration — web utterance.onerror emits 'text_web_error'", () => 
     const synthState: { utterance: FakeUtterance | null } = { utterance: null };
     const fakeSynth = {
       cancel: jest.fn(),
-      speak: jest.fn((u: FakeUtterance) => { synthState.utterance = u; }),
+      speak: jest.fn((u: FakeUtterance) => {
+        synthState.utterance = u;
+      }),
       pause: jest.fn(),
       resume: jest.fn(),
       getVoices: jest.fn(() => []),
@@ -967,9 +1000,11 @@ describe("useNarration — web utterance.onerror emits 'text_web_error'", () => 
 
     n.enqueue("p1", "first text", "Place One");
 
-    const synthState = (globalThis as unknown as {
-      __synthState: { utterance: FakeUtterance | null };
-    }).__synthState;
+    const synthState = (
+      globalThis as unknown as {
+        __synthState: { utterance: FakeUtterance | null };
+      }
+    ).__synthState;
     expect(synthState.utterance).not.toBeNull();
     expect(typeof synthState.utterance!.onerror).toBe("function");
 
@@ -996,8 +1031,12 @@ describe("useNarration — web utterance.onerror emits 'text_web_error'", () => 
 // production dashboard.
 
 describe("useNarration — trackNarrationPlayed fires once per actually-started playback", () => {
-  beforeEach(() => { jest.useFakeTimers(); });
-  afterEach(() => { jest.useRealTimers(); });
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
   test("audio path: emits 'audio' once after player.play() succeeds", () => {
     const n = useFreshNarrationHook();
@@ -1045,7 +1084,9 @@ describe("useNarration — trackNarrationPlayed fires once per actually-started 
     mockCreateAudioPlayer.mockImplementationOnce(() => {
       const listeners: Listener[] = [];
       const player: FakePlayer = {
-        play: jest.fn(() => { throw new Error("audio session lost"); }),
+        play: jest.fn(() => {
+          throw new Error("audio session lost");
+        }),
         pause: jest.fn(),
         remove: jest.fn(),
         addListener: jest.fn((_event: string, l: Listener) => {

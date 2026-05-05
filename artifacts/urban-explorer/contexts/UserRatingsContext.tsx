@@ -1,5 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { InteractionManager } from "react-native";
 import { useAuth } from "@/lib/auth";
 import { getApiToken } from "@/lib/apiToken";
@@ -30,10 +37,16 @@ function getApiBaseUrl(): string {
 }
 
 export function storageKey(userId: string | null, placeId: string): string {
-  return userId ? `place_rating:${userId}:${placeId}` : `place_rating:${placeId}`;
+  return userId
+    ? `place_rating:${userId}:${placeId}`
+    : `place_rating:${placeId}`;
 }
 
-export function UserRatingsProvider({ children }: { children: React.ReactNode }) {
+export function UserRatingsProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -86,7 +99,9 @@ export function UserRatingsProvider({ children }: { children: React.ReactNode })
           return;
         }
 
-        const data = await res.json() as { ratings: Record<string, RatingValue> };
+        const data = (await res.json()) as {
+          ratings: Record<string, RatingValue>;
+        };
         if (!data.ratings) {
           setIsLoaded(true);
           return;
@@ -113,17 +128,20 @@ export function UserRatingsProvider({ children }: { children: React.ReactNode })
     }
   }, [userId]);
 
-  const setLocalRating = useCallback((placeId: string, rating: RatingValue | null) => {
-    setRatings((prev) => {
-      const next = new Map(prev);
-      if (rating === null) {
-        next.delete(placeId);
-      } else {
-        next.set(placeId, rating);
-      }
-      return next;
-    });
-  }, []);
+  const setLocalRating = useCallback(
+    (placeId: string, rating: RatingValue | null) => {
+      setRatings((prev) => {
+        const next = new Map(prev);
+        if (rating === null) {
+          next.delete(placeId);
+        } else {
+          next.set(placeId, rating);
+        }
+        return next;
+      });
+    },
+    [],
+  );
 
   const getRating = useCallback(
     (placeId: string) => ratings.get(placeId) ?? null,
@@ -131,7 +149,9 @@ export function UserRatingsProvider({ children }: { children: React.ReactNode })
   );
 
   return (
-    <UserRatingsContext.Provider value={{ ratings, isLoaded, userId, setLocalRating, getRating }}>
+    <UserRatingsContext.Provider
+      value={{ ratings, isLoaded, userId, setLocalRating, getRating }}
+    >
       {children}
     </UserRatingsContext.Provider>
   );

@@ -1,6 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 import { useHeading, type HeadingTarget } from "@/contexts/HeadingContext";
 import { useT } from "@/contexts/LocaleContext";
@@ -62,14 +68,22 @@ export function PlaceActions({ place, size = "full" }: Props) {
         style={({ pressed }) => [
           styles.btnPrimary,
           {
-            backgroundColor: isThisTarget ? colors.primary + "dd" : colors.primary,
+            backgroundColor: isThisTarget
+              ? colors.primary + "dd"
+              : colors.primary,
             opacity: pressed ? 0.85 : 1,
           },
         ]}
       >
-        <Feather name="navigation-2" size={16} color={colors.primaryForeground} />
+        <Feather
+          name="navigation-2"
+          size={16}
+          color={colors.primaryForeground}
+        />
         <Text style={[styles.btnText, { color: colors.primaryForeground }]}>
-          {isThisTarget ? t.placeActions.headingThere : t.placeActions.headThere}
+          {isThisTarget
+            ? t.placeActions.headingThere
+            : t.placeActions.headThere}
         </Text>
       </Pressable>
     </View>

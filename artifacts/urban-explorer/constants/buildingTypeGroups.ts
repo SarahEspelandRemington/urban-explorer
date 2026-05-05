@@ -14,7 +14,15 @@ export const BUILDING_TYPE_GROUPS: readonly BuildingTypeGroup[] = [
   },
   {
     key: "parking",
-    types: ["garage", "garages", "carport", "parking", "bicycle_parking", "garbage_shed", "container"],
+    types: [
+      "garage",
+      "garages",
+      "carport",
+      "parking",
+      "bicycle_parking",
+      "garbage_shed",
+      "container",
+    ],
   },
   {
     key: "utility",
@@ -22,9 +30,15 @@ export const BUILDING_TYPE_GROUPS: readonly BuildingTypeGroup[] = [
   },
 ] as const;
 
-export type BuildingGroupKey = "residential" | "agricultural" | "parking" | "utility";
+export type BuildingGroupKey =
+  | "residential"
+  | "agricultural"
+  | "parking"
+  | "utility";
 
-export function groupKeysToIncludedTypes(enabledGroups: Set<BuildingGroupKey>): string[] {
+export function groupKeysToIncludedTypes(
+  enabledGroups: Set<BuildingGroupKey>,
+): string[] {
   const types: string[] = [];
   for (const group of BUILDING_TYPE_GROUPS) {
     if (enabledGroups.has(group.key as BuildingGroupKey)) {

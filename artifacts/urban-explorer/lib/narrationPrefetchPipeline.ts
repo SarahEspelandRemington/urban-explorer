@@ -131,7 +131,9 @@ export function createStalePrefetchPool<P extends PrefetchPlaceLike>(
     ttlMs: opts.ttlMs ?? DEFAULT_STALE_PREFETCH_TTL_MS,
     now: opts.now ?? (() => Date.now()),
     schedule: opts.schedule ?? ((fn, ms) => setTimeout(fn, ms)),
-    cancel: opts.cancel ?? ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>)),
+    cancel:
+      opts.cancel ??
+      ((handle) => clearTimeout(handle as ReturnType<typeof setTimeout>)),
     onReplay: opts.onReplay,
     onEvict: opts.onEvict,
   };
@@ -150,9 +152,13 @@ function emitPoolEvent<P extends PrefetchPlaceLike>(
   }
 }
 
-function runAudioCleanup<P extends PrefetchPlaceLike>(entry: PrefetchEntry<P>): void {
+function runAudioCleanup<P extends PrefetchPlaceLike>(
+  entry: PrefetchEntry<P>,
+): void {
   if (entry.payload.kind === "audio") {
-    try { entry.payload.cleanup?.(); } catch {}
+    try {
+      entry.payload.cleanup?.();
+    } catch {}
   }
 }
 
@@ -168,7 +174,9 @@ export function parkStalePrefetchedEntry<P extends PrefetchPlaceLike>(
 ): void {
   const existing = pool.map.get(entry.placeId);
   if (existing) {
-    try { pool.cancel(existing.timerHandle); } catch {}
+    try {
+      pool.cancel(existing.timerHandle);
+    } catch {}
     runAudioCleanup(existing.entry);
     pool.map.delete(entry.placeId);
   }
@@ -203,7 +211,9 @@ export function reviveStalePrefetchedEntry<P extends PrefetchPlaceLike>(
   const slot = pool.map.get(placeId);
   if (!slot) return null;
   if (slot.expiresAt <= pool.now()) {
-    try { pool.cancel(slot.timerHandle); } catch {}
+    try {
+      pool.cancel(slot.timerHandle);
+    } catch {}
     runAudioCleanup(slot.entry);
     pool.map.delete(placeId);
     // Synchronous expiry path: the entry aged out before the timer ran. We
@@ -211,7 +221,9 @@ export function reviveStalePrefetchedEntry<P extends PrefetchPlaceLike>(
     emitPoolEvent(pool.onEvict, pool, slot);
     return null;
   }
-  try { pool.cancel(slot.timerHandle); } catch {}
+  try {
+    pool.cancel(slot.timerHandle);
+  } catch {}
   pool.map.delete(placeId);
   // Successful re-pick within the TTL — the cache saved a round-trip.
   emitPoolEvent(pool.onReplay, pool, slot);
@@ -227,7 +239,9 @@ export function disposeStalePrefetchPool<P extends PrefetchPlaceLike>(
   pool: StalePrefetchPool<P>,
 ): void {
   for (const slot of pool.map.values()) {
-    try { pool.cancel(slot.timerHandle); } catch {}
+    try {
+      pool.cancel(slot.timerHandle);
+    } catch {}
     runAudioCleanup(slot.entry);
   }
   pool.map.clear();
@@ -272,9 +286,14 @@ export interface PrefetchPipelineDeps<P extends PrefetchPlaceLike> {
   onEvent?: (event: PrefetchEvent) => void;
 }
 
-function emit(onEvent: ((e: PrefetchEvent) => void) | undefined, event: PrefetchEvent): void {
+function emit(
+  onEvent: ((e: PrefetchEvent) => void) | undefined,
+  event: PrefetchEvent,
+): void {
   if (!onEvent) return;
-  try { onEvent(event); } catch {}
+  try {
+    onEvent(event);
+  } catch {}
 }
 
 /**
@@ -289,7 +308,8 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
   const candidate = deps.pickNext();
   if (!candidate) return undefined;
   // Already cached for this candidate — no need to re-fetch.
-  if (deps.prefetchedNarrationRef.current?.placeId === candidate.id) return undefined;
+  if (deps.prefetchedNarrationRef.current?.placeId === candidate.id)
+    return undefined;
   // Another request for this candidate is already in flight — DEDUPE.
   if (deps.prefetchInFlightRef.current === candidate.id) {
     emit(deps.onEvent, "DEDUPE");
@@ -326,7 +346,9 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
     if (deps.stalePool) {
       parkStalePrefetchedEntry(deps.stalePool, stale);
     } else if (stale.payload.kind === "audio") {
-      try { stale.payload.cleanup?.(); } catch {}
+      try {
+        stale.payload.cleanup?.();
+      } catch {}
     }
     emit(deps.onEvent, "STALE_DISCARD");
   }
@@ -342,12 +364,23 @@ export function runPrefetchCycle<P extends PrefetchPlaceLike>(
       if (!payload) return;
       // STOP-WALK / already-narrated guard. We own the audio temp file so
       // delete it before bailing.
-      if (!deps.isWalkingRef.current || deps.narratedIdsRef.current.has(candidateId)) {
-        if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
+      if (
+        !deps.isWalkingRef.current ||
+        deps.narratedIdsRef.current.has(candidateId)
+      ) {
+        if (payload.kind === "audio") {
+          try {
+            payload.cleanup?.();
+          } catch {}
+        }
         emit(deps.onEvent, "STOP_WALK_DISCARD");
         return;
       }
-      deps.prefetchedNarrationRef.current = { placeId: candidateId, payload, place };
+      deps.prefetchedNarrationRef.current = {
+        placeId: candidateId,
+        payload,
+        place,
+      };
     } catch {
       // Best-effort: failures fall back to the normal fetchNarration path.
     } finally {
@@ -383,8 +416,7 @@ export function consumePrefetchedNarration<P extends PrefetchPlaceLike>(
   requestedPlaceId: string,
   stalePool?: StalePrefetchPool<P>,
   onEvent?: (event: PrefetchEvent) => void,
-):
-  // `source` distinguishes the two hit paths:
+): // `source` distinguishes the two hit paths:
   //   "live"        — the live prefetch slot already held this place's payload
   //                   (the normal first-time-narration fast path: pickNext
   //                   chose place N and we'd already prefetched it for N).
@@ -403,7 +435,9 @@ export function consumePrefetchedNarration<P extends PrefetchPlaceLike>(
     if (stalePool) {
       parkStalePrefetchedEntry(stalePool, prefetched);
     } else if (prefetched.payload.kind === "audio") {
-      try { prefetched.payload.cleanup?.(); } catch {}
+      try {
+        prefetched.payload.cleanup?.();
+      } catch {}
     }
     emit(onEvent, "STALE_DISCARD");
   }

@@ -1,4 +1,12 @@
-import { Search, Footprints, Compass, MoreHorizontal, Map, List, Navigation } from "lucide-react";
+import {
+  Search,
+  Footprints,
+  Compass,
+  MoreHorizontal,
+  Map,
+  List,
+  Navigation,
+} from "lucide-react";
 
 const BG = "#0f1117";
 const CARD = "#1a1d2b";
@@ -40,7 +48,14 @@ export function SimplifiedBar() {
           }}
         >
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: FG, letterSpacing: "-0.4px" }}>
+            <div
+              style={{
+                fontSize: 22,
+                fontWeight: 700,
+                color: FG,
+                letterSpacing: "-0.4px",
+              }}
+            >
               Discover
             </div>
             <div style={{ fontSize: 11, color: MUTED_FG, marginTop: 1 }}>
@@ -106,7 +121,14 @@ export function SimplifiedBar() {
               <Footprints size={17} color={WALK_COLOR} />
             </div>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: FG, lineHeight: 1.2 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: FG,
+                  lineHeight: 1.2,
+                }}
+              >
                 Start Walking
               </div>
               <div style={{ fontSize: 10, color: MUTED_FG, marginTop: 2 }}>
@@ -137,7 +159,9 @@ export function SimplifiedBar() {
             }}
           >
             <Compass size={18} color={PRIMARY_FG} />
-            <span style={{ fontSize: 14, fontWeight: 700, color: PRIMARY_FG }}>Discover</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: PRIMARY_FG }}>
+              Discover
+            </span>
           </div>
         </div>
       </div>
@@ -218,7 +242,14 @@ export function SimplifiedBar() {
               border: `1px solid ${BORDER}`,
             }}
           >
-            <div style={{ fontSize: 15, fontWeight: 600, color: FG, marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: FG,
+                marginBottom: 4,
+              }}
+            >
               {p.name}
             </div>
             <div style={{ fontSize: 12, color: MUTED_FG }}>{p.kind}</div>
@@ -242,10 +273,12 @@ export function SimplifiedBar() {
       >
         <span style={{ fontSize: 16 }}>✓</span>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#a89cff" }}>FIX: 6 buttons → 4</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#a89cff" }}>
+            FIX: 6 buttons → 4
+          </div>
           <div style={{ fontSize: 11, color: MUTED_FG, marginTop: 2 }}>
-            Walk + Plan merged into one card · Language + plan in "•••" overflow ·
-            View toggle moved inline with content · Clear two-button layout
+            Walk + Plan merged into one card · Language + plan in "•••" overflow
+            · View toggle moved inline with content · Clear two-button layout
           </div>
         </div>
       </div>

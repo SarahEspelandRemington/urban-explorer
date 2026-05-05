@@ -1103,21 +1103,16 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
       // response write when headers haven't been sent and the socket is still
       // open — otherwise we'd produce a write-after-close log noise.
       if (!res.headersSent && res.socket?.writable) {
-        res
-          .status(503)
-          .json({
-            error:
-              "Discovery service temporarily unavailable. Please try again.",
-          });
+        res.status(503).json({
+          error: "Discovery service temporarily unavailable. Please try again.",
+        });
       }
       return;
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error: "Discovery service temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Discovery service temporarily unavailable. Please try again.",
+    });
     return;
   } finally {
     clearTimeout(discoverTimer);
@@ -1409,11 +1404,9 @@ Be as accurate as possible with coordinates. For neighborhoods, use the center p
     }
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error: "Geocoding service temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Geocoding service temporarily unavailable. Please try again.",
+    });
     return;
   }
 
@@ -1509,11 +1502,9 @@ router.post("/explore/investigate-address", async (req, res) => {
         nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
       );
     } catch {
-      res
-        .status(503)
-        .json({
-          error: "Address lookup temporarily unavailable. Please try again.",
-        });
+      res.status(503).json({
+        error: "Address lookup temporarily unavailable. Please try again.",
+      });
       return;
     }
     if (results.length === 0) {
@@ -1605,12 +1596,9 @@ What is this building? What was it originally? What should I look at?`,
     });
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error:
-          "Investigation service temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Investigation service temporarily unavailable. Please try again.",
+    });
     return;
   }
 
@@ -1729,12 +1717,9 @@ Every detail should feel like a local secret worth knowing.`,
       return;
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error:
-          "Place detail service temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Place detail service temporarily unavailable. Please try again.",
+    });
     return;
   }
 
@@ -1829,11 +1814,9 @@ Create 4-6 eras spanning the full history. Each era should feel distinct and ali
     });
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error: "Timeline service temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Timeline service temporarily unavailable. Please try again.",
+    });
     return;
   }
 
@@ -1912,11 +1895,9 @@ How to write for speech:
     });
   } catch (err: any) {
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error: "Narration service temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Narration service temporarily unavailable. Please try again.",
+    });
     return;
   }
 
@@ -2051,11 +2032,9 @@ How to write for speech:
     } catch (err: any) {
       if (abortController.signal.aborted) return;
       const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-      res
-        .status(status)
-        .json({
-          error: "Narration service temporarily unavailable. Please try again.",
-        });
+      res.status(status).json({
+        error: "Narration service temporarily unavailable. Please try again.",
+      });
       return;
     }
     const content = textResp.choices[0]?.message?.content;
@@ -2082,11 +2061,9 @@ How to write for speech:
     if (abortController.signal.aborted) return;
     logger.error({ err, placeName, voice }, "TTS generation failed");
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error: "Voice synthesis temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Voice synthesis temporarily unavailable. Please try again.",
+    });
     return;
   }
   if (!audioBytes || audioBytes.length === 0) {
@@ -2163,20 +2140,15 @@ How to write for speech:
     clearTimeout(deepTimeout);
     if (abortController.signal.aborted) {
       if (!res.headersSent && res.socket?.writable)
-        res
-          .status(504)
-          .json({
-            error: "Deep narration request timed out. Please try again.",
-          });
+        res.status(504).json({
+          error: "Deep narration request timed out. Please try again.",
+        });
       return;
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
-    res
-      .status(status)
-      .json({
-        error:
-          "Deep narration service temporarily unavailable. Please try again.",
-      });
+    res.status(status).json({
+      error: "Deep narration service temporarily unavailable. Please try again.",
+    });
     return;
   }
 
@@ -2511,11 +2483,9 @@ router.post("/explore/places-along-route", async (req, res) => {
       typeof c[1] === "number",
   );
   if (geom.length < 2) {
-    res
-      .status(400)
-      .json({
-        error: "Route geometry must have at least 2 valid coordinate pairs",
-      });
+    res.status(400).json({
+      error: "Route geometry must have at least 2 valid coordinate pairs",
+    });
     return;
   }
 
@@ -2730,11 +2700,9 @@ Return one entry per input place, in the same order. Be concise — these blurbs
   }
   // If every chunk failed, return a graceful error rather than an empty/fallback-only list
   if (failedChunks === chunks.length && chunks.length > 0) {
-    res
-      .status(503)
-      .json({
-        error: "Route narration temporarily unavailable. Please try again.",
-      });
+    res.status(503).json({
+      error: "Route narration temporarily unavailable. Please try again.",
+    });
     return;
   }
   logger.info(

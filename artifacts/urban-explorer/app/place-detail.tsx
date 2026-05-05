@@ -12,7 +12,11 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInUp, FadeOutDown } from "react-native-reanimated";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  FadeOutDown,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LoadingMessages } from "@/components/LoadingMessages";
@@ -28,7 +32,10 @@ import { buildPlaceId } from "@/lib/placeId";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useStillLoading } from "@/hooks/useStillLoading";
-import { useGetPlaceDetail, useGetPlaceTimeline } from "@workspace/api-client-react";
+import {
+  useGetPlaceDetail,
+  useGetPlaceTimeline,
+} from "@workspace/api-client-react";
 
 export default function PlaceDetailScreen() {
   const colors = useColors();
@@ -60,12 +67,23 @@ export default function PlaceDetailScreen() {
   const lat = parseFloat(params.latitude || "0");
   const lng = parseFloat(params.longitude || "0");
   const basicFacts = React.useMemo<string[]>(() => {
-    try { return params.facts ? (JSON.parse(params.facts) as string[]) : []; } catch { return []; }
+    try {
+      return params.facts ? (JSON.parse(params.facts) as string[]) : [];
+    } catch {
+      return [];
+    }
   }, [params.facts]);
   const tags = React.useMemo<string[]>(() => {
-    try { return params.tags ? (JSON.parse(params.tags) as string[]) : []; } catch { return []; }
+    try {
+      return params.tags ? (JSON.parse(params.tags) as string[]) : [];
+    } catch {
+      return [];
+    }
   }, [params.tags]);
-  const placeId = React.useMemo(() => params.name ? buildPlaceId(params.name, lat, lng) : "", [params.name, lat, lng]);
+  const placeId = React.useMemo(
+    () => (params.name ? buildPlaceId(params.name, lat, lng) : ""),
+    [params.name, lat, lng],
+  );
   const saved = isPlaceSaved(placeId);
   const iconName = getCategoryIcon(params.category || "");
   const categoryColor = getCategoryColor(params.category || "", colors);
@@ -105,7 +123,15 @@ export default function PlaceDetailScreen() {
         yearBuilt: params.yearBuilt || undefined,
       },
     });
-  }, [params.name, lat, lng, params.category, params.yearBuilt, timelineMutation, timelineLoaded]);
+  }, [
+    params.name,
+    lat,
+    lng,
+    params.category,
+    params.yearBuilt,
+    timelineMutation,
+    timelineLoaded,
+  ]);
 
   const handleSave = () => {
     if (Platform.OS !== "web") {
@@ -160,7 +186,11 @@ export default function PlaceDetailScreen() {
           onPress={handleSave}
           hitSlop={20}
           accessibilityRole="button"
-          accessibilityLabel={saved ? `${t.placeDetail.removeSavedAccessibility} ${params.name}` : `${t.placeDetail.saveAccessibility} ${params.name}`}
+          accessibilityLabel={
+            saved
+              ? `${t.placeDetail.removeSavedAccessibility} ${params.name}`
+              : `${t.placeDetail.saveAccessibility} ${params.name}`
+          }
           accessibilityState={{ selected: saved }}
           style={styles.topBarButton}
         >
@@ -186,249 +216,378 @@ export default function PlaceDetailScreen() {
         ) : null}
 
         <View style={styles.content}>
-        <View style={[styles.iconContainer, { backgroundColor: categoryColor + "18" }]}>
-          <MaterialCommunityIcons name={iconName as any} size={24} color={categoryColor} />
-        </View>
-
-        <Text style={[styles.name, { color: colors.foreground }]}>{params.name}</Text>
-
-        {params.address ? (
-          <View style={styles.addressRow}>
-            <Feather name="map-pin" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.addressText, { color: colors.mutedForeground }]}>
-              {params.address}
-            </Text>
-          </View>
-        ) : null}
-
-        <View style={styles.metaRow}>
-          {params.category ? (
-            <View style={[styles.badge, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.badgeText, { color: colors.foreground }]}>
-                {params.category}
-              </Text>
-            </View>
-          ) : null}
-          {params.yearBuilt ? (
-            <View style={[styles.badge, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.badgeText, { color: colors.foreground }]}>
-                {params.yearBuilt}
-              </Text>
-            </View>
-          ) : null}
-          {tags.map((tag) => (
-            <View key={tag} style={[styles.badge, { backgroundColor: categoryColor + "15" }]}>
-              <Text style={[styles.badgeText, { color: categoryColor }]}>
-                #{tag}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        <Text style={[styles.summary, { color: colors.mutedForeground }]}>
-          {params.summary}
-        </Text>
-
-        <PlaceActions
-          place={{
-            id: placeId,
-            name: params.name,
-            category: params.category,
-            yearBuilt: params.yearBuilt,
-            summary: params.summary,
-            facts: basicFacts,
-            latitude: lat,
-            longitude: lng,
-          }}
-        />
-
-        <View style={styles.mapSection}>
-          <PlaceDetailMap
-            latitude={lat}
-            longitude={lng}
-            name={params.name}
-            address={params.address}
-          />
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-          {t.placeDetail.quickFacts}
-        </Text>
-        {basicFacts.map((fact, i) => (
-          <Animated.View
-            key={i}
-            entering={Platform.OS !== "web" ? FadeInDown.delay(i * 80) : undefined}
-            style={[styles.factCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+          <View
+            style={[
+              styles.iconContainer,
+              { backgroundColor: categoryColor + "18" },
+            ]}
           >
-            <View style={[styles.factNumber, { backgroundColor: colors.primary + "18" }]}>
-              <Text style={[styles.factNumberText, { color: colors.primary }]}>{i + 1}</Text>
+            <MaterialCommunityIcons
+              name={iconName as any}
+              size={24}
+              color={categoryColor}
+            />
+          </View>
+
+          <Text style={[styles.name, { color: colors.foreground }]}>
+            {params.name}
+          </Text>
+
+          {params.address ? (
+            <View style={styles.addressRow}>
+              <Feather
+                name="map-pin"
+                size={14}
+                color={colors.mutedForeground}
+              />
+              <Text
+                style={[styles.addressText, { color: colors.mutedForeground }]}
+              >
+                {params.address}
+              </Text>
             </View>
-            <Text style={[styles.factContent, { color: colors.foreground }]}>{fact}</Text>
-          </Animated.View>
-        ))}
+          ) : null}
 
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <PlaceTimeline
-          eras={timelineMutation.data?.eras}
-          isLoading={timelineMutation.isPending}
-          error={timelineMutation.isError}
-          onLoad={handleLoadTimeline}
-          onRetry={() => {
-            setTimelineLoaded(false);
-            timelineMutation.reset();
-            // Actually re-fire the request — reset() alone only cleared the
-            // error state; without mutate() no new network call is made.
-            timelineMutation.mutate({
-              data: {
-                placeName: params.name,
-                latitude: lat,
-                longitude: lng,
-                category: params.category,
-                yearBuilt: params.yearBuilt || undefined,
-              },
-            });
-          }}
-          hasLoaded={timelineLoaded}
-        />
-
-        {detailMutation.isPending ? (
-          <View style={styles.detailLoading}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <LoadingMessages variant="detail" />
-            {showStillLoading ? (
-              <StillLoadingHint hint={t.placeDetail.stillLoading} variant="fadeInDown" exiting={FadeOutDown.duration(300)} />
+          <View style={styles.metaRow}>
+            {params.category ? (
+              <View style={[styles.badge, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.badgeText, { color: colors.foreground }]}>
+                  {params.category}
+                </Text>
+              </View>
             ) : null}
+            {params.yearBuilt ? (
+              <View style={[styles.badge, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.badgeText, { color: colors.foreground }]}>
+                  {params.yearBuilt}
+                </Text>
+              </View>
+            ) : null}
+            {tags.map((tag) => (
+              <View
+                key={tag}
+                style={[
+                  styles.badge,
+                  { backgroundColor: categoryColor + "15" },
+                ]}
+              >
+                <Text style={[styles.badgeText, { color: categoryColor }]}>
+                  #{tag}
+                </Text>
+              </View>
+            ))}
           </View>
-        ) : detailMutation.isError ? (
-          <View style={styles.detailLoading}>
-            <Feather name="alert-circle" size={20} color={colors.destructive} />
-            <Text style={[styles.detailLoadingText, { color: colors.mutedForeground }]}>
-              {t.placeDetail.couldNotLoad}
-            </Text>
-            <Pressable
-              onPress={() =>
-                detailMutation.mutate({
-                  data: {
-                    placeName: params.name,
-                    latitude: lat,
-                    longitude: lng,
-                    category: params.category,
-                  },
-                })
+
+          <Text style={[styles.summary, { color: colors.mutedForeground }]}>
+            {params.summary}
+          </Text>
+
+          <PlaceActions
+            place={{
+              id: placeId,
+              name: params.name,
+              category: params.category,
+              yearBuilt: params.yearBuilt,
+              summary: params.summary,
+              facts: basicFacts,
+              latitude: lat,
+              longitude: lng,
+            }}
+          />
+
+          <View style={styles.mapSection}>
+            <PlaceDetailMap
+              latitude={lat}
+              longitude={lng}
+              name={params.name}
+              address={params.address}
+            />
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            {t.placeDetail.quickFacts}
+          </Text>
+          {basicFacts.map((fact, i) => (
+            <Animated.View
+              key={i}
+              entering={
+                Platform.OS !== "web" ? FadeInDown.delay(i * 80) : undefined
               }
-              style={[styles.retryButton, { borderColor: colors.border }]}
-              accessibilityRole="button"
-              accessibilityLabel={t.placeDetail.retryHistoryAccessibility}
+              style={[
+                styles.factCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
             >
-              <Text style={[styles.retryText, { color: colors.accent }]}>{t.common.retry}</Text>
-            </Pressable>
-          </View>
-        ) : detail ? (
-          <Animated.View entering={Platform.OS !== "web" ? FadeInUp.delay(200) : undefined}>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
-              {t.placeDetail.history}
-            </Text>
-            <Text style={[styles.historyText, { color: colors.foreground }]}>
-              {detail.fullHistory}
-            </Text>
-
-            {detail.architecturalStyle ? (
-              <>
-                <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  {t.placeDetail.architecture}
+              <View
+                style={[
+                  styles.factNumber,
+                  { backgroundColor: colors.primary + "18" },
+                ]}
+              >
+                <Text
+                  style={[styles.factNumberText, { color: colors.primary }]}
+                >
+                  {i + 1}
                 </Text>
-                <Text style={[styles.historyText, { color: colors.foreground }]}>
-                  {detail.architecturalStyle}
-                </Text>
-              </>
-            ) : null}
+              </View>
+              <Text style={[styles.factContent, { color: colors.foreground }]}>
+                {fact}
+              </Text>
+            </Animated.View>
+          ))}
 
-            {detail.notableEvents && detail.notableEvents.length > 0 ? (
-              <>
-                <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  {t.placeDetail.notableEvents}
-                </Text>
-                {detail.notableEvents.map((event: string, i: number) => (
-                  <View key={i} style={styles.eventRow}>
-                    <View style={[styles.eventDot, { backgroundColor: colors.accent }]} />
-                    <Text style={[styles.eventText, { color: colors.foreground }]}>{event}</Text>
-                  </View>
-                ))}
-              </>
-            ) : null}
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <PlaceTimeline
+            eras={timelineMutation.data?.eras}
+            isLoading={timelineMutation.isPending}
+            error={timelineMutation.isError}
+            onLoad={handleLoadTimeline}
+            onRetry={() => {
+              setTimelineLoaded(false);
+              timelineMutation.reset();
+              // Actually re-fire the request — reset() alone only cleared the
+              // error state; without mutate() no new network call is made.
+              timelineMutation.mutate({
+                data: {
+                  placeName: params.name,
+                  latitude: lat,
+                  longitude: lng,
+                  category: params.category,
+                  yearBuilt: params.yearBuilt || undefined,
+                },
+              });
+            }}
+            hasLoaded={timelineLoaded}
+          />
 
-            {detail.funFacts && detail.funFacts.length > 0 ? (
-              <>
-                <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  {t.placeDetail.moreFunFacts}
+          {detailMutation.isPending ? (
+            <View style={styles.detailLoading}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <LoadingMessages variant="detail" />
+              {showStillLoading ? (
+                <StillLoadingHint
+                  hint={t.placeDetail.stillLoading}
+                  variant="fadeInDown"
+                  exiting={FadeOutDown.duration(300)}
+                />
+              ) : null}
+            </View>
+          ) : detailMutation.isError ? (
+            <View style={styles.detailLoading}>
+              <Feather
+                name="alert-circle"
+                size={20}
+                color={colors.destructive}
+              />
+              <Text
+                style={[
+                  styles.detailLoadingText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                {t.placeDetail.couldNotLoad}
+              </Text>
+              <Pressable
+                onPress={() =>
+                  detailMutation.mutate({
+                    data: {
+                      placeName: params.name,
+                      latitude: lat,
+                      longitude: lng,
+                      category: params.category,
+                    },
+                  })
+                }
+                style={[styles.retryButton, { borderColor: colors.border }]}
+                accessibilityRole="button"
+                accessibilityLabel={t.placeDetail.retryHistoryAccessibility}
+              >
+                <Text style={[styles.retryText, { color: colors.accent }]}>
+                  {t.common.retry}
                 </Text>
-                {detail.funFacts.map((fact: string, i: number) => (
-                  <View
-                    key={i}
-                    style={[styles.funFactCard, { backgroundColor: colors.primary + "0a" }]}
+              </Pressable>
+            </View>
+          ) : detail ? (
+            <Animated.View
+              entering={Platform.OS !== "web" ? FadeInUp.delay(200) : undefined}
+            >
+              <View
+                style={[styles.divider, { backgroundColor: colors.border }]}
+              />
+
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                {t.placeDetail.history}
+              </Text>
+              <Text style={[styles.historyText, { color: colors.foreground }]}>
+                {detail.fullHistory}
+              </Text>
+
+              {detail.architecturalStyle ? (
+                <>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: colors.foreground, marginTop: 24 },
+                    ]}
                   >
-                    <Feather name="zap" size={14} color={colors.primary} />
-                    <Text style={[styles.funFactText, { color: colors.foreground }]}>{fact}</Text>
-                  </View>
-                ))}
-              </>
-            ) : null}
+                    {t.placeDetail.architecture}
+                  </Text>
+                  <Text
+                    style={[styles.historyText, { color: colors.foreground }]}
+                  >
+                    {detail.architecturalStyle}
+                  </Text>
+                </>
+              ) : null}
 
-            {detail.nearbyRelated && detail.nearbyRelated.length > 0 ? (
-              <>
-                <Text style={[styles.sectionTitle, { color: colors.foreground, marginTop: 24 }]}>
-                  {t.placeDetail.nearbyRelated}
-                </Text>
-                <View style={styles.relatedRow}>
-                  {detail.nearbyRelated.map((related, i) => {
-                    const relatedName = typeof related === "string" ? related : related.name;
-                    const relatedLat = typeof related === "string" ? null : related.latitude;
-                    const relatedLng = typeof related === "string" ? null : related.longitude;
-                    const relatedCategory = typeof related === "string" ? undefined : related.category;
-                    return (
-                      <Pressable
-                        key={i}
-                        onPress={() => {
-                          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                          if (relatedLat != null && relatedLng != null) {
-                            router.push({
-                              pathname: "/place-detail",
-                              params: {
-                                name: relatedName,
-                                latitude: String(relatedLat),
-                                longitude: String(relatedLng),
-                                category: relatedCategory ?? "",
-                                // Unique token so expo-router pushes a new stack entry
-                                // instead of reusing the existing place-detail screen.
-                                _push: String(Date.now()),
-                              },
-                            });
-                          } else {
-                            router.push({ pathname: "/investigate", params: { prefillAddress: relatedName } });
-                          }
-                        }}
-                        style={({ pressed }) => [
-                          styles.relatedChip,
-                          { backgroundColor: colors.muted, opacity: pressed ? 0.75 : 1 },
+              {detail.notableEvents && detail.notableEvents.length > 0 ? (
+                <>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: colors.foreground, marginTop: 24 },
+                    ]}
+                  >
+                    {t.placeDetail.notableEvents}
+                  </Text>
+                  {detail.notableEvents.map((event: string, i: number) => (
+                    <View key={i} style={styles.eventRow}>
+                      <View
+                        style={[
+                          styles.eventDot,
+                          { backgroundColor: colors.accent },
                         ]}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${t.placeDetail.lookUp} ${relatedName}`}
+                      />
+                      <Text
+                        style={[styles.eventText, { color: colors.foreground }]}
                       >
-                        <Feather name="map-pin" size={12} color={colors.primary} />
-                        <Text style={[styles.relatedText, { color: colors.foreground }]}>{relatedName}</Text>
-                        <Feather name="chevron-right" size={12} color={colors.mutedForeground} />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </>
-            ) : null}
-          </Animated.View>
-        ) : null}
+                        {event}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              ) : null}
+
+              {detail.funFacts && detail.funFacts.length > 0 ? (
+                <>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: colors.foreground, marginTop: 24 },
+                    ]}
+                  >
+                    {t.placeDetail.moreFunFacts}
+                  </Text>
+                  {detail.funFacts.map((fact: string, i: number) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.funFactCard,
+                        { backgroundColor: colors.primary + "0a" },
+                      ]}
+                    >
+                      <Feather name="zap" size={14} color={colors.primary} />
+                      <Text
+                        style={[
+                          styles.funFactText,
+                          { color: colors.foreground },
+                        ]}
+                      >
+                        {fact}
+                      </Text>
+                    </View>
+                  ))}
+                </>
+              ) : null}
+
+              {detail.nearbyRelated && detail.nearbyRelated.length > 0 ? (
+                <>
+                  <Text
+                    style={[
+                      styles.sectionTitle,
+                      { color: colors.foreground, marginTop: 24 },
+                    ]}
+                  >
+                    {t.placeDetail.nearbyRelated}
+                  </Text>
+                  <View style={styles.relatedRow}>
+                    {detail.nearbyRelated.map((related, i) => {
+                      const relatedName =
+                        typeof related === "string" ? related : related.name;
+                      const relatedLat =
+                        typeof related === "string" ? null : related.latitude;
+                      const relatedLng =
+                        typeof related === "string" ? null : related.longitude;
+                      const relatedCategory =
+                        typeof related === "string"
+                          ? undefined
+                          : related.category;
+                      return (
+                        <Pressable
+                          key={i}
+                          onPress={() => {
+                            if (Platform.OS !== "web")
+                              Haptics.impactAsync(
+                                Haptics.ImpactFeedbackStyle.Light,
+                              );
+                            if (relatedLat != null && relatedLng != null) {
+                              router.push({
+                                pathname: "/place-detail",
+                                params: {
+                                  name: relatedName,
+                                  latitude: String(relatedLat),
+                                  longitude: String(relatedLng),
+                                  category: relatedCategory ?? "",
+                                  // Unique token so expo-router pushes a new stack entry
+                                  // instead of reusing the existing place-detail screen.
+                                  _push: String(Date.now()),
+                                },
+                              });
+                            } else {
+                              router.push({
+                                pathname: "/investigate",
+                                params: { prefillAddress: relatedName },
+                              });
+                            }
+                          }}
+                          style={({ pressed }) => [
+                            styles.relatedChip,
+                            {
+                              backgroundColor: colors.muted,
+                              opacity: pressed ? 0.75 : 1,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t.placeDetail.lookUp} ${relatedName}`}
+                        >
+                          <Feather
+                            name="map-pin"
+                            size={12}
+                            color={colors.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.relatedText,
+                              { color: colors.foreground },
+                            ]}
+                          >
+                            {relatedName}
+                          </Text>
+                          <Feather
+                            name="chevron-right"
+                            size={12}
+                            color={colors.mutedForeground}
+                          />
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
+            </Animated.View>
+          ) : null}
         </View>
       </ScrollView>
 

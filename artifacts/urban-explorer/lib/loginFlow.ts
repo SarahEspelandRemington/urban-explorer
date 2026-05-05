@@ -42,7 +42,9 @@ interface LoginFlowResult {
  * @param onSuccess Called once a token has been persisted. The caller (the
  *                  AuthProvider) refreshes the user state from /api/auth/user.
  */
-export function useLoginFlow(onSuccess: () => Promise<void> | void): LoginFlowResult {
+export function useLoginFlow(
+  onSuccess: () => Promise<void> | void,
+): LoginFlowResult {
   const discovery = AuthSession.useAutoDiscovery(ISSUER_URL);
   const redirectUri = AuthSession.makeRedirectUri();
   const [isExchangingToken, setIsExchangingToken] = useState(false);
@@ -70,16 +72,19 @@ export function useLoginFlow(onSuccess: () => Promise<void> | void): LoginFlowRe
           console.error("API base URL is not configured.");
           return;
         }
-        const exchangeRes = await fetch(`${apiBase}/api/mobile-auth/token-exchange`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code,
-            code_verifier: request.codeVerifier,
-            redirect_uri: redirectUri,
-            state,
-          }),
-        });
+        const exchangeRes = await fetch(
+          `${apiBase}/api/mobile-auth/token-exchange`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code,
+              code_verifier: request.codeVerifier,
+              redirect_uri: redirectUri,
+              state,
+            }),
+          },
+        );
         if (!exchangeRes.ok) {
           console.error("Token exchange failed:", exchangeRes.status);
           return;
@@ -115,4 +120,3 @@ export function useLoginFlow(onSuccess: () => Promise<void> | void): LoginFlowRe
     isDiscovering: discovery == null,
   };
 }
-

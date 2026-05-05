@@ -1,8 +1,18 @@
-import { STARTUP_KEYS, getStartupValue, setStartupValue } from "@/lib/startupStorage";
+import {
+  STARTUP_KEYS,
+  getStartupValue,
+  setStartupValue,
+} from "@/lib/startupStorage";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,7 +24,11 @@ import {
   Text,
   View,
 } from "react-native";
-import Animated, { FadeIn, FadeOut, FadeOutDown } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  FadeOutDown,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
@@ -30,7 +44,10 @@ import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
 import { markStartupPhase } from "@/lib/coldStart";
-import { useDiscoverPlaces, useGeocodeLocation } from "@workspace/api-client-react";
+import {
+  useDiscoverPlaces,
+  useGeocodeLocation,
+} from "@workspace/api-client-react";
 
 interface DiscoveredPlace {
   id: string;
@@ -50,13 +67,19 @@ interface DiscoveredPlace {
 
 const DRIFT_THRESHOLD_METERS = 150;
 
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+function haversineMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
   const R = 6371000;
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
   const Δλ = ((lng2 - lng1) * Math.PI) / 180;
-  const a = Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
+  const a =
+    Math.sin(Δφ / 2) ** 2 + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -88,9 +111,7 @@ function formatCategoryLabel(cat: string): string {
   if (!cat) return "";
   const key = cat.toLowerCase().trim();
   if (OSM_CATEGORY_LABELS[key]) return OSM_CATEGORY_LABELS[key];
-  return key
-    .replace(/_+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return key.replace(/_+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function getEra(yearBuilt?: string): string | null {
@@ -98,7 +119,9 @@ function getEra(yearBuilt?: string): string | null {
   const match = yearBuilt.match(/\d{4}|\d{3}0s/);
   if (!match) return null;
   const yearStr = match[0];
-  const year = yearStr.endsWith("s") ? parseInt(yearStr.slice(0, -1), 10) : parseInt(yearStr, 10);
+  const year = yearStr.endsWith("s")
+    ? parseInt(yearStr.slice(0, -1), 10)
+    : parseInt(yearStr, 10);
   if (isNaN(year)) return null;
   if (year < 1850) return "Pre-1850";
   if (year < 1900) return "1850–1900";
@@ -116,13 +139,18 @@ export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [permission, requestPermission] = Location.useForegroundPermissions();
-  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [location, setLocation] = useState<Location.LocationObject | null>(
+    null,
+  );
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationCalibrating, setLocationCalibrating] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("map");
   const [searchRadius, setSearchRadius] = useState<150 | 300 | 500>(300);
 
-  const [manualCoords, setManualCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [manualCoords, setManualCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [showLocationSearch, setShowLocationSearch] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
@@ -158,37 +186,52 @@ export default function ExploreScreen() {
 
   const filterGroups = useMemo(() => {
     const cats = [...new Set(places.map((p) => p.category))].sort();
-    const eras = [...new Set(places.map((p) => getEra(p.yearBuilt)).filter(Boolean))] as string[];
-    const eraOrder = ["Pre-1850", "1850–1900", "1900–1930", "1930–1960", "1960–1990", "1990+"];
+    const eras = [
+      ...new Set(places.map((p) => getEra(p.yearBuilt)).filter(Boolean)),
+    ] as string[];
+    const eraOrder = [
+      "Pre-1850",
+      "1850–1900",
+      "1900–1930",
+      "1930–1960",
+      "1960–1990",
+      "1990+",
+    ];
     eras.sort((a, b) => eraOrder.indexOf(a) - eraOrder.indexOf(b));
     const allTags = places.flatMap((p) => p.tags || []);
     const tagCounts = new Map<string, number>();
     allTags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) || 0) + 1));
-    const tags = [...tagCounts.keys()].sort((a, b) => (tagCounts.get(b) || 0) - (tagCounts.get(a) || 0));
+    const tags = [...tagCounts.keys()].sort(
+      (a, b) => (tagCounts.get(b) || 0) - (tagCounts.get(a) || 0),
+    );
     return { categories: cats, eras, tags };
   }, [places]);
 
-  const allFilters = useMemo(() => [
-    ...filterGroups.categories,
-    ...filterGroups.eras,
-    ...filterGroups.tags,
-  ], [filterGroups]);
+  const allFilters = useMemo(
+    () => [
+      ...filterGroups.categories,
+      ...filterGroups.eras,
+      ...filterGroups.tags,
+    ],
+    [filterGroups],
+  );
 
   const filteredPlaces = useMemo(() => {
-    const filtered = activeFilters.size === 0
-      ? places
-      : places.filter((p) => {
-          const placeEra = getEra(p.yearBuilt);
-          const placeTags = new Set([
-            p.category,
-            ...(placeEra ? [placeEra] : []),
-            ...(p.tags || []),
-          ]);
-          for (const f of activeFilters) {
-            if (placeTags.has(f)) return true;
-          }
-          return false;
-        });
+    const filtered =
+      activeFilters.size === 0
+        ? places
+        : places.filter((p) => {
+            const placeEra = getEra(p.yearBuilt);
+            const placeTags = new Set([
+              p.category,
+              ...(placeEra ? [placeEra] : []),
+              ...(p.tags || []),
+            ]);
+            for (const f of activeFilters) {
+              if (placeTags.has(f)) return true;
+            }
+            return false;
+          });
     return [...filtered].sort((a, b) => (b.netScore ?? 0) - (a.netScore ?? 0));
   }, [places, activeFilters]);
 
@@ -203,7 +246,11 @@ export default function ExploreScreen() {
     }
   }, [discoverMutation.isPending]);
 
-  const { showWarning: showRatingPaceWarning, recordRating, dismissWarning } = useRatingPaceWarning();
+  const {
+    showWarning: showRatingPaceWarning,
+    recordRating,
+    dismissWarning,
+  } = useRatingPaceWarning();
 
   const WALK_BANNER_KEY = STARTUP_KEYS.walkBannerDismissed;
   const [showWalkBanner, setShowWalkBanner] = useState(true);
@@ -229,13 +276,20 @@ export default function ExploreScreen() {
 
   const handleWalkBannerTap = useCallback(() => {
     dismissWalkBanner();
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("/walk");
   }, [dismissWalkBanner, router]);
 
   const handlePlaceRated = useCallback(
-    (placeId: string, newRating: "up" | "down" | null, prevRating: "up" | "down" | null) => {
-      const delta = (newRating === "up" ? 1 : newRating === "down" ? -1 : 0) - (prevRating === "up" ? 1 : prevRating === "down" ? -1 : 0);
+    (
+      placeId: string,
+      newRating: "up" | "down" | null,
+      prevRating: "up" | "down" | null,
+    ) => {
+      const delta =
+        (newRating === "up" ? 1 : newRating === "down" ? -1 : 0) -
+        (prevRating === "up" ? 1 : prevRating === "down" ? -1 : 0);
       if (delta === 0) return;
       if (newRating !== null) {
         recordRating();
@@ -251,13 +305,17 @@ export default function ExploreScreen() {
     [recordRating],
   );
 
-  const handleToggleExpand = useCallback((itemId: string, isExpanded: boolean) => {
-    setExpandedId(isExpanded ? null : itemId);
-  }, []);
+  const handleToggleExpand = useCallback(
+    (itemId: string, isExpanded: boolean) => {
+      setExpandedId(isExpanded ? null : itemId);
+    },
+    [],
+  );
 
   const renderPlaceItem = useCallback(
     ({ item, index }: { item: DiscoveredPlace; index: number }) => {
-      const isExpanded = expandedId === item.id || (expandedId === null && index === 0);
+      const isExpanded =
+        expandedId === item.id || (expandedId === null && index === 0);
       return (
         <PlaceCard
           place={item}
@@ -271,19 +329,26 @@ export default function ExploreScreen() {
     [expandedId, handleToggleExpand, handlePlaceRated],
   );
 
-  const effectiveLatitude = manualCoords?.latitude ?? location?.coords.latitude ?? 0;
-  const effectiveLongitude = manualCoords?.longitude ?? location?.coords.longitude ?? 0;
+  const effectiveLatitude =
+    manualCoords?.latitude ?? location?.coords.latitude ?? 0;
+  const effectiveLongitude =
+    manualCoords?.longitude ?? location?.coords.longitude ?? 0;
   const hasCoords = !!(manualCoords || location);
 
   const getLocation = useCallback(async () => {
     setLocationLoading(true);
     setLocationCalibrating(false);
     const accuracyPref =
-      Platform.OS === "web" ? Location.Accuracy.High : Location.Accuracy.BestForNavigation;
+      Platform.OS === "web"
+        ? Location.Accuracy.High
+        : Location.Accuracy.BestForNavigation;
     const withTimeout = <T,>(p: Promise<T>, ms: number): Promise<T> => {
       let timerId: ReturnType<typeof setTimeout> | undefined;
       return Promise.race([
-        p.then((v) => { clearTimeout(timerId); return v; }),
+        p.then((v) => {
+          clearTimeout(timerId);
+          return v;
+        }),
         new Promise<T>((_, reject) => {
           timerId = setTimeout(() => reject(new Error("location-timeout")), ms);
         }),
@@ -360,7 +425,10 @@ export default function ExploreScreen() {
     }
   }, [permission?.granted, location, manualCoords, getLocation]);
 
-  const lastDiscoverCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const lastDiscoverCoordsRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [driftMeters, setDriftMeters] = useState(0);
 
   // Continuously watch GPS so the location stays fresh as the user walks.
@@ -409,13 +477,18 @@ export default function ExploreScreen() {
       cancelled = true;
       sub?.remove();
     };
-  // Re-run only when permission changes or the user toggles manual coords.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Re-run only when permission changes or the user toggles manual coords.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permission?.granted, !!manualCoords]);
 
   const discoverRequestRef = useRef(0);
   const discoverAt = useCallback(
-    (lat: number, lng: number, accuracy?: number | null, radiusOverride?: 150 | 300 | 500) => {
+    (
+      lat: number,
+      lng: number,
+      accuracy?: number | null,
+      radiusOverride?: 150 | 300 | 500,
+    ) => {
       const requestId = ++discoverRequestRef.current;
       const r = radiusOverride ?? searchRadius;
       lastDiscoverCoordsRef.current = { latitude: lat, longitude: lng };
@@ -477,11 +550,13 @@ export default function ExploreScreen() {
           onSuccess: (data: any) => {
             // Drop result if a newer pan fired while this one was in-flight.
             if (requestId !== mapRegionRequestRef.current) return;
-            const newPlaces = (data?.places as DiscoveredPlace[] | undefined) ?? [];
+            const newPlaces =
+              (data?.places as DiscoveredPlace[] | undefined) ?? [];
             if (newPlaces.length > 0) {
               const existing = new Set(
                 mapPlacesRef.current.map(
-                  (p) => `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`,
+                  (p) =>
+                    `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`,
                 ),
               );
               const fresh = newPlaces.filter((p) => {
@@ -517,7 +592,11 @@ export default function ExploreScreen() {
       loc = await getLocation();
     }
     if (loc) {
-      discoverAt(loc.coords.latitude, loc.coords.longitude, loc.coords.accuracy);
+      discoverAt(
+        loc.coords.latitude,
+        loc.coords.longitude,
+        loc.coords.accuracy,
+      );
     }
   }, [location, manualCoords, discoverAt, getLocation]);
 
@@ -528,8 +607,14 @@ export default function ExploreScreen() {
         { data: { query } },
         {
           onSuccess: (data: any) => {
-            if (typeof data?.latitude === "number" && typeof data?.longitude === "number") {
-              const coords = { latitude: data.latitude, longitude: data.longitude };
+            if (
+              typeof data?.latitude === "number" &&
+              typeof data?.longitude === "number"
+            ) {
+              const coords = {
+                latitude: data.latitude,
+                longitude: data.longitude,
+              };
               setManualCoords(coords);
               setShowLocationSearch(false);
               discoverAt(coords.latitude, coords.longitude);
@@ -551,8 +636,17 @@ export default function ExploreScreen() {
   );
 
   useEffect(() => {
-    if (location && !manualCoords && !discoverMutation.data && !discoverMutation.isPending) {
-      discoverAt(location.coords.latitude, location.coords.longitude, location.coords.accuracy);
+    if (
+      location &&
+      !manualCoords &&
+      !discoverMutation.data &&
+      !discoverMutation.isPending
+    ) {
+      discoverAt(
+        location.coords.latitude,
+        location.coords.longitude,
+        location.coords.accuracy,
+      );
     }
     // Only re-run on `location` change. Adding mutation state would cause an
     // infinite loop because discoverAt() sets discoverMutation.data itself.
@@ -573,14 +667,18 @@ export default function ExploreScreen() {
         onManualLocation={handleManualLocation}
         isGeocoding={geocodeMutation.isPending}
         geocodeError={geocodeError}
-        showBackButton={showLocationSearch && (permission?.granted || !!manualCoords)}
+        showBackButton={
+          showLocationSearch && (permission?.granted || !!manualCoords)
+        }
         onBack={() => setShowLocationSearch(false)}
         onWalkMode={() => {
-          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          if (Platform.OS !== "web")
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           router.push("/walk-mode");
         }}
         onWalkPlan={() => {
-          if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (Platform.OS !== "web")
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           router.push("/walk-plan");
         }}
       />
@@ -618,15 +716,16 @@ export default function ExploreScreen() {
             {locationCalibrating
               ? t.explore.improvingGps
               : locationLoading
-              ? t.explore.locating
-              : areaName || t.explore.readyToExplore}
+                ? t.explore.locating
+                : areaName || t.explore.readyToExplore}
             {!locationLoading && !manualCoords && location?.coords.accuracy
               ? `  ·  ±${Math.round(location.coords.accuracy)}m`
               : ""}
           </Text>
           <Pressable
             onPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (Platform.OS !== "web")
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setShowLanguagePicker(true);
             }}
             style={({ pressed }) => [
@@ -640,14 +739,26 @@ export default function ExploreScreen() {
           </Pressable>
         </View>
         <View style={styles.headerBottomRow}>
-          <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={1}>
+          <Text
+            style={[styles.title, { color: colors.foreground }]}
+            numberOfLines={1}
+          >
             {t.explore.discover}
           </Text>
           <View style={styles.headerActions}>
             {showContent && (
-              <View style={[styles.toggleContainer, { backgroundColor: colors.muted }]}>
+              <View
+                style={[
+                  styles.toggleContainer,
+                  { backgroundColor: colors.muted },
+                ]}
+              >
                 <Pressable
-                  onPress={() => { setViewMode("list"); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  onPress={() => {
+                    setViewMode("list");
+                    if (Platform.OS !== "web")
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
                   style={[
                     styles.toggleButton,
                     viewMode === "list" && { backgroundColor: colors.card },
@@ -659,11 +770,19 @@ export default function ExploreScreen() {
                   <Feather
                     name="list"
                     size={16}
-                    color={viewMode === "list" ? colors.foreground : colors.mutedForeground}
+                    color={
+                      viewMode === "list"
+                        ? colors.foreground
+                        : colors.mutedForeground
+                    }
                   />
                 </Pressable>
                 <Pressable
-                  onPress={() => { setViewMode("map"); if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  onPress={() => {
+                    setViewMode("map");
+                    if (Platform.OS !== "web")
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
                   style={[
                     styles.toggleButton,
                     viewMode === "map" && { backgroundColor: colors.card },
@@ -675,7 +794,11 @@ export default function ExploreScreen() {
                   <Feather
                     name="map"
                     size={16}
-                    color={viewMode === "map" ? colors.foreground : colors.mutedForeground}
+                    color={
+                      viewMode === "map"
+                        ? colors.foreground
+                        : colors.mutedForeground
+                    }
                   />
                 </Pressable>
               </View>
@@ -695,16 +818,31 @@ export default function ExploreScreen() {
               accessibilityLabel="Discover nearby places"
             >
               {discoverMutation.isPending ? (
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primaryForeground}
+                />
               ) : (
-                <Feather name="compass" size={20} color={colors.primaryForeground} />
+                <Feather
+                  name="compass"
+                  size={20}
+                  color={colors.primaryForeground}
+                />
               )}
-              <Text style={[styles.labeledHeaderBtnText, { color: colors.primaryForeground }]}>
+              <Text
+                style={[
+                  styles.labeledHeaderBtnText,
+                  { color: colors.primaryForeground },
+                ]}
+              >
                 Discover
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => { setGeocodeError(null); setShowLocationSearch(true); }}
+              onPress={() => {
+                setGeocodeError(null);
+                setShowLocationSearch(true);
+              }}
               style={({ pressed }) => [
                 styles.labeledHeaderBtn,
                 { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
@@ -713,7 +851,12 @@ export default function ExploreScreen() {
               accessibilityLabel="Search by location"
             >
               <Feather name="search" size={18} color={colors.foreground} />
-              <Text style={[styles.labeledHeaderBtnText, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.labeledHeaderBtnText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 Search
               </Text>
             </Pressable>
@@ -722,8 +865,18 @@ export default function ExploreScreen() {
       </View>
 
       {(hasCoords || locationLoading) && (
-        <View style={[styles.radiusRow, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
-          <Text style={[styles.radiusLabel, { color: colors.mutedForeground }]}>{t.explore.range}</Text>
+        <View
+          style={[
+            styles.radiusRow,
+            {
+              borderBottomColor: colors.border,
+              backgroundColor: colors.background,
+            },
+          ]}
+        >
+          <Text style={[styles.radiusLabel, { color: colors.mutedForeground }]}>
+            {t.explore.range}
+          </Text>
           {([150, 300, 500] as const).map((r) => {
             const isActive = searchRadius === r;
             return (
@@ -732,9 +885,15 @@ export default function ExploreScreen() {
                 onPress={() => {
                   if (r === searchRadius) return;
                   setSearchRadius(r);
-                  if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  if (Platform.OS !== "web")
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   if (manualCoords) {
-                    discoverAt(manualCoords.latitude, manualCoords.longitude, null, r);
+                    discoverAt(
+                      manualCoords.latitude,
+                      manualCoords.longitude,
+                      null,
+                      r,
+                    );
                   } else if (location) {
                     discoverAt(
                       location.coords.latitude,
@@ -746,7 +905,11 @@ export default function ExploreScreen() {
                 }}
                 style={[
                   styles.radiusChip,
-                  { backgroundColor: isActive ? colors.foreground : colors.muted },
+                  {
+                    backgroundColor: isActive
+                      ? colors.foreground
+                      : colors.muted,
+                  },
                 ]}
                 accessibilityRole="button"
                 accessibilityLabel={`Set discovery range to ${r} meters`}
@@ -755,10 +918,19 @@ export default function ExploreScreen() {
                 <Text
                   style={[
                     styles.radiusChipText,
-                    { color: isActive ? colors.background : colors.mutedForeground },
+                    {
+                      color: isActive
+                        ? colors.background
+                        : colors.mutedForeground,
+                    },
                   ]}
                 >
-                  {r === 150 ? t.explore.rangeClose : r === 300 ? t.explore.rangeMedium : t.explore.rangeWide} · {r}m
+                  {r === 150
+                    ? t.explore.rangeClose
+                    : r === 300
+                      ? t.explore.rangeMedium
+                      : t.explore.rangeWide}{" "}
+                  · {r}m
                 </Text>
               </Pressable>
             );
@@ -776,12 +948,14 @@ export default function ExploreScreen() {
             <Pressable
               onPress={() => {
                 setActiveFilters(new Set());
-                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (Platform.OS !== "web")
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               style={[
                 styles.filterChip,
                 {
-                  backgroundColor: activeFilters.size === 0 ? colors.foreground : colors.muted,
+                  backgroundColor:
+                    activeFilters.size === 0 ? colors.foreground : colors.muted,
                 },
               ]}
               accessibilityRole="button"
@@ -791,49 +965,68 @@ export default function ExploreScreen() {
               <Text
                 style={[
                   styles.filterChipText,
-                  { color: activeFilters.size === 0 ? colors.background : colors.mutedForeground },
+                  {
+                    color:
+                      activeFilters.size === 0
+                        ? colors.background
+                        : colors.mutedForeground,
+                  },
                 ]}
               >
                 {t.explore.all}
               </Text>
             </Pressable>
-            {filterGroups.categories.length > 1 && filterGroups.categories.map((cat) => {
-              const isActive = activeFilters.has(cat);
-              return (
-                <Pressable
-                  key={`cat-${cat}`}
-                  onPress={() => {
-                    setActiveFilters((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(cat)) next.delete(cat); else next.add(cat);
-                      return next;
-                    });
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.filterChip,
-                    {
-                      backgroundColor: isActive ? colors.foreground : colors.muted,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Filter by ${formatCategoryLabel(cat)}`}
-                  accessibilityState={{ selected: isActive }}
-                >
-                  <Text
+            {filterGroups.categories.length > 1 &&
+              filterGroups.categories.map((cat) => {
+                const isActive = activeFilters.has(cat);
+                return (
+                  <Pressable
+                    key={`cat-${cat}`}
+                    onPress={() => {
+                      setActiveFilters((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(cat)) next.delete(cat);
+                        else next.add(cat);
+                        return next;
+                      });
+                      if (Platform.OS !== "web")
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
                     style={[
-                      styles.filterChipText,
-                      { color: isActive ? colors.background : colors.mutedForeground },
+                      styles.filterChip,
+                      {
+                        backgroundColor: isActive
+                          ? colors.foreground
+                          : colors.muted,
+                      },
                     ]}
-                    numberOfLines={1}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Filter by ${formatCategoryLabel(cat)}`}
+                    accessibilityState={{ selected: isActive }}
                   >
-                    {formatCategoryLabel(cat)}
-                  </Text>
-                </Pressable>
-              );
-            })}
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        {
+                          color: isActive
+                            ? colors.background
+                            : colors.mutedForeground,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {formatCategoryLabel(cat)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             {filterGroups.eras.length > 0 && (
-              <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+              <View
+                style={[
+                  styles.filterDivider,
+                  { backgroundColor: colors.border },
+                ]}
+              />
             )}
             {filterGroups.eras.map((era) => {
               const isActive = activeFilters.has(era);
@@ -843,16 +1036,20 @@ export default function ExploreScreen() {
                   onPress={() => {
                     setActiveFilters((prev) => {
                       const next = new Set(prev);
-                      if (next.has(era)) next.delete(era); else next.add(era);
+                      if (next.has(era)) next.delete(era);
+                      else next.add(era);
                       return next;
                     });
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (Platform.OS !== "web")
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                   style={[
                     styles.filterChip,
                     styles.filterChipEra,
                     {
-                      backgroundColor: isActive ? colors.primary : colors.primary + "15",
+                      backgroundColor: isActive
+                        ? colors.primary
+                        : colors.primary + "15",
                       borderColor: colors.primary + "30",
                     },
                   ]}
@@ -860,11 +1057,19 @@ export default function ExploreScreen() {
                   accessibilityLabel={`Filter by era: ${era}`}
                   accessibilityState={{ selected: isActive }}
                 >
-                  <Feather name="clock" size={11} color={isActive ? colors.primaryForeground : colors.primary} />
+                  <Feather
+                    name="clock"
+                    size={11}
+                    color={isActive ? colors.primaryForeground : colors.primary}
+                  />
                   <Text
                     style={[
                       styles.filterChipText,
-                      { color: isActive ? colors.primaryForeground : colors.primary },
+                      {
+                        color: isActive
+                          ? colors.primaryForeground
+                          : colors.primary,
+                      },
                     ]}
                   >
                     {era}
@@ -873,7 +1078,12 @@ export default function ExploreScreen() {
               );
             })}
             {filterGroups.tags.length > 0 && (
-              <View style={[styles.filterDivider, { backgroundColor: colors.border }]} />
+              <View
+                style={[
+                  styles.filterDivider,
+                  { backgroundColor: colors.border },
+                ]}
+              />
             )}
             {filterGroups.tags.map((tag) => {
               const isActive = activeFilters.has(tag);
@@ -883,15 +1093,19 @@ export default function ExploreScreen() {
                   onPress={() => {
                     setActiveFilters((prev) => {
                       const next = new Set(prev);
-                      if (next.has(tag)) next.delete(tag); else next.add(tag);
+                      if (next.has(tag)) next.delete(tag);
+                      else next.add(tag);
                       return next;
                     });
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (Platform.OS !== "web")
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }}
                   style={[
                     styles.filterChip,
                     {
-                      backgroundColor: isActive ? colors.foreground : colors.muted,
+                      backgroundColor: isActive
+                        ? colors.foreground
+                        : colors.muted,
                     },
                   ]}
                   accessibilityRole="button"
@@ -901,7 +1115,11 @@ export default function ExploreScreen() {
                   <Text
                     style={[
                       styles.filterChipText,
-                      { color: isActive ? colors.background : colors.mutedForeground },
+                      {
+                        color: isActive
+                          ? colors.background
+                          : colors.mutedForeground,
+                      },
                     ]}
                   >
                     #{tag}
@@ -924,11 +1142,24 @@ export default function ExploreScreen() {
             accessibilityRole="button"
             accessibilityLabel={`You've moved ${Math.round(driftMeters)}m — tap to refresh results for this area`}
           >
-            <Feather name="navigation" size={14} color={colors.primaryForeground} />
-            <Text style={[styles.driftBannerText, { color: colors.primaryForeground }]}>
+            <Feather
+              name="navigation"
+              size={14}
+              color={colors.primaryForeground}
+            />
+            <Text
+              style={[
+                styles.driftBannerText,
+                { color: colors.primaryForeground },
+              ]}
+            >
               {t.explore.driftBanner}
             </Text>
-            <Feather name="refresh-cw" size={14} color={colors.primaryForeground} />
+            <Feather
+              name="refresh-cw"
+              size={14}
+              color={colors.primaryForeground}
+            />
           </Pressable>
         </Animated.View>
       )}
@@ -961,7 +1192,13 @@ export default function ExploreScreen() {
                 <Animated.View
                   entering={FadeIn.duration(300)}
                   exiting={FadeOut.duration(200)}
-                  style={[styles.walkBanner, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "40" }]}
+                  style={[
+                    styles.walkBanner,
+                    {
+                      backgroundColor: colors.primary + "18",
+                      borderColor: colors.primary + "40",
+                    },
+                  ]}
                 >
                   <Pressable
                     onPress={handleWalkBannerTap}
@@ -970,11 +1207,21 @@ export default function ExploreScreen() {
                     accessibilityLabel="Start Walking — tap to open Walk tab"
                     accessibilityHint="Opens the Walk tab to start your audio tour"
                   >
-                    <Feather name="headphones" size={16} color={colors.primary} />
-                    <Text style={[styles.walkBannerText, { color: colors.primary }]}>
+                    <Feather
+                      name="headphones"
+                      size={16}
+                      color={colors.primary}
+                    />
+                    <Text
+                      style={[styles.walkBannerText, { color: colors.primary }]}
+                    >
                       Tap Walk tab to start your audio tour
                     </Text>
-                    <Feather name="arrow-right" size={14} color={colors.primary} />
+                    <Feather
+                      name="arrow-right"
+                      size={14}
+                      color={colors.primary}
+                    />
                   </Pressable>
                   <Pressable
                     onPress={dismissWalkBanner}
@@ -982,7 +1229,12 @@ export default function ExploreScreen() {
                     accessibilityRole="button"
                     accessibilityLabel="Dismiss tip"
                   >
-                    <Feather name="x" size={14} color={colors.primary} style={{ opacity: 0.6 }} />
+                    <Feather
+                      name="x"
+                      size={14}
+                      color={colors.primary}
+                      style={{ opacity: 0.6 }}
+                    />
                   </Pressable>
                 </Animated.View>
               ) : null}
@@ -991,7 +1243,8 @@ export default function ExploreScreen() {
                 <>
                   <Pressable
                     onPress={() => {
-                      if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (Platform.OS !== "web")
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       router.push("/investigate");
                     }}
                     style={({ pressed }) => [
@@ -1008,41 +1261,64 @@ export default function ExploreScreen() {
                     accessibilityHint="Look up the history of a specific building by address"
                   >
                     <View style={styles.cardRow}>
-                      <Feather name="search" size={20} color={colors.foreground} />
+                      <Feather
+                        name="search"
+                        size={20}
+                        color={colors.foreground}
+                      />
                       <View style={styles.cardRowText}>
-                        <Text style={[styles.investigateCardTitle, { color: colors.foreground }]}>
+                        <Text
+                          style={[
+                            styles.investigateCardTitle,
+                            { color: colors.foreground },
+                          ]}
+                        >
                           {t.explore.investigateTitle}
                         </Text>
-                        <Text style={[styles.investigateCardSubtitle, { color: colors.mutedForeground }]}>
+                        <Text
+                          style={[
+                            styles.investigateCardSubtitle,
+                            { color: colors.mutedForeground },
+                          ]}
+                        >
                           {t.explore.investigateSubtitle}
                         </Text>
                       </View>
-                      <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+                      <Feather
+                        name="chevron-right"
+                        size={18}
+                        color={colors.mutedForeground}
+                      />
                     </View>
                   </Pressable>
 
                   {showRatingPaceWarning ? (
-                  <Animated.View
-                    entering={FadeIn.duration(250)}
-                    exiting={FadeOut.duration(200)}
-                    style={styles.ratingPaceWarning}
-                    accessibilityRole="alert"
-                    accessibilityLabel="You're rating quickly — pace yourself"
-                  >
-                    <Feather name="clock" size={14} color="#92400e" />
-                    <Text style={styles.ratingPaceWarningText}>
-                      {t.explore.ratingPaceWarning}
-                    </Text>
-                    <Pressable
-                      onPress={dismissWarning}
-                      hitSlop={12}
-                      accessibilityRole="button"
-                      accessibilityLabel="Dismiss warning"
+                    <Animated.View
+                      entering={FadeIn.duration(250)}
+                      exiting={FadeOut.duration(200)}
+                      style={styles.ratingPaceWarning}
+                      accessibilityRole="alert"
+                      accessibilityLabel="You're rating quickly — pace yourself"
                     >
-                      <Feather name="x" size={14} color="#92400e" style={{ opacity: 0.7 }} />
-                    </Pressable>
-                  </Animated.View>
-                ) : null}
+                      <Feather name="clock" size={14} color="#92400e" />
+                      <Text style={styles.ratingPaceWarningText}>
+                        {t.explore.ratingPaceWarning}
+                      </Text>
+                      <Pressable
+                        onPress={dismissWarning}
+                        hitSlop={12}
+                        accessibilityRole="button"
+                        accessibilityLabel="Dismiss warning"
+                      >
+                        <Feather
+                          name="x"
+                          size={14}
+                          color="#92400e"
+                          style={{ opacity: 0.7 }}
+                        />
+                      </Pressable>
+                    </Animated.View>
+                  ) : null}
                 </>
               ) : null}
             </View>
@@ -1063,23 +1339,31 @@ export default function ExploreScreen() {
                 <PlaceCardSkeleton count={4} />
                 <LoadingMessages variant="discovery" />
                 {showStillLoading ? (
-                  <StillLoadingHint hint={t.explore.stillLoading} variant="fadeIn" exiting={FadeOutDown.duration(300)} />
+                  <StillLoadingHint
+                    hint={t.explore.stillLoading}
+                    variant="fadeIn"
+                    exiting={FadeOutDown.duration(300)}
+                  />
                 ) : null}
               </Animated.View>
             ) : discoverMutation.isError ? (
               <View style={styles.emptyContainer}>
-                <Feather name="alert-circle" size={40} color={colors.mutedForeground} />
-                <Text
-                  style={[styles.emptyTitle, { color: colors.foreground }]}
-                >
-                  {(discoverMutation.error as any)?.status === 429 || (discoverMutation.error as any)?.status === 503
+                <Feather
+                  name="alert-circle"
+                  size={40}
+                  color={colors.mutedForeground}
+                />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+                  {(discoverMutation.error as any)?.status === 429 ||
+                  (discoverMutation.error as any)?.status === 503
                     ? t.explore.busyTitle
                     : t.explore.errorTitle}
                 </Text>
                 <Text
                   style={[styles.emptyText, { color: colors.mutedForeground }]}
                 >
-                  {(discoverMutation.error as any)?.status === 429 || (discoverMutation.error as any)?.status === 503
+                  {(discoverMutation.error as any)?.status === 429 ||
+                  (discoverMutation.error as any)?.status === 503
                     ? t.explore.busyDetail
                     : t.explore.errorDetail}
                 </Text>
@@ -1095,7 +1379,11 @@ export default function ExploreScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Retry discovering places"
                 >
-                  <Feather name="refresh-cw" size={16} color={colors.primaryForeground} />
+                  <Feather
+                    name="refresh-cw"
+                    size={16}
+                    color={colors.primaryForeground}
+                  />
                   <Text
                     style={[
                       styles.retryText,
@@ -1108,11 +1396,17 @@ export default function ExploreScreen() {
               </View>
             ) : discoverMutation.isSuccess ? (
               <View style={styles.emptyContainer}>
-                <Feather name="map-pin" size={40} color={colors.mutedForeground} />
+                <Feather
+                  name="map-pin"
+                  size={40}
+                  color={colors.mutedForeground}
+                />
                 <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                   {t.explore.nothingFoundTitle}
                 </Text>
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                <Text
+                  style={[styles.emptyText, { color: colors.mutedForeground }]}
+                >
                   {t.explore.nothingFoundDetail}
                 </Text>
                 <View style={styles.emptyActions}>
@@ -1121,19 +1415,47 @@ export default function ExploreScreen() {
                       onPress={() => {
                         const next = searchRadius === 150 ? 300 : 500;
                         setSearchRadius(next);
-                        if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        const coords = manualCoords ?? (location ? { latitude: location.coords.latitude, longitude: location.coords.longitude } : null);
-                        if (coords) discoverAt(coords.latitude, coords.longitude, location?.coords.accuracy ?? null, next);
+                        if (Platform.OS !== "web")
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
+                          );
+                        const coords =
+                          manualCoords ??
+                          (location
+                            ? {
+                                latitude: location.coords.latitude,
+                                longitude: location.coords.longitude,
+                              }
+                            : null);
+                        if (coords)
+                          discoverAt(
+                            coords.latitude,
+                            coords.longitude,
+                            location?.coords.accuracy ?? null,
+                            next,
+                          );
                       }}
                       style={({ pressed }) => [
                         styles.retryButton,
-                        { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+                        {
+                          backgroundColor: colors.primary,
+                          opacity: pressed ? 0.85 : 1,
+                        },
                       ]}
                       accessibilityRole="button"
                       accessibilityLabel="Try wider search range"
                     >
-                      <Feather name="maximize" size={16} color={colors.primaryForeground} />
-                      <Text style={[styles.retryText, { color: colors.primaryForeground }]}>
+                      <Feather
+                        name="maximize"
+                        size={16}
+                        color={colors.primaryForeground}
+                      />
+                      <Text
+                        style={[
+                          styles.retryText,
+                          { color: colors.primaryForeground },
+                        ]}
+                      >
                         {t.explore.tryRange(searchRadius === 150 ? 300 : 500)}
                       </Text>
                     </Pressable>
@@ -1142,22 +1464,35 @@ export default function ExploreScreen() {
                     onPress={handleDiscover}
                     style={({ pressed }) => [
                       styles.retryButton,
-                      { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
+                      {
+                        backgroundColor: colors.muted,
+                        opacity: pressed ? 0.85 : 1,
+                      },
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel="Search again"
                   >
-                    <Feather name="refresh-cw" size={16} color={colors.foreground} />
-                    <Text style={[styles.retryText, { color: colors.foreground }]}>{t.explore.searchAgain}</Text>
+                    <Feather
+                      name="refresh-cw"
+                      size={16}
+                      color={colors.foreground}
+                    />
+                    <Text
+                      style={[styles.retryText, { color: colors.foreground }]}
+                    >
+                      {t.explore.searchAgain}
+                    </Text>
                   </Pressable>
                 </View>
               </View>
             ) : (
               <View style={styles.emptyContainer}>
-                <Feather name="compass" size={40} color={colors.mutedForeground} />
-                <Text
-                  style={[styles.emptyTitle, { color: colors.foreground }]}
-                >
+                <Feather
+                  name="compass"
+                  size={40}
+                  color={colors.mutedForeground}
+                />
+                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                   {t.explore.startExploringTitle}
                 </Text>
                 <Text

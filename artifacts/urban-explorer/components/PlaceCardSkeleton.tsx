@@ -39,7 +39,10 @@ export function PlaceCardSkeleton({ count = 4 }: Props) {
     return () => loop.stop();
   }, [pulse]);
 
-  const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
+  const opacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.55, 1],
+  });
   const blockBg = colors.muted;
 
   return (
@@ -60,10 +63,20 @@ export function PlaceCardSkeleton({ count = 4 }: Props) {
             },
           ]}
         >
-          <View style={[styles.titleBar, { backgroundColor: blockBg, width: idx % 2 === 0 ? "70%" : "55%" }]} />
+          <View
+            style={[
+              styles.titleBar,
+              {
+                backgroundColor: blockBg,
+                width: idx % 2 === 0 ? "70%" : "55%",
+              },
+            ]}
+          />
           <View style={[styles.metaBar, { backgroundColor: blockBg }]} />
           <View style={[styles.bodyBar, { backgroundColor: blockBg }]} />
-          <View style={[styles.bodyBar, { backgroundColor: blockBg, width: "85%" }]} />
+          <View
+            style={[styles.bodyBar, { backgroundColor: blockBg, width: "85%" }]}
+          />
         </Animated.View>
       ))}
     </View>

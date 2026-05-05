@@ -1,4 +1,10 @@
-import { Landmark, Search, Headphones, Navigation, Bookmark } from "lucide-react";
+import {
+  Landmark,
+  Search,
+  Headphones,
+  Navigation,
+  Bookmark,
+} from "lucide-react";
 
 const colors = {
   background: "#F5F2F3",
@@ -249,7 +255,11 @@ export function DustyRose() {
             gap: 4,
           }}
         >
-          <Bookmark size={22} color={colors.mutedForeground} strokeWidth={1.8} />
+          <Bookmark
+            size={22}
+            color={colors.mutedForeground}
+            strokeWidth={1.8}
+          />
           <span
             style={{
               fontSize: 11,

@@ -37,7 +37,12 @@ const LEAFLET_CSS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
 const LEAFLET_JS = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
 const PAN_DISTANCE_THRESHOLD = 150;
 
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -101,7 +106,8 @@ export function PlaceMapView({
     }).setView([userLatitude, userLongitude], 16);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
 
@@ -169,7 +175,9 @@ export function PlaceMapView({
         iconAnchor: [14, 14],
       });
 
-      const marker = L.marker([place.latitude, place.longitude], { icon }).addTo(map);
+      const marker = L.marker([place.latitude, place.longitude], {
+        icon,
+      }).addTo(map);
       marker.on("click", () => setSelectedPlace(place));
       markersRef.current.push(marker);
     });
@@ -215,9 +223,16 @@ export function PlaceMapView({
       />
 
       {isLoadingMore && (
-        <View style={[styles.loadingBadge, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.loadingBadge,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={[styles.loadingBadgeText, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.loadingBadgeText, { color: colors.mutedForeground }]}
+          >
             Finding places...
           </Text>
         </View>
@@ -237,7 +252,12 @@ export function PlaceMapView({
             ]}
           >
             <View style={styles.cardHeader}>
-              <View style={[styles.iconContainer, { backgroundColor: colors.primary + "18" }]}>
+              <View
+                style={[
+                  styles.iconContainer,
+                  { backgroundColor: colors.primary + "18" },
+                ]}
+              >
                 <MaterialCommunityIcons
                   name={getCategoryIcon(selectedPlace.category) as any}
                   size={20}
@@ -245,23 +265,40 @@ export function PlaceMapView({
                 />
               </View>
               <View style={styles.cardHeaderText}>
-                <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>
+                <Text
+                  style={[styles.cardName, { color: colors.foreground }]}
+                  numberOfLines={1}
+                >
                   {selectedPlace.name}
                 </Text>
-                <Text style={[styles.cardCategory, { color: colors.mutedForeground }]}>
+                <Text
+                  style={[
+                    styles.cardCategory,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
                   {selectedPlace.category}
-                  {selectedPlace.yearBuilt ? ` \u00B7 ${selectedPlace.yearBuilt}` : ""}
+                  {selectedPlace.yearBuilt
+                    ? ` \u00B7 ${selectedPlace.yearBuilt}`
+                    : ""}
                 </Text>
               </View>
               <Pressable onPress={handleSave} hitSlop={12}>
                 <Feather
                   name="bookmark"
                   size={20}
-                  color={isPlaceSaved(selectedPlace.id) ? colors.primary : colors.mutedForeground}
+                  color={
+                    isPlaceSaved(selectedPlace.id)
+                      ? colors.primary
+                      : colors.mutedForeground
+                  }
                 />
               </Pressable>
             </View>
-            <Text style={[styles.cardSummary, { color: colors.foreground }]} numberOfLines={2}>
+            <Text
+              style={[styles.cardSummary, { color: colors.foreground }]}
+              numberOfLines={2}
+            >
               {selectedPlace.summary}
             </Text>
             <View style={styles.cardFooter}>

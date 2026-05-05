@@ -32,7 +32,10 @@ import { useState, useEffect } from "react";
  * - `app/investigate.tsx` — used with `useInvestigateAddress` (discovery flow)
  * - `app/place-detail.tsx` — used with `useGetPlaceDetail` (history enrichment flow)
  */
-export function useStillLoading(isPending: boolean, delayMs: number = 10_000): boolean {
+export function useStillLoading(
+  isPending: boolean,
+  delayMs: number = 10_000,
+): boolean {
   const [showStillLoading, setShowStillLoading] = useState(false);
 
   useEffect(() => {

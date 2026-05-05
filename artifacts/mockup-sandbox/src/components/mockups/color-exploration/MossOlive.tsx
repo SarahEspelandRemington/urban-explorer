@@ -1,4 +1,10 @@
-import { TreePine, Search, Headphones, Navigation, Bookmark } from "lucide-react";
+import {
+  TreePine,
+  Search,
+  Headphones,
+  Navigation,
+  Bookmark,
+} from "lucide-react";
 
 const colors = {
   background: "#F4F5F2",
@@ -249,7 +255,11 @@ export function MossOlive() {
             gap: 4,
           }}
         >
-          <Bookmark size={22} color={colors.mutedForeground} strokeWidth={1.8} />
+          <Bookmark
+            size={22}
+            color={colors.mutedForeground}
+            strokeWidth={1.8}
+          />
           <span
             style={{
               fontSize: 11,

@@ -88,7 +88,9 @@ async function createDashboard(
   const title = "Walk Mode Prefetch";
   const existing = await findExistingDashboard(token, org, title);
   if (existing) {
-    console.log(`Dashboard "${title}" already exists (id=${existing.id}), reusing.`);
+    console.log(
+      `Dashboard "${title}" already exists (id=${existing.id}), reusing.`,
+    );
     return existing;
   }
 
@@ -223,8 +225,12 @@ async function main(): Promise<void> {
   await patchReplitMd(org, dashboard.id, alertRule.id);
 
   console.log("\nDone. Verify in Sentry:");
-  console.log(`  Dashboard: ${SENTRY_HOST}/organizations/${org}/dashboard/${dashboard.id}/`);
-  console.log(`  Alert:     ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${alertRule.id}/`);
+  console.log(
+    `  Dashboard: ${SENTRY_HOST}/organizations/${org}/dashboard/${dashboard.id}/`,
+  );
+  console.log(
+    `  Alert:     ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${alertRule.id}/`,
+  );
 }
 
 main().catch((err) => {

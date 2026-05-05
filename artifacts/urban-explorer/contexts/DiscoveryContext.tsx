@@ -1,5 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { STARTUP_KEYS, getStartupValue } from "@/lib/startupStorage";
 
@@ -62,7 +69,7 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback((places: SavedPlace[]) => {
     writeQueueRef.current = writeQueueRef.current.then(() =>
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(places)).catch(() => {})
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(places)).catch(() => {}),
     );
   }, []);
 
@@ -70,12 +77,15 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
     (place: Omit<SavedPlace, "savedAt" | "note">) => {
       setSavedPlaces((prev) => {
         if (prev.some((p) => p.id === place.id)) return prev;
-        const updated = [{ ...place, savedAt: new Date().toISOString() }, ...prev];
+        const updated = [
+          { ...place, savedAt: new Date().toISOString() },
+          ...prev,
+        ];
         persist(updated);
         return updated;
       });
     },
-    [persist]
+    [persist],
   );
 
   const removePlace = useCallback(
@@ -86,29 +96,31 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
         return updated;
       });
     },
-    [persist]
+    [persist],
   );
 
   const isPlaceSaved = useCallback(
     (id: string) => savedPlaces.some((p) => p.id === id),
-    [savedPlaces]
+    [savedPlaces],
   );
 
   const updateNote = useCallback(
     (id: string, note: string) => {
       setSavedPlaces((prev) => {
         const updated = prev.map((p) =>
-          p.id === id ? { ...p, note: note || undefined } : p
+          p.id === id ? { ...p, note: note || undefined } : p,
         );
         persist(updated);
         return updated;
       });
     },
-    [persist]
+    [persist],
   );
 
   return (
-    <DiscoveryContext.Provider value={{ savedPlaces, savePlace, removePlace, isPlaceSaved, updateNote }}>
+    <DiscoveryContext.Provider
+      value={{ savedPlaces, savePlace, removePlace, isPlaceSaved, updateNote }}
+    >
       {children}
     </DiscoveryContext.Provider>
   );

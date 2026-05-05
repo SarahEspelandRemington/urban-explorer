@@ -97,7 +97,18 @@ describe("walkSessionManager — CAS callback, no ghost state", () => {
   test("dispatchLocation forwards to the active callback", () => {
     const cb = jest.fn();
     installSessionCallback(cb);
-    const fakeLoc = { coords: { latitude: 51.5, longitude: -0.1, altitude: 0, accuracy: 5, altitudeAccuracy: 5, heading: 0, speed: 0 }, timestamp: Date.now() } as Parameters<typeof dispatchLocation>[0];
+    const fakeLoc = {
+      coords: {
+        latitude: 51.5,
+        longitude: -0.1,
+        altitude: 0,
+        accuracy: 5,
+        altitudeAccuracy: 5,
+        heading: 0,
+        speed: 0,
+      },
+      timestamp: Date.now(),
+    } as Parameters<typeof dispatchLocation>[0];
     dispatchLocation(fakeLoc);
     expect(cb).toHaveBeenCalledTimes(1);
     expect(cb).toHaveBeenCalledWith(fakeLoc);
@@ -107,7 +118,18 @@ describe("walkSessionManager — CAS callback, no ghost state", () => {
     const cb = jest.fn();
     const session = installSessionCallback(cb);
     session.stop();
-    const fakeLoc = { coords: { latitude: 51.5, longitude: -0.1, altitude: 0, accuracy: 5, altitudeAccuracy: 5, heading: 0, speed: 0 }, timestamp: Date.now() } as Parameters<typeof dispatchLocation>[0];
+    const fakeLoc = {
+      coords: {
+        latitude: 51.5,
+        longitude: -0.1,
+        altitude: 0,
+        accuracy: 5,
+        altitudeAccuracy: 5,
+        heading: 0,
+        speed: 0,
+      },
+      timestamp: Date.now(),
+    } as Parameters<typeof dispatchLocation>[0];
     dispatchLocation(fakeLoc);
     expect(cb).not.toHaveBeenCalled();
   });
@@ -118,7 +140,18 @@ describe("walkSessionManager — CAS callback, no ghost state", () => {
     const sA = installSessionCallback(cbA);
     installSessionCallback(cbB);
     sA.stop();
-    const fakeLoc = { coords: { latitude: 51.5, longitude: -0.1, altitude: 0, accuracy: 5, altitudeAccuracy: 5, heading: 0, speed: 0 }, timestamp: Date.now() } as Parameters<typeof dispatchLocation>[0];
+    const fakeLoc = {
+      coords: {
+        latitude: 51.5,
+        longitude: -0.1,
+        altitude: 0,
+        accuracy: 5,
+        altitudeAccuracy: 5,
+        heading: 0,
+        speed: 0,
+      },
+      timestamp: Date.now(),
+    } as Parameters<typeof dispatchLocation>[0];
     dispatchLocation(fakeLoc);
     expect(cbB).toHaveBeenCalledTimes(1);
     expect(cbA).not.toHaveBeenCalled();
@@ -140,9 +173,15 @@ describe("executeStopWalkSync (NowPlaying stop-ordering guard)", () => {
     return {
       callOrder,
       isWalkingRef: { current: true },
-      nowPlayingUnsub: jest.fn(() => { callOrder.push("nowPlayingUnsub"); }),
-      nowPlayingClear: jest.fn(() => { callOrder.push("NowPlaying.clear"); }),
-      narrationStop: jest.fn(() => { callOrder.push("narration.stop"); }),
+      nowPlayingUnsub: jest.fn(() => {
+        callOrder.push("nowPlayingUnsub");
+      }),
+      nowPlayingClear: jest.fn(() => {
+        callOrder.push("NowPlaying.clear");
+      }),
+      narrationStop: jest.fn(() => {
+        callOrder.push("narration.stop");
+      }),
     };
   }
 
@@ -156,7 +195,7 @@ describe("executeStopWalkSync (NowPlaying stop-ordering guard)", () => {
     const deps = buildDeps();
     executeStopWalkSync(deps);
     const clearIdx = deps.callOrder.indexOf("NowPlaying.clear");
-    const stopIdx  = deps.callOrder.indexOf("narration.stop");
+    const stopIdx = deps.callOrder.indexOf("narration.stop");
     expect(clearIdx).toBeGreaterThanOrEqual(0);
     expect(stopIdx).toBeGreaterThanOrEqual(0);
     expect(clearIdx).toBeLessThan(stopIdx);
@@ -220,8 +259,12 @@ describe("executeStopWalkSync (NowPlaying stop-ordering guard)", () => {
 // Tests verify the throw is caught and the function falls through to the text
 // endpoint, returning { kind: "text" } rather than propagating the error.
 
-jest.mock("../lib/walkAudioCache", () => ({ writeNarrationAudioToCache: jest.fn() }));
-jest.mock("../lib/apiToken", () => ({ authHeaders: jest.fn(async () => ({})) }));
+jest.mock("../lib/walkAudioCache", () => ({
+  writeNarrationAudioToCache: jest.fn(),
+}));
+jest.mock("../lib/apiToken", () => ({
+  authHeaders: jest.fn(async () => ({})),
+}));
 jest.mock("../lib/sentryWalk", () => ({
   addWalkBreadcrumb: jest.fn(),
   trackNarrationFallback: jest.fn(),
@@ -254,8 +297,12 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
   });
 
   test("returns text payload when writeNarrationAudioToCache throws (bad Paths.cache)", async () => {
-    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as { writeNarrationAudioToCache: jest.Mock };
-    writeNarrationAudioToCache.mockImplementation(() => { throw new TypeError("Paths.cache is undefined"); });
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
+    writeNarrationAudioToCache.mockImplementation(() => {
+      throw new TypeError("Paths.cache is undefined");
+    });
     mockFetch
       .mockResolvedValueOnce(audioFetch(16))
       .mockResolvedValueOnce(textFetch("An old town hall."));
@@ -266,8 +313,12 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
   });
 
   test("does not throw when writeNarrationAudioToCache throws (error is swallowed)", async () => {
-    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as { writeNarrationAudioToCache: jest.Mock };
-    writeNarrationAudioToCache.mockImplementation(() => { throw new Error("disk full"); });
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
+    writeNarrationAudioToCache.mockImplementation(() => {
+      throw new Error("disk full");
+    });
     mockFetch
       .mockResolvedValueOnce(audioFetch(8))
       .mockResolvedValueOnce(textFetch("Fallback narration."));
@@ -277,18 +328,29 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
   });
 
   test("returns audio payload when writeNarrationAudioToCache succeeds", async () => {
-    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as { writeNarrationAudioToCache: jest.Mock };
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
     const mockCleanup = jest.fn();
-    writeNarrationAudioToCache.mockReturnValue({ uri: "file:///cache/walk-narr-abc.mp3", cleanup: mockCleanup });
+    writeNarrationAudioToCache.mockReturnValue({
+      uri: "file:///cache/walk-narr-abc.mp3",
+      cleanup: mockCleanup,
+    });
     mockFetch.mockResolvedValueOnce(audioFetch(16));
 
     const { fetchNarrationPayload } = require("../lib/fetchNarrationPayload");
     const result = await fetchNarrationPayload(mockPlace, OPTS);
-    expect(result).toEqual({ kind: "audio", audioUri: "file:///cache/walk-narr-abc.mp3", cleanup: mockCleanup });
+    expect(result).toEqual({
+      kind: "audio",
+      audioUri: "file:///cache/walk-narr-abc.mp3",
+      cleanup: mockCleanup,
+    });
   });
 
   test("returns null when audio buffer is empty AND text endpoint fails", async () => {
-    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as { writeNarrationAudioToCache: jest.Mock };
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
     writeNarrationAudioToCache.mockReturnValue(null);
     mockFetch
       .mockResolvedValueOnce(audioFetch(0))
@@ -300,19 +362,28 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
   });
 
   test("skips audio endpoint entirely when isExpoGo=true, returns text", async () => {
-    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as { writeNarrationAudioToCache: jest.Mock };
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
     mockFetch.mockResolvedValueOnce(textFetch("Expo Go narration."));
 
     const { fetchNarrationPayload } = require("../lib/fetchNarrationPayload");
-    const result = await fetchNarrationPayload(mockPlace, { ...OPTS, isExpoGo: true });
+    const result = await fetchNarrationPayload(mockPlace, {
+      ...OPTS,
+      isExpoGo: true,
+    });
     expect(result).toEqual({ kind: "text", text: "Expo Go narration." });
     expect(writeNarrationAudioToCache).not.toHaveBeenCalled();
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   test("trackNarrationFallback called with 'write_failure' when cache write throws", async () => {
-    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as { writeNarrationAudioToCache: jest.Mock };
-    writeNarrationAudioToCache.mockImplementation(() => { throw new TypeError("Paths.cache is null"); });
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
+    writeNarrationAudioToCache.mockImplementation(() => {
+      throw new TypeError("Paths.cache is null");
+    });
     mockFetch
       .mockResolvedValueOnce(audioFetch(8))
       .mockResolvedValueOnce(textFetch("Fallback."));
@@ -357,7 +428,10 @@ import {
   type StalePrefetchPool,
 } from "../lib/narrationPrefetchPipeline";
 
-interface StressPlace { id: string; name: string }
+interface StressPlace {
+  id: string;
+  name: string;
+}
 
 interface PipelineState {
   isWalkingRef: { current: boolean };
@@ -378,14 +452,23 @@ function buildPipelineState(places: StressPlace[]): PipelineState {
     prefetchInFlightRef: { current: null },
     placesRef: { current: places },
     counters,
-    onEvent: (event: PrefetchEvent) => { counters[event] += 1; },
+    onEvent: (event: PrefetchEvent) => {
+      counters[event] += 1;
+    },
   };
 }
 
-function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void; reject: (e: unknown) => void } {
+function deferred<T>(): {
+  promise: Promise<T>;
+  resolve: (v: T) => void;
+  reject: (e: unknown) => void;
+} {
   let resolve!: (v: T) => void;
   let reject!: (e: unknown) => void;
-  const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej; });
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
   return { promise, resolve, reject };
 }
 
@@ -398,11 +481,20 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       const stale: PrefetchEntry<StressPlace> = {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: staleCleanup },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: staleCleanup,
+        },
       };
       const events: PrefetchEvent[] = [];
 
-      const result = consumePrefetchedNarration(stale, "place-B", undefined, (e) => events.push(e));
+      const result = consumePrefetchedNarration(
+        stale,
+        "place-B",
+        undefined,
+        (e) => events.push(e),
+      );
 
       expect(result.kind).toBe("miss");
       expect(staleCleanup).toHaveBeenCalledTimes(1);
@@ -437,7 +529,12 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       };
       const events: PrefetchEvent[] = [];
 
-      const result = consumePrefetchedNarration(cached, "place-B", undefined, (e) => events.push(e));
+      const result = consumePrefetchedNarration(
+        cached,
+        "place-B",
+        undefined,
+        (e) => events.push(e),
+      );
 
       expect(result.kind).toBe("hit");
       if (result.kind === "hit") {
@@ -453,8 +550,16 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
     test("null cache returns miss without throwing", () => {
       const events: PrefetchEvent[] = [];
-      expect(() => consumePrefetchedNarration(null, "place-X", undefined, (e) => events.push(e))).not.toThrow();
-      expect(consumePrefetchedNarration(null, "place-X", undefined, (e) => events.push(e)).kind).toBe("miss");
+      expect(() =>
+        consumePrefetchedNarration(null, "place-X", undefined, (e) =>
+          events.push(e),
+        ),
+      ).not.toThrow();
+      expect(
+        consumePrefetchedNarration(null, "place-X", undefined, (e) =>
+          events.push(e),
+        ).kind,
+      ).toBe("miss");
       expect(events).toEqual(["MISS", "MISS"]);
     });
 
@@ -474,9 +579,15 @@ describe("narration prefetch pipeline — race-condition guards", () => {
         place: { id: "place-A", name: "A" },
         payload: { kind: "text", text: "old" },
       };
-      const onEvent = () => { throw new Error("sentry exploded"); };
-      expect(() => consumePrefetchedNarration(stale, "place-B", undefined, onEvent)).not.toThrow();
-      expect(() => consumePrefetchedNarration(null, "place-X", undefined, onEvent)).not.toThrow();
+      const onEvent = () => {
+        throw new Error("sentry exploded");
+      };
+      expect(() =>
+        consumePrefetchedNarration(stale, "place-B", undefined, onEvent),
+      ).not.toThrow();
+      expect(() =>
+        consumePrefetchedNarration(null, "place-X", undefined, onEvent),
+      ).not.toThrow();
     });
 
     test("cleanup throw is swallowed so the consumer can continue", () => {
@@ -486,7 +597,9 @@ describe("narration prefetch pipeline — race-condition guards", () => {
         payload: {
           kind: "audio",
           audioUri: "file:///tmp/A.mp3",
-          cleanup: () => { throw new Error("fs error"); },
+          cleanup: () => {
+            throw new Error("fs error");
+          },
         },
       };
 
@@ -503,14 +616,20 @@ describe("narration prefetch pipeline — race-condition guards", () => {
     state.prefetchedNarrationRef.current = {
       placeId: "place-A",
       place: { id: "place-A", name: "A" },
-      payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: staleCleanup },
+      payload: {
+        kind: "audio",
+        audioUri: "file:///tmp/A.mp3",
+        cleanup: staleCleanup,
+      },
     };
 
-    const fetchPayload = jest.fn(async (): Promise<NarrationPayload> => ({
-      kind: "audio",
-      audioUri: "file:///tmp/B.mp3",
-      cleanup: jest.fn(),
-    }));
+    const fetchPayload = jest.fn(
+      async (): Promise<NarrationPayload> => ({
+        kind: "audio",
+        audioUri: "file:///tmp/B.mp3",
+        cleanup: jest.fn(),
+      }),
+    );
 
     await runPrefetchCycle({
       ...state,
@@ -644,7 +763,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       // First call kicks off the in-flight fetch.
       const firstCycle = runPrefetchCycle({ ...state, pickNext, fetchPayload });
       // Second call (e.g. another GPS tick) — must dedupe.
-      const secondCycle = runPrefetchCycle({ ...state, pickNext, fetchPayload });
+      const secondCycle = runPrefetchCycle({
+        ...state,
+        pickNext,
+        fetchPayload,
+      });
 
       expect(state.prefetchInFlightRef.current).toBe("place-D");
       expect(fetchPayload).toHaveBeenCalledTimes(1);
@@ -691,9 +814,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       const state = buildPipelineState(places);
       const gateA = deferred<NarrationPayload>();
       const gateB = deferred<NarrationPayload>();
-      const fetchPayload = jest.fn(async (place: StressPlace): Promise<NarrationPayload> => {
-        return place.id === "place-A" ? gateA.promise : gateB.promise;
-      });
+      const fetchPayload = jest.fn(
+        async (place: StressPlace): Promise<NarrationPayload> => {
+          return place.id === "place-A" ? gateA.promise : gateB.promise;
+        },
+      );
 
       // First cycle: candidate A is in flight.
       const cycleA = runPrefetchCycle({
@@ -738,7 +863,9 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       // The next cycle short-circuits because R is already cached, NOT because
       // the in-flight marker is stuck. Clearing the cache should let it fetch
       // again — proving the marker really did clear on completion.
-      const clearCache = () => { cacheRef.current = null; };
+      const clearCache = () => {
+        cacheRef.current = null;
+      };
       clearCache();
       const second = runPrefetchCycle({ ...state, pickNext, fetchPayload });
       await second;
@@ -791,7 +918,9 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
   describe("stale-pool replay for skip-then-re-pick", () => {
     // Controllable clock and scheduler so TTL behaviour stays deterministic.
-    function buildControlledPool<P extends StressPlace>(opts?: { ttlMs?: number }): {
+    function buildControlledPool<P extends StressPlace>(opts?: {
+      ttlMs?: number;
+    }): {
       pool: StalePrefetchPool<P>;
       advance: (ms: number) => void;
       pendingTimers: number;
@@ -846,12 +975,22 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       const state = buildPipelineState(places);
       const { pool } = buildControlledPool<StressPlace>();
       const aCleanup = jest.fn();
-      const fetchPayload = jest.fn(async (place: StressPlace): Promise<NarrationPayload> => {
-        if (place.id === "place-A") {
-          return { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup };
-        }
-        return { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() };
-      });
+      const fetchPayload = jest.fn(
+        async (place: StressPlace): Promise<NarrationPayload> => {
+          if (place.id === "place-A") {
+            return {
+              kind: "audio",
+              audioUri: "file:///tmp/A.mp3",
+              cleanup: aCleanup,
+            };
+          }
+          return {
+            kind: "audio",
+            audioUri: "file:///tmp/B.mp3",
+            cleanup: jest.fn(),
+          };
+        },
+      );
 
       // Cycle 1: prefetch A.
       let candidate: StressPlace = places[0];
@@ -901,7 +1040,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       const aEntry: PrefetchEntry<StressPlace> = {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: aCleanup,
+        },
       };
       // Simulate: A was just parked because B took the live slot.
       parkStalePrefetchedEntry(pool, aEntry);
@@ -909,7 +1052,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       const liveB: PrefetchEntry<StressPlace> = {
         placeId: "place-B",
         place: { id: "place-B", name: "B" },
-        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/B.mp3",
+          cleanup: jest.fn(),
+        },
       };
 
       // Now fetchNarration is called for A while live cache holds B.
@@ -930,7 +1077,9 @@ describe("narration prefetch pipeline — race-condition guards", () => {
     });
 
     test("entries that age out past TTL are cleaned up by the scheduled timer", () => {
-      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      const { pool, advance } = buildControlledPool<StressPlace>({
+        ttlMs: 30_000,
+      });
       const cleanup = jest.fn();
       const entry: PrefetchEntry<StressPlace> = {
         placeId: "place-A",
@@ -982,18 +1131,27 @@ describe("narration prefetch pipeline — race-condition guards", () => {
     });
 
     test("disposeStalePrefetchPool runs cleanup on every pending entry", () => {
-      const { pool, pendingTimers: _ignored } = buildControlledPool<StressPlace>();
+      const { pool, pendingTimers: _ignored } =
+        buildControlledPool<StressPlace>();
       const aCleanup = jest.fn();
       const bCleanup = jest.fn();
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: aCleanup,
+        },
       });
       parkStalePrefetchedEntry(pool, {
         placeId: "place-B",
         place: { id: "place-B", name: "B" },
-        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: bCleanup },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/B.mp3",
+          cleanup: bCleanup,
+        },
       });
 
       disposeStalePrefetchPool(pool);
@@ -1004,20 +1162,30 @@ describe("narration prefetch pipeline — race-condition guards", () => {
     });
 
     test("re-parking the same placeId cancels prior timer and cleans up the old entry", () => {
-      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      const { pool, advance } = buildControlledPool<StressPlace>({
+        ttlMs: 30_000,
+      });
       const firstCleanup = jest.fn();
       const secondCleanup = jest.fn();
 
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A1.mp3", cleanup: firstCleanup },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A1.mp3",
+          cleanup: firstCleanup,
+        },
       });
       // Re-park (e.g. a fresh fetch landed and was then displaced again).
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A2.mp3", cleanup: secondCleanup },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A2.mp3",
+          cleanup: secondCleanup,
+        },
       });
 
       // First entry's cleanup ran when it was displaced.
@@ -1047,7 +1215,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: jest.fn(),
+        },
       });
 
       // Re-pick happens 8s after parking — well within the TTL.
@@ -1056,28 +1228,40 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
       expect(revived).not.toBeNull();
       expect(onReplay).toHaveBeenCalledTimes(1);
-      expect(onReplay).toHaveBeenCalledWith({ placeId: "place-A", ageMs: 8_000 });
+      expect(onReplay).toHaveBeenCalledWith({
+        placeId: "place-A",
+        ageMs: 8_000,
+      });
       expect(onEvict).not.toHaveBeenCalled();
     });
 
     test("onEvict fires when the TTL timer ages an entry out without a replay", () => {
       const onReplay = jest.fn();
       const onEvict = jest.fn();
-      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      const { pool, advance } = buildControlledPool<StressPlace>({
+        ttlMs: 30_000,
+      });
       pool.onReplay = onReplay;
       pool.onEvict = onEvict;
 
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: jest.fn(),
+        },
       });
 
       // Step past TTL — timer fires, eviction recorded.
       advance(30_000);
 
       expect(onEvict).toHaveBeenCalledTimes(1);
-      expect(onEvict).toHaveBeenCalledWith({ placeId: "place-A", ageMs: 30_000 });
+      expect(onEvict).toHaveBeenCalledWith({
+        placeId: "place-A",
+        ageMs: 30_000,
+      });
       expect(onReplay).not.toHaveBeenCalled();
     });
 
@@ -1096,7 +1280,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: jest.fn(),
+        },
       });
 
       // Past the TTL, but the timer never ran — the synchronous-expiry
@@ -1107,7 +1295,10 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       expect(revived).toBeNull();
       expect(onReplay).not.toHaveBeenCalled();
       expect(onEvict).toHaveBeenCalledTimes(1);
-      expect(onEvict).toHaveBeenCalledWith({ placeId: "place-A", ageMs: 31_000 });
+      expect(onEvict).toHaveBeenCalledWith({
+        placeId: "place-A",
+        ageMs: 31_000,
+      });
     });
 
     test("re-park displacement and disposeStalePrefetchPool do NOT fire onEvict", () => {
@@ -1121,12 +1312,20 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A1.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A1.mp3",
+          cleanup: jest.fn(),
+        },
       });
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A2.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A2.mp3",
+          cleanup: jest.fn(),
+        },
       });
       expect(onEvict).not.toHaveBeenCalled();
 
@@ -1134,7 +1333,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       parkStalePrefetchedEntry(pool, {
         placeId: "place-B",
         place: { id: "place-B", name: "B" },
-        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/B.mp3",
+          cleanup: jest.fn(),
+        },
       });
       disposeStalePrefetchPool(pool);
       expect(onEvict).not.toHaveBeenCalled();
@@ -1142,16 +1345,26 @@ describe("narration prefetch pipeline — race-condition guards", () => {
     });
 
     test("onReplay/onEvict throws are swallowed so the cache flow never breaks", () => {
-      const onReplay = jest.fn(() => { throw new Error("sentry down"); });
-      const onEvict = jest.fn(() => { throw new Error("sentry down"); });
-      const { pool, advance } = buildControlledPool<StressPlace>({ ttlMs: 30_000 });
+      const onReplay = jest.fn(() => {
+        throw new Error("sentry down");
+      });
+      const onEvict = jest.fn(() => {
+        throw new Error("sentry down");
+      });
+      const { pool, advance } = buildControlledPool<StressPlace>({
+        ttlMs: 30_000,
+      });
       pool.onReplay = onReplay;
       pool.onEvict = onEvict;
 
       parkStalePrefetchedEntry(pool, {
         placeId: "place-A",
         place: { id: "place-A", name: "A" },
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: jest.fn(),
+        },
       });
       // Replay should not throw despite onReplay throwing.
       expect(() => reviveStalePrefetchedEntry(pool, "place-A")).not.toThrow();
@@ -1159,7 +1372,11 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       parkStalePrefetchedEntry(pool, {
         placeId: "place-B",
         place: { id: "place-B", name: "B" },
-        payload: { kind: "audio", audioUri: "file:///tmp/B.mp3", cleanup: jest.fn() },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/B.mp3",
+          cleanup: jest.fn(),
+        },
       });
       // TTL fire should not throw despite onEvict throwing.
       expect(() => advance(30_000)).not.toThrow();
@@ -1177,14 +1394,20 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       state.prefetchedNarrationRef.current = {
         placeId: "place-A",
         place: places[0],
-        payload: { kind: "audio", audioUri: "file:///tmp/A.mp3", cleanup: aCleanup },
+        payload: {
+          kind: "audio",
+          audioUri: "file:///tmp/A.mp3",
+          cleanup: aCleanup,
+        },
       };
 
-      const fetchPayload = jest.fn(async (): Promise<NarrationPayload> => ({
-        kind: "audio",
-        audioUri: "file:///tmp/B.mp3",
-        cleanup: jest.fn(),
-      }));
+      const fetchPayload = jest.fn(
+        async (): Promise<NarrationPayload> => ({
+          kind: "audio",
+          audioUri: "file:///tmp/B.mp3",
+          cleanup: jest.fn(),
+        }),
+      );
 
       await runPrefetchCycle({
         ...state,
@@ -1220,10 +1443,12 @@ describe("narration prefetch pipeline — race-condition guards", () => {
     test("a successful prefetch followed by a matching consume produces exactly one HIT and zero misses", async () => {
       const places: StressPlace[] = [{ id: "place-H", name: "H" }];
       const state = buildPipelineState(places);
-      const fetchPayload = jest.fn(async (): Promise<NarrationPayload> => ({
-        kind: "text",
-        text: "Hit narration",
-      }));
+      const fetchPayload = jest.fn(
+        async (): Promise<NarrationPayload> => ({
+          kind: "text",
+          text: "Hit narration",
+        }),
+      );
 
       await runPrefetchCycle({
         ...state,
@@ -1236,7 +1461,12 @@ describe("narration prefetch pipeline — race-condition guards", () => {
       // mirror the production "always consume / clear the cache" pattern.
       const cached = state.prefetchedNarrationRef.current;
       state.prefetchedNarrationRef.current = null;
-      const result = consumePrefetchedNarration(cached, "place-H", undefined, state.onEvent);
+      const result = consumePrefetchedNarration(
+        cached,
+        "place-H",
+        undefined,
+        state.onEvent,
+      );
 
       expect(result.kind).toBe("hit");
       expect(state.counters.HIT).toBe(1);
@@ -1248,7 +1478,12 @@ describe("narration prefetch pipeline — race-condition guards", () => {
 
     test("an empty cache lookup increments MISS without touching other counters", () => {
       const state = buildPipelineState([]);
-      consumePrefetchedNarration(null, "place-anything", undefined, state.onEvent);
+      consumePrefetchedNarration(
+        null,
+        "place-anything",
+        undefined,
+        state.onEvent,
+      );
 
       expect(state.counters).toEqual({
         HIT: 0,

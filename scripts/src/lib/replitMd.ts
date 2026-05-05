@@ -19,7 +19,12 @@ export async function patchReplitMdUrls(
 ): Promise<void> {
   const { replacements, missingPlaceholderLabel, successMessage } = options;
 
-  const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+  const repoRoot = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "..",
+    "..",
+  );
   const replitMdPath = resolve(repoRoot, "replit.md");
   const before = await readFile(replitMdPath, "utf8");
 

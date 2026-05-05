@@ -82,7 +82,9 @@ async function createDashboard(
   const title = "Walk Mode Audio Fallback";
   const existing = await findExistingDashboard(token, org, title);
   if (existing) {
-    console.log(`Dashboard "${title}" already exists (id=${existing.id}), reusing.`);
+    console.log(
+      `Dashboard "${title}" already exists (id=${existing.id}), reusing.`,
+    );
     return existing;
   }
 
@@ -361,9 +363,15 @@ async function main(): Promise<void> {
   await patchReplitMd(org, dashboard.id, fetchRule.id, playbackRule.id);
 
   console.log("\nDone. Verify in Sentry:");
-  console.log(`  Dashboard:      ${SENTRY_HOST}/organizations/${org}/dashboard/${dashboard.id}/`);
-  console.log(`  Fetch alert:    ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${fetchRule.id}/`);
-  console.log(`  Playback alert: ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${playbackRule.id}/`);
+  console.log(
+    `  Dashboard:      ${SENTRY_HOST}/organizations/${org}/dashboard/${dashboard.id}/`,
+  );
+  console.log(
+    `  Fetch alert:    ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${fetchRule.id}/`,
+  );
+  console.log(
+    `  Playback alert: ${SENTRY_HOST}/organizations/${org}/alerts/rules/details/${playbackRule.id}/`,
+  );
 }
 
 main().catch((err) => {

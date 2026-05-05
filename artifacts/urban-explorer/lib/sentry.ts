@@ -38,14 +38,32 @@ const DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
 //   "speed"     — movement velocity (location-adjacent movement data)
 // ─────────────────────────────────────────────────────────────────────────────
 const PII_KEY_PATTERNS = [
-  "lat", "lon", "lng", "coord", "location", "place", "address",
-  "destination", "origin", "route", "street", "city", "geo",
-  "name", "summary", "narration", "altitude", "heading", "speed",
+  "lat",
+  "lon",
+  "lng",
+  "coord",
+  "location",
+  "place",
+  "address",
+  "destination",
+  "origin",
+  "route",
+  "street",
+  "city",
+  "geo",
+  "name",
+  "summary",
+  "narration",
+  "altitude",
+  "heading",
+  "speed",
 ];
 
 // Lookahead used by scrubString to stop an unquoted multi-word value just
 // before the next PII key delimiter (e.g. "name: X Y name: Z" → two matches).
-const PII_UNQUOTED_LOOKAHEAD = PII_KEY_PATTERNS.map((p) => `\\b${p}\\b`).join("|");
+const PII_UNQUOTED_LOOKAHEAD = PII_KEY_PATTERNS.map((p) => `\\b${p}\\b`).join(
+  "|",
+);
 
 export function isPiiKey(key: string): boolean {
   // Keys ending with "Id" or "Count" are safe metadata — not PII — even if
@@ -88,12 +106,15 @@ export function scrubString(text: string): string {
 }
 
 function isPlainObject(val: unknown): val is Record<string, unknown> {
-  if (val === null || typeof val !== "object" || Array.isArray(val)) return false;
+  if (val === null || typeof val !== "object" || Array.isArray(val))
+    return false;
   const proto = Object.getPrototypeOf(val) as unknown;
   return proto === Object.prototype || proto === null;
 }
 
-export function scrubObject(obj: Record<string, unknown>): Record<string, unknown> {
+export function scrubObject(
+  obj: Record<string, unknown>,
+): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, val] of Object.entries(obj)) {
     if (isPiiKey(key)) continue;

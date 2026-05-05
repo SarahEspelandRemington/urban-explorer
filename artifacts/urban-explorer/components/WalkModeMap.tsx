@@ -1,7 +1,20 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Easing, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import MapView, { Circle, Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
+import {
+  Easing,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import MapView, {
+  Circle,
+  Marker,
+  PROVIDER_DEFAULT,
+  Region,
+} from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -72,7 +85,12 @@ function clusterPlaces(places: WalkPlace[], region: Region): Cluster[] {
   for (const [key, group] of buckets) {
     if (group.length === 1) {
       const p = group[0];
-      clusters.push({ key: p.id, latitude: p.latitude, longitude: p.longitude, places: group });
+      clusters.push({
+        key: p.id,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        places: group,
+      });
     } else {
       let lat = 0;
       let lng = 0;
@@ -110,7 +128,10 @@ export function WalkModeMap({
   const [region, setRegion] = useState<Region>(initialRegion);
   const [previewCluster, setPreviewCluster] = useState<Cluster | null>(null);
 
-  const clusters = useMemo(() => clusterPlaces(places, region), [places, region]);
+  const clusters = useMemo(
+    () => clusterPlaces(places, region),
+    [places, region],
+  );
 
   const [expansion, setExpansion] = useState<{
     cluster: Cluster;
@@ -279,9 +300,11 @@ export function WalkModeMap({
           expansion.cluster.places.map((place) => {
             const t = expandProgress;
             const lat =
-              expansion.cluster.latitude + (place.latitude - expansion.cluster.latitude) * t;
+              expansion.cluster.latitude +
+              (place.latitude - expansion.cluster.latitude) * t;
             const lng =
-              expansion.cluster.longitude + (place.longitude - expansion.cluster.longitude) * t;
+              expansion.cluster.longitude +
+              (place.longitude - expansion.cluster.longitude) * t;
             return (
               <Marker
                 key={`expand:${place.id}`}
@@ -313,7 +336,8 @@ export function WalkModeMap({
               const lat =
                 place.latitude + (group.center.latitude - place.latitude) * t;
               const lng =
-                place.longitude + (group.center.longitude - place.longitude) * t;
+                place.longitude +
+                (group.center.longitude - place.longitude) * t;
               return (
                 <Marker
                   key={`collapse:${group.clusterKey}:${place.id}`}
@@ -357,20 +381,33 @@ export function WalkModeMap({
             return (
               <Marker
                 key={cluster.key}
-                coordinate={{ latitude: place.latitude, longitude: place.longitude }}
+                coordinate={{
+                  latitude: place.latitude,
+                  longitude: place.longitude,
+                }}
                 title={place.name}
                 pinColor={wasNarrated ? colors.mutedForeground : colors.primary}
                 opacity={opacity}
               />
             );
           }
-          const allNarrated = cluster.places.every((p) => narratedIds.has(p.id));
+          const allNarrated = cluster.places.every((p) =>
+            narratedIds.has(p.id),
+          );
           const bg = allNarrated ? colors.mutedForeground : colors.primary;
-          const size = cluster.places.length >= 100 ? 52 : cluster.places.length >= 10 ? 44 : 36;
+          const size =
+            cluster.places.length >= 100
+              ? 52
+              : cluster.places.length >= 10
+                ? 44
+                : 36;
           return (
             <Marker
               key={cluster.key}
-              coordinate={{ latitude: cluster.latitude, longitude: cluster.longitude }}
+              coordinate={{
+                latitude: cluster.latitude,
+                longitude: cluster.longitude,
+              }}
               tracksViewChanges={false}
               anchor={{ x: 0.5, y: 0.5 }}
               stopPropagation
@@ -395,7 +432,12 @@ export function WalkModeMap({
                     },
                   ]}
                 >
-                  <Text style={[styles.clusterText, { color: colors.primaryForeground }]}>
+                  <Text
+                    style={[
+                      styles.clusterText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
                     {cluster.places.length}
                   </Text>
                 </View>
@@ -425,72 +467,99 @@ export function WalkModeMap({
             <Text style={[styles.previewTitle, { color: colors.foreground }]}>
               {previewCluster.places.length} places here
             </Text>
-            <ScrollView style={styles.previewList} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              style={styles.previewList}
+              keyboardShouldPersistTaps="handled"
+            >
               {previewCluster.places.map((p) => {
                 const narratedAt = narratedIds.get(p.id);
                 const visited = narratedAt !== undefined;
                 const iconOpacity = visited ? visitedOpacity(narratedAt) : 1;
                 return (
-                <View key={p.id} style={styles.previewRow}>
-                  <View style={styles.previewVisitedSlot}>
-                    {visited ? (
-                      <Feather name="check-circle" size={13} color={colors.primary} style={{ opacity: iconOpacity }} />
+                  <View key={p.id} style={styles.previewRow}>
+                    <View style={styles.previewVisitedSlot}>
+                      {visited ? (
+                        <Feather
+                          name="check-circle"
+                          size={13}
+                          color={colors.primary}
+                          style={{ opacity: iconOpacity }}
+                        />
+                      ) : null}
+                    </View>
+                    {p.photoUrl ? (
+                      <Image
+                        source={{ uri: p.photoUrl }}
+                        style={[
+                          styles.previewThumb,
+                          { opacity: visited ? 0.5 : 1 },
+                        ]}
+                        resizeMode="cover"
+                      />
+                    ) : null}
+                    <Pressable
+                      onPress={() => focusPlace(p)}
+                      style={({ pressed }) => [
+                        styles.previewItem,
+                        pressed && { backgroundColor: colors.muted },
+                      ]}
+                      accessibilityLabel={`Centre map on ${p.name}${visited ? " (visited)" : ""}`}
+                    >
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.previewItemText,
+                          {
+                            color: visited
+                              ? colors.mutedForeground
+                              : colors.foreground,
+                          },
+                        ]}
+                      >
+                        {p.name}
+                      </Text>
+                      {(() => {
+                        const sub =
+                          (p.category?.trim() ||
+                            p.summary?.split(/[.!?]/)[0]?.trim()) ??
+                          "";
+                        return sub ? (
+                          <Text
+                            numberOfLines={1}
+                            style={[
+                              styles.previewItemSubtext,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
+                            {sub}
+                          </Text>
+                        ) : null;
+                      })()}
+                    </Pressable>
+                    {onOpenPlace ? (
+                      <Pressable
+                        onPress={() => onOpenPlace(p)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open ${p.name}`}
+                        style={({ pressed }) => [
+                          styles.previewOpenBtn,
+                          {
+                            backgroundColor: pressed
+                              ? colors.muted
+                              : "transparent",
+                          },
+                        ]}
+                      >
+                        <Feather
+                          name="chevron-right"
+                          size={16}
+                          color={colors.mutedForeground}
+                        />
+                      </Pressable>
                     ) : null}
                   </View>
-                  {p.photoUrl ? (
-                    <Image
-                      source={{ uri: p.photoUrl }}
-                      style={[styles.previewThumb, { opacity: visited ? 0.5 : 1 }]}
-                      resizeMode="cover"
-                    />
-                  ) : null}
-                  <Pressable
-                    onPress={() => focusPlace(p)}
-                    style={({ pressed }) => [
-                      styles.previewItem,
-                      pressed && { backgroundColor: colors.muted },
-                    ]}
-                    accessibilityLabel={`Centre map on ${p.name}${visited ? " (visited)" : ""}`}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.previewItemText,
-                        {
-                          color: visited ? colors.mutedForeground : colors.foreground,
-                        },
-                      ]}
-                    >
-                      {p.name}
-                    </Text>
-                    {(() => {
-                      const sub = (p.category?.trim() || p.summary?.split(/[.!?]/)[0]?.trim()) ?? "";
-                      return sub ? (
-                        <Text
-                          numberOfLines={1}
-                          style={[styles.previewItemSubtext, { color: colors.mutedForeground }]}
-                        >
-                          {sub}
-                        </Text>
-                      ) : null;
-                    })()}
-                  </Pressable>
-                  {onOpenPlace ? (
-                    <Pressable
-                      onPress={() => onOpenPlace(p)}
-                      hitSlop={8}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Open ${p.name}`}
-                      style={({ pressed }) => [
-                        styles.previewOpenBtn,
-                        { backgroundColor: pressed ? colors.muted : "transparent" },
-                      ]}
-                    >
-                      <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-                    </Pressable>
-                  ) : null}
-                </View>
-              );
+                );
               })}
             </ScrollView>
           </View>

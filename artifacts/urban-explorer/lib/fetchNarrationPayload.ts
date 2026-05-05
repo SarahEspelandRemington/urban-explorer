@@ -47,7 +47,10 @@ export async function fetchNarrationPayload(
     summary: place.summary,
     fact: place.facts[0],
   });
-  const headers = { "Content-Type": "application/json", ...await authHeaders() };
+  const headers = {
+    "Content-Type": "application/json",
+    ...(await authHeaders()),
+  };
 
   // Native: try the natural-voice MP3 endpoint first.
   // Skipped in Expo Go: the bundled native runtime may not match the JS
@@ -74,12 +77,21 @@ export async function fetchNarrationPayload(
           try {
             const cached = writeNarrationAudioToCache(place.id, buf);
             if (cached) {
-              return { kind: "audio", audioUri: cached.uri, cleanup: cached.cleanup };
+              return {
+                kind: "audio",
+                audioUri: cached.uri,
+                cleanup: cached.cleanup,
+              };
             }
           } catch (writeErr) {
             addWalkBreadcrumb(
               "narration audio write failed",
-              { errorType: writeErr instanceof Error ? writeErr.constructor.name : typeof writeErr },
+              {
+                errorType:
+                  writeErr instanceof Error
+                    ? writeErr.constructor.name
+                    : typeof writeErr,
+              },
               "warning",
             );
             trackNarrationFallback("write_failure");
@@ -90,7 +102,11 @@ export async function fetchNarrationPayload(
           trackNarrationFallback("bad_response");
         }
       } else {
-        addWalkBreadcrumb("narration audio bad status", { status: res.status }, "warning");
+        addWalkBreadcrumb(
+          "narration audio bad status",
+          { status: res.status },
+          "warning",
+        );
         trackNarrationFallback("bad_response");
       }
     } catch (err) {
@@ -115,7 +131,11 @@ export async function fetchNarrationPayload(
         signal: textController.signal,
       });
       if (!res.ok) {
-        addWalkBreadcrumb("narration fetch failed", { status: res.status }, "error");
+        addWalkBreadcrumb(
+          "narration fetch failed",
+          { status: res.status },
+          "error",
+        );
         return null;
       }
       const data = await res.json();

@@ -32,7 +32,7 @@ export default [
   },
   {
     files: ["artifacts/urban-explorer/**/*.{ts,tsx}"],
-    plugins: { "react-hooks": reactHooks, "local": noPiiInSentryPlugin },
+    plugins: { "react-hooks": reactHooks, local: noPiiInSentryPlugin },
     languageOptions: {
       globals: { ...globals.browser, ...globals.node },
     },
@@ -62,7 +62,11 @@ export default [
     },
   },
   {
-    files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"],
+    files: [
+      "**/__tests__/**/*.{ts,tsx}",
+      "**/*.test.{ts,tsx}",
+      "**/*.spec.{ts,tsx}",
+    ],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },

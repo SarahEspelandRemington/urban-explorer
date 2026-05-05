@@ -22,12 +22,17 @@ type NowPlayingNativeModule = {
   ): Promise<void>;
   setPlaybackState(isPaused: boolean): Promise<void>;
   clear(): Promise<void>;
-  addListener(eventName: "onPlay" | "onPause" | "onNext", listener: () => void): Subscription;
+  addListener(
+    eventName: "onPlay" | "onPause" | "onNext",
+    listener: () => void,
+  ): Subscription;
 };
 
 const native =
   Platform.OS === "ios" || Platform.OS === "android"
-    ? (requireOptionalNativeModule("NowPlayingModule") as NowPlayingNativeModule | null)
+    ? (requireOptionalNativeModule(
+        "NowPlayingModule",
+      ) as NowPlayingNativeModule | null)
     : null;
 
 export type RemoteCommand = "play" | "pause" | "next";
@@ -47,7 +52,9 @@ export const NowPlaying = {
     isPaused = false,
     artworkUrl: string | null = null,
   ): Promise<void> {
-    return native ? native.setNowPlaying(title, artist, isPaused, artworkUrl) : noop();
+    return native
+      ? native.setNowPlaying(title, artist, isPaused, artworkUrl)
+      : noop();
   },
 
   setPlaybackState(isPaused: boolean): Promise<void> {

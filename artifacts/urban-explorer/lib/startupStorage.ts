@@ -55,7 +55,10 @@ export async function getStartupValue(key: string): Promise<string | null> {
  *
  * For non-startup keys, keep using `AsyncStorage.setItem` directly.
  */
-export async function setStartupValue(key: string, value: string): Promise<void> {
+export async function setStartupValue(
+  key: string,
+  value: string,
+): Promise<void> {
   // Ensure the snapshot multiGet has been kicked off, then layer this write
   // on top so any in-flight or subsequent getStartupValue() call sees the
   // fresh value. We must NOT short-circuit the multiGet by seeding the

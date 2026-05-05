@@ -1,4 +1,13 @@
-import { List, Map, Search, Navigation, Footprints, Compass, Globe, ChevronDown } from "lucide-react";
+import {
+  List,
+  Map,
+  Search,
+  Navigation,
+  Footprints,
+  Compass,
+  Globe,
+  ChevronDown,
+} from "lucide-react";
 
 const BG = "#0f1117";
 const CARD = "#1a1d2b";
@@ -84,7 +93,9 @@ function ToggleGroup() {
         }}
       >
         <Map size={15} color={MUTED_FG} />
-        <span style={{ fontSize: 9, fontWeight: 600, color: MUTED_FG }}>Map</span>
+        <span style={{ fontSize: 9, fontWeight: 600, color: MUTED_FG }}>
+          Map
+        </span>
       </div>
     </div>
   );
@@ -124,7 +135,9 @@ export function LabeledActions() {
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
             <Globe size={13} color={MUTED_FG} />
-            <span style={{ fontSize: 11, color: MUTED_FG, fontWeight: 500 }}>EN</span>
+            <span style={{ fontSize: 11, color: MUTED_FG, fontWeight: 500 }}>
+              EN
+            </span>
             <ChevronDown size={12} color={MUTED_FG} />
           </div>
         </div>
@@ -136,7 +149,14 @@ export function LabeledActions() {
             justifyContent: "space-between",
           }}
         >
-          <span style={{ fontSize: 24, fontWeight: 700, color: FG, letterSpacing: "-0.5px" }}>
+          <span
+            style={{
+              fontSize: 24,
+              fontWeight: 700,
+              color: FG,
+              letterSpacing: "-0.5px",
+            }}
+          >
             Discover
           </span>
 
@@ -159,7 +179,9 @@ export function LabeledActions() {
             alignItems: "center",
           }}
         >
-          <span style={{ fontSize: 12, color: MUTED_FG, fontWeight: 500 }}>Range:</span>
+          <span style={{ fontSize: 12, color: MUTED_FG, fontWeight: 500 }}>
+            Range:
+          </span>
           {["150m", "300m", "500m"].map((r, i) => (
             <div
               key={r}
@@ -192,7 +214,14 @@ export function LabeledActions() {
               border: `1px solid ${BORDER}`,
             }}
           >
-            <div style={{ fontSize: 15, fontWeight: 600, color: FG, marginBottom: 4 }}>
+            <div
+              style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: FG,
+                marginBottom: 4,
+              }}
+            >
               {p.name}
             </div>
             <div style={{ fontSize: 12, color: MUTED_FG }}>{p.kind}</div>
@@ -216,10 +245,13 @@ export function LabeledActions() {
       >
         <span style={{ fontSize: 16 }}>✓</span>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#a89cff" }}>FIX: Duplicate icons gone</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#a89cff" }}>
+            FIX: Duplicate icons gone
+          </div>
           <div style={{ fontSize: 11, color: MUTED_FG, marginTop: 2 }}>
-            "Plan Walk" uses a navigation arrow · "Walk" uses a footprints icon ·
-            Language is subtle text chip in location row · Labels on all buttons
+            "Plan Walk" uses a navigation arrow · "Walk" uses a footprints icon
+            · Language is subtle text chip in location row · Labels on all
+            buttons
           </div>
         </div>
       </div>

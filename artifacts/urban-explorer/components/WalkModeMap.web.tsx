@@ -66,7 +66,12 @@ function clusterPlaces(
   for (const [key, group] of buckets) {
     if (group.length === 1) {
       const p = group[0];
-      clusters.push({ key: p.id, latitude: p.latitude, longitude: p.longitude, places: group });
+      clusters.push({
+        key: p.id,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        places: group,
+      });
     } else {
       let lat = 0;
       let lng = 0;
@@ -127,7 +132,8 @@ export function WalkModeMap({
   }, []);
 
   useEffect(() => {
-    if (!leafletReady || !mapContainerRef.current || mapInstanceRef.current) return;
+    if (!leafletReady || !mapContainerRef.current || mapInstanceRef.current)
+      return;
     const L = (window as any).L;
     if (!L) return;
 
@@ -136,7 +142,8 @@ export function WalkModeMap({
       16,
     );
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       maxZoom: 19,
     }).addTo(map);
 
@@ -164,7 +171,10 @@ export function WalkModeMap({
       removeCollapseMarkers();
     };
 
-    const renderMarkers = (clusters: Cluster[], suppressedKeys: Set<string>) => {
+    const renderMarkers = (
+      clusters: Cluster[],
+      suppressedKeys: Set<string>,
+    ) => {
       const currentMap = mapInstanceRef.current;
       if (!currentMap) return;
       const c = colorsRef.current;
@@ -193,7 +203,9 @@ export function WalkModeMap({
             iconSize: [22, 22],
             iconAnchor: [11, 11],
           });
-          const marker = L.marker([place.latitude, place.longitude], { icon }).addTo(currentMap);
+          const marker = L.marker([place.latitude, place.longitude], {
+            icon,
+          }).addTo(currentMap);
           marker.bindTooltip(place.name);
           markersRef.current.push(marker);
         } else {
@@ -216,11 +228,14 @@ export function WalkModeMap({
             iconSize: [size, size],
             iconAnchor: [size / 2, size / 2],
           });
-          const marker = L.marker([cluster.latitude, cluster.longitude], { icon }).addTo(
-            currentMap,
-          );
+          const marker = L.marker([cluster.latitude, cluster.longitude], {
+            icon,
+          }).addTo(currentMap);
           marker.on("click", () => {
-            const latLngs = cluster.places.map((p) => [p.latitude, p.longitude]);
+            const latLngs = cluster.places.map((p) => [
+              p.latitude,
+              p.longitude,
+            ]);
             const clusterBounds = L.latLngBounds(latLngs);
             currentMap.fitBounds(clusterBounds.pad(0.4), {
               maxZoom: 19,
@@ -277,7 +292,9 @@ export function WalkModeMap({
             icon,
             zIndexOffset: 1000,
           }).addTo(currentMap);
-          const el: HTMLElement | null = marker.getElement ? marker.getElement() : null;
+          const el: HTMLElement | null = marker.getElement
+            ? marker.getElement()
+            : null;
           collapseMarkersRef.current.push(marker);
           animEntries.push({
             marker,
@@ -345,7 +362,8 @@ export function WalkModeMap({
 
       const prevSingleById = new Map<string, WalkPlace>();
       for (const c of prev) {
-        if (c.places.length === 1) prevSingleById.set(c.places[0].id, c.places[0]);
+        if (c.places.length === 1)
+          prevSingleById.set(c.places[0].id, c.places[0]);
       }
 
       if (prevSingleById.size > 0) {
@@ -361,7 +379,10 @@ export function WalkModeMap({
           if (merged.length >= 1) {
             groups.push({
               clusterKey: cluster.key,
-              center: { latitude: cluster.latitude, longitude: cluster.longitude },
+              center: {
+                latitude: cluster.latitude,
+                longitude: cluster.longitude,
+              },
               places: merged.map((p) => prevSingleById.get(p.id)!),
             });
           }

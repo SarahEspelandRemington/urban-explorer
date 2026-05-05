@@ -36,7 +36,10 @@ interface HeadingContextType {
   isAudioLoading: boolean;
   audioError: string | null;
   narration: ReturnType<typeof useNarration>;
-  headTo: (place: HeadingTarget, opts?: { autoListen?: boolean }) => Promise<void>;
+  headTo: (
+    place: HeadingTarget,
+    opts?: { autoListen?: boolean },
+  ) => Promise<void>;
   listen: (place: HeadingTarget) => Promise<void>;
   cancel: () => void;
 }
@@ -160,7 +163,10 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch(`${API_BASE}/api/explore/deep-narration`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", ...await authHeaders() },
+          headers: {
+            "Content-Type": "application/json",
+            ...(await authHeaders()),
+          },
           body: JSON.stringify({
             placeName: place.name,
             category: place.category,
@@ -231,10 +237,7 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
   // When the user enters Walk Mode (which has its own narration),
   // tear down any active heading so the two narration channels don't fight.
   useEffect(() => {
-    if (
-      pathname?.startsWith("/walk-mode") &&
-      (target || audioPlace)
-    ) {
+    if (pathname?.startsWith("/walk-mode") && (target || audioPlace)) {
       cancel();
     }
   }, [pathname, target, audioPlace, cancel]);

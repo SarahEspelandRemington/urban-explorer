@@ -62,7 +62,8 @@ export function HeadingBanner() {
     (isSpeaking || isPaused || heading.isAudioLoading || !!heading.audioError);
 
   const onTogglePause = () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (isPaused) heading.narration.resume();
     else heading.narration.pause();
   };
@@ -73,7 +74,8 @@ export function HeadingBanner() {
   };
 
   const onCancel = () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     heading.cancel();
   };
 
@@ -100,14 +102,13 @@ export function HeadingBanner() {
                   formatDistance(heading.distanceMeters, measurementSystem),
                 )
               : t.headingBanner.headingToPlaceAccessibility(headlinePlace.name)
-            : t.headingBanner.nowPlayingDeepDivePlaceAccessibility(headlinePlace.name)
+            : t.headingBanner.nowPlayingDeepDivePlaceAccessibility(
+                headlinePlace.name,
+              )
         }
       >
         <View
-          style={[
-            styles.arrowWrap,
-            { backgroundColor: colors.primary + "1f" },
-          ]}
+          style={[styles.arrowWrap, { backgroundColor: colors.primary + "1f" }]}
         >
           {showNav ? (
             <View style={{ transform: [{ rotate: `${bearing}deg` }] }}>

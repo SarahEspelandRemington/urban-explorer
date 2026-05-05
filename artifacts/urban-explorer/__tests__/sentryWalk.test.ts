@@ -98,7 +98,11 @@ describe("addWalkBreadcrumb — PII scrubbed at add-time", () => {
 
     expect(mockAddBreadcrumb).toHaveBeenCalledTimes(1);
     const arg = mockAddBreadcrumb.mock.calls[0][0];
-    expect(arg.data).toEqual({ placeId: "abc", kind: "audio", narrationCount: 3 });
+    expect(arg.data).toEqual({
+      placeId: "abc",
+      kind: "audio",
+      narrationCount: 3,
+    });
   });
 
   test("omits data key entirely when all fields are PII", () => {
@@ -118,7 +122,11 @@ describe("addWalkBreadcrumb — PII scrubbed at add-time", () => {
   });
 
   test("sets category to 'walk' and forwards message and level", () => {
-    addWalkBreadcrumb("fetchNearbyPlaces error", { errorType: "TypeError" }, "error");
+    addWalkBreadcrumb(
+      "fetchNearbyPlaces error",
+      { errorType: "TypeError" },
+      "error",
+    );
 
     expect(mockAddBreadcrumb).toHaveBeenCalledTimes(1);
     const arg = mockAddBreadcrumb.mock.calls[0][0];
@@ -133,7 +141,9 @@ describe("addWalkBreadcrumb — PII scrubbed at add-time", () => {
     const Sentry2 = require("@sentry/react-native");
     const addBreadcrumb2 = Sentry2.addBreadcrumb as jest.Mock;
     addBreadcrumb2.mockClear();
-    const { addWalkBreadcrumb: addBreadcrumbNoSdk } = require("../lib/sentryWalk");
+    const {
+      addWalkBreadcrumb: addBreadcrumbNoSdk,
+    } = require("../lib/sentryWalk");
 
     addBreadcrumbNoSdk("walk started");
 

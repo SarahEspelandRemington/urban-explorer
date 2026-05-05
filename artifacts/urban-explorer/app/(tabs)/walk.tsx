@@ -18,8 +18,16 @@ import { useT } from "@/contexts/LocaleContext";
 import { useWalkMode } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
-import { deleteRecentRoute, loadRecentRoutes, type RecentRoute } from "@/lib/recentRoutes";
-import { STARTUP_KEYS, getStartupValue, setStartupValue } from "@/lib/startupStorage";
+import {
+  deleteRecentRoute,
+  loadRecentRoutes,
+  type RecentRoute,
+} from "@/lib/recentRoutes";
+import {
+  STARTUP_KEYS,
+  getStartupValue,
+  setStartupValue,
+} from "@/lib/startupStorage";
 
 const UNDO_DURATION_MS = 4000;
 const WALK_WELCOME_KEY = STARTUP_KEYS.walkWelcomeDismissed;
@@ -54,7 +62,9 @@ export default function WalkScreen() {
   const { isWalking } = useWalkMode();
 
   const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
-  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
+    null,
+  );
   const toastAnim = useRef(new Animated.Value(0)).current;
   const pendingDeleteRef = useRef<PendingDelete | null>(null);
 
@@ -110,18 +120,22 @@ export default function WalkScreen() {
     }, []),
   );
 
-  const commitDelete = useCallback(async (id: string) => {
-    await deleteRecentRoute(id);
-    Animated.timing(toastAnim, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => setPendingDelete(null));
-  }, [toastAnim]);
+  const commitDelete = useCallback(
+    async (id: string) => {
+      await deleteRecentRoute(id);
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => setPendingDelete(null));
+    },
+    [toastAnim],
+  );
 
   const handleDeleteRoute = useCallback(
     async (route: RecentRoute, index: number) => {
-      if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== "web")
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       const pd = pendingDeleteRef.current;
       if (pd) {
@@ -158,7 +172,8 @@ export default function WalkScreen() {
     const pd = pendingDeleteRef.current;
     if (!pd) return;
     clearTimeout(pd.timer);
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRecentRoutes((prev) => {
       const next = [...prev];
       next.splice(pd.index, 0, pd.route);
@@ -173,22 +188,26 @@ export default function WalkScreen() {
 
   const handleStartWalking = () => {
     unlockWebSpeech();
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push("/walk-mode");
   };
 
   const handlePlanRoute = () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("/walk-plan");
   };
 
   const handleResumeWalk = () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push("/walk-mode");
   };
 
   const handleReRunRoute = (route: RecentRoute) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({
       pathname: "/walk-plan",
       params: {
@@ -201,7 +220,11 @@ export default function WalkScreen() {
   const swipeableRefs = useRef<Map<string, Swipeable | null>>(new Map());
 
   const renderRightActions = useCallback(
-    (route: RecentRoute, index: number, dragX: Animated.AnimatedInterpolation<number>) => {
+    (
+      route: RecentRoute,
+      index: number,
+      dragX: Animated.AnimatedInterpolation<number>,
+    ) => {
       const scale = dragX.interpolate({
         inputRange: [-80, 0],
         outputRange: [1, 0.7],
@@ -247,18 +270,32 @@ export default function WalkScreen() {
           <Text style={[styles.title, { color: colors.foreground }]}>Walk</Text>
           <Pressable
             onPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (Platform.OS !== "web")
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.push("/settings-messages");
             }}
             style={({ pressed }) => [
               styles.editMessagesBtn,
-              { borderColor: colors.border, backgroundColor: colors.muted, opacity: pressed ? 0.75 : 1 },
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.muted,
+                opacity: pressed ? 0.75 : 1,
+              },
             ]}
             accessibilityRole="button"
             accessibilityLabel="Edit loading messages"
           >
-            <Feather name="message-square" size={13} color={colors.mutedForeground} />
-            <Text style={[styles.editMessagesBtnText, { color: colors.mutedForeground }]}>
+            <Feather
+              name="message-square"
+              size={13}
+              color={colors.mutedForeground}
+            />
+            <Text
+              style={[
+                styles.editMessagesBtnText,
+                { color: colors.mutedForeground },
+              ]}
+            >
               Messages
             </Text>
           </Pressable>
@@ -301,7 +338,9 @@ export default function WalkScreen() {
                 {t.walk.welcomeTitle}
               </Text>
             </View>
-            <Text style={[styles.welcomeBody, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.welcomeBody, { color: colors.mutedForeground }]}
+            >
               {t.walk.welcomeBody}
             </Text>
             <Pressable
@@ -317,7 +356,10 @@ export default function WalkScreen() {
               accessibilityLabel={t.walk.welcomeDismiss}
             >
               <Text
-                style={[styles.welcomeButtonText, { color: colors.primaryForeground }]}
+                style={[
+                  styles.welcomeButtonText,
+                  { color: colors.primaryForeground },
+                ]}
               >
                 {t.walk.welcomeDismiss}
               </Text>
@@ -349,23 +391,27 @@ export default function WalkScreen() {
                 ]}
               />
               <View style={styles.inProgressText}>
-                <Text style={[styles.inProgressTitle, { color: colors.primary }]}>
+                <Text
+                  style={[styles.inProgressTitle, { color: colors.primary }]}
+                >
                   Walk in Progress
                 </Text>
                 <Text
-                  style={[styles.inProgressSub, { color: colors.mutedForeground }]}
+                  style={[
+                    styles.inProgressSub,
+                    { color: colors.mutedForeground },
+                  ]}
                 >
                   Tap to return to your active session
                 </Text>
               </View>
             </View>
             <View
-              style={[
-                styles.resumeButton,
-                { backgroundColor: colors.primary },
-              ]}
+              style={[styles.resumeButton, { backgroundColor: colors.primary }]}
             >
-              <Text style={[styles.resumeText, { color: colors.primaryForeground }]}>
+              <Text
+                style={[styles.resumeText, { color: colors.primaryForeground }]}
+              >
                 Resume
               </Text>
             </View>
@@ -410,7 +456,11 @@ export default function WalkScreen() {
               historic buildings and places.
             </Text>
           </View>
-          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+          <Feather
+            name="chevron-right"
+            size={20}
+            color={colors.mutedForeground}
+          />
         </Pressable>
 
         <Pressable
@@ -430,7 +480,11 @@ export default function WalkScreen() {
           accessibilityHint="Plan a walking route and pre-load stories"
         >
           <View style={[styles.actionIcon, { backgroundColor: colors.muted }]}>
-            <Feather name="navigation" size={26} color={colors.mutedForeground} />
+            <Feather
+              name="navigation"
+              size={26}
+              color={colors.mutedForeground}
+            />
           </View>
           <View style={styles.actionText}>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>
@@ -446,7 +500,11 @@ export default function WalkScreen() {
               historic place along your path.
             </Text>
           </View>
-          <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
+          <Feather
+            name="chevron-right"
+            size={20}
+            color={colors.mutedForeground}
+          />
         </Pressable>
 
         <View
@@ -477,7 +535,12 @@ export default function WalkScreen() {
               ]}
             >
               <Feather name="map" size={20} color={colors.mutedForeground} />
-              <Text style={[styles.emptyStateText, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.emptyStateText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 Your planned routes will appear here after your first walk.
               </Text>
             </View>
@@ -489,7 +552,9 @@ export default function WalkScreen() {
                   if (ref) swipeableRefs.current.set(route.id, ref);
                   else swipeableRefs.current.delete(route.id);
                 }}
-                renderRightActions={(_, dragX) => renderRightActions(route, index, dragX)}
+                renderRightActions={(_, dragX) =>
+                  renderRightActions(route, index, dragX)
+                }
                 rightThreshold={40}
                 overshootRight={false}
                 friction={2}
@@ -497,7 +562,8 @@ export default function WalkScreen() {
                 <Pressable
                   onPress={() => handleReRunRoute(route)}
                   onLongPress={() => {
-                    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    if (Platform.OS !== "web")
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     swipeableRefs.current.get(route.id)?.openRight();
                   }}
                   delayLongPress={400}
@@ -514,8 +580,17 @@ export default function WalkScreen() {
                   accessibilityLabel={`Re-run route from ${route.startText} to ${route.endText}`}
                   accessibilityHint="Swipe left or long-press to delete"
                 >
-                  <View style={[styles.recentIconWrap, { backgroundColor: colors.muted }]}>
-                    <Feather name="map-pin" size={16} color={colors.mutedForeground} />
+                  <View
+                    style={[
+                      styles.recentIconWrap,
+                      { backgroundColor: colors.muted },
+                    ]}
+                  >
+                    <Feather
+                      name="map-pin"
+                      size={16}
+                      color={colors.mutedForeground}
+                    />
                   </View>
                   <View style={styles.recentInfo}>
                     <Text
@@ -525,33 +600,63 @@ export default function WalkScreen() {
                       {route.startText}
                     </Text>
                     <View style={styles.recentToRow}>
-                      <Feather name="arrow-right" size={10} color={colors.mutedForeground} />
+                      <Feather
+                        name="arrow-right"
+                        size={10}
+                        color={colors.mutedForeground}
+                      />
                       <Text
-                        style={[styles.recentTo, { color: colors.mutedForeground }]}
+                        style={[
+                          styles.recentTo,
+                          { color: colors.mutedForeground },
+                        ]}
                         numberOfLines={1}
                       >
                         {route.endText}
                       </Text>
                     </View>
-                    {(route.distanceMeters != null || route.durationSeconds != null) && (
+                    {(route.distanceMeters != null ||
+                      route.durationSeconds != null) && (
                       <View style={styles.recentMeta}>
                         {route.distanceMeters != null && (
-                          <Text style={[styles.recentMetaText, { color: colors.mutedForeground }]}>
+                          <Text
+                            style={[
+                              styles.recentMetaText,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
                             {formatDistance(route.distanceMeters)}
                           </Text>
                         )}
-                        {route.distanceMeters != null && route.durationSeconds != null && (
-                          <Text style={[styles.recentMetaDot, { color: colors.mutedForeground }]}>·</Text>
-                        )}
+                        {route.distanceMeters != null &&
+                          route.durationSeconds != null && (
+                            <Text
+                              style={[
+                                styles.recentMetaDot,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
+                              ·
+                            </Text>
+                          )}
                         {route.durationSeconds != null && (
-                          <Text style={[styles.recentMetaText, { color: colors.mutedForeground }]}>
+                          <Text
+                            style={[
+                              styles.recentMetaText,
+                              { color: colors.mutedForeground },
+                            ]}
+                          >
                             {formatDuration(route.durationSeconds)}
                           </Text>
                         )}
                       </View>
                     )}
                   </View>
-                  <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                  <Feather
+                    name="chevron-right"
+                    size={16}
+                    color={colors.mutedForeground}
+                  />
                 </Pressable>
               </Swipeable>
             ))
@@ -588,7 +693,10 @@ export default function WalkScreen() {
             </Text>
             <Pressable
               onPress={handleUndo}
-              style={({ pressed }) => [styles.undoButton, { opacity: pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [
+                styles.undoButton,
+                { opacity: pressed ? 0.7 : 1 },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Undo route deletion"
             >

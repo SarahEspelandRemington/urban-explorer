@@ -15,7 +15,9 @@ function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="walk">
-        <Icon sf={{ default: "figure.walk", selected: "figure.walk.circle.fill" }} />
+        <Icon
+          sf={{ default: "figure.walk", selected: "figure.walk.circle.fill" }}
+        />
         <Label>{t.tabs.walk}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="index">

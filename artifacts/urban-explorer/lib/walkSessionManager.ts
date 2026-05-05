@@ -27,7 +27,9 @@ let activeLocationCallback: LocationCallback | null = null;
  * a new session has already called `install` is therefore safe and
  * idempotent.
  */
-export function installSessionCallback(cb: LocationCallback): { stop: () => void } {
+export function installSessionCallback(cb: LocationCallback): {
+  stop: () => void;
+} {
   const installed = cb;
   activeLocationCallback = cb;
 

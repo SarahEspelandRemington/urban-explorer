@@ -249,7 +249,11 @@ export function SlateBlue() {
             gap: 4,
           }}
         >
-          <Bookmark size={22} color={colors.mutedForeground} strokeWidth={1.8} />
+          <Bookmark
+            size={22}
+            color={colors.mutedForeground}
+            strokeWidth={1.8}
+          />
           <span
             style={{
               fontSize: 11,

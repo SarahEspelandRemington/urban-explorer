@@ -22,7 +22,10 @@ import { useT } from "@/contexts/LocaleContext";
 import { useWalkMode, type WalkDensity } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
-import { BUILDING_TYPE_GROUPS, type BuildingGroupKey } from "@/constants/buildingTypeGroups";
+import {
+  BUILDING_TYPE_GROUPS,
+  type BuildingGroupKey,
+} from "@/constants/buildingTypeGroups";
 
 export default function WalkModeScreen() {
   const colors = useColors();
@@ -43,7 +46,8 @@ export default function WalkModeScreen() {
   }, []);
 
   const handleStop = () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     walk.stopWalk();
     router.dismissAll?.();
     router.replace("/(tabs)/walk");
@@ -51,18 +55,21 @@ export default function WalkModeScreen() {
 
   const setDensity = (d: WalkDensity) => {
     if (d === walk.density) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     walk.setDensity(d);
   };
 
   const togglePause = () => {
     if (walk.narration.isPaused) walk.narration.resume();
     else walk.narration.pause();
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const toggleBuildingGroup = (key: BuildingGroupKey) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const next = new Set(walk.enabledBuildingGroups);
     if (next.has(key)) next.delete(key);
     else next.add(key);
@@ -70,7 +77,8 @@ export default function WalkModeScreen() {
   };
 
   const togglePrefetchStats = (next: boolean) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     walk.setShowPrefetchStats(next);
   };
 
@@ -100,16 +108,22 @@ export default function WalkModeScreen() {
           ]}
         >
           <Feather name="x" size={16} color={colors.foreground} />
-          <Text style={[styles.headerHomeText, { color: colors.foreground }]}>{t.walkMode.end}</Text>
+          <Text style={[styles.headerHomeText, { color: colors.foreground }]}>
+            {t.walkMode.end}
+          </Text>
         </Pressable>
 
         <View style={styles.walkingIndicator}>
           <View style={[styles.liveDot, { backgroundColor: "#22c55e" }]} />
-          <Text style={[styles.walkingText, { color: colors.foreground }]}>{t.walkMode.walking}</Text>
+          <Text style={[styles.walkingText, { color: colors.foreground }]}>
+            {t.walkMode.walking}
+          </Text>
         </View>
 
         <View style={styles.headerRight}>
-          <View style={[styles.densityToggle, { backgroundColor: colors.muted }]}>
+          <View
+            style={[styles.densityToggle, { backgroundColor: colors.muted }]}
+          >
             {(["sparse", "dense"] as const).map((d) => {
               const active = walk.density === d;
               return (
@@ -117,7 +131,11 @@ export default function WalkModeScreen() {
                   key={d}
                   onPress={() => setDensity(d)}
                   accessibilityRole="button"
-                  accessibilityLabel={d === "sparse" ? t.walkMode.fewerResultsAccessibility : t.walkMode.moreResultsAccessibility}
+                  accessibilityLabel={
+                    d === "sparse"
+                      ? t.walkMode.fewerResultsAccessibility
+                      : t.walkMode.moreResultsAccessibility
+                  }
                   accessibilityState={{ selected: active }}
                   style={[
                     styles.densityButton,
@@ -128,8 +146,12 @@ export default function WalkModeScreen() {
                     style={[
                       styles.densityText,
                       {
-                        color: active ? colors.foreground : colors.mutedForeground,
-                        fontFamily: active ? "Inter_600SemiBold" : "Inter_500Medium",
+                        color: active
+                          ? colors.foreground
+                          : colors.mutedForeground,
+                        fontFamily: active
+                          ? "Inter_600SemiBold"
+                          : "Inter_500Medium",
                       },
                     ]}
                   >
@@ -142,7 +164,8 @@ export default function WalkModeScreen() {
 
           <Pressable
             onPress={() => {
-              if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (Platform.OS !== "web")
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setSettingsVisible(true);
             }}
             hitSlop={12}
@@ -151,8 +174,14 @@ export default function WalkModeScreen() {
             style={({ pressed }) => [
               styles.settingsBtn,
               {
-                backgroundColor: walk.enabledBuildingGroups.size > 0 ? colors.primary + "22" : colors.muted,
-                borderColor: walk.enabledBuildingGroups.size > 0 ? colors.primary : colors.border,
+                backgroundColor:
+                  walk.enabledBuildingGroups.size > 0
+                    ? colors.primary + "22"
+                    : colors.muted,
+                borderColor:
+                  walk.enabledBuildingGroups.size > 0
+                    ? colors.primary
+                    : colors.border,
                 opacity: pressed ? 0.75 : 1,
               },
             ]}
@@ -160,7 +189,11 @@ export default function WalkModeScreen() {
             <Feather
               name="sliders"
               size={14}
-              color={walk.enabledBuildingGroups.size > 0 ? colors.primary : colors.mutedForeground}
+              color={
+                walk.enabledBuildingGroups.size > 0
+                  ? colors.primary
+                  : colors.mutedForeground
+              }
             />
           </Pressable>
         </View>
@@ -172,16 +205,35 @@ export default function WalkModeScreen() {
         animationType="slide"
         onRequestClose={() => setSettingsVisible(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setSettingsVisible(false)}>
-          <Pressable style={[styles.modalSheet, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => {}}>
-            <View style={[styles.modalHandle, { backgroundColor: colors.border }]} />
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setSettingsVisible(false)}
+        >
+          <Pressable
+            style={[
+              styles.modalSheet,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+            onPress={() => {}}
+          >
+            <View
+              style={[styles.modalHandle, { backgroundColor: colors.border }]}
+            />
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>
               {t.walkMode.buildingFilters}
             </Text>
-            <Text style={[styles.modalDescription, { color: colors.mutedForeground }]}>
+            <Text
+              style={[
+                styles.modalDescription,
+                { color: colors.mutedForeground },
+              ]}
+            >
               {t.walkMode.buildingFiltersDescription}
             </Text>
-            <ScrollView style={styles.modalGroups} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.modalGroups}
+              showsVerticalScrollIndicator={false}
+            >
               <Pressable
                 onPress={() => togglePrefetchStats(!walk.showPrefetchStats)}
                 style={[styles.groupRow, { borderBottomColor: colors.border }]}
@@ -190,25 +242,41 @@ export default function WalkModeScreen() {
                 accessibilityLabel={t.walkMode.showPrefetchStats}
               >
                 <View style={styles.groupText}>
-                  <Text style={[styles.groupName, { color: colors.foreground }]}>
+                  <Text
+                    style={[styles.groupName, { color: colors.foreground }]}
+                  >
                     {t.walkMode.showPrefetchStats}
                   </Text>
-                  <Text style={[styles.groupDesc, { color: colors.mutedForeground }]}>
+                  <Text
+                    style={[
+                      styles.groupDesc,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
                     {t.walkMode.showPrefetchStatsDescription}
                   </Text>
                 </View>
                 <Switch
                   value={walk.showPrefetchStats}
                   onValueChange={togglePrefetchStats}
-                  trackColor={{ false: colors.muted, true: colors.primary + "80" }}
-                  thumbColor={walk.showPrefetchStats ? colors.primary : colors.mutedForeground}
+                  trackColor={{
+                    false: colors.muted,
+                    true: colors.primary + "80",
+                  }}
+                  thumbColor={
+                    walk.showPrefetchStats
+                      ? colors.primary
+                      : colors.mutedForeground
+                  }
                 />
               </Pressable>
               {BUILDING_TYPE_GROUPS.map((group) => {
                 const key = group.key as BuildingGroupKey;
                 const enabled = walk.enabledBuildingGroups.has(key);
-                const labelKey = `buildingGroup${group.key.charAt(0).toUpperCase()}${group.key.slice(1)}` as keyof typeof t.walkMode;
-                const descKey = `buildingGroup${group.key.charAt(0).toUpperCase()}${group.key.slice(1)}Desc` as keyof typeof t.walkMode;
+                const labelKey =
+                  `buildingGroup${group.key.charAt(0).toUpperCase()}${group.key.slice(1)}` as keyof typeof t.walkMode;
+                const descKey =
+                  `buildingGroup${group.key.charAt(0).toUpperCase()}${group.key.slice(1)}Desc` as keyof typeof t.walkMode;
                 return (
                   <Pressable
                     key={key}
@@ -223,18 +291,30 @@ export default function WalkModeScreen() {
                     accessibilityState={{ checked: enabled }}
                   >
                     <View style={styles.groupText}>
-                      <Text style={[styles.groupName, { color: colors.foreground }]}>
+                      <Text
+                        style={[styles.groupName, { color: colors.foreground }]}
+                      >
                         {String(t.walkMode[labelKey])}
                       </Text>
-                      <Text style={[styles.groupDesc, { color: colors.mutedForeground }]}>
+                      <Text
+                        style={[
+                          styles.groupDesc,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
                         {String(t.walkMode[descKey])}
                       </Text>
                     </View>
                     <Switch
                       value={enabled}
                       onValueChange={() => toggleBuildingGroup(key)}
-                      trackColor={{ false: colors.muted, true: colors.primary + "80" }}
-                      thumbColor={enabled ? colors.primary : colors.mutedForeground}
+                      trackColor={{
+                        false: colors.muted,
+                        true: colors.primary + "80",
+                      }}
+                      thumbColor={
+                        enabled ? colors.primary : colors.mutedForeground
+                      }
                     />
                   </Pressable>
                 );
@@ -242,7 +322,10 @@ export default function WalkModeScreen() {
             </ScrollView>
             <Pressable
               onPress={() => setSettingsVisible(false)}
-              style={[styles.modalCloseBtn, { backgroundColor: colors.primary }]}
+              style={[
+                styles.modalCloseBtn,
+                { backgroundColor: colors.primary },
+              ]}
               accessibilityRole="button"
             >
               <Text style={styles.modalCloseBtnText}>{t.common.ok}</Text>
@@ -278,7 +361,9 @@ export default function WalkModeScreen() {
         ) : (
           <View style={[styles.loadingMap, { backgroundColor: colors.muted }]}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[styles.loadingText, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.loadingText, { color: colors.mutedForeground }]}
+            >
               {t.walkMode.gettingLocation}
             </Text>
           </View>
@@ -288,11 +373,18 @@ export default function WalkModeScreen() {
       <View style={styles.cardSlot}>
         {walk.narration.currentPlace ? (
           <Animated.View
-            entering={Platform.OS !== "web" ? FadeInDown.springify() : undefined}
+            entering={
+              Platform.OS !== "web" ? FadeInDown.springify() : undefined
+            }
             exiting={Platform.OS !== "web" ? FadeOut : undefined}
-            style={[styles.nowPlaying, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[
+              styles.nowPlaying,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             accessibilityLiveRegion="polite"
-            accessibilityLabel={t.walkMode.nowPlayingPlaceAccessibility(walk.narration.currentPlace)}
+            accessibilityLabel={t.walkMode.nowPlayingPlaceAccessibility(
+              walk.narration.currentPlace,
+            )}
           >
             {(() => {
               const photoUrl = walk.currentNarrationPlace?.photoUrl;
@@ -303,34 +395,63 @@ export default function WalkModeScreen() {
                   resizeMode="cover"
                 />
               ) : (
-                <View style={[styles.nowPlayingIcon, { backgroundColor: colors.primary + "18" }]}>
+                <View
+                  style={[
+                    styles.nowPlayingIcon,
+                    { backgroundColor: colors.primary + "18" },
+                  ]}
+                >
                   <Feather name="headphones" size={18} color={colors.primary} />
                 </View>
               );
             })()}
             <View style={styles.nowPlayingText}>
               <View style={styles.nowPlayingLabelRow}>
-                <Text style={[styles.nowPlayingLabel, { color: colors.mutedForeground }]}>
+                <Text
+                  style={[
+                    styles.nowPlayingLabel,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
                   {t.walkMode.nowPlaying}
                 </Text>
                 {walk.isReplay ? (
                   <Animated.View
-                    entering={Platform.OS !== "web" ? FadeIn.duration(200) : undefined}
-                    exiting={Platform.OS !== "web" ? FadeOut.duration(200) : undefined}
+                    entering={
+                      Platform.OS !== "web" ? FadeIn.duration(200) : undefined
+                    }
+                    exiting={
+                      Platform.OS !== "web" ? FadeOut.duration(200) : undefined
+                    }
                     style={[
                       styles.replayBadge,
-                      { backgroundColor: colors.primary + "1f", borderColor: colors.primary + "55" },
+                      {
+                        backgroundColor: colors.primary + "1f",
+                        borderColor: colors.primary + "55",
+                      },
                     ]}
                     accessibilityLabel={t.walkMode.replayBadge}
                   >
-                    <Feather name="rotate-ccw" size={10} color={colors.primary} />
-                    <Text style={[styles.replayBadgeText, { color: colors.primary }]}>
+                    <Feather
+                      name="rotate-ccw"
+                      size={10}
+                      color={colors.primary}
+                    />
+                    <Text
+                      style={[
+                        styles.replayBadgeText,
+                        { color: colors.primary },
+                      ]}
+                    >
                       {t.walkMode.replayBadge}
                     </Text>
                   </Animated.View>
                 ) : null}
               </View>
-              <Text style={[styles.nowPlayingTitle, { color: colors.foreground }]} numberOfLines={2}>
+              <Text
+                style={[styles.nowPlayingTitle, { color: colors.foreground }]}
+                numberOfLines={2}
+              >
                 {walk.narration.currentPlace}
               </Text>
             </View>
@@ -338,7 +459,11 @@ export default function WalkModeScreen() {
               onPress={togglePause}
               hitSlop={16}
               accessibilityRole="button"
-              accessibilityLabel={walk.narration.isPaused ? t.walkMode.resumeAccessibility : t.walkMode.pauseAccessibility}
+              accessibilityLabel={
+                walk.narration.isPaused
+                  ? t.walkMode.resumeAccessibility
+                  : t.walkMode.pauseAccessibility
+              }
               style={[styles.iconBtn, { backgroundColor: colors.muted }]}
             >
               <Feather
@@ -350,37 +475,67 @@ export default function WalkModeScreen() {
             <Pressable
               onPress={() => {
                 walk.narration.skip();
-                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                if (Platform.OS !== "web")
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               hitSlop={16}
               accessibilityRole="button"
               accessibilityLabel={t.walkMode.skipAccessibility}
               style={[styles.iconBtn, { backgroundColor: colors.muted }]}
             >
-              <Feather name="skip-forward" size={18} color={colors.foreground} />
+              <Feather
+                name="skip-forward"
+                size={18}
+                color={colors.foreground}
+              />
             </Pressable>
           </Animated.View>
         ) : walk.isLoading ? (
           <Animated.View
             entering={Platform.OS !== "web" ? FadeIn : undefined}
-            style={[styles.nowPlaying, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[
+              styles.nowPlaying,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
           >
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={[styles.scanningText, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.scanningText, { color: colors.mutedForeground }]}
+            >
               {t.walkMode.listening}
             </Text>
           </Animated.View>
         ) : (
-          <View style={[styles.nowPlaying, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.nowPlayingIcon, { backgroundColor: colors.muted }]}>
-              <Feather name="navigation" size={18} color={colors.mutedForeground} />
+          <View
+            style={[
+              styles.nowPlaying,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
+            <View
+              style={[styles.nowPlayingIcon, { backgroundColor: colors.muted }]}
+            >
+              <Feather
+                name="navigation"
+                size={18}
+                color={colors.mutedForeground}
+              />
             </View>
             <View style={styles.nowPlayingText}>
-              <Text style={[styles.nowPlayingLabel, { color: colors.mutedForeground }]}>
+              <Text
+                style={[
+                  styles.nowPlayingLabel,
+                  { color: colors.mutedForeground },
+                ]}
+              >
                 {t.walkMode.keepWalking}
               </Text>
-              <Text style={[styles.nowPlayingTitle, { color: colors.foreground }]}>
-                {walk.density === "dense" ? t.walkMode.storiesOften : t.walkMode.storiesAsYouGo}
+              <Text
+                style={[styles.nowPlayingTitle, { color: colors.foreground }]}
+              >
+                {walk.density === "dense"
+                  ? t.walkMode.storiesOften
+                  : t.walkMode.storiesAsYouGo}
               </Text>
             </View>
           </View>
@@ -405,7 +560,8 @@ export default function WalkModeScreen() {
               // conflate "lookup miss" with "prefetch churn" and
               // understate the real lookup hit rate.
               const lookups = s.HIT + s.MISS;
-              const rate = lookups > 0 ? Math.round((s.HIT / lookups) * 100) : 0;
+              const rate =
+                lookups > 0 ? Math.round((s.HIT / lookups) * 100) : 0;
               return `prefetch  hit ${s.HIT}/${lookups} (${rate}%)  stale ${s.STALE_DISCARD}  stop ${s.STOP_WALK_DISCARD}  dedupe ${s.DEDUPE}`;
             })()}
           </Text>
@@ -521,7 +677,11 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.4,
   },
-  nowPlayingTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", marginTop: 2 },
+  nowPlayingTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    marginTop: 2,
+  },
   iconBtn: {
     width: 40,
     height: 40,

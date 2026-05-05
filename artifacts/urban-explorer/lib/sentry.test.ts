@@ -1,4 +1,10 @@
-import { beforeSend, beforeAddBreadcrumb, isPiiKey, scrubObject, scrubString } from "./sentry";
+import {
+  beforeSend,
+  beforeAddBreadcrumb,
+  isPiiKey,
+  scrubObject,
+  scrubString,
+} from "./sentry";
 import type { ErrorEvent, Breadcrumb } from "@sentry/react-native";
 
 describe("isPiiKey", () => {
@@ -173,7 +179,9 @@ describe("scrubString", () => {
     });
 
     test("place: Eiffel Tower Paris → place: [redacted] (three-word)", () => {
-      expect(scrubString("place: Eiffel Tower Paris")).toBe("place: [redacted]");
+      expect(scrubString("place: Eiffel Tower Paris")).toBe(
+        "place: [redacted]",
+      );
     });
 
     test("name: Central Park, summary: nice — both keys redacted, comma consumed", () => {
@@ -216,13 +224,13 @@ describe("scrubString", () => {
 
     test("name and summary both redacted", () => {
       expect(scrubString('name: "Park", summary: "Nice place"')).toBe(
-        'name: [redacted], summary: [redacted]',
+        "name: [redacted], summary: [redacted]",
       );
     });
 
     test("mixed colon and equals forms", () => {
       expect(scrubString('lat: 51.5 place="Park"')).toBe(
-        'lat: [redacted] place=[redacted]',
+        "lat: [redacted] place=[redacted]",
       );
     });
   });
@@ -373,9 +381,7 @@ describe("scrubObject", () => {
 
   test("recurses into nested objects inside array elements", () => {
     const input = {
-      stops: [
-        { meta: { lat: 51.5, kind: "audio" }, placeId: "x" },
-      ],
+      stops: [{ meta: { lat: 51.5, kind: "audio" }, placeId: "x" }],
     };
     expect(scrubObject(input)).toEqual({
       stops: [{ meta: { kind: "audio" }, placeId: "x" }],
@@ -406,7 +412,12 @@ describe("scrubObject", () => {
   });
 
   test("returns identical object when no keys are PII", () => {
-    const input = { placeId: "a", narrationCount: 1, kind: "text", isWalking: false };
+    const input = {
+      placeId: "a",
+      narrationCount: 1,
+      kind: "text",
+      isWalking: false,
+    };
     expect(scrubObject(input)).toEqual(input);
   });
 });
@@ -462,12 +473,20 @@ describe("beforeSend pipeline", () => {
       const event = makeEvent({
         breadcrumbs: [
           { category: "walk", message: "walk started" },
-          { category: "walk", message: "place visited", data: { placeId: "abc" } },
+          {
+            category: "walk",
+            message: "place visited",
+            data: { placeId: "abc" },
+          },
         ] as Breadcrumb[],
       });
       const result = beforeSend(event);
       expect(result.breadcrumbs).toHaveLength(2);
-      expect((result.breadcrumbs as Breadcrumb[]).every((b) => b.category === "walk")).toBe(true);
+      expect(
+        (result.breadcrumbs as Breadcrumb[]).every(
+          (b) => b.category === "walk",
+        ),
+      ).toBe(true);
     });
 
     test("retains only walk breadcrumbs when mixed", () => {
@@ -476,13 +495,21 @@ describe("beforeSend pipeline", () => {
           { category: "xhr", message: "GET /api" },
           { category: "walk", message: "walk started" },
           { category: "console", message: "debug" },
-          { category: "walk", message: "place visited", data: { placeId: "x" } },
+          {
+            category: "walk",
+            message: "place visited",
+            data: { placeId: "x" },
+          },
         ] as Breadcrumb[],
       });
       const result = beforeSend(event);
       expect(result.breadcrumbs).toHaveLength(2);
-      expect((result.breadcrumbs as Breadcrumb[])[0].message).toBe("walk started");
-      expect((result.breadcrumbs as Breadcrumb[])[1].message).toBe("place visited");
+      expect((result.breadcrumbs as Breadcrumb[])[0].message).toBe(
+        "walk started",
+      );
+      expect((result.breadcrumbs as Breadcrumb[])[1].message).toBe(
+        "place visited",
+      );
     });
 
     test("redacts PII in walk-category breadcrumb message", () => {
@@ -513,7 +540,9 @@ describe("beforeSend pipeline", () => {
 
     test("breadcrumb without data field is handled gracefully", () => {
       const event = makeEvent({
-        breadcrumbs: [{ category: "walk", message: "walk started" }] as Breadcrumb[],
+        breadcrumbs: [
+          { category: "walk", message: "walk started" },
+        ] as Breadcrumb[],
       });
       expect(() => beforeSend(event)).not.toThrow();
     });
@@ -521,7 +550,11 @@ describe("beforeSend pipeline", () => {
     test("preserves walk breadcrumb data without PII unchanged", () => {
       const event = makeEvent({
         breadcrumbs: [
-          { category: "walk", message: "place visited", data: { placeId: "abc", kind: "text" } },
+          {
+            category: "walk",
+            message: "place visited",
+            data: { placeId: "abc", kind: "text" },
+          },
         ] as Breadcrumb[],
       });
       const result = beforeSend(event);
@@ -630,7 +663,12 @@ describe("beforeSend pipeline", () => {
 
     test("preserves safe keys in event.extra", () => {
       const event = makeEvent({
-        extra: { placeId: "abc", narrationCount: 2, kind: "audio", isWalking: true },
+        extra: {
+          placeId: "abc",
+          narrationCount: 2,
+          kind: "audio",
+          isWalking: true,
+        },
       });
       const result = beforeSend(event);
       expect(result.extra).toEqual({
@@ -747,7 +785,9 @@ describe("beforeSend pipeline", () => {
       const event = makeEvent({
         user: { id: "u1" },
         extra: { lat: 51.5, kind: "audio" },
-        breadcrumbs: [{ category: "walk", message: "walk started" }] as Breadcrumb[],
+        breadcrumbs: [
+          { category: "walk", message: "walk started" },
+        ] as Breadcrumb[],
       });
       const result = beforeSend(event);
       expect(result).toBe(event);
@@ -763,12 +803,18 @@ describe("beforeAddBreadcrumb", () => {
     });
 
     test("returns null for console category", () => {
-      const crumb: Breadcrumb = { category: "console", message: "user logged in" };
+      const crumb: Breadcrumb = {
+        category: "console",
+        message: "user logged in",
+      };
       expect(beforeAddBreadcrumb(crumb)).toBeNull();
     });
 
     test("returns null for navigation category", () => {
-      const crumb: Breadcrumb = { category: "navigation", message: "route changed" };
+      const crumb: Breadcrumb = {
+        category: "navigation",
+        message: "route changed",
+      };
       expect(beforeAddBreadcrumb(crumb)).toBeNull();
     });
 
@@ -785,7 +831,11 @@ describe("beforeAddBreadcrumb", () => {
 
   describe("passes walk breadcrumbs through", () => {
     test("returns breadcrumb unchanged when it has no data field", () => {
-      const crumb: Breadcrumb = { category: "walk", message: "walk started", level: "info" };
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "walk started",
+        level: "info",
+      };
       const result = beforeAddBreadcrumb(crumb);
       expect(result).not.toBeNull();
       expect(result!.category).toBe("walk");
@@ -794,7 +844,11 @@ describe("beforeAddBreadcrumb", () => {
     });
 
     test("returns breadcrumb unchanged when data is undefined", () => {
-      const crumb: Breadcrumb = { category: "walk", message: "walk stopped", data: undefined };
+      const crumb: Breadcrumb = {
+        category: "walk",
+        message: "walk stopped",
+        data: undefined,
+      };
       const result = beforeAddBreadcrumb(crumb);
       expect(result).not.toBeNull();
       expect(result!.data).toBeUndefined();

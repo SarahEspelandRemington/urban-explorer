@@ -20,14 +20,18 @@ interface LanguagePickerModalProps {
   onClose: () => void;
 }
 
-export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalProps) {
+export function LanguagePickerModal({
+  visible,
+  onClose,
+}: LanguagePickerModalProps) {
   const colors = useColors();
   const t = useT();
   const insets = useSafeAreaInsets();
   const { locale, setLocale, availableLocales, resolved } = useLocale();
 
   const handleSelect = async (code: string) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await setLocale(code);
     onClose();
   };
@@ -56,7 +60,9 @@ export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalPro
               <Text style={[styles.title, { color: colors.foreground }]}>
                 {t.languageModal.title}
               </Text>
-              <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+              <Text
+                style={[styles.subtitle, { color: colors.mutedForeground }]}
+              >
                 {t.languageModal.subtitle}
               </Text>
             </View>
@@ -72,7 +78,9 @@ export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalPro
           </View>
 
           <View style={[styles.preview, { backgroundColor: colors.muted }]}>
-            <Text style={[styles.previewLabel, { color: colors.mutedForeground }]}>
+            <Text
+              style={[styles.previewLabel, { color: colors.mutedForeground }]}
+            >
               {t.languageModal.preview}
             </Text>
             <Text
@@ -89,7 +97,10 @@ export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalPro
             </Text>
           </View>
 
-          <ScrollView style={styles.list} contentContainerStyle={{ paddingVertical: 4 }}>
+          <ScrollView
+            style={styles.list}
+            contentContainerStyle={{ paddingVertical: 4 }}
+          >
             {availableLocales.map((l) => {
               const active = l.code === locale;
               return (
@@ -101,15 +112,23 @@ export function LanguagePickerModal({ visible, onClose }: LanguagePickerModalPro
                   accessibilityState={{ selected: active }}
                   style={({ pressed }) => [
                     styles.row,
-                    { borderBottomColor: colors.border, opacity: pressed ? 0.7 : 1 },
+                    {
+                      borderBottomColor: colors.border,
+                      opacity: pressed ? 0.7 : 1,
+                    },
                   ]}
                 >
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.rowLabel, { color: colors.foreground }]}>
+                    <Text
+                      style={[styles.rowLabel, { color: colors.foreground }]}
+                    >
                       {l.label}
                     </Text>
                     <Text
-                      style={[styles.rowSample, { color: colors.mutedForeground }]}
+                      style={[
+                        styles.rowSample,
+                        { color: colors.mutedForeground },
+                      ]}
                       numberOfLines={1}
                     >
                       {l.notificationTitle}
@@ -149,7 +168,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: { fontSize: 18, fontFamily: "Inter_700Bold" },
-  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 4, lineHeight: 18 },
+  subtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    marginTop: 4,
+    lineHeight: 18,
+  },
   closeBtn: {
     width: 32,
     height: 32,

@@ -43,8 +43,14 @@ async function geocodeAddress(
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const lat = typeof data.latitude === "number" ? data.latitude : parseFloat(data.latitude);
-    const lng = typeof data.longitude === "number" ? data.longitude : parseFloat(data.longitude);
+    const lat =
+      typeof data.latitude === "number"
+        ? data.latitude
+        : parseFloat(data.latitude);
+    const lng =
+      typeof data.longitude === "number"
+        ? data.longitude
+        : parseFloat(data.longitude);
     if (!isFinite(lat) || !isFinite(lng)) return null;
     return { latitude: lat, longitude: lng };
   } catch {
@@ -71,7 +77,10 @@ export default function WalkPlanScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const walk = useWalkMode();
-  const params = useLocalSearchParams<{ prefillStart?: string; prefillEnd?: string }>();
+  const params = useLocalSearchParams<{
+    prefillStart?: string;
+    prefillEnd?: string;
+  }>();
 
   const [startText, setStartText] = useState(params.prefillStart ?? "");
   const [endText, setEndText] = useState(params.prefillEnd ?? "");
@@ -86,24 +95,41 @@ export default function WalkPlanScreen() {
   const [phase, setPhase] = useState<Phase>("input");
   const [errorMsg, setErrorMsg] = useState("");
   const [prefetchedPlaces, setPrefetchedPlaces] = useState<WalkPlace[]>([]);
-  const [routeMeta, setRouteMeta] = useState<{ distanceMeters: number; durationSeconds: number } | null>(null);
+  const [routeMeta, setRouteMeta] = useState<{
+    distanceMeters: number;
+    durationSeconds: number;
+  } | null>(null);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   const canSearch = startText.trim().length >= 2 && endText.trim().length >= 2;
   const canStart = phase === "ready";
 
-  const handleSelectStart = (suggestion: { name: string; latitude?: number; longitude?: number }) => {
+  const handleSelectStart = (suggestion: {
+    name: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     if (suggestion.latitude != null && suggestion.longitude != null) {
-      startCoordsRef.current = { latitude: suggestion.latitude, longitude: suggestion.longitude };
+      startCoordsRef.current = {
+        latitude: suggestion.latitude,
+        longitude: suggestion.longitude,
+      };
     } else {
       startCoordsRef.current = null;
     }
   };
 
-  const handleSelectEnd = (suggestion: { name: string; latitude?: number; longitude?: number }) => {
+  const handleSelectEnd = (suggestion: {
+    name: string;
+    latitude?: number;
+    longitude?: number;
+  }) => {
     if (suggestion.latitude != null && suggestion.longitude != null) {
-      endCoordsRef.current = { latitude: suggestion.latitude, longitude: suggestion.longitude };
+      endCoordsRef.current = {
+        latitude: suggestion.latitude,
+        longitude: suggestion.longitude,
+      };
     } else {
       endCoordsRef.current = null;
     }
@@ -111,7 +137,8 @@ export default function WalkPlanScreen() {
 
   const handleFindRoute = async () => {
     if (!canSearch) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPhase("searching");
     setErrorMsg("");
     setPrefetchedPlaces([]);
@@ -147,7 +174,10 @@ export default function WalkPlanScreen() {
         method: "POST",
         headers: { "Content-Type": "application/json", ...hdrs },
         body: JSON.stringify({
-          start: { latitude: startCoords.latitude, longitude: startCoords.longitude },
+          start: {
+            latitude: startCoords.latitude,
+            longitude: startCoords.longitude,
+          },
           end: { latitude: endCoords.latitude, longitude: endCoords.longitude },
         }),
       });
@@ -155,8 +185,11 @@ export default function WalkPlanScreen() {
       if (!routeRes.ok) {
         const data: unknown = await routeRes.json().catch(() => ({}));
         const serverMsg =
-          typeof data === "object" && data !== null && "error" in data && typeof (data as Record<string, unknown>).error === "string"
-            ? (data as Record<string, unknown>).error as string
+          typeof data === "object" &&
+          data !== null &&
+          "error" in data &&
+          typeof (data as Record<string, unknown>).error === "string"
+            ? ((data as Record<string, unknown>).error as string)
             : null;
         if (routeRes.status === 404) {
           setErrorMsg(t.walkPlan.noRoute);
@@ -243,7 +276,9 @@ export default function WalkPlanScreen() {
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             {t.walkPlan.title}
           </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
+          >
             {t.walkPlan.subtitle}
           </Text>
         </View>
@@ -258,7 +293,9 @@ export default function WalkPlanScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.routeLine}>
-          <View style={[styles.routeConnector, { backgroundColor: colors.border }]} />
+          <View
+            style={[styles.routeConnector, { backgroundColor: colors.border }]}
+          />
 
           <View style={styles.inputRow}>
             <AddressInput
@@ -300,7 +337,9 @@ export default function WalkPlanScreen() {
         {phase !== "ready" && (
           <Pressable
             onPress={handleFindRoute}
-            disabled={!canSearch || phase === "searching" || phase === "fetching"}
+            disabled={
+              !canSearch || phase === "searching" || phase === "fetching"
+            }
             style={({ pressed }) => [
               styles.actionButton,
               {
@@ -312,11 +351,21 @@ export default function WalkPlanScreen() {
             accessibilityRole="button"
             accessibilityLabel={t.walkPlan.findRoute}
           >
-            {(phase === "searching" || phase === "fetching") ? (
+            {phase === "searching" || phase === "fetching" ? (
               <View style={styles.buttonRow}>
-                <ActivityIndicator size="small" color={colors.primaryForeground} />
-                <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
-                  {phase === "searching" ? t.walkPlan.searching : t.walkPlan.fetchingStops}
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primaryForeground}
+                />
+                <Text
+                  style={[
+                    styles.buttonText,
+                    { color: colors.primaryForeground },
+                  ]}
+                >
+                  {phase === "searching"
+                    ? t.walkPlan.searching
+                    : t.walkPlan.fetchingStops}
                 </Text>
               </View>
             ) : (
@@ -324,12 +373,20 @@ export default function WalkPlanScreen() {
                 <Feather
                   name="navigation"
                   size={16}
-                  color={canSearch ? colors.primaryForeground : colors.mutedForeground}
+                  color={
+                    canSearch
+                      ? colors.primaryForeground
+                      : colors.mutedForeground
+                  }
                 />
                 <Text
                   style={[
                     styles.buttonText,
-                    { color: canSearch ? colors.primaryForeground : colors.mutedForeground },
+                    {
+                      color: canSearch
+                        ? colors.primaryForeground
+                        : colors.mutedForeground,
+                    },
                   ]}
                 >
                   {t.walkPlan.findRoute}
@@ -341,10 +398,20 @@ export default function WalkPlanScreen() {
 
         {phase === "error" && (
           <View
-            style={[styles.errorBox, { backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[
+              styles.errorBox,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
           >
-            <Feather name="alert-circle" size={16} color="#ef4444" style={{ marginRight: 8 }} />
-            <Text style={[styles.errorText, { color: "#ef4444" }]}>{errorMsg}</Text>
+            <Feather
+              name="alert-circle"
+              size={16}
+              color="#ef4444"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={[styles.errorText, { color: "#ef4444" }]}>
+              {errorMsg}
+            </Text>
           </View>
         )}
 
@@ -358,22 +425,50 @@ export default function WalkPlanScreen() {
                 ]}
               >
                 <View style={styles.routeMetaItem}>
-                  <Feather name="map" size={14} color={colors.mutedForeground} />
-                  <Text style={[styles.routeMetaText, { color: colors.foreground }]}>
+                  <Feather
+                    name="map"
+                    size={14}
+                    color={colors.mutedForeground}
+                  />
+                  <Text
+                    style={[styles.routeMetaText, { color: colors.foreground }]}
+                  >
                     {formatDistance(routeMeta.distanceMeters)}
                   </Text>
                 </View>
-                <View style={[styles.routeMetaDivider, { backgroundColor: colors.border }]} />
+                <View
+                  style={[
+                    styles.routeMetaDivider,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
                 <View style={styles.routeMetaItem}>
-                  <Feather name="clock" size={14} color={colors.mutedForeground} />
-                  <Text style={[styles.routeMetaText, { color: colors.foreground }]}>
+                  <Feather
+                    name="clock"
+                    size={14}
+                    color={colors.mutedForeground}
+                  />
+                  <Text
+                    style={[styles.routeMetaText, { color: colors.foreground }]}
+                  >
                     {formatDuration(routeMeta.durationSeconds)}
                   </Text>
                 </View>
-                <View style={[styles.routeMetaDivider, { backgroundColor: colors.border }]} />
+                <View
+                  style={[
+                    styles.routeMetaDivider,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
                 <View style={styles.routeMetaItem}>
-                  <Feather name="headphones" size={14} color={colors.mutedForeground} />
-                  <Text style={[styles.routeMetaText, { color: colors.foreground }]}>
+                  <Feather
+                    name="headphones"
+                    size={14}
+                    color={colors.mutedForeground}
+                  />
+                  <Text
+                    style={[styles.routeMetaText, { color: colors.foreground }]}
+                  >
                     {t.walkPlan.stopsFound(prefetchedPlaces.length)}
                   </Text>
                 </View>
@@ -387,8 +482,18 @@ export default function WalkPlanScreen() {
                   { backgroundColor: colors.card, borderColor: colors.border },
                 ]}
               >
-                <Feather name="info" size={14} color={colors.mutedForeground} style={{ marginRight: 8, marginTop: 1 }} />
-                <Text style={[styles.emptyNoteText, { color: colors.mutedForeground }]}>
+                <Feather
+                  name="info"
+                  size={14}
+                  color={colors.mutedForeground}
+                  style={{ marginRight: 8, marginTop: 1 }}
+                />
+                <Text
+                  style={[
+                    styles.emptyNoteText,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
                   {t.walkPlan.emptyRouteNote}
                 </Text>
               </View>
@@ -396,7 +501,9 @@ export default function WalkPlanScreen() {
 
             {prefetchedPlaces.length > 0 && (
               <View style={styles.stopsSection}>
-                <Text style={[styles.stopsLabel, { color: colors.mutedForeground }]}>
+                <Text
+                  style={[styles.stopsLabel, { color: colors.mutedForeground }]}
+                >
                   {t.walkPlan.previewLabel}
                 </Text>
                 {prefetchedPlaces.map((place, i) => (
@@ -411,8 +518,18 @@ export default function WalkPlanScreen() {
                       },
                     ]}
                   >
-                    <View style={[styles.stopIndex, { backgroundColor: colors.muted }]}>
-                      <Text style={[styles.stopIndexText, { color: colors.mutedForeground }]}>
+                    <View
+                      style={[
+                        styles.stopIndex,
+                        { backgroundColor: colors.muted },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.stopIndexText,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
                         {i + 1}
                       </Text>
                     </View>
@@ -424,7 +541,10 @@ export default function WalkPlanScreen() {
                         {place.name}
                       </Text>
                       <Text
-                        style={[styles.stopCategory, { color: colors.mutedForeground }]}
+                        style={[
+                          styles.stopCategory,
+                          { color: colors.mutedForeground },
+                        ]}
                         numberOfLines={1}
                       >
                         {place.category}
@@ -454,7 +574,11 @@ export default function WalkPlanScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={t.walkPlan.findRoute}
               >
-                <Feather name="refresh-cw" size={15} color={colors.foreground} />
+                <Feather
+                  name="refresh-cw"
+                  size={15}
+                  color={colors.foreground}
+                />
               </Pressable>
 
               <Pressable
@@ -472,8 +596,17 @@ export default function WalkPlanScreen() {
                 accessibilityLabel={t.walkPlan.startWalk}
               >
                 <View style={styles.buttonRow}>
-                  <Feather name="headphones" size={16} color={colors.primaryForeground} />
-                  <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>
+                  <Feather
+                    name="headphones"
+                    size={16}
+                    color={colors.primaryForeground}
+                  />
+                  <Text
+                    style={[
+                      styles.buttonText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
                     {t.walkPlan.startWalk}
                   </Text>
                 </View>

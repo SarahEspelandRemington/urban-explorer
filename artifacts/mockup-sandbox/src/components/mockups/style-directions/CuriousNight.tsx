@@ -7,7 +7,7 @@ export function CuriousNight() {
       {/* Background ambient lighting */}
       <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-[#1C130D] to-transparent pointer-events-none opacity-80" />
       <div className="absolute top-0 right-0 w-64 h-64 bg-[#B5651D] opacity-[0.03] blur-[100px] pointer-events-none" />
-      
+
       {/* Header */}
       <div className="pt-14 pb-4 px-6 relative z-10 flex justify-between items-center bg-gradient-to-b from-[#0A0A0B] via-[#0A0A0B]/90 to-transparent">
         <div>
@@ -33,14 +33,13 @@ export function CuriousNight() {
 
       {/* Main Content Scroll */}
       <div className="h-full overflow-y-auto pb-40 px-5 space-y-4 [&::-webkit-scrollbar]:hidden relative z-10">
-        
         {/* Card 1 */}
         <div className="group relative bg-[#121214] rounded-2xl p-1.5 transition-all duration-300 hover:bg-[#161618] border border-[#222120] overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-[#E5993A]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3">
-            <img 
-              src="/__mockup/images/curious-night-building.jpg" 
-              alt="The Blackwood Apothecary" 
+            <img
+              src="/__mockup/images/curious-night-building.jpg"
+              alt="The Blackwood Apothecary"
               className="w-full h-full object-cover mix-blend-luminosity opacity-80 group-hover:mix-blend-normal group-hover:opacity-100 transition-all duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-[#121214]/20 to-transparent" />
@@ -56,7 +55,9 @@ export function CuriousNight() {
               The Blackwood Apothecary
             </h3>
             <p className="text-[#84807C] text-sm leading-relaxed line-clamp-2 mb-4 font-light">
-              Hidden beneath the modern street level, this former 19th-century pharmacy still contains sealed glass bottles of tonics that were forgotten during the Great Fire.
+              Hidden beneath the modern street level, this former 19th-century
+              pharmacy still contains sealed glass bottles of tonics that were
+              forgotten during the Great Fire.
             </p>
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
@@ -77,9 +78,9 @@ export function CuriousNight() {
         {/* Card 2 */}
         <div className="group relative bg-[#121214] rounded-2xl p-1.5 transition-all duration-300 hover:bg-[#161618] border border-[#222120] overflow-hidden">
           <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3">
-            <img 
-              src="/__mockup/images/curious-night-alley.jpg" 
-              alt="Smuggler's Passage" 
+            <img
+              src="/__mockup/images/curious-night-alley.jpg"
+              alt="Smuggler's Passage"
               className="w-full h-full object-cover mix-blend-luminosity opacity-80 group-hover:mix-blend-normal group-hover:opacity-100 transition-all duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-[#121214]/20 to-transparent" />
@@ -95,7 +96,9 @@ export function CuriousNight() {
               Smuggler's Passage
             </h3>
             <p className="text-[#84807C] text-sm leading-relaxed line-clamp-2 mb-4 font-light">
-              What looks like a dead-end brick alley was once a crucial artery for prohibition-era rum runners. Notice the bricked-over archway on the left wall.
+              What looks like a dead-end brick alley was once a crucial artery
+              for prohibition-era rum runners. Notice the bricked-over archway
+              on the left wall.
             </p>
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
@@ -113,9 +116,9 @@ export function CuriousNight() {
         {/* Card 3 */}
         <div className="group relative bg-[#121214] rounded-2xl p-1.5 transition-all duration-300 hover:bg-[#161618] border border-[#222120] overflow-hidden">
           <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-3">
-            <img 
-              src="/__mockup/images/curious-night-church.jpg" 
-              alt="Trinity Spire" 
+            <img
+              src="/__mockup/images/curious-night-church.jpg"
+              alt="Trinity Spire"
               className="w-full h-full object-cover mix-blend-luminosity opacity-80 group-hover:mix-blend-normal group-hover:opacity-100 transition-all duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-[#121214]/20 to-transparent" />
@@ -131,7 +134,9 @@ export function CuriousNight() {
               Trinity Spire Sanctuary
             </h3>
             <p className="text-[#84807C] text-sm leading-relaxed line-clamp-2 mb-4 font-light">
-              The only surviving structure of the original parish. The crypt below allegedly holds untouched archives from the city's founding families.
+              The only surviving structure of the original parish. The crypt
+              below allegedly holds untouched archives from the city's founding
+              families.
             </p>
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
@@ -155,7 +160,6 @@ export function CuriousNight() {
           <MapPin size={16} />
         </button>
       </div>
-
     </div>
   );
 }

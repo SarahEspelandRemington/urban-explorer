@@ -3,8 +3,25 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Image, LayoutAnimation, Platform, Pressable, StyleSheet, Text, UIManager, View } from "react-native";
-import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from "react-native-reanimated";
+import {
+  Alert,
+  Image,
+  LayoutAnimation,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  UIManager,
+  View,
+} from "react-native";
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 
 import { NoteModal } from "@/components/NoteModal";
 import { PlaceActions } from "@/components/PlaceActions";
@@ -14,15 +31,26 @@ import { buildPlaceId } from "@/lib/placeId";
 import { useT } from "@/contexts/LocaleContext";
 import { storageKey, useUserRatings } from "@/contexts/UserRatingsContext";
 import { useColors } from "@/hooks/useColors";
-import { useRatePlace, type RatePlaceResponse } from "@workspace/api-client-react";
+import {
+  useRatePlace,
+  type RatePlaceResponse,
+} from "@workspace/api-client-react";
 
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
 function formatWalkDistance(
   meters: number | undefined,
-  pc: { walkLessThan: string; walkMin: (n: number) => string; walkFt: (n: number) => string; walkMi: (s: string) => string },
+  pc: {
+    walkLessThan: string;
+    walkMin: (n: number) => string;
+    walkFt: (n: number) => string;
+    walkMi: (s: string) => string;
+  },
 ): string {
   if (meters == null) return "";
   if (meters < 80) return pc.walkLessThan;
@@ -63,11 +91,22 @@ interface PlaceCardProps {
   index: number;
   expanded?: boolean;
   onToggleExpand?: (id: string, isExpanded: boolean) => void;
-  onRate?: (placeId: string, newRating: "up" | "down" | null, prevRating: "up" | "down" | null) => void;
+  onRate?: (
+    placeId: string,
+    newRating: "up" | "down" | null,
+    prevRating: "up" | "down" | null,
+  ) => void;
   onSaveConfirm?: (saved: boolean) => void;
 }
 
-export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded, onToggleExpand, onRate, onSaveConfirm }: PlaceCardProps) {
+export const PlaceCard = React.memo(function PlaceCard({
+  place,
+  index,
+  expanded,
+  onToggleExpand,
+  onRate,
+  onSaveConfirm,
+}: PlaceCardProps) {
   const colors = useColors();
   const t = useT();
   const router = useRouter();
@@ -81,7 +120,9 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
   const { getRating, setLocalRating, isLoaded, userId } = useUserRatings();
   const [userRating, setUserRating] = useState<"up" | "down" | null>(null);
-  const [communityRating, setCommunityRating] = useState<CommunityRating | undefined>(place.communityRating);
+  const [communityRating, setCommunityRating] = useState<
+    CommunityRating | undefined
+  >(place.communityRating);
   const rateMutation = useRatePlace();
 
   const ratingStorageKey = storageKey(userId, placeId);
@@ -144,7 +185,10 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
       removePlace(placeId);
       onSaveConfirm?.(false);
     } else {
-      savePlace({ ...place, id: placeId } as Omit<SavedPlace, "savedAt" | "note">);
+      savePlace({ ...place, id: placeId } as Omit<
+        SavedPlace,
+        "savedAt" | "note"
+      >);
       onSaveConfirm?.(true);
       setNoteModalVisible(true);
     }
@@ -152,7 +196,8 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
   const handleRate = (tapped: "up" | "down") => {
     const previousRating = userRating;
-    const newRating: "up" | "down" | null = previousRating === tapped ? null : tapped;
+    const newRating: "up" | "down" | null =
+      previousRating === tapped ? null : tapped;
 
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -180,22 +225,22 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
       },
       {
         onSuccess: (result: RatePlaceResponse) => {
-          setCommunityRating({ up: result.up, down: result.down, netScore: result.up - result.down });
+          setCommunityRating({
+            up: result.up,
+            down: result.down,
+            netScore: result.up - result.down,
+          });
         },
         onError: (error: unknown) => {
           const status = (error as { status?: number })?.status;
           if (status === 429) {
-            Alert.alert(
-              t.placeCard.rateLimitTitle,
-              t.placeCard.rateLimitBody,
-              [{ text: t.common.ok }],
-            );
+            Alert.alert(t.placeCard.rateLimitTitle, t.placeCard.rateLimitBody, [
+              { text: t.common.ok },
+            ]);
           } else {
-            Alert.alert(
-              t.placeCard.saveErrTitle,
-              t.placeCard.saveErrBody,
-              [{ text: t.common.ok }],
-            );
+            Alert.alert(t.placeCard.saveErrTitle, t.placeCard.saveErrBody, [
+              { text: t.common.ok },
+            ]);
           }
           setUserRating(previousRating);
           setLocalRating(placeId, previousRating);
@@ -236,7 +281,9 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     onToggleExpand?.(place.id, expanded ?? false);
   };
 
-  const saveLabel = saved ? `Remove ${place.name} from saved` : `Save ${place.name}`;
+  const saveLabel = saved
+    ? `Remove ${place.name} from saved`
+    : `Save ${place.name}`;
 
   const BookmarkIcon = (
     <Animated.View style={bookmarkAnimStyle}>
@@ -264,7 +311,11 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
     return (
       <>
         <Animated.View
-          entering={Platform.OS !== "web" ? FadeInDown.delay(index === 0 ? 0 : index * 60).springify() : undefined}
+          entering={
+            Platform.OS !== "web"
+              ? FadeInDown.delay(index === 0 ? 0 : index * 60).springify()
+              : undefined
+          }
           style={isLowRated ? { opacity: 0.55 } : undefined}
         >
           <Pressable
@@ -289,145 +340,201 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
               />
             ) : null}
             <View style={styles.heroContent}>
-            <View style={styles.heroTop}>
-              <View
-                style={[styles.heroIconContainer, { backgroundColor: categoryColor + "20" }]}
-                accessibilityLabel={place.category}
-              >
-                <MaterialCommunityIcons name={iconName as any} size={22} color={categoryColor} />
-              </View>
-              <View style={styles.heroActions}>
-                <Pressable
-                  onPress={(e) => { e.stopPropagation?.(); handleRate("up"); }}
-                  hitSlop={16}
-                  style={styles.actionButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Thumbs up for ${place.name}`}
-                  accessibilityState={{ selected: userRating === "up" }}
-                >
-                  <Feather
-                    name="thumbs-up"
-                    size={18}
-                    color={userRating === "up" ? "#22c55e" : colors.mutedForeground}
-                    style={{ opacity: userRating === "up" ? 1 : 0.45 }}
-                  />
-                </Pressable>
-                {communityRating != null ? (
-                  <Text
-                    style={[
-                      styles.communityScore,
-                      {
-                        color:
-                          communityRating.netScore > 0
-                            ? "#22c55e"
-                            : communityRating.netScore < 0
-                            ? "#ef4444"
-                            : colors.mutedForeground,
-                      },
-                    ]}
-                    accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
-                  >
-                    {communityRating.netScore > 0 ? "+" : ""}{communityRating.netScore}
-                  </Text>
-                ) : null}
-                <Pressable
-                  onPress={(e) => { e.stopPropagation?.(); handleRate("down"); }}
-                  hitSlop={16}
-                  style={styles.actionButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Thumbs down for ${place.name}`}
-                  accessibilityState={{ selected: userRating === "down" }}
-                >
-                  <Feather
-                    name="thumbs-down"
-                    size={18}
-                    color={userRating === "down" ? "#ef4444" : colors.mutedForeground}
-                    style={{ opacity: userRating === "down" ? 1 : 0.45 }}
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={(e) => { e.stopPropagation?.(); handleSave(); }}
-                  hitSlop={16}
-                  style={styles.actionButton}
-                  accessibilityRole="button"
-                  accessibilityLabel={saveLabel}
-                  accessibilityState={{ selected: saved }}
-                >
-                  {BookmarkIcon}
-                </Pressable>
-                <Pressable
-                  onPress={navigateToDetail}
-                  hitSlop={16}
-                  style={styles.detailArrow}
-                  accessibilityRole="button"
-                  accessibilityLabel={`View full details for ${place.name}`}
-                  accessibilityHint="Opens the detail screen"
-                >
-                  <Feather name="chevron-right" size={20} color={colors.mutedForeground} />
-                </Pressable>
-              </View>
-            </View>
-
-            <Text style={[styles.heroName, { color: colors.foreground }]} numberOfLines={2}>
-              {place.name}
-            </Text>
-
-            <View style={styles.heroMeta}>
-              {isTopPick ? (
-                <Animated.View
-                  style={[styles.topPickBadge, badgeAnimStyle]}
-                  accessibilityLabel="Top pick"
-                >
-                  <Feather name="star" size={11} color="#f59e0b" />
-                  <Text style={styles.topPickBadgeText}>{t.placeCard.topPick}</Text>
-                </Animated.View>
-              ) : null}
-              {walkTime ? (
+              <View style={styles.heroTop}>
                 <View
-                  style={[styles.walkBadge, { backgroundColor: colors.primary + "18" }]}
-                  accessibilityLabel={`${walkTime} walk`}
+                  style={[
+                    styles.heroIconContainer,
+                    { backgroundColor: categoryColor + "20" },
+                  ]}
+                  accessibilityLabel={place.category}
                 >
-                  <Feather name="navigation" size={12} color={colors.primary} />
-                  <Text style={[styles.walkBadgeText, { color: colors.primary }]}>
-                    {walkTime}
-                  </Text>
+                  <MaterialCommunityIcons
+                    name={iconName as any}
+                    size={22}
+                    color={categoryColor}
+                  />
                 </View>
-              ) : null}
-              <Text style={[styles.heroCategory, { color: categoryColor }]}>
-                {place.category}
-              </Text>
-            </View>
+                <View style={styles.heroActions}>
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleRate("up");
+                    }}
+                    hitSlop={16}
+                    style={styles.actionButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Thumbs up for ${place.name}`}
+                    accessibilityState={{ selected: userRating === "up" }}
+                  >
+                    <Feather
+                      name="thumbs-up"
+                      size={18}
+                      color={
+                        userRating === "up" ? "#22c55e" : colors.mutedForeground
+                      }
+                      style={{ opacity: userRating === "up" ? 1 : 0.45 }}
+                    />
+                  </Pressable>
+                  {communityRating != null ? (
+                    <Text
+                      style={[
+                        styles.communityScore,
+                        {
+                          color:
+                            communityRating.netScore > 0
+                              ? "#22c55e"
+                              : communityRating.netScore < 0
+                                ? "#ef4444"
+                                : colors.mutedForeground,
+                        },
+                      ]}
+                      accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
+                    >
+                      {communityRating.netScore > 0 ? "+" : ""}
+                      {communityRating.netScore}
+                    </Text>
+                  ) : null}
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleRate("down");
+                    }}
+                    hitSlop={16}
+                    style={styles.actionButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Thumbs down for ${place.name}`}
+                    accessibilityState={{ selected: userRating === "down" }}
+                  >
+                    <Feather
+                      name="thumbs-down"
+                      size={18}
+                      color={
+                        userRating === "down"
+                          ? "#ef4444"
+                          : colors.mutedForeground
+                      }
+                      style={{ opacity: userRating === "down" ? 1 : 0.45 }}
+                    />
+                  </Pressable>
+                  <Pressable
+                    onPress={(e) => {
+                      e.stopPropagation?.();
+                      handleSave();
+                    }}
+                    hitSlop={16}
+                    style={styles.actionButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={saveLabel}
+                    accessibilityState={{ selected: saved }}
+                  >
+                    {BookmarkIcon}
+                  </Pressable>
+                  <Pressable
+                    onPress={navigateToDetail}
+                    hitSlop={16}
+                    style={styles.detailArrow}
+                    accessibilityRole="button"
+                    accessibilityLabel={`View full details for ${place.name}`}
+                    accessibilityHint="Opens the detail screen"
+                  >
+                    <Feather
+                      name="chevron-right"
+                      size={20}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
+                </View>
+              </View>
 
-            <Text style={[styles.heroSummary, { color: colors.mutedForeground }]} numberOfLines={3}>
-              {place.summary}
-            </Text>
-
-            {place.note ? (
-              <Pressable
-                onPress={(e) => { e.stopPropagation?.(); setNoteModalVisible(true); }}
-                style={[styles.noteChip, { backgroundColor: colors.primary + "12", borderColor: colors.primary + "30" }]}
-                accessibilityRole="button"
-                accessibilityLabel="Edit note"
+              <Text
+                style={[styles.heroName, { color: colors.foreground }]}
+                numberOfLines={2}
               >
-                <Feather name="edit-3" size={11} color={colors.primary} />
-                <Text style={[styles.noteChipText, { color: colors.primary }]} numberOfLines={1}>
-                  {place.note}
-                </Text>
-              </Pressable>
-            ) : null}
+                {place.name}
+              </Text>
 
-            <PlaceActions
-              place={{
-                id: placeId,
-                name: place.name,
-                category: place.category,
-                yearBuilt: place.yearBuilt,
-                summary: place.summary,
-                facts: place.facts,
-                latitude: place.latitude,
-                longitude: place.longitude,
-              }}
-            />
+              <View style={styles.heroMeta}>
+                {isTopPick ? (
+                  <Animated.View
+                    style={[styles.topPickBadge, badgeAnimStyle]}
+                    accessibilityLabel="Top pick"
+                  >
+                    <Feather name="star" size={11} color="#f59e0b" />
+                    <Text style={styles.topPickBadgeText}>
+                      {t.placeCard.topPick}
+                    </Text>
+                  </Animated.View>
+                ) : null}
+                {walkTime ? (
+                  <View
+                    style={[
+                      styles.walkBadge,
+                      { backgroundColor: colors.primary + "18" },
+                    ]}
+                    accessibilityLabel={`${walkTime} walk`}
+                  >
+                    <Feather
+                      name="navigation"
+                      size={12}
+                      color={colors.primary}
+                    />
+                    <Text
+                      style={[styles.walkBadgeText, { color: colors.primary }]}
+                    >
+                      {walkTime}
+                    </Text>
+                  </View>
+                ) : null}
+                <Text style={[styles.heroCategory, { color: categoryColor }]}>
+                  {place.category}
+                </Text>
+              </View>
+
+              <Text
+                style={[styles.heroSummary, { color: colors.mutedForeground }]}
+                numberOfLines={3}
+              >
+                {place.summary}
+              </Text>
+
+              {place.note ? (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    setNoteModalVisible(true);
+                  }}
+                  style={[
+                    styles.noteChip,
+                    {
+                      backgroundColor: colors.primary + "12",
+                      borderColor: colors.primary + "30",
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit note"
+                >
+                  <Feather name="edit-3" size={11} color={colors.primary} />
+                  <Text
+                    style={[styles.noteChipText, { color: colors.primary }]}
+                    numberOfLines={1}
+                  >
+                    {place.note}
+                  </Text>
+                </Pressable>
+              ) : null}
+
+              <PlaceActions
+                place={{
+                  id: placeId,
+                  name: place.name,
+                  category: place.category,
+                  yearBuilt: place.yearBuilt,
+                  summary: place.summary,
+                  facts: place.facts,
+                  latitude: place.latitude,
+                  longitude: place.longitude,
+                }}
+              />
             </View>
           </Pressable>
         </Animated.View>
@@ -448,7 +555,11 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
   return (
     <>
       <Animated.View
-        entering={Platform.OS !== "web" ? FadeInDown.delay(index * 60).springify() : undefined}
+        entering={
+          Platform.OS !== "web"
+            ? FadeInDown.delay(index * 60).springify()
+            : undefined
+        }
         style={isLowRated ? { opacity: 0.55 } : undefined}
       >
         <Pressable
@@ -467,30 +578,55 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
           {place.photoUrl ? (
             <Image
               source={{ uri: place.photoUrl }}
-              style={[styles.compactThumb, { borderColor: categoryColor + "40" }]}
+              style={[
+                styles.compactThumb,
+                { borderColor: categoryColor + "40" },
+              ]}
               resizeMode="cover"
               accessibilityLabel={`Photo of ${place.name}`}
             />
           ) : (
-            <View style={[styles.compactIcon, { backgroundColor: categoryColor + "18" }]}>
-              <MaterialCommunityIcons name={iconName as any} size={18} color={categoryColor} />
+            <View
+              style={[
+                styles.compactIcon,
+                { backgroundColor: categoryColor + "18" },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={iconName as any}
+                size={18}
+                color={categoryColor}
+              />
             </View>
           )}
 
           <View style={styles.compactInfo}>
             <View style={styles.compactNameRow}>
-              <Text style={[styles.compactName, { color: colors.foreground }]} numberOfLines={1}>
+              <Text
+                style={[styles.compactName, { color: colors.foreground }]}
+                numberOfLines={1}
+              >
                 {place.name}
               </Text>
               {isTopPick ? (
-                <Animated.View style={[styles.compactTopStarWrapper, badgeAnimStyle]}>
+                <Animated.View
+                  style={[styles.compactTopStarWrapper, badgeAnimStyle]}
+                >
                   <Feather name="star" size={12} color="#f59e0b" />
                 </Animated.View>
               ) : null}
             </View>
-            <Text style={[styles.compactCategory, { color: colors.mutedForeground }]} numberOfLines={1}>
+            <Text
+              style={[
+                styles.compactCategory,
+                { color: colors.mutedForeground },
+              ]}
+              numberOfLines={1}
+            >
               {place.category}
-              {place.yearBuilt && place.yearBuilt !== "unknown" ? ` · ${place.yearBuilt}` : ""}
+              {place.yearBuilt && place.yearBuilt !== "unknown"
+                ? ` · ${place.yearBuilt}`
+                : ""}
             </Text>
           </View>
 
@@ -502,7 +638,10 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
 
           <View style={styles.compactRatingRow}>
             <Pressable
-              onPress={(e) => { e.stopPropagation?.(); handleRate("up"); }}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                handleRate("up");
+              }}
               hitSlop={12}
               style={styles.compactRatingBtn}
               accessibilityRole="button"
@@ -525,17 +664,21 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
                       communityRating.netScore > 0
                         ? "#22c55e"
                         : communityRating.netScore < 0
-                        ? "#ef4444"
-                        : colors.mutedForeground,
+                          ? "#ef4444"
+                          : colors.mutedForeground,
                   },
                 ]}
                 accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
               >
-                {communityRating.netScore > 0 ? "+" : ""}{communityRating.netScore}
+                {communityRating.netScore > 0 ? "+" : ""}
+                {communityRating.netScore}
               </Text>
             ) : null}
             <Pressable
-              onPress={(e) => { e.stopPropagation?.(); handleRate("down"); }}
+              onPress={(e) => {
+                e.stopPropagation?.();
+                handleRate("down");
+              }}
               hitSlop={12}
               style={styles.compactRatingBtn}
               accessibilityRole="button"
@@ -545,14 +688,19 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
               <Feather
                 name="thumbs-down"
                 size={13}
-                color={userRating === "down" ? "#ef4444" : colors.mutedForeground}
+                color={
+                  userRating === "down" ? "#ef4444" : colors.mutedForeground
+                }
                 style={{ opacity: userRating === "down" ? 1 : 0.35 }}
               />
             </Pressable>
           </View>
 
           <Pressable
-            onPress={(e) => { e.stopPropagation?.(); handleSave(); }}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              handleSave();
+            }}
             hitSlop={16}
             style={styles.compactSave}
             accessibilityRole="button"
@@ -569,7 +717,12 @@ export const PlaceCard = React.memo(function PlaceCard({ place, index, expanded,
             accessibilityRole="button"
             accessibilityLabel={`View details for ${place.name}`}
           >
-            <Feather name="chevron-right" size={16} color={colors.mutedForeground} style={{ opacity: 0.5 }} />
+            <Feather
+              name="chevron-right"
+              size={16}
+              color={colors.mutedForeground}
+              style={{ opacity: 0.5 }}
+            />
           </Pressable>
         </Pressable>
       </Animated.View>

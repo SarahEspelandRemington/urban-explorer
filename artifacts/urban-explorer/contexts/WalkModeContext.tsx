@@ -2,17 +2,39 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { AppState, type AppStateStatus, Platform } from "react-native";
 
 import { useLocale } from "@/contexts/LocaleContext";
-import { enableBackgroundAudio, unlockWebSpeech, useNarration } from "@/hooks/useNarration";
+import {
+  enableBackgroundAudio,
+  unlockWebSpeech,
+  useNarration,
+} from "@/hooks/useNarration";
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
 import { fetchNarrationPayload as fetchNarrationPayloadUtil } from "@/lib/fetchNarrationPayload";
-import { getStartupValue, setStartupValue, STARTUP_KEYS } from "@/lib/startupStorage";
-import { addWalkBreadcrumb, setWalkScope, trackPrefetchEvent } from "@/lib/sentryWalk";
-import { installSessionCallback, dispatchLocation } from "@/lib/walkSessionManager";
+import {
+  getStartupValue,
+  setStartupValue,
+  STARTUP_KEYS,
+} from "@/lib/startupStorage";
+import {
+  addWalkBreadcrumb,
+  setWalkScope,
+  trackPrefetchEvent,
+} from "@/lib/sentryWalk";
+import {
+  installSessionCallback,
+  dispatchLocation,
+} from "@/lib/walkSessionManager";
 import { executeStopWalkSync } from "@/lib/walkStopSession";
 import {
   consumePrefetchedNarration,
@@ -26,7 +48,10 @@ import {
   type StalePrefetchPool,
 } from "@/lib/narrationPrefetchPipeline";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
-import { type BuildingGroupKey, groupKeysToIncludedTypes } from "@/constants/buildingTypeGroups";
+import {
+  type BuildingGroupKey,
+  groupKeysToIncludedTypes,
+} from "@/constants/buildingTypeGroups";
 
 // Background location task name. Defining the task at module scope (outside any
 // component) is required by expo-task-manager — the OS may invoke this task
@@ -37,7 +62,10 @@ const BACKGROUND_LOCATION_TASK = "urban-explorer-background-location";
 // Location events are forwarded to whichever session is active via
 // walkSessionManager.dispatchLocation — the CAS logic in walkSessionManager
 // ensures stale sessions cannot ghost-clear the current session's callback.
-if (Platform.OS !== "web" && !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK)) {
+if (
+  Platform.OS !== "web" &&
+  !TaskManager.isTaskDefined(BACKGROUND_LOCATION_TASK)
+) {
   TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }) => {
     if (error) return;
     if (!data) return;
@@ -99,7 +127,10 @@ interface WalkModeContextType {
   // TTL). UI uses this to show a small "Replay" badge so users know the
   // instant playback is intentional, not a degraded fallback.
   isReplay: boolean;
-  fetchPlacesAlongRoute: (geometry: number[][], maxPlaces?: number) => Promise<WalkPlace[]>;
+  fetchPlacesAlongRoute: (
+    geometry: number[][],
+    maxPlaces?: number,
+  ) => Promise<WalkPlace[]>;
   enabledBuildingGroups: Set<BuildingGroupKey>;
   setEnabledBuildingGroups: (groups: Set<BuildingGroupKey>) => void;
   /**
@@ -211,8 +242,10 @@ const SLOW_DWELL_MS = 30_000;
 const MANUAL_OVERRIDE_MS = 5 * 60_000;
 
 function haversineMeters(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
 ): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -226,8 +259,10 @@ function haversineMeters(
 }
 
 function bearingDeg(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
 ): number {
   const toRad = (d: number) => (d * Math.PI) / 180;
   const phi1 = toRad(lat1);
@@ -262,8 +297,7 @@ function projectAhead(
   const radLat = (lat * Math.PI) / 180;
   const dLat = (meters * Math.cos((headingDeg * Math.PI) / 180)) / R;
   const dLon =
-    (meters * Math.sin((headingDeg * Math.PI) / 180)) /
-    (R * Math.cos(radLat));
+    (meters * Math.sin((headingDeg * Math.PI) / 180)) / (R * Math.cos(radLat));
   return {
     latitude: lat + (dLat * 180) / Math.PI,
     longitude: lon + (dLon * 180) / Math.PI,
@@ -272,18 +306,32 @@ function projectAhead(
 
 export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const [isWalking, setIsWalking] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<WalkPlace[]>([]);
-  const [narratedIds, setNarratedIds] = useState<Map<string, number>>(new Map());
+  const [narratedIds, setNarratedIds] = useState<Map<string, number>>(
+    new Map(),
+  );
   const [isLoading, setIsLoading] = useState(false);
-  const [stats, setStats] = useState<WalkStats>({ startTime: 0, placesNarrated: 0, distanceWalked: 0 });
+  const [stats, setStats] = useState<WalkStats>({
+    startTime: 0,
+    placesNarrated: 0,
+    distanceWalked: 0,
+  });
   const [density, setDensityState] = useState<WalkDensity>("dense");
-  const [currentNarrationPlace, setCurrentNarrationPlace] = useState<WalkPlace | null>(null);
+  const [currentNarrationPlace, setCurrentNarrationPlace] =
+    useState<WalkPlace | null>(null);
   const [isReplay, setIsReplay] = useState(false);
   // Auto-clear timer for the "Replay" badge so it disappears after a few
   // seconds and doesn't clutter the Now Playing card.
-  const replayBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [enabledBuildingGroups, setEnabledBuildingGroupsState] = useState<Set<BuildingGroupKey>>(new Set());
+  const replayBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const [enabledBuildingGroups, setEnabledBuildingGroupsState] = useState<
+    Set<BuildingGroupKey>
+  >(new Set());
   const enabledBuildingGroupsRef = useRef<Set<BuildingGroupKey>>(new Set());
   // Server-fetched heading-bias overrides. Null until the walk-config
   // endpoint responds; the DENSITY_CONFIG defaults are used as fallback.
@@ -293,12 +341,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     offAxisPenaltyMeters: number;
   } | null>(null);
 
-  const setEnabledBuildingGroups = useCallback((groups: Set<BuildingGroupKey>) => {
-    enabledBuildingGroupsRef.current = groups;
-    setEnabledBuildingGroupsState(groups);
-    // Reset the fetch anchor so the next GPS tick re-fetches with the new prefs.
-    lastFetchRef.current = null;
-  }, []);
+  const setEnabledBuildingGroups = useCallback(
+    (groups: Set<BuildingGroupKey>) => {
+      enabledBuildingGroupsRef.current = groups;
+      setEnabledBuildingGroupsState(groups);
+      // Reset the fetch anchor so the next GPS tick re-fetches with the new prefs.
+      lastFetchRef.current = null;
+    },
+    [],
+  );
 
   const { localeRef } = useLocale();
   const narration = useNarration();
@@ -308,9 +359,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // narration is recreated on each render; stash the latest in a ref so the
   // remote command listener (registered once at startWalk) drives the live one.
   const narrationRef = useRef(narration);
-  useEffect(() => { narrationRef.current = narration; }, [narration]);
-  const lastFetchRef = useRef<{ latitude: number; longitude: number } | null>(null);
-  const prevLocationRef = useRef<{ latitude: number; longitude: number; ts: number } | null>(null);
+  useEffect(() => {
+    narrationRef.current = narration;
+  }, [narration]);
+  const lastFetchRef = useRef<{ latitude: number; longitude: number } | null>(
+    null,
+  );
+  const prevLocationRef = useRef<{
+    latitude: number;
+    longitude: number;
+    ts: number;
+  } | null>(null);
   // Device compass heading from the magnetometer, when available.
   const deviceHeadingRef = useRef<number | null>(null);
   // Velocity-derived heading, as a fallback when the compass isn't available.
@@ -321,7 +380,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const lastNarrationEndRef = useRef<number>(0);
   // Where the user was when the last narration ended, so we can require them
   // to physically walk a minimum distance before picking the next story.
-  const lastNarrationEndLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const lastNarrationEndLocationRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const isSpeakingRef = useRef(false);
   // The place whose narration is currently queued or playing. Used to thread
   // the place's photo into the iOS Now Playing widget so the lock-screen pill
@@ -374,7 +436,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // map that are only useful once a walk is actually running. Doing it inline
   // at provider mount adds work to every cold start, including launches where
   // the user never goes near Walk Mode. Initialise on first read instead.
-  const stalePrefetchPoolRef = useRef<StalePrefetchPool<WalkPlace> | null>(null);
+  const stalePrefetchPoolRef = useRef<StalePrefetchPool<WalkPlace> | null>(
+    null,
+  );
   const getStalePrefetchPool = useCallback((): StalePrefetchPool<WalkPlace> => {
     if (!stalePrefetchPoolRef.current) {
       stalePrefetchPoolRef.current = createStalePrefetchPool<WalkPlace>({
@@ -399,7 +463,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // mirror is what the dev overlay subscribes to (updated via a microtask
   // batch on every emit so we don't render-storm during a burst).
   const prefetchCountersRef = useRef<PrefetchCounters>(emptyPrefetchCounters());
-  const [prefetchStats, setPrefetchStats] = useState<PrefetchCounters>(emptyPrefetchCounters());
+  const [prefetchStats, setPrefetchStats] = useState<PrefetchCounters>(
+    emptyPrefetchCounters(),
+  );
   const prefetchStatsFlushQueuedRef = useRef(false);
 
   // Persisted opt-in toggle for the prefetch stats footer counter. Hydrated
@@ -413,7 +479,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return;
       if (value === "1") setShowPrefetchStatsState(true);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
   const setShowPrefetchStats = useCallback((enabled: boolean) => {
     setShowPrefetchStatsState(enabled);
@@ -439,12 +507,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     setDensityState(d);
   }, []);
 
-  const setDensity = useCallback((d: WalkDensity) => {
-    // A manual pick wins for a few minutes so auto-switching doesn't undo it.
-    manualOverrideUntilRef.current = Date.now() + MANUAL_OVERRIDE_MS;
-    slowSinceRef.current = null;
-    applyDensity(d);
-  }, [applyDensity]);
+  const setDensity = useCallback(
+    (d: WalkDensity) => {
+      // A manual pick wins for a few minutes so auto-switching doesn't undo it.
+      manualOverrideUntilRef.current = Date.now() + MANUAL_OVERRIDE_MS;
+      slowSinceRef.current = null;
+      applyDensity(d);
+    },
+    [applyDensity],
+  );
 
   // Track narration speaking state in a ref so the loop can react synchronously.
   useEffect(() => {
@@ -455,7 +526,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // Snapshot location at narration end so the next pick must be earned
       // by walking minMetersBetweenPicks from this spot.
       lastNarrationEndLocationRef.current = currentLocation
-        ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude }
+        ? {
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+          }
         : null;
       // Drop the artwork association so the next idle widget update doesn't
       // keep showing a photo from a place we've already moved past.
@@ -506,296 +580,391 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // keep the widget visible with a generic "listening" label so the user
       // still sees Urban Explorer is the active audio app. No artwork URL
       // here means the native side falls back to the app icon.
-      NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true, null);
+      NowPlaying.setNowPlaying(
+        "Listening for nearby places",
+        "Urban Explorer",
+        true,
+        null,
+      );
     }
-  }, [isWalking, narration.isSpeaking, narration.isPaused, narration.currentPlace]);
+  }, [
+    isWalking,
+    narration.isSpeaking,
+    narration.isPaused,
+    narration.currentPlace,
+  ]);
 
   const cachedAddressHintRef = useRef<string>("");
 
-  const fetchNearbyPlaces = useCallback(async (latitude: number, longitude: number) => {
-    if (fetchingRef.current) return;
-    fetchingRef.current = true;
-    setIsLoading(true);
-    try {
-      const cfg = DENSITY_CONFIG[densityRef.current];
-      // Critical path: hit /discover IMMEDIATELY with lat/lng — never block on
-      // reverse-geocode. Use any cached addressHint from a previous tick if we
-      // happen to have one, but never wait.
-      // Project the discover fetch centre ahead of the user in their direction
-      // of travel. This front-loads the Overpass result set with places the
-      // user is about to walk toward, so candidates are ready in the queue
-      // well before the user reaches them. Fall back to GPS position when no
-      // heading is available (first fix, standing still, etc.).
-      const fetchHeading = deviceHeadingRef.current ?? velocityHeadingRef.current;
-      const fetchCenter =
-        fetchHeading !== null
-          ? projectAhead(latitude, longitude, fetchHeading, LOOK_AHEAD_METERS)
-          : { latitude, longitude };
+  const fetchNearbyPlaces = useCallback(
+    async (latitude: number, longitude: number) => {
+      if (fetchingRef.current) return;
+      fetchingRef.current = true;
+      setIsLoading(true);
+      try {
+        const cfg = DENSITY_CONFIG[densityRef.current];
+        // Critical path: hit /discover IMMEDIATELY with lat/lng — never block on
+        // reverse-geocode. Use any cached addressHint from a previous tick if we
+        // happen to have one, but never wait.
+        // Project the discover fetch centre ahead of the user in their direction
+        // of travel. This front-loads the Overpass result set with places the
+        // user is about to walk toward, so candidates are ready in the queue
+        // well before the user reaches them. Fall back to GPS position when no
+        // heading is available (first fix, standing still, etc.).
+        const fetchHeading =
+          deviceHeadingRef.current ?? velocityHeadingRef.current;
+        const fetchCenter =
+          fetchHeading !== null
+            ? projectAhead(latitude, longitude, fetchHeading, LOOK_AHEAD_METERS)
+            : { latitude, longitude };
 
-      const body: Record<string, unknown> = {
-        latitude: fetchCenter.latitude,
-        longitude: fetchCenter.longitude,
-        radius: cfg.discoverRadius,
-      };
-      if (cachedAddressHintRef.current) body.addressHint = cachedAddressHintRef.current;
-      const includedTypes = groupKeysToIncludedTypes(enabledBuildingGroupsRef.current);
-      if (includedTypes.length > 0) body.includeBuildingTypes = includedTypes;
+        const body: Record<string, unknown> = {
+          latitude: fetchCenter.latitude,
+          longitude: fetchCenter.longitude,
+          radius: cfg.discoverRadius,
+        };
+        if (cachedAddressHintRef.current)
+          body.addressHint = cachedAddressHintRef.current;
+        const includedTypes = groupKeysToIncludedTypes(
+          enabledBuildingGroupsRef.current,
+        );
+        if (includedTypes.length > 0) body.includeBuildingTypes = includedTypes;
 
-      // Kick off a non-blocking reverse-geocode for the NEXT fetch to use.
-      Location.reverseGeocodeAsync({ latitude, longitude })
-        .then((geocoded) => {
-          if (geocoded.length > 0) {
-            const g = geocoded[0];
-            const parts = [g.streetNumber, g.street, g.district, g.subregion, g.city].filter(Boolean);
-            cachedAddressHintRef.current = parts.join(", ");
+        // Kick off a non-blocking reverse-geocode for the NEXT fetch to use.
+        Location.reverseGeocodeAsync({ latitude, longitude })
+          .then((geocoded) => {
+            if (geocoded.length > 0) {
+              const g = geocoded[0];
+              const parts = [
+                g.streetNumber,
+                g.street,
+                g.district,
+                g.subregion,
+                g.city,
+              ].filter(Boolean);
+              cachedAddressHintRef.current = parts.join(", ");
+            }
+          })
+          .catch(() => {});
+
+        const res = await fetch(`${API_BASE}/api/explore/discover`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await authHeaders()),
+          },
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          // Guard: if stopWalk was called while the fetch was in-flight, discard
+          // results so we don't repopulate the places list or update state after
+          // the walk has ended.
+          if (!isWalkingRef.current) return;
+          if (Array.isArray(data?.places)) {
+            // Merge with existing — dedupe by id, then evict anything farther
+            // than memoryRadius from the user's current location. Without the
+            // eviction the queue grows unbounded over a long walk, slowing
+            // pickNext and piling stale markers across the whole neighborhood.
+            const incoming = data.places as WalkPlace[];
+            const map = new Map<string, WalkPlace>();
+            for (const p of placesRef.current) map.set(p.id, p);
+            for (const p of incoming) map.set(p.id, p);
+            const merged: WalkPlace[] = [];
+            for (const p of map.values()) {
+              const d = haversineMeters(
+                latitude,
+                longitude,
+                p.latitude,
+                p.longitude,
+              );
+              if (d <= cfg.memoryRadius) merged.push(p);
+            }
+            placesRef.current = merged;
+            setNearbyPlaces(merged);
+            lastFetchRef.current = { latitude, longitude };
           }
-        })
-        .catch(() => {});
-
-      const res = await fetch(`${API_BASE}/api/explore/discover`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...await authHeaders() },
-        body: JSON.stringify(body),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        // Guard: if stopWalk was called while the fetch was in-flight, discard
-        // results so we don't repopulate the places list or update state after
-        // the walk has ended.
-        if (!isWalkingRef.current) return;
-        if (Array.isArray(data?.places)) {
-          // Merge with existing — dedupe by id, then evict anything farther
-          // than memoryRadius from the user's current location. Without the
-          // eviction the queue grows unbounded over a long walk, slowing
-          // pickNext and piling stale markers across the whole neighborhood.
-          const incoming = data.places as WalkPlace[];
-          const map = new Map<string, WalkPlace>();
-          for (const p of placesRef.current) map.set(p.id, p);
-          for (const p of incoming) map.set(p.id, p);
-          const merged: WalkPlace[] = [];
-          for (const p of map.values()) {
-            const d = haversineMeters(latitude, longitude, p.latitude, p.longitude);
-            if (d <= cfg.memoryRadius) merged.push(p);
-          }
-          placesRef.current = merged;
-          setNearbyPlaces(merged);
-          lastFetchRef.current = { latitude, longitude };
         }
+      } catch (err) {
+        addWalkBreadcrumb(
+          "fetchNearbyPlaces error",
+          {
+            errorType: err instanceof Error ? err.constructor.name : typeof err,
+          },
+          "error",
+        );
+      } finally {
+        fetchingRef.current = false;
+        setIsLoading(false);
       }
-    } catch (err) {
-      addWalkBreadcrumb(
-        "fetchNearbyPlaces error",
-        { errorType: err instanceof Error ? err.constructor.name : typeof err },
-        "error",
-      );
-    } finally {
-      fetchingRef.current = false;
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    [],
+  );
 
-  const fetchPlacesAlongRoute = useCallback(async (
-    geometry: number[][],
-    maxPlaces?: number,
-  ): Promise<WalkPlace[]> => {
-    const cfg = DENSITY_CONFIG[densityRef.current];
-    try {
-      const res = await fetch(`${API_BASE}/api/explore/places-along-route`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...await authHeaders() },
-        body: JSON.stringify({
-          geometry,
-          ...(maxPlaces !== undefined ? { maxPlaces } : {}),
-          corridorMeters: cfg.corridorMeters,
-        }),
-      });
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data?.places) ? (data.places as WalkPlace[]) : [];
-    } catch {
-      return [];
-    }
-  }, []);
+  const fetchPlacesAlongRoute = useCallback(
+    async (geometry: number[][], maxPlaces?: number): Promise<WalkPlace[]> => {
+      const cfg = DENSITY_CONFIG[densityRef.current];
+      try {
+        const res = await fetch(`${API_BASE}/api/explore/places-along-route`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(await authHeaders()),
+          },
+          body: JSON.stringify({
+            geometry,
+            ...(maxPlaces !== undefined ? { maxPlaces } : {}),
+            corridorMeters: cfg.corridorMeters,
+          }),
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data?.places) ? (data.places as WalkPlace[]) : [];
+      } catch {
+        return [];
+      }
+    },
+    [],
+  );
 
   // Enqueue a narration and update all associated state. Accepts a payload
   // produced by fetchNarrationPayload — either a pre-rendered MP3 file (the
   // natural-voice path on native) or plain text (web, or native fallback when
   // the audio endpoint failed).
-  const enqueueNarration = useCallback((place: WalkPlace, payload: NarrationPayload) => {
-    currentNarrationPlaceRef.current = place;
-    setCurrentNarrationPlace(place);
-    if (payload.kind === "audio") {
-      narration.enqueueAudio(place.id, payload.audioUri, place.name, payload.cleanup);
-    } else {
-      narration.enqueue(place.id, payload.text, place.name);
-    }
-    addWalkBreadcrumb("narration fetched", { placeId: place.id, kind: payload.kind });
-    if (Platform.OS !== "web") {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }
-    setStats((prev) => ({ ...prev, placesNarrated: prev.placesNarrated + 1 }));
-  }, [narration]);
+  const enqueueNarration = useCallback(
+    (place: WalkPlace, payload: NarrationPayload) => {
+      currentNarrationPlaceRef.current = place;
+      setCurrentNarrationPlace(place);
+      if (payload.kind === "audio") {
+        narration.enqueueAudio(
+          place.id,
+          payload.audioUri,
+          place.name,
+          payload.cleanup,
+        );
+      } else {
+        narration.enqueue(place.id, payload.text, place.name);
+      }
+      addWalkBreadcrumb("narration fetched", {
+        placeId: place.id,
+        kind: payload.kind,
+      });
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      setStats((prev) => ({
+        ...prev,
+        placesNarrated: prev.placesNarrated + 1,
+      }));
+    },
+    [narration],
+  );
 
   // Single source of truth for "go fetch a narration for this place". On web
   // (and as a fallback when the audio endpoint errors) returns text. On native
   // returns a path to a freshly-written MP3 file plus a cleanup that deletes
   // the file once playback is done.  The actual fetch/write logic lives in
   // lib/fetchNarrationPayload.ts so it can be tested without React.
-  const fetchNarrationPayload = useCallback((place: WalkPlace): Promise<NarrationPayload | null> => {
-    return fetchNarrationPayloadUtil(place, { apiBase: API_BASE, isExpoGo: IS_EXPO_GO });
-  }, []);
+  const fetchNarrationPayload = useCallback(
+    (place: WalkPlace): Promise<NarrationPayload | null> => {
+      return fetchNarrationPayloadUtil(place, {
+        apiBase: API_BASE,
+        isExpoGo: IS_EXPO_GO,
+      });
+    },
+    [],
+  );
 
-  const fetchNarration = useCallback(async (place: WalkPlace) => {
-    // --- Narration pipeline: fast path ---
-    // Check if we already pre-fetched the narration for this place while the
-    // previous story was playing. If so, enqueue it immediately (no round-trip)
-    // and then start pre-fetching the one after that. consumePrefetchedNarration
-    // also runs the stale-cleanup when the cached entry is for a different place.
-    const prefetched = prefetchedNarrationRef.current;
-    prefetchedNarrationRef.current = null; // always consume / clear the cache
-    const lookup = consumePrefetchedNarration(
-      prefetched,
-      place.id,
-      getStalePrefetchPool(),
-      handlePrefetchEvent,
-    );
-    if (lookup.kind === "hit") {
-      if (__DEV__) {
-        console.log(`[fetchNarration] cache HIT (${lookup.source}) for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`);
-      }
-      // Only the "staleReplay" path is a genuine replay (a place that was
-      // displaced from the live slot and revived from the stale pool because
-      // the user re-picked it within the TTL). A "live" hit is the normal
-      // first-time narration fast path — the prefetch landed before the user
-      // finished the previous story — and must NOT show the Replay badge.
-      if (lookup.source === "staleReplay") {
-        // Auto-clear after a few seconds so the badge doesn't linger.
-        if (replayBadgeTimerRef.current) {
-          clearTimeout(replayBadgeTimerRef.current);
+  const fetchNarration = useCallback(
+    async (place: WalkPlace) => {
+      // --- Narration pipeline: fast path ---
+      // Check if we already pre-fetched the narration for this place while the
+      // previous story was playing. If so, enqueue it immediately (no round-trip)
+      // and then start pre-fetching the one after that. consumePrefetchedNarration
+      // also runs the stale-cleanup when the cached entry is for a different place.
+      const prefetched = prefetchedNarrationRef.current;
+      prefetchedNarrationRef.current = null; // always consume / clear the cache
+      const lookup = consumePrefetchedNarration(
+        prefetched,
+        place.id,
+        getStalePrefetchPool(),
+        handlePrefetchEvent,
+      );
+      if (lookup.kind === "hit") {
+        if (__DEV__) {
+          console.log(
+            `[fetchNarration] cache HIT (${lookup.source}) for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`,
+          );
         }
-        setIsReplay(true);
-        replayBadgeTimerRef.current = setTimeout(() => {
-          setIsReplay(false);
+        // Only the "staleReplay" path is a genuine replay (a place that was
+        // displaced from the live slot and revived from the stale pool because
+        // the user re-picked it within the TTL). A "live" hit is the normal
+        // first-time narration fast path — the prefetch landed before the user
+        // finished the previous story — and must NOT show the Replay badge.
+        if (lookup.source === "staleReplay") {
+          // Auto-clear after a few seconds so the badge doesn't linger.
+          if (replayBadgeTimerRef.current) {
+            clearTimeout(replayBadgeTimerRef.current);
+          }
+          setIsReplay(true);
+          replayBadgeTimerRef.current = setTimeout(() => {
+            setIsReplay(false);
+            replayBadgeTimerRef.current = null;
+          }, 4000);
+        } else if (replayBadgeTimerRef.current) {
+          // Live first-time narration: drop any stale badge that was still up.
+          clearTimeout(replayBadgeTimerRef.current);
           replayBadgeTimerRef.current = null;
-        }, 4000);
-      } else if (replayBadgeTimerRef.current) {
-        // Live first-time narration: drop any stale badge that was still up.
+          setIsReplay(false);
+        }
+        enqueueNarration(place, lookup.entry.payload);
+        // Keep the pipeline going: pre-fetch the next candidate.
+        prefetchNextRef.current?.();
+        return;
+      }
+
+      // --- Normal path (cache miss or stale) ---
+      const payload = await fetchNarrationPayload(place);
+      if (!payload) return;
+      // Guard: if stopWalk was called while the fetch was in-flight (up to 15 s),
+      // discard the payload and run its cleanup so we never play audio or update
+      // stats after the walk has ended.
+      if (!isWalkingRef.current) {
+        if (payload.kind === "audio") {
+          try {
+            payload.cleanup?.();
+          } catch {}
+        }
+        return;
+      }
+      // First-time narration: ensure any stale "Replay" badge from the previous
+      // story is gone before we kick off the new one.
+      if (replayBadgeTimerRef.current) {
         clearTimeout(replayBadgeTimerRef.current);
         replayBadgeTimerRef.current = null;
-        setIsReplay(false);
       }
-      enqueueNarration(place, lookup.entry.payload);
-      // Keep the pipeline going: pre-fetch the next candidate.
+      setIsReplay(false);
+      // Remember which place is now driving the lock-screen widget so the
+      // artwork we send matches the story being spoken.
+      enqueueNarration(place, payload);
+      // Start pre-fetching the next candidate so it's ready when this
+      // narration finishes and the movement gate clears.
       prefetchNextRef.current?.();
-      return;
-    }
-
-    // --- Normal path (cache miss or stale) ---
-    const payload = await fetchNarrationPayload(place);
-    if (!payload) return;
-    // Guard: if stopWalk was called while the fetch was in-flight (up to 15 s),
-    // discard the payload and run its cleanup so we never play audio or update
-    // stats after the walk has ended.
-    if (!isWalkingRef.current) {
-      if (payload.kind === "audio") { try { payload.cleanup?.(); } catch {} }
-      return;
-    }
-    // First-time narration: ensure any stale "Replay" badge from the previous
-    // story is gone before we kick off the new one.
-    if (replayBadgeTimerRef.current) {
-      clearTimeout(replayBadgeTimerRef.current);
-      replayBadgeTimerRef.current = null;
-    }
-    setIsReplay(false);
-    // Remember which place is now driving the lock-screen widget so the
-    // artwork we send matches the story being spoken.
-    enqueueNarration(place, payload);
-    // Start pre-fetching the next candidate so it's ready when this
-    // narration finishes and the movement gate clears.
-    prefetchNextRef.current?.();
-  }, [enqueueNarration, fetchNarrationPayload, handlePrefetchEvent]);
+    },
+    [enqueueNarration, fetchNarrationPayload, handlePrefetchEvent],
+  );
 
   /**
    * Pick the best place to narrate next, given current location, heading, density.
    * Returns null if nothing qualifies right now.
    */
-  const pickNext = useCallback((overrideLoc?: { latitude: number; longitude: number }): WalkPlace | null => {
-    const loc = overrideLoc ?? currentLocation;
-    if (!loc) return null;
-    const cfg = DENSITY_CONFIG[densityRef.current];
+  const pickNext = useCallback(
+    (overrideLoc?: {
+      latitude: number;
+      longitude: number;
+    }): WalkPlace | null => {
+      const loc = overrideLoc ?? currentLocation;
+      if (!loc) return null;
+      const cfg = DENSITY_CONFIG[densityRef.current];
 
-    // Movement gating: require the user to walk a minimum distance from where
-    // the last narration ended before queueing the next one. If we have no
-    // anchor yet (first pick of the walk), this gate is a no-op.
-    const anchor = lastNarrationEndLocationRef.current;
-    if (anchor) {
-      const movedSinceLast = haversineMeters(
-        anchor.latitude, anchor.longitude, loc.latitude, loc.longitude,
-      );
-      if (movedSinceLast < cfg.minMetersBetweenPicks) return null;
-    }
-    // Prefer the live device compass heading; fall back to the heading we
-    // derive from GPS velocity when the magnetometer is unavailable.
-    const heading = deviceHeadingRef.current ?? velocityHeadingRef.current;
+      // Movement gating: require the user to walk a minimum distance from where
+      // the last narration ended before queueing the next one. If we have no
+      // anchor yet (first pick of the walk), this gate is a no-op.
+      const anchor = lastNarrationEndLocationRef.current;
+      if (anchor) {
+        const movedSinceLast = haversineMeters(
+          anchor.latitude,
+          anchor.longitude,
+          loc.latitude,
+          loc.longitude,
+        );
+        if (movedSinceLast < cfg.minMetersBetweenPicks) return null;
+      }
+      // Prefer the live device compass heading; fall back to the heading we
+      // derive from GPS velocity when the magnetometer is unavailable.
+      const heading = deviceHeadingRef.current ?? velocityHeadingRef.current;
 
-    let best: WalkPlace | null = null;
-    let bestScore = Infinity;
+      let best: WalkPlace | null = null;
+      let bestScore = Infinity;
 
-    for (const p of placesRef.current) {
-      if (narratedIdsRef.current.has(p.id)) continue;
-      const dist = haversineMeters(loc.latitude, loc.longitude, p.latitude, p.longitude);
-      if (dist > cfg.maxQueueDistance) continue;
-      const net = p.netScore ?? 0;
-      if (net < cfg.netScoreFloor) continue;
+      for (const p of placesRef.current) {
+        if (narratedIdsRef.current.has(p.id)) continue;
+        const dist = haversineMeters(
+          loc.latitude,
+          loc.longitude,
+          p.latitude,
+          p.longitude,
+        );
+        if (dist > cfg.maxQueueDistance) continue;
+        const net = p.netScore ?? 0;
+        if (net < cfg.netScoreFloor) continue;
 
-      // Scoring: lower is better. Distance is the base.
-      let score = dist;
-      // Heading-aware bias: strongly favour places in the direction of travel.
-      //   forwardBiasMeters (200 m default) — cosine term gives the full bonus
-      //   when the place is straight ahead (diff=0) and 0 bonus at 90°. At 180°
-      //   it becomes a penalty. This overwhelms the Manhattan side-street effect:
-      //   a place 200 m ahead scores 200−200=0 vs 80 m perpendicular scoring 80.
-      //
-      //   offAxisPenaltyDeg / offAxisPenaltyMeters — additional flat penalty for
-      //   places more than ~70° off-heading, making them a genuine last resort
-      //   without hard-excluding them (queue never goes empty in bad GPS).
-      if (heading !== null) {
-        const overrides = walkConfigOverridesRef.current;
-        const fwdBias = overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
-        const penaltyDeg = overrides?.offAxisPenaltyDeg ?? cfg.offAxisPenaltyDeg;
-        const penaltyMeters = overrides?.offAxisPenaltyMeters ?? cfg.offAxisPenaltyMeters;
-        const placeBearing = bearingDeg(loc.latitude, loc.longitude, p.latitude, p.longitude);
-        const diff = angularDiff(heading, placeBearing);
-        score -= fwdBias * Math.cos((diff * Math.PI) / 180);
-        if (diff > penaltyDeg) {
-          score += penaltyMeters;
+        // Scoring: lower is better. Distance is the base.
+        let score = dist;
+        // Heading-aware bias: strongly favour places in the direction of travel.
+        //   forwardBiasMeters (200 m default) — cosine term gives the full bonus
+        //   when the place is straight ahead (diff=0) and 0 bonus at 90°. At 180°
+        //   it becomes a penalty. This overwhelms the Manhattan side-street effect:
+        //   a place 200 m ahead scores 200−200=0 vs 80 m perpendicular scoring 80.
+        //
+        //   offAxisPenaltyDeg / offAxisPenaltyMeters — additional flat penalty for
+        //   places more than ~70° off-heading, making them a genuine last resort
+        //   without hard-excluding them (queue never goes empty in bad GPS).
+        if (heading !== null) {
+          const overrides = walkConfigOverridesRef.current;
+          const fwdBias = overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
+          const penaltyDeg =
+            overrides?.offAxisPenaltyDeg ?? cfg.offAxisPenaltyDeg;
+          const penaltyMeters =
+            overrides?.offAxisPenaltyMeters ?? cfg.offAxisPenaltyMeters;
+          const placeBearing = bearingDeg(
+            loc.latitude,
+            loc.longitude,
+            p.latitude,
+            p.longitude,
+          );
+          const diff = angularDiff(heading, placeBearing);
+          score -= fwdBias * Math.cos((diff * Math.PI) / 180);
+          if (diff > penaltyDeg) {
+            score += penaltyMeters;
+          }
+        }
+        // Rating bonus: each net upvote shaves up to 20m, capped at 80m.
+        score -= Math.min(80, Math.max(-40, net * 20));
+
+        if (score < bestScore) {
+          bestScore = score;
+          best = p;
         }
       }
-      // Rating bonus: each net upvote shaves up to 20m, capped at 80m.
-      score -= Math.min(80, Math.max(-40, net * 20));
 
-      if (score < bestScore) {
-        bestScore = score;
-        best = p;
+      if (__DEV__ && best) {
+        const placeBearing =
+          heading !== null
+            ? bearingDeg(
+                loc.latitude,
+                loc.longitude,
+                best.latitude,
+                best.longitude,
+              )
+            : null;
+        const diff =
+          heading !== null && placeBearing !== null
+            ? angularDiff(heading, placeBearing)
+            : null;
+        console.log(
+          `[pickNext] selected="${best.name}" dist=${Math.round(haversineMeters(loc.latitude, loc.longitude, best.latitude, best.longitude))}m` +
+            (diff !== null
+              ? ` headingDiff=${Math.round(diff)}°`
+              : " (no heading)") +
+            ` finalScore=${Math.round(bestScore)}`,
+        );
       }
-    }
 
-    if (__DEV__ && best) {
-      const placeBearing = heading !== null
-        ? bearingDeg(loc.latitude, loc.longitude, best.latitude, best.longitude)
-        : null;
-      const diff = heading !== null && placeBearing !== null
-        ? angularDiff(heading, placeBearing)
-        : null;
-      console.log(
-        `[pickNext] selected="${best.name}" dist=${Math.round(haversineMeters(loc.latitude, loc.longitude, best.latitude, best.longitude))}m` +
-        (diff !== null ? ` headingDiff=${Math.round(diff)}°` : " (no heading)") +
-        ` finalScore=${Math.round(bestScore)}`
-      );
-    }
-
-    return best;
-  }, [currentLocation]);
+      return best;
+    },
+    [currentLocation],
+  );
 
   // Pre-fetch the narration for the next best candidate while the current
   // story is playing. Runs fire-and-forget in the background; failures are
@@ -823,7 +992,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       stalePool: getStalePrefetchPool(),
       onEvent: handlePrefetchEvent,
     });
-  }, [pickNext, fetchNarrationPayload, getStalePrefetchPool, handlePrefetchEvent]);
+  }, [
+    pickNext,
+    fetchNarrationPayload,
+    getStalePrefetchPool,
+    handlePrefetchEvent,
+  ]);
   useEffect(() => {
     prefetchNextRef.current = prefetchNext;
   }, [prefetchNext]);
@@ -836,7 +1010,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
       if (prevLocationRef.current) {
         const prev = prevLocationRef.current;
-        const dist = haversineMeters(prev.latitude, prev.longitude, latitude, longitude);
+        const dist = haversineMeters(
+          prev.latitude,
+          prev.longitude,
+          latitude,
+          longitude,
+        );
         if (dist < 200) {
           setStats((s) => ({ ...s, distanceWalked: s.distanceWalked + dist }));
           // Feed the rolling pace buffer with this segment. Skip giant jumps
@@ -846,7 +1025,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // Compute heading from velocity: only trust if moved enough recently.
         if (dist >= 8 && now - prev.ts < 30_000) {
           velocityHeadingRef.current = bearingDeg(
-            prev.latitude, prev.longitude, latitude, longitude,
+            prev.latitude,
+            prev.longitude,
+            latitude,
+            longitude,
           );
         }
       }
@@ -861,11 +1043,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       ) {
         paceSamplesRef.current.shift();
       }
-      if (now >= manualOverrideUntilRef.current && paceSamplesRef.current.length > 0) {
+      if (
+        now >= manualOverrideUntilRef.current &&
+        paceSamplesRef.current.length > 0
+      ) {
         const oldest = paceSamplesRef.current[0].ts;
         const spanMs = now - oldest;
         if (spanMs >= PACE_MIN_WINDOW_MS) {
-          const totalMeters = paceSamplesRef.current.reduce((a, s) => a + s.meters, 0);
+          const totalMeters = paceSamplesRef.current.reduce(
+            (a, s) => a + s.meters,
+            0,
+          );
           const pace = totalMeters / (spanMs / 1000); // m/s
           if (pace > FAST_PACE_MPS) {
             // Commuting — make sure we're in Sparse and reset slow timer.
@@ -917,23 +1105,40 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // from both the setInterval tick (foreground) and the GPS callback
   // (background). Stored in a ref so handleLocationUpdate doesn't depend on
   // pickNext/fetchNarration in its useCallback deps.
-  const maybeNarrateRef = useRef<((loc?: { latitude: number; longitude: number }) => void) | null>(null);
+  const maybeNarrateRef = useRef<
+    ((loc?: { latitude: number; longitude: number }) => void) | null
+  >(null);
   const maybeNarrate = useCallback(
     (loc?: { latitude: number; longitude: number }) => {
-      if (!isWalkingRef.current) { if (__DEV__) console.log("[maybeNarrate] BLOCKED: not walking"); return; }
-      if (isSpeakingRef.current) { if (__DEV__) console.log("[maybeNarrate] BLOCKED: already speaking"); return; }
+      if (!isWalkingRef.current) {
+        if (__DEV__) console.log("[maybeNarrate] BLOCKED: not walking");
+        return;
+      }
+      if (isSpeakingRef.current) {
+        if (__DEV__) console.log("[maybeNarrate] BLOCKED: already speaking");
+        return;
+      }
       const cfg = DENSITY_CONFIG[densityRef.current];
       const elapsed = Date.now() - lastNarrationEndRef.current;
       if (elapsed < cfg.cooldownMs) {
-        if (__DEV__) console.log(`[maybeNarrate] BLOCKED: cooldown ${Math.round((cfg.cooldownMs - elapsed) / 1000)}s remaining (density=${densityRef.current})`);
+        if (__DEV__)
+          console.log(
+            `[maybeNarrate] BLOCKED: cooldown ${Math.round((cfg.cooldownMs - elapsed) / 1000)}s remaining (density=${densityRef.current})`,
+          );
         return;
       }
       const next = pickNext(loc);
       if (!next) {
-        if (__DEV__) console.log(`[maybeNarrate] BLOCKED: pickNext=null (${placesRef.current.length} places, ${narratedIdsRef.current.size} narrated)`);
+        if (__DEV__)
+          console.log(
+            `[maybeNarrate] BLOCKED: pickNext=null (${placesRef.current.length} places, ${narratedIdsRef.current.size} narrated)`,
+          );
         return;
       }
-      if (__DEV__) console.log(`[maybeNarrate] PASSED — fetching narration for "${next.name}"`);
+      if (__DEV__)
+        console.log(
+          `[maybeNarrate] PASSED — fetching narration for "${next.name}"`,
+        );
       narratedIdsRef.current.set(next.id, Date.now());
       setNarratedIds(new Map(narratedIdsRef.current));
       addWalkBreadcrumb("place visited", { placeId: next.id });
@@ -980,229 +1185,265 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [isWalking]);
 
-  const startWalk = useCallback(async (initialPlaces?: WalkPlace[]): Promise<boolean> => {
-    // Guard against double-tap or re-entry before the walk is fully set up.
-    if (isWalkingRef.current || isStartingRef.current) return false;
-    isStartingRef.current = true;
-    try {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") { isStartingRef.current = false; return false; }
-
-    // Background permission is best-effort: if the user declines, Walk Mode
-    // still works while the app is in the foreground. We never block the
-    // walk on the background grant.
-    if (Platform.OS !== "web") {
+  const startWalk = useCallback(
+    async (initialPlaces?: WalkPlace[]): Promise<boolean> => {
+      // Guard against double-tap or re-entry before the walk is fully set up.
+      if (isWalkingRef.current || isStartingRef.current) return false;
+      isStartingRef.current = true;
       try {
-        await Location.requestBackgroundPermissionsAsync();
-      } catch {}
-    }
-
-    // Configure the audio session so expo-speech keeps playing when the
-    // screen locks. Best-effort; on failure we fall back to foreground-only
-    // narration rather than refusing to start the walk.
-    try {
-      await enableBackgroundAudio();
-    } catch {}
-
-    isWalkingRef.current = true;
-    setIsWalking(true);
-    addWalkBreadcrumb("walk started");
-
-    // Fetch server-side heading-bias config in the background. Reset first so
-    // any stale values from a previous walk are cleared. The fetch races
-    // against a 5 s wall-clock so it never blocks walk startup; if it wins
-    // before pickNext runs the server values override the hard-coded defaults.
-    walkConfigOverridesRef.current = null;
-    (async () => {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 5000);
-        let res: Response;
-        try {
-          res = await fetch(`${API_BASE}/api/explore/walk-config`, {
-            signal: controller.signal,
-            headers: { "Content-Type": "application/json", ...await authHeaders() },
-          });
-        } finally {
-          clearTimeout(timer);
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          isStartingRef.current = false;
+          return false;
         }
-        if (res.ok) {
-          const data = await res.json() as {
-            forwardBiasMeters?: unknown;
-            offAxisPenaltyDeg?: unknown;
-            offAxisPenaltyMeters?: unknown;
-          };
-          const fwd = typeof data.forwardBiasMeters === "number" ? data.forwardBiasMeters : null;
-          const deg = typeof data.offAxisPenaltyDeg === "number" ? data.offAxisPenaltyDeg : null;
-          const m   = typeof data.offAxisPenaltyMeters === "number" ? data.offAxisPenaltyMeters : null;
-          if (fwd !== null && deg !== null && m !== null) {
-            walkConfigOverridesRef.current = {
-              forwardBiasMeters: fwd,
-              offAxisPenaltyDeg: deg,
-              offAxisPenaltyMeters: m,
-            };
+
+        // Background permission is best-effort: if the user declines, Walk Mode
+        // still works while the app is in the foreground. We never block the
+        // walk on the background grant.
+        if (Platform.OS !== "web") {
+          try {
+            await Location.requestBackgroundPermissionsAsync();
+          } catch {}
+        }
+
+        // Configure the audio session so expo-speech keeps playing when the
+        // screen locks. Best-effort; on failure we fall back to foreground-only
+        // narration rather than refusing to start the walk.
+        try {
+          await enableBackgroundAudio();
+        } catch {}
+
+        isWalkingRef.current = true;
+        setIsWalking(true);
+        addWalkBreadcrumb("walk started");
+
+        // Fetch server-side heading-bias config in the background. Reset first so
+        // any stale values from a previous walk are cleared. The fetch races
+        // against a 5 s wall-clock so it never blocks walk startup; if it wins
+        // before pickNext runs the server values override the hard-coded defaults.
+        walkConfigOverridesRef.current = null;
+        (async () => {
+          try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 5000);
+            let res: Response;
+            try {
+              res = await fetch(`${API_BASE}/api/explore/walk-config`, {
+                signal: controller.signal,
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(await authHeaders()),
+                },
+              });
+            } finally {
+              clearTimeout(timer);
+            }
+            if (res.ok) {
+              const data = (await res.json()) as {
+                forwardBiasMeters?: unknown;
+                offAxisPenaltyDeg?: unknown;
+                offAxisPenaltyMeters?: unknown;
+              };
+              const fwd =
+                typeof data.forwardBiasMeters === "number"
+                  ? data.forwardBiasMeters
+                  : null;
+              const deg =
+                typeof data.offAxisPenaltyDeg === "number"
+                  ? data.offAxisPenaltyDeg
+                  : null;
+              const m =
+                typeof data.offAxisPenaltyMeters === "number"
+                  ? data.offAxisPenaltyMeters
+                  : null;
+              if (fwd !== null && deg !== null && m !== null) {
+                walkConfigOverridesRef.current = {
+                  forwardBiasMeters: fwd,
+                  offAxisPenaltyDeg: deg,
+                  offAxisPenaltyMeters: m,
+                };
+              }
+            }
+          } catch {
+            // Best-effort — DENSITY_CONFIG defaults are used when fetch fails.
+          }
+        })();
+
+        // Density is per-walk: every new walk starts at Dense (more results) as the
+        // default, so the user gets immediate story density without needing to configure
+        // anything. Auto-switching will move it to Sparse if they walk fast.
+        densityRef.current = "dense";
+        setDensityState("dense");
+        setStats({
+          startTime: Date.now(),
+          placesNarrated: 0,
+          distanceWalked: 0,
+        });
+        setNarratedIds(new Map());
+        narratedIdsRef.current = new Map();
+        // Seed pre-fetched places so narration can fire as soon as GPS arrives,
+        // without waiting for the first GPS-driven discover call to complete.
+        placesRef.current = initialPlaces?.length ? [...initialPlaces] : [];
+        setNearbyPlaces(initialPlaces?.length ? [...initialPlaces] : []);
+        lastFetchRef.current = null;
+        prevLocationRef.current = null;
+        deviceHeadingRef.current = null;
+        velocityHeadingRef.current = null;
+        cachedAddressHintRef.current = "";
+        lastNarrationEndLocationRef.current = null;
+        paceSamplesRef.current = [];
+        slowSinceRef.current = null;
+        manualOverrideUntilRef.current = 0;
+        // Drop any pending prefetch and delete its temp file if we own one.
+        const stalePrefetch = prefetchedNarrationRef.current;
+        if (stalePrefetch && stalePrefetch.payload.kind === "audio") {
+          try {
+            stalePrefetch.payload.cleanup?.();
+          } catch {}
+        }
+        prefetchedNarrationRef.current = null;
+        prefetchInFlightRef.current = null;
+        // Drain the stale-replay pool too so a previous walk's parked entries
+        // don't leak temp files or accidentally replay across walks. The pool
+        // is lazy-allocated, so on the very first walk this is a no-op.
+        if (stalePrefetchPoolRef.current) {
+          disposeStalePrefetchPool(stalePrefetchPoolRef.current);
+        }
+        // Reset prefetch telemetry so each walk's counters start at zero.
+        prefetchCountersRef.current = emptyPrefetchCounters();
+        setPrefetchStats(emptyPrefetchCounters());
+        // Start cooldown so we don't fire instantly before the user has even moved.
+        // Use the largest cooldown across all densities so the 5-second initial
+        // wait is preserved even if auto-density switches to a stricter tier right
+        // after walk start (e.g. dense → sparse when walking at normal pace).
+        const maxCooldownMs = Math.max(
+          ...Object.values(DENSITY_CONFIG).map((c) => c.cooldownMs),
+        );
+        lastNarrationEndRef.current = Date.now() - maxCooldownMs + 5000;
+
+        if (Platform.OS === "web") {
+          try {
+            unlockWebSpeech();
+          } catch {}
+        }
+
+        // Bind lock-screen / Control Center commands to the narration queue.
+        if (nowPlayingUnsubRef.current) {
+          nowPlayingUnsubRef.current();
+          nowPlayingUnsubRef.current = null;
+        }
+        nowPlayingUnsubRef.current = NowPlaying.addRemoteCommandListener(
+          (cmd) => {
+            const n = narrationRef.current;
+            if (cmd === "play") n.resume();
+            else if (cmd === "pause") {
+              if (n.isPaused) n.resume();
+              else n.pause();
+            } else if (cmd === "next") n.skip();
+          },
+        );
+        // Seed the widget right away so the user sees Urban Explorer claim the
+        // Now Playing slot the moment Walk Mode starts, even before the first
+        // narration begins.
+        NowPlaying.setNowPlaying(
+          "Listening for nearby places",
+          "Urban Explorer",
+          true,
+          null,
+        );
+
+        const accuracy =
+          Platform.OS === "web"
+            ? Location.Accuracy.High
+            : Location.Accuracy.BestForNavigation;
+
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy });
+          handleLocationUpdate(loc);
+        } catch {}
+
+        if (Platform.OS === "web") {
+          try {
+            const sub = await Location.watchPositionAsync(
+              { accuracy, distanceInterval: 5, timeInterval: 2000 },
+              handleLocationUpdate,
+            );
+            watchRef.current = sub;
+          } catch {}
+        } else {
+          // On native, route GPS through the background task. This keeps the
+          // location stream alive when the screen locks (iOS uses the "location"
+          // background mode; Android keeps the process alive via the foreground
+          // service notification we configure here).
+          // Install this session's GPS callback via walkSessionManager.
+          // installSessionCallback returns a stop() that removes the pointer via
+          // CAS — a late-arriving stopWalk from a previous session will not clear
+          // a callback that already belongs to the new walk.
+          const session = installSessionCallback(handleLocationUpdate);
+          walkSessionCallbackRef.current = session;
+          try {
+            const alreadyRunning =
+              await Location.hasStartedLocationUpdatesAsync(
+                BACKGROUND_LOCATION_TASK,
+              );
+            if (alreadyRunning) {
+              await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
+            }
+            await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
+              accuracy,
+              distanceInterval: 5,
+              timeInterval: 2000,
+              activityType: Location.ActivityType.Fitness,
+              pausesUpdatesAutomatically: false,
+              showsBackgroundLocationIndicator: true,
+              foregroundService: (() => {
+                const strings = getNotificationLocale(localeRef.current);
+                return {
+                  notificationTitle: strings.notificationTitle,
+                  notificationBody: strings.notificationBody,
+                  notificationColor: "#1f2937",
+                };
+              })(),
+            });
+          } catch {
+            // If background updates fail to start (e.g. permission denied),
+            // fall back to a foreground-only watcher so the walk still works
+            // while the app is in front.
+            try {
+              const sub = await Location.watchPositionAsync(
+                { accuracy, distanceInterval: 5, timeInterval: 2000 },
+                handleLocationUpdate,
+              );
+              watchRef.current = sub;
+            } catch {}
           }
         }
-      } catch {
-        // Best-effort — DENSITY_CONFIG defaults are used when fetch fails.
-      }
-    })();
 
-    // Density is per-walk: every new walk starts at Dense (more results) as the
-    // default, so the user gets immediate story density without needing to configure
-    // anything. Auto-switching will move it to Sparse if they walk fast.
-    densityRef.current = "dense";
-    setDensityState("dense");
-    setStats({ startTime: Date.now(), placesNarrated: 0, distanceWalked: 0 });
-    setNarratedIds(new Map());
-    narratedIdsRef.current = new Map();
-    // Seed pre-fetched places so narration can fire as soon as GPS arrives,
-    // without waiting for the first GPS-driven discover call to complete.
-    placesRef.current = initialPlaces?.length ? [...initialPlaces] : [];
-    setNearbyPlaces(initialPlaces?.length ? [...initialPlaces] : []);
-    lastFetchRef.current = null;
-    prevLocationRef.current = null;
-    deviceHeadingRef.current = null;
-    velocityHeadingRef.current = null;
-    cachedAddressHintRef.current = "";
-    lastNarrationEndLocationRef.current = null;
-    paceSamplesRef.current = [];
-    slowSinceRef.current = null;
-    manualOverrideUntilRef.current = 0;
-    // Drop any pending prefetch and delete its temp file if we own one.
-    const stalePrefetch = prefetchedNarrationRef.current;
-    if (stalePrefetch && stalePrefetch.payload.kind === "audio") {
-      try { stalePrefetch.payload.cleanup?.(); } catch {}
-    }
-    prefetchedNarrationRef.current = null;
-    prefetchInFlightRef.current = null;
-    // Drain the stale-replay pool too so a previous walk's parked entries
-    // don't leak temp files or accidentally replay across walks. The pool
-    // is lazy-allocated, so on the very first walk this is a no-op.
-    if (stalePrefetchPoolRef.current) {
-      disposeStalePrefetchPool(stalePrefetchPoolRef.current);
-    }
-    // Reset prefetch telemetry so each walk's counters start at zero.
-    prefetchCountersRef.current = emptyPrefetchCounters();
-    setPrefetchStats(emptyPrefetchCounters());
-    // Start cooldown so we don't fire instantly before the user has even moved.
-    // Use the largest cooldown across all densities so the 5-second initial
-    // wait is preserved even if auto-density switches to a stricter tier right
-    // after walk start (e.g. dense → sparse when walking at normal pace).
-    const maxCooldownMs = Math.max(
-      ...Object.values(DENSITY_CONFIG).map((c) => c.cooldownMs),
-    );
-    lastNarrationEndRef.current = Date.now() - maxCooldownMs + 5000;
-
-    if (Platform.OS === "web") {
-      try { unlockWebSpeech(); } catch {}
-    }
-
-    // Bind lock-screen / Control Center commands to the narration queue.
-    if (nowPlayingUnsubRef.current) {
-      nowPlayingUnsubRef.current();
-      nowPlayingUnsubRef.current = null;
-    }
-    nowPlayingUnsubRef.current = NowPlaying.addRemoteCommandListener((cmd) => {
-      const n = narrationRef.current;
-      if (cmd === "play") n.resume();
-      else if (cmd === "pause") {
-        if (n.isPaused) n.resume();
-        else n.pause();
-      } else if (cmd === "next") n.skip();
-    });
-    // Seed the widget right away so the user sees Urban Explorer claim the
-    // Now Playing slot the moment Walk Mode starts, even before the first
-    // narration begins.
-    NowPlaying.setNowPlaying("Listening for nearby places", "Urban Explorer", true, null);
-
-    const accuracy =
-      Platform.OS === "web" ? Location.Accuracy.High : Location.Accuracy.BestForNavigation;
-
-    try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy });
-      handleLocationUpdate(loc);
-    } catch {}
-
-    if (Platform.OS === "web") {
-      try {
-        const sub = await Location.watchPositionAsync(
-          { accuracy, distanceInterval: 5, timeInterval: 2000 },
-          handleLocationUpdate,
-        );
-        watchRef.current = sub;
-      } catch {}
-    } else {
-      // On native, route GPS through the background task. This keeps the
-      // location stream alive when the screen locks (iOS uses the "location"
-      // background mode; Android keeps the process alive via the foreground
-      // service notification we configure here).
-      // Install this session's GPS callback via walkSessionManager.
-      // installSessionCallback returns a stop() that removes the pointer via
-      // CAS — a late-arriving stopWalk from a previous session will not clear
-      // a callback that already belongs to the new walk.
-      const session = installSessionCallback(handleLocationUpdate);
-      walkSessionCallbackRef.current = session;
-      try {
-        const alreadyRunning = await Location.hasStartedLocationUpdatesAsync(
-          BACKGROUND_LOCATION_TASK,
-        );
-        if (alreadyRunning) {
-          await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK);
-        }
-        await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
-          accuracy,
-          distanceInterval: 5,
-          timeInterval: 2000,
-          activityType: Location.ActivityType.Fitness,
-          pausesUpdatesAutomatically: false,
-          showsBackgroundLocationIndicator: true,
-          foregroundService: (() => {
-            const strings = getNotificationLocale(localeRef.current);
-            return {
-              notificationTitle: strings.notificationTitle,
-              notificationBody: strings.notificationBody,
-              notificationColor: "#1f2937",
-            };
-          })(),
-        });
-      } catch {
-        // If background updates fail to start (e.g. permission denied),
-        // fall back to a foreground-only watcher so the walk still works
-        // while the app is in front.
+        // Also subscribe to the device compass; it gives a true heading even when
+        // the user is standing still. We fall back to GPS-velocity heading when
+        // the platform doesn't support it (notably on web).
         try {
-          const sub = await Location.watchPositionAsync(
-            { accuracy, distanceInterval: 5, timeInterval: 2000 },
-            handleLocationUpdate,
-          );
-          watchRef.current = sub;
+          const headingSub = await Location.watchHeadingAsync((h) => {
+            // trueHeading is preferred; -1 means unavailable. magHeading is the fallback.
+            const candidate =
+              typeof h.trueHeading === "number" && h.trueHeading >= 0
+                ? h.trueHeading
+                : typeof h.magHeading === "number" && h.magHeading >= 0
+                  ? h.magHeading
+                  : null;
+            if (candidate !== null) deviceHeadingRef.current = candidate;
+          });
+          headingWatchRef.current = headingSub;
         } catch {}
+        return true;
+      } finally {
+        // Allow startWalk to be called again (e.g. after stopping and
+        // restarting, or after an error during setup).
+        isStartingRef.current = false;
       }
-    }
-
-    // Also subscribe to the device compass; it gives a true heading even when
-    // the user is standing still. We fall back to GPS-velocity heading when
-    // the platform doesn't support it (notably on web).
-    try {
-      const headingSub = await Location.watchHeadingAsync((h) => {
-        // trueHeading is preferred; -1 means unavailable. magHeading is the fallback.
-        const candidate =
-          typeof h.trueHeading === "number" && h.trueHeading >= 0
-            ? h.trueHeading
-            : typeof h.magHeading === "number" && h.magHeading >= 0
-              ? h.magHeading
-              : null;
-        if (candidate !== null) deviceHeadingRef.current = candidate;
-      });
-      headingWatchRef.current = headingSub;
-    } catch {}
-    return true;
-    } finally {
-      // Allow startWalk to be called again (e.g. after stopping and
-      // restarting, or after an error during setup).
-      isStartingRef.current = false;
-    }
-  }, [handleLocationUpdate]);
+    },
+    [handleLocationUpdate],
+  );
 
   const stopWalk = useCallback(() => {
     // executeStopWalkSync enforces the exact stop-ordering that prevents
@@ -1230,7 +1471,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     // don't leave a stale MP3 sitting in the device cache.
     const stalePrefetch = prefetchedNarrationRef.current;
     if (stalePrefetch && stalePrefetch.payload.kind === "audio") {
-      try { stalePrefetch.payload.cleanup?.(); } catch {}
+      try {
+        stalePrefetch.payload.cleanup?.();
+      } catch {}
     }
     prefetchedNarrationRef.current = null;
     prefetchInFlightRef.current = null;
@@ -1240,11 +1483,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       disposeStalePrefetchPool(stalePrefetchPoolRef.current);
     }
     if (watchRef.current) {
-      try { watchRef.current.remove(); } catch {}
+      try {
+        watchRef.current.remove();
+      } catch {}
       watchRef.current = null;
     }
     if (headingWatchRef.current) {
-      try { headingWatchRef.current.remove(); } catch {}
+      try {
+        headingWatchRef.current.remove();
+      } catch {}
       headingWatchRef.current = null;
     }
     if (Platform.OS !== "web") {

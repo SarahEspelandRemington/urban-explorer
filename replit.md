@@ -217,10 +217,12 @@ That script installs dependencies and pushes the database schema. Then complete 
 ### Artifacts and workflows
 
 Service workflows (defined in `.replit`, restart automatically):
+
 - `artifacts/api-server` — Express API server (`pnpm --filter @workspace/api-server run dev`)
 - `artifacts/urban-explorer` — Expo mobile app (`pnpm --filter @workspace/urban-explorer run dev`)
 
 Validation workflows (run on demand or as CI gates):
+
 - `privacy-tests` — `pnpm --filter @workspace/urban-explorer run test` (200+ sentry/privacy unit tests)
 - `lint-rules` — `pnpm run lint:rules` (ESLint PII rule self-tests)
 - `lint` — `pnpm run lint` (ESLint across all source files)
@@ -245,34 +247,37 @@ The full git history is preserved in the `.git` folder, which is included when y
 
 ### Key feature commits
 
-| Feature | Commit |
-|---|---|
-| Race condition / stability fixes | `e05014c` |
-| expo-dev-client + DevBuildBanner | `19beaeb` |
-| Sentry crash reporting (initial) | `ef02ede` |
+| Feature                            | Commit    |
+| ---------------------------------- | --------- |
+| Race condition / stability fixes   | `e05014c` |
+| expo-dev-client + DevBuildBanner   | `19beaeb` |
+| Sentry crash reporting (initial)   | `ef02ede` |
 | Sentry source maps / app.config.js | `e86102e` |
-| Walk session context in Sentry | `d4cc389` |
-| Narration failure breadcrumbs | `c1c52e8` |
-| Narration fallback rate metric | `944d25e` |
-| Privacy test suite (jest) | `72ce4de` |
-| ESLint PII rule | `8b6a03e` |
-| PII scrubbing in arrays | `d83e4b8` |
-| beforeBreadcrumb ingestion hook | `7a10412` |
-| Multi-word PII fix in scrubString | `38a77e8` |
+| Walk session context in Sentry     | `d4cc389` |
+| Narration failure breadcrumbs      | `c1c52e8` |
+| Narration fallback rate metric     | `944d25e` |
+| Privacy test suite (jest)          | `72ce4de` |
+| ESLint PII rule                    | `8b6a03e` |
+| PII scrubbing in arrays            | `d83e4b8` |
+| beforeBreadcrumb ingestion hook    | `7a10412` |
+| Multi-word PII fix in scrubString  | `38a77e8` |
 
 ### How to revert
 
 **Roll the whole project back to a specific point** (destructive — loses all commits after that hash):
+
 ```bash
 git reset --hard <commit-hash>
 ```
 
 **Undo a single commit while keeping everything else** (safe, creates a new undo commit):
+
 ```bash
 git revert <commit-hash>
 ```
 
 **Remove Sentry entirely** (files to delete):
+
 ```bash
 rm -rf artifacts/urban-explorer/lib/sentry.ts \
        artifacts/urban-explorer/lib/sentryWalk.ts \
@@ -282,9 +287,11 @@ rm -rf artifacts/urban-explorer/lib/sentry.ts \
        artifacts/urban-explorer/jest.config.js \
        eslint-rules/
 ```
+
 Then remove the `@sentry/react-native` entry from `artifacts/urban-explorer/package.json`, revert `app.config.js` back to `app.json`, remove the `wrap` call from `app/_layout.tsx`, and remove the `captureException` call from `components/ErrorBoundary.tsx`.
 
 **Find the commit that introduced a file or change:**
+
 ```bash
 git log --oneline --follow -- artifacts/urban-explorer/lib/sentry.ts
 ```

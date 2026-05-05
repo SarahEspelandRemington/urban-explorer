@@ -13,15 +13,15 @@ and ends when the user can interact with the first useful screen. We split
 that window into the following phases, each emitted as a Sentry tag and a
 walk-category breadcrumb:
 
-| Phase | Where it's marked | Typical budget on a 2022-class Android |
-| --- | --- | --- |
-| `bundleStart` | Auto, at first import of `lib/coldStart.ts` | 0 ms (origin) |
-| `providersMounted` | `app/_layout.tsx` mount effect | < 250 ms |
-| `splashHidden` | `app/_layout.tsx` after `SplashScreen.hideAsync()` | < 350 ms |
-| `firstInteractiveFrame` | `app/_layout.tsx` after rAF→rAF on mount (fires regardless of which tab the router lands on) | < 500 ms |
-| `fontsLoaded` | `useFonts` resolved | < 1500 ms (non-blocking) |
-| `authUserResolved` | `lib/auth.tsx` after `/api/auth/user` returns | < 800 ms |
-| `exploreFirstResponse` | `app/(tabs)/index.tsx` first `discoverMutation` settles | < 2500 ms |
+| Phase                   | Where it's marked                                                                            | Typical budget on a 2022-class Android |
+| ----------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `bundleStart`           | Auto, at first import of `lib/coldStart.ts`                                                  | 0 ms (origin)                          |
+| `providersMounted`      | `app/_layout.tsx` mount effect                                                               | < 250 ms                               |
+| `splashHidden`          | `app/_layout.tsx` after `SplashScreen.hideAsync()`                                           | < 350 ms                               |
+| `firstInteractiveFrame` | `app/_layout.tsx` after rAF→rAF on mount (fires regardless of which tab the router lands on) | < 500 ms                               |
+| `fontsLoaded`           | `useFonts` resolved                                                                          | < 1500 ms (non-blocking)               |
+| `authUserResolved`      | `lib/auth.tsx` after `/api/auth/user` returns                                                | < 800 ms                               |
+| `exploreFirstResponse`  | `app/(tabs)/index.tsx` first `discoverMutation` settles                                      | < 2500 ms                              |
 
 Each phase is a one-shot — only the first call per process lands on the
 recorder. Warm reloads / route changes do not move the dial.
@@ -44,7 +44,7 @@ Every cold launch ships one `cold_start_complete` info-level event when the
 The full path we care about is `bundleStart` → `firstInteractiveFrame`.
 That single delta is the user-perceived cold-start time. The intermediate
 phases (`providersMounted`, `splashHidden`, `authUserResolved`,
-`exploreFirstResponse`) explain *where* time was spent if the total moves.
+`exploreFirstResponse`) explain _where_ time was spent if the total moves.
 
 The `firstInteractiveFrame` recorder is one-shot per process, so warm route
 changes never inflate the dataset.

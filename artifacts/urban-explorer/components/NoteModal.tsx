@@ -23,7 +23,13 @@ interface NoteModalProps {
   onSkip: () => void;
 }
 
-export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: NoteModalProps) {
+export function NoteModal({
+  visible,
+  placeName,
+  existingNote,
+  onSave,
+  onSkip,
+}: NoteModalProps) {
   const t = useT();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -77,14 +83,22 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
           <View style={styles.header}>
-            <View style={[styles.iconWrap, { backgroundColor: colors.primary + "15" }]}>
+            <View
+              style={[
+                styles.iconWrap,
+                { backgroundColor: colors.primary + "15" },
+              ]}
+            >
               <Feather name="bookmark" size={18} color={colors.primary} />
             </View>
             <View style={styles.headerText}>
               <Text style={[styles.title, { color: colors.foreground }]}>
                 {t.saved.noteModalTitle}
               </Text>
-              <Text style={[styles.subtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
+              <Text
+                style={[styles.subtitle, { color: colors.mutedForeground }]}
+                numberOfLines={1}
+              >
                 {placeName}
               </Text>
             </View>
@@ -131,9 +145,13 @@ export function NoteModal({ visible, placeName, existingNote, onSave, onSkip }: 
             onPress={handleSave}
             style={[styles.saveBtn, { backgroundColor: colors.primary }]}
             accessibilityRole="button"
-            accessibilityLabel={note.trim() ? t.saved.noteModalSave : t.saved.noteModalDone}
+            accessibilityLabel={
+              note.trim() ? t.saved.noteModalSave : t.saved.noteModalDone
+            }
           >
-            <Text style={[styles.saveBtnText, { color: colors.primaryForeground }]}>
+            <Text
+              style={[styles.saveBtnText, { color: colors.primaryForeground }]}
+            >
               {note.trim() ? t.saved.noteModalSave : t.saved.noteModalDone}
             </Text>
           </Pressable>

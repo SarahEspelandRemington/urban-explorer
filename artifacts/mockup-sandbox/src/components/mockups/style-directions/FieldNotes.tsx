@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin, ArrowUpRight, Clock, BookOpen, Compass } from 'lucide-react';
+import React from "react";
+import { MapPin, ArrowUpRight, Clock, BookOpen, Compass } from "lucide-react";
 
 export function FieldNotes() {
   const places = [
@@ -7,44 +7,51 @@ export function FieldNotes() {
       id: 1,
       name: "The Jefferson Market Library",
       category: "Architecture",
-      summary: "Originally built as a courthouse in 1877, this High Victorian Gothic structure was saved from demolition by community activists in the 1960s. Its clock tower once served as a fire watcher's lookout.",
+      summary:
+        "Originally built as a courthouse in 1877, this High Victorian Gothic structure was saved from demolition by community activists in the 1960s. Its clock tower once served as a fire watcher's lookout.",
       distance: "0.1 mi",
       date: "1877",
       image: "/__mockup/images/curious-night-building.jpg",
-      tags: ["Gothic Revival", "Adaptive Reuse"]
+      tags: ["Gothic Revival", "Adaptive Reuse"],
     },
     {
       id: 2,
       name: "St. Luke in the Fields",
       category: "Sanctuary",
-      summary: "One of the oldest active churches in Manhattan, standing since 1821. Beyond the brick facade lies a hidden garden that serves as a quiet sanctuary from the unrelenting city noise.",
+      summary:
+        "One of the oldest active churches in Manhattan, standing since 1821. Beyond the brick facade lies a hidden garden that serves as a quiet sanctuary from the unrelenting city noise.",
       distance: "0.3 mi",
       date: "1821",
       image: "/__mockup/images/curious-night-church.jpg",
-      tags: ["Federal Style", "Secret Garden"]
+      tags: ["Federal Style", "Secret Garden"],
     },
     {
       id: 3,
       name: "Minetta Tavern",
       category: "Historic Venue",
-      summary: "A Parisian-style steakhouse where Hemingway, Pound, and Cummings once drank. The original wooden bar, tin ceiling, and checkered tiled floor remain impeccably intact.",
+      summary:
+        "A Parisian-style steakhouse where Hemingway, Pound, and Cummings once drank. The original wooden bar, tin ceiling, and checkered tiled floor remain impeccably intact.",
       distance: "0.4 mi",
       date: "1937",
       image: "/__mockup/images/curious-night-alley.jpg",
-      tags: ["Literary History", "Preserved Interior"]
-    }
+      tags: ["Literary History", "Preserved Interior"],
+    },
   ];
 
   return (
     <div className="w-[390px] h-[844px] bg-[#F4F3ED] text-[#111111] overflow-y-auto flex flex-col relative font-sans mx-auto overflow-x-hidden selection:bg-[#E83A14] selection:text-white">
-      <style dangerouslySetInnerHTML={{__html: `
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
         .font-editorial { font-family: 'Fraunces', serif; }
         .font-meta { font-family: 'Space Mono', monospace; }
         .text-accent { color: #E83A14; }
         .bg-accent { background-color: #E83A14; }
         .border-ink { border-color: #111111; }
-      `}} />
+      `,
+        }}
+      />
 
       {/* Header */}
       <header className="px-6 pt-14 pb-8 border-b-[1.5px] border-ink bg-[#F4F3ED] sticky top-0 z-20">
@@ -57,15 +64,17 @@ export function FieldNotes() {
             Live
           </div>
         </div>
-        
+
         <h1 className="font-editorial text-[3.5rem] leading-[0.9] tracking-tight mb-4">
           Discover
         </h1>
-        
+
         <div className="flex items-center justify-between items-end border-t border-ink/20 pt-4 mt-6">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-accent" />
-            <span className="font-editorial text-xl italic text-black/80">West Village</span>
+            <span className="font-editorial text-xl italic text-black/80">
+              West Village
+            </span>
           </div>
           <span className="font-meta text-xs uppercase tracking-wider text-black/50">
             3 Places Nearby
@@ -76,8 +85,8 @@ export function FieldNotes() {
       {/* Content Feed */}
       <main className="flex-1 pb-12">
         {places.map((place, index) => (
-          <article 
-            key={place.id} 
+          <article
+            key={place.id}
             className="border-b-[1.5px] border-ink group cursor-pointer hover:bg-black/[0.02] transition-colors"
           >
             <div className="px-6 py-8">
@@ -103,8 +112,8 @@ export function FieldNotes() {
 
               {/* Image */}
               <div className="relative w-full aspect-[4/3] mb-5 overflow-hidden border border-ink/10 bg-black/5">
-                <img 
-                  src={place.image} 
+                <img
+                  src={place.image}
                   alt={place.name}
                   className="w-full h-full object-cover filter contrast-[1.1] sepia-[0.1] saturate-[0.8]"
                 />
@@ -119,8 +128,8 @@ export function FieldNotes() {
               {/* Footer Row */}
               <div className="flex items-center justify-between mt-auto">
                 <div className="flex flex-wrap gap-2">
-                  {place.tags.map(tag => (
-                    <span 
+                  {place.tags.map((tag) => (
+                    <span
                       key={tag}
                       className="font-meta text-[9px] uppercase tracking-widest border border-ink/20 px-2 py-1 text-black/60"
                     >

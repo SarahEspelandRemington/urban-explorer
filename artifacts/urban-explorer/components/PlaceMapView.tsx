@@ -2,12 +2,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import MapView, {
   Callout,
   Marker,
@@ -23,7 +18,10 @@ import { useColors } from "@/hooks/useColors";
 const MAX_GEOCODE_CACHE_SIZE = 200;
 const geocodeCache = new Map<string, { latitude: number; longitude: number }>();
 
-function setCachedGeocode(key: string, value: { latitude: number; longitude: number }): void {
+function setCachedGeocode(
+  key: string,
+  value: { latitude: number; longitude: number },
+): void {
   if (geocodeCache.size >= MAX_GEOCODE_CACHE_SIZE) {
     const firstKey = geocodeCache.keys().next().value;
     if (firstKey !== undefined) geocodeCache.delete(firstKey);
@@ -55,7 +53,12 @@ interface PlaceMapViewProps {
 
 const PAN_DISTANCE_THRESHOLD = 150;
 
-function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function haversineDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -119,7 +122,9 @@ export function PlaceMapView({
     };
 
     geocodePlaces();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
     // Re-run only when the set of places changes (not on every object identity change).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [places.map((p) => p.id).join(",")]);
@@ -161,7 +166,10 @@ export function PlaceMapView({
         );
 
         if (dist > PAN_DISTANCE_THRESHOLD) {
-          lastFetchCenter.current = { lat: region.latitude, lng: region.longitude };
+          lastFetchCenter.current = {
+            lat: region.latitude,
+            lng: region.longitude,
+          };
           onMapRegionDiscover(region.latitude, region.longitude);
         }
       }, 800);
@@ -195,48 +203,85 @@ export function PlaceMapView({
             longitude: place.longitude,
           };
           return (
-          <Marker
-            key={place.id}
-            coordinate={markerCoord}
-            pinColor={colors.primary}
-          >
-            <Callout
-              tooltip
-              onPress={() => navigateToDetail(place)}
+            <Marker
+              key={place.id}
+              coordinate={markerCoord}
+              pinColor={colors.primary}
             >
-              <View style={[styles.calloutContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.calloutHeader}>
-                  <View style={[styles.iconContainer, { backgroundColor: colors.primary + "18" }]}>
-                    <MaterialCommunityIcons
-                      name={getCategoryIcon(place.category) as any}
-                      size={16}
-                      color={colors.primary}
-                    />
+              <Callout tooltip onPress={() => navigateToDetail(place)}>
+                <View
+                  style={[
+                    styles.calloutContainer,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <View style={styles.calloutHeader}>
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        { backgroundColor: colors.primary + "18" },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={getCategoryIcon(place.category) as any}
+                        size={16}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={styles.calloutHeaderText}>
+                      <Text
+                        style={[
+                          styles.calloutName,
+                          { color: colors.foreground },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {place.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.calloutCategory,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {place.category}
+                        {place.yearBuilt ? ` · ${place.yearBuilt}` : ""}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.calloutHeaderText}>
-                    <Text style={[styles.calloutName, { color: colors.foreground }]} numberOfLines={1}>
-                      {place.name}
-                    </Text>
-                    <Text style={[styles.calloutCategory, { color: colors.mutedForeground }]}>
-                      {place.category}
-                      {place.yearBuilt ? ` · ${place.yearBuilt}` : ""}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.calloutSummary, { color: colors.foreground }]} numberOfLines={2}>
-                  {place.summary}
-                </Text>
-                <View style={styles.calloutFooter}>
-                  <Text style={[styles.calloutCta, { color: colors.primary }]}>
-                    Tap for details →
+                  <Text
+                    style={[
+                      styles.calloutSummary,
+                      { color: colors.foreground },
+                    ]}
+                    numberOfLines={2}
+                  >
+                    {place.summary}
                   </Text>
+                  <View style={styles.calloutFooter}>
+                    <Text
+                      style={[styles.calloutCta, { color: colors.primary }]}
+                    >
+                      Tap for details →
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.calloutArrow}>
-                <View style={[styles.calloutArrowInner, { backgroundColor: colors.card, borderColor: colors.border }]} />
-              </View>
-            </Callout>
-          </Marker>
+                <View style={styles.calloutArrow}>
+                  <View
+                    style={[
+                      styles.calloutArrowInner,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  />
+                </View>
+              </Callout>
+            </Marker>
           );
         })}
       </MapView>
@@ -253,7 +298,9 @@ export function PlaceMapView({
           pointerEvents="none"
         >
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={[styles.loadingBadgeText, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.loadingBadgeText, { color: colors.mutedForeground }]}
+          >
             Finding places...
           </Text>
         </View>

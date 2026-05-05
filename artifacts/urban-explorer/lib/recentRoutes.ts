@@ -12,7 +12,10 @@ export interface RecentRoute {
   durationSeconds?: number;
 }
 
-export async function saveRecentRoute(entry: Omit<RecentRoute, "id" | "savedAt"> & Partial<Pick<RecentRoute, "id" | "savedAt">>): Promise<void> {
+export async function saveRecentRoute(
+  entry: Omit<RecentRoute, "id" | "savedAt"> &
+    Partial<Pick<RecentRoute, "id" | "savedAt">>,
+): Promise<void> {
   try {
     const route: RecentRoute = {
       id: entry.id ?? `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,

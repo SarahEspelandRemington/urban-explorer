@@ -21,13 +21,15 @@ export async function loadCustomMessages(): Promise<CustomMessages> {
 
 export async function saveCustomMessages(
   variant: "discovery" | "detail",
-  messages: string[]
+  messages: string[],
 ): Promise<void> {
   const key = variant === "discovery" ? DISCOVERY_KEY : DETAIL_KEY;
   await AsyncStorage.setItem(key, JSON.stringify(messages));
 }
 
-export async function clearCustomMessages(variant: "discovery" | "detail"): Promise<void> {
+export async function clearCustomMessages(
+  variant: "discovery" | "detail",
+): Promise<void> {
   const key = variant === "discovery" ? DISCOVERY_KEY : DETAIL_KEY;
   await AsyncStorage.removeItem(key);
 }

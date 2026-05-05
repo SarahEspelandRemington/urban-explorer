@@ -60,7 +60,9 @@ function MessageSection({
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
             {title}
           </Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.sectionSubtitle, { color: colors.mutedForeground }]}
+          >
             {subtitle}
           </Text>
         </View>
@@ -72,8 +74,14 @@ function MessageSection({
           ]}
           accessibilityLabel={resetAccessibilityLabel}
         >
-          <Feather name="refresh-ccw" size={12} color={colors.mutedForeground} />
-          <Text style={[styles.resetBtnText, { color: colors.mutedForeground }]}>
+          <Feather
+            name="refresh-ccw"
+            size={12}
+            color={colors.mutedForeground}
+          />
+          <Text
+            style={[styles.resetBtnText, { color: colors.mutedForeground }]}
+          >
             {resetLabel}
           </Text>
         </Pressable>
@@ -99,7 +107,10 @@ function MessageSection({
           <Pressable
             onPress={() => onDelete(i)}
             hitSlop={8}
-            style={({ pressed }) => [styles.deleteBtn, { opacity: pressed ? 0.6 : 1 }]}
+            style={({ pressed }) => [
+              styles.deleteBtn,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
             accessibilityLabel={`${deleteMessageLabel} ${i + 1}`}
           >
             <Feather name="trash-2" size={16} color="#EF4444" />
@@ -140,7 +151,8 @@ export default function SettingsMessagesScreen() {
 
   useEffect(() => {
     loadCustomMessages().then((custom) => {
-      if (custom.discovery && custom.discovery.length > 0) setDiscovery(custom.discovery);
+      if (custom.discovery && custom.discovery.length > 0)
+        setDiscovery(custom.discovery);
       else setDiscovery(t.loadingMessages.discovery);
       if (custom.detail && custom.detail.length > 0) setDetail(custom.detail);
       else setDetail(t.loadingMessages.detail);
@@ -159,7 +171,8 @@ export default function SettingsMessagesScreen() {
   }, []);
 
   const deleteDiscovery = useCallback((idx: number) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDiscovery((prev) => {
       const next = prev.filter((_, i) => i !== idx);
       saveCustomMessages("discovery", next);
@@ -168,7 +181,8 @@ export default function SettingsMessagesScreen() {
   }, []);
 
   const addDiscovery = useCallback(() => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDiscovery((prev) => {
       const next = [...prev, ""];
       saveCustomMessages("discovery", next);
@@ -177,7 +191,8 @@ export default function SettingsMessagesScreen() {
   }, []);
 
   const resetDiscovery = useCallback(async () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await clearCustomMessages("discovery");
     setDiscovery(t.loadingMessages.discovery);
   }, [t]);
@@ -191,7 +206,8 @@ export default function SettingsMessagesScreen() {
   }, []);
 
   const deleteDetail = useCallback((idx: number) => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDetail((prev) => {
       const next = prev.filter((_, i) => i !== idx);
       saveCustomMessages("detail", next);
@@ -200,7 +216,8 @@ export default function SettingsMessagesScreen() {
   }, []);
 
   const addDetail = useCallback(() => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDetail((prev) => {
       const next = [...prev, ""];
       saveCustomMessages("detail", next);
@@ -209,7 +226,8 @@ export default function SettingsMessagesScreen() {
   }, []);
 
   const resetDetail = useCallback(async () => {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await clearCustomMessages("detail");
     setDetail(t.loadingMessages.detail);
   }, [t]);
@@ -243,7 +261,9 @@ export default function SettingsMessagesScreen() {
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
             {t.settingsMessages.headerTitle}
           </Text>
-          <Text style={[styles.headerSubtitle, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
+          >
             {t.settingsMessages.headerSubtitle}
           </Text>
         </View>
@@ -269,7 +289,9 @@ export default function SettingsMessagesScreen() {
           resetLabel={t.settingsMessages.reset}
           resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
           addMessageLabel={t.settingsMessages.addMessage}
-          addMessageAccessibilityLabel={t.settingsMessages.addMessageAccessibility}
+          addMessageAccessibilityLabel={
+            t.settingsMessages.addMessageAccessibility
+          }
           deleteMessageLabel={t.settingsMessages.deleteMessage}
           messagePlaceholder={t.settingsMessages.messagePlaceholder}
           colors={colors}
@@ -286,7 +308,9 @@ export default function SettingsMessagesScreen() {
           resetLabel={t.settingsMessages.reset}
           resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
           addMessageLabel={t.settingsMessages.addMessage}
-          addMessageAccessibilityLabel={t.settingsMessages.addMessageAccessibility}
+          addMessageAccessibilityLabel={
+            t.settingsMessages.addMessageAccessibility
+          }
           deleteMessageLabel={t.settingsMessages.deleteMessage}
           messagePlaceholder={t.settingsMessages.messagePlaceholder}
           colors={colors}

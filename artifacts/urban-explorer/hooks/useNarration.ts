@@ -1,17 +1,25 @@
-import { setAudioModeAsync, createAudioPlayer, type AudioPlayer, type AudioStatus } from "expo-audio";
+import {
+  setAudioModeAsync,
+  createAudioPlayer,
+  type AudioPlayer,
+  type AudioStatus,
+} from "expo-audio";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 
-import { trackNarrationFallback, trackNarrationPlayed } from "../lib/sentryWalk";
+import {
+  trackNarrationFallback,
+  trackNarrationPlayed,
+} from "../lib/sentryWalk";
 
 interface NarrationItem {
   id: string;
   placeName: string;
   // Exactly one playback source is set per item.
-  text?: string;          // text path: web SpeechSynthesisUtterance, or native Speech.speak fallback
-  audioUri?: string;      // audio path: native expo-audio, plays a local file://...mp3
-  cleanup?: () => void;   // optional disposer (e.g. delete the temp MP3 when done)
+  text?: string; // text path: web SpeechSynthesisUtterance, or native Speech.speak fallback
+  audioUri?: string; // audio path: native expo-audio, plays a local file://...mp3
+  cleanup?: () => void; // optional disposer (e.g. delete the temp MP3 when done)
 }
 
 let webSpeechUnlocked = false;
@@ -105,7 +113,10 @@ export function useNarration() {
     clearTimeout(audioWatchdogRef.current);
     audioWatchdogRef.current = null;
     const elapsed = Date.now() - audioWatchdogStartRef.current;
-    audioWatchdogRemainingRef.current = Math.max(1000, audioWatchdogRemainingRef.current - elapsed);
+    audioWatchdogRemainingRef.current = Math.max(
+      1000,
+      audioWatchdogRemainingRef.current - elapsed,
+    );
   }, []);
 
   const resumeAudioWatchdog = useCallback(() => {
@@ -113,7 +124,10 @@ export function useNarration() {
     const fire = audioWatchdogFireRef.current;
     if (!fire) return; // no active playback to guard
     audioWatchdogStartRef.current = Date.now();
-    audioWatchdogRef.current = setTimeout(fire, audioWatchdogRemainingRef.current);
+    audioWatchdogRef.current = setTimeout(
+      fire,
+      audioWatchdogRemainingRef.current,
+    );
   }, []);
 
   const clearAudioWatchdog = useCallback(() => {
@@ -131,19 +145,27 @@ export function useNarration() {
   const teardownActive = useCallback(() => {
     clearAudioWatchdog();
     if (currentSubRef.current) {
-      try { currentSubRef.current.remove(); } catch {}
+      try {
+        currentSubRef.current.remove();
+      } catch {}
       currentSubRef.current = null;
     }
     const player = currentPlayerRef.current;
     if (player) {
-      try { player.pause(); } catch {}
-      try { player.remove(); } catch {}
+      try {
+        player.pause();
+      } catch {}
+      try {
+        player.remove();
+      } catch {}
       currentPlayerRef.current = null;
     }
     const cleanup = currentCleanupRef.current;
     currentCleanupRef.current = null;
     if (cleanup) {
-      try { cleanup(); } catch {}
+      try {
+        cleanup();
+      } catch {}
     }
   }, [clearAudioWatchdog]);
 
@@ -172,19 +194,29 @@ export function useNarration() {
     // --- Audio path: play the MP3 file via expo-audio ----------------------
     // Used on native when the server returned natural-voice TTS audio.
     if (item.audioUri && Platform.OS !== "web") {
-      if (__DEV__) console.log(`[narration audio] play "${item.placeName}" uri=${item.audioUri} gen=${myGen}`);
+      if (__DEV__)
+        console.log(
+          `[narration audio] play "${item.placeName}" uri=${item.audioUri} gen=${myGen}`,
+        );
       let player: AudioPlayer;
       try {
         player = createAudioPlayer({ uri: item.audioUri });
       } catch (err) {
-        if (__DEV__) console.log(`[narration audio] createAudioPlayer threw:`, err);
+        if (__DEV__)
+          console.log(`[narration audio] createAudioPlayer threw:`, err);
         // Surface the silent skip to the audio-fallback dashboard so a
         // regression in expo-audio / a corrupt cache file doesn't go
         // unnoticed (the user just gets a gap in their tour, no crash).
-        try { trackNarrationFallback("playback_create"); } catch {}
+        try {
+          trackNarrationFallback("playback_create");
+        } catch {}
         // If we can't even create the player, run cleanup and advance the
         // queue so we don't hang the walk-mode pipeline.
-        if (item.cleanup) { try { item.cleanup(); } catch {} }
+        if (item.cleanup) {
+          try {
+            item.cleanup();
+          } catch {}
+        }
         speakingRef.current = false;
         setIsSpeaking(false);
         setCurrentPlace(null);
@@ -201,42 +233,60 @@ export function useNarration() {
       // that long pauses don't silently skip the current story.
       armAudioWatchdog(AUDIO_WATCHDOG_MS, () => {
         if (speechGenRef.current !== myGen) return;
-        if (__DEV__) console.log(`[narration audio] watchdog tripped gen=${myGen}, forcing advance`);
+        if (__DEV__)
+          console.log(
+            `[narration audio] watchdog tripped gen=${myGen}, forcing advance`,
+          );
         // Surface the silent skip to the audio-fallback dashboard. Without
         // this, a decoder stall / lost audio session would leave the queue
         // moving on with zero telemetry, masking a real regression.
-        try { trackNarrationFallback("playback_watchdog"); } catch {}
+        try {
+          trackNarrationFallback("playback_watchdog");
+        } catch {}
         onFinish();
       });
 
-      const sub = player.addListener("playbackStatusUpdate", (status: AudioStatus) => {
-        if (speechGenRef.current !== myGen) return;
-        // Null-check: if teardownActive already ran (currentSubRef cleared before
-        // player.remove()), this is a stale event fired by the OS during teardown.
-        // Exit early rather than risk calling remove() on an already-removed player.
-        if (!currentSubRef.current) return;
-        if (status.didJustFinish) {
-          if (__DEV__) console.log(`[narration audio] didJustFinish gen=${myGen}`);
-          onFinish();
-          return;
-        }
-        // expo-audio doesn't expose a typed error field on AudioStatus, but
-        // playbackState / reasonForWaitingToPlay are free-form strings the
-        // platforms use to report failure ("error", "failed", "cannotPlay",
-        // "notSupportedFile", etc). Treat any of those as a play failure and
-        // advance the queue so Walk Mode doesn't stall.
-        const errSignal =
-          (typeof status.playbackState === "string" && /error|fail|cannot|invalid/i.test(status.playbackState)) ||
-          (typeof status.reasonForWaitingToPlay === "string" && /error|fail|cannot|noItem/i.test(status.reasonForWaitingToPlay));
-        if (errSignal) {
-          if (__DEV__) console.log(`[narration audio] error status gen=${myGen}, advancing:`, status.playbackState, status.reasonForWaitingToPlay);
-          // Surface the silent skip to the audio-fallback dashboard. The
-          // OS told us decoding failed; if we don't track it the dashboard
-          // will show zero events while users get a gap in their tour.
-          try { trackNarrationFallback("playback_status_error"); } catch {}
-          onFinish();
-        }
-      });
+      const sub = player.addListener(
+        "playbackStatusUpdate",
+        (status: AudioStatus) => {
+          if (speechGenRef.current !== myGen) return;
+          // Null-check: if teardownActive already ran (currentSubRef cleared before
+          // player.remove()), this is a stale event fired by the OS during teardown.
+          // Exit early rather than risk calling remove() on an already-removed player.
+          if (!currentSubRef.current) return;
+          if (status.didJustFinish) {
+            if (__DEV__)
+              console.log(`[narration audio] didJustFinish gen=${myGen}`);
+            onFinish();
+            return;
+          }
+          // expo-audio doesn't expose a typed error field on AudioStatus, but
+          // playbackState / reasonForWaitingToPlay are free-form strings the
+          // platforms use to report failure ("error", "failed", "cannotPlay",
+          // "notSupportedFile", etc). Treat any of those as a play failure and
+          // advance the queue so Walk Mode doesn't stall.
+          const errSignal =
+            (typeof status.playbackState === "string" &&
+              /error|fail|cannot|invalid/i.test(status.playbackState)) ||
+            (typeof status.reasonForWaitingToPlay === "string" &&
+              /error|fail|cannot|noItem/i.test(status.reasonForWaitingToPlay));
+          if (errSignal) {
+            if (__DEV__)
+              console.log(
+                `[narration audio] error status gen=${myGen}, advancing:`,
+                status.playbackState,
+                status.reasonForWaitingToPlay,
+              );
+            // Surface the silent skip to the audio-fallback dashboard. The
+            // OS told us decoding failed; if we don't track it the dashboard
+            // will show zero events while users get a gap in their tour.
+            try {
+              trackNarrationFallback("playback_status_error");
+            } catch {}
+            onFinish();
+          }
+        },
+      );
       currentSubRef.current = sub;
 
       try {
@@ -245,13 +295,17 @@ export function useNarration() {
         // dashboard's "narrations played" denominator. Emitted only after
         // play() returns without throwing, so playback_create / playback_play
         // failures stay out of the denominator (the rate stays meaningful).
-        try { trackNarrationPlayed("audio"); } catch {}
+        try {
+          trackNarrationPlayed("audio");
+        } catch {}
       } catch (err) {
         if (__DEV__) console.log(`[narration audio] play() threw:`, err);
         // Surface the silent skip to the audio-fallback dashboard. play()
         // throws on lost audio sessions / decoder unavailability — Walk
         // Mode advances the queue, so without this the failure is invisible.
-        try { trackNarrationFallback("playback_play"); } catch {}
+        try {
+          trackNarrationFallback("playback_play");
+        } catch {}
         // teardownActive (run inside onFinish) will remove the listener and
         // the watchdog, so we don't need to do it manually here.
         onFinish();
@@ -266,7 +320,9 @@ export function useNarration() {
       // audio-fallback dashboard: an empty prefetched payload (e.g. text
       // endpoint regression, malformed cached entry) would otherwise leave
       // a gap in the user's tour with zero telemetry.
-      try { trackNarrationFallback("text_empty"); } catch {}
+      try {
+        trackNarrationFallback("text_empty");
+      } catch {}
       onFinish();
       return;
     }
@@ -284,18 +340,34 @@ export function useNarration() {
         // Surface the silent skip to the audio-fallback dashboard. A Web
         // Speech API regression (voice unavailable, synth backend down)
         // would otherwise be invisible — the user just gets a gap.
-        try { trackNarrationFallback("text_web_error"); } catch {}
+        try {
+          trackNarrationFallback("text_web_error");
+        } catch {}
         onFinish();
       };
 
       const voices = window.speechSynthesis.getVoices();
-      const preferredNames = ["samantha", "karen", "daniel", "moira", "tessa", "rishi", "google us english", "google uk english"];
+      const preferredNames = [
+        "samantha",
+        "karen",
+        "daniel",
+        "moira",
+        "tessa",
+        "rishi",
+        "google us english",
+        "google uk english",
+      ];
       const premium = voices.find(
-        (v) => v.lang.startsWith("en") && preferredNames.some((n) => v.name.toLowerCase().includes(n))
+        (v) =>
+          v.lang.startsWith("en") &&
+          preferredNames.some((n) => v.name.toLowerCase().includes(n)),
       );
-      const fallback = voices.find(
-        (v) => v.lang.startsWith("en-") && !v.name.toLowerCase().includes("compact")
-      ) || voices.find((v) => v.lang.startsWith("en"));
+      const fallback =
+        voices.find(
+          (v) =>
+            v.lang.startsWith("en-") &&
+            !v.name.toLowerCase().includes("compact"),
+        ) || voices.find((v) => v.lang.startsWith("en"));
       const selectedVoice = premium || fallback;
       if (selectedVoice) utterance.voice = selectedVoice;
 
@@ -303,7 +375,9 @@ export function useNarration() {
       // Web text playback successfully started (synchronous handoff to the
       // browser's speech synth) — count it toward the dashboard's
       // "narrations played" denominator.
-      try { trackNarrationPlayed("text"); } catch {}
+      try {
+        trackNarrationPlayed("text");
+      } catch {}
 
       retryTimerRef.current = setTimeout(() => {
         if (speakingRef.current && !window.speechSynthesis.speaking) {
@@ -314,12 +388,18 @@ export function useNarration() {
       }, 500);
     } else {
       // Native fallback if the audio endpoint failed and we got plain text.
-      if (__DEV__) console.log(`[Speech.speak] starting "${item.placeName}" (${fallbackText.length} chars, gen=${myGen})`);
+      if (__DEV__)
+        console.log(
+          `[Speech.speak] starting "${item.placeName}" (${fallbackText.length} chars, gen=${myGen})`,
+        );
       Speech.speak(fallbackText, {
         language: "en-US",
         rate: 0.9,
         pitch: 1.05,
-        onDone: () => { if (__DEV__) console.log(`[Speech.speak] onDone gen=${myGen}`); onFinish(); },
+        onDone: () => {
+          if (__DEV__) console.log(`[Speech.speak] onDone gen=${myGen}`);
+          onFinish();
+        },
         // Note: trackNarrationPlayed("text") is fired synchronously *after*
         // Speech.speak returns below. expo-speech does not throw for typical
         // failures (it surfaces them via onError instead), so the call
@@ -329,7 +409,10 @@ export function useNarration() {
           // Guard with the generation check so a stop() for a previous utterance
           // doesn't corrupt the new one. Do NOT call processQueue here —
           // stop() and skip() handle that after bumping the generation counter.
-          if (__DEV__) console.log(`[Speech.speak] onStopped gen=${myGen} current=${speechGenRef.current}`);
+          if (__DEV__)
+            console.log(
+              `[Speech.speak] onStopped gen=${myGen} current=${speechGenRef.current}`,
+            );
           if (speechGenRef.current !== myGen) return;
           speakingRef.current = false;
           setIsSpeaking(false);
@@ -342,7 +425,9 @@ export function useNarration() {
           // expo-speech regression (engine unavailable, locale missing on
           // a new OS version) would otherwise leave the dashboard at zero
           // while users get a gap in their tour.
-          try { trackNarrationFallback("text_speak_error"); } catch {}
+          try {
+            trackNarrationFallback("text_speak_error");
+          } catch {}
           onFinish();
         },
       });
@@ -350,7 +435,9 @@ export function useNarration() {
       // count it toward the dashboard's "narrations played" denominator.
       // (Speech.speak surfaces failures via onError, not by throwing, so
       // this is the closest synchronous "started" signal we have.)
-      try { trackNarrationPlayed("text"); } catch {}
+      try {
+        trackNarrationPlayed("text");
+      } catch {}
     }
   }, [teardownActive, armAudioWatchdog]);
 
@@ -382,7 +469,11 @@ export function useNarration() {
     // Run cleanup on any queued-but-not-yet-played items so we don't leak
     // their temp files.
     for (const queued of queueRef.current) {
-      if (queued.cleanup) { try { queued.cleanup(); } catch {} }
+      if (queued.cleanup) {
+        try {
+          queued.cleanup();
+        } catch {}
+      }
     }
     queueRef.current = [];
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
@@ -401,7 +492,9 @@ export function useNarration() {
 
   const pause = useCallback(() => {
     if (currentPlayerRef.current) {
-      try { currentPlayerRef.current.pause(); } catch {}
+      try {
+        currentPlayerRef.current.pause();
+      } catch {}
       suspendAudioWatchdog();
     } else if (Platform.OS === "web") {
       window.speechSynthesis.pause();
@@ -413,7 +506,9 @@ export function useNarration() {
 
   const resume = useCallback(() => {
     if (currentPlayerRef.current) {
-      try { currentPlayerRef.current.play(); } catch {}
+      try {
+        currentPlayerRef.current.play();
+      } catch {}
       resumeAudioWatchdog();
     } else if (Platform.OS === "web") {
       window.speechSynthesis.resume();
@@ -473,19 +568,29 @@ export function useNarration() {
     speechGenRef.current++;
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
     for (const queued of queueRef.current) {
-      if (queued.cleanup) { try { queued.cleanup(); } catch {} }
+      if (queued.cleanup) {
+        try {
+          queued.cleanup();
+        } catch {}
+      }
     }
     queueRef.current = [];
     teardownActive();
     if (Platform.OS === "web") {
-      try { window.speechSynthesis.cancel(); } catch {}
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
     } else {
-      try { Speech.stop(); } catch {}
+      try {
+        Speech.stop();
+      } catch {}
     }
   };
   useEffect(() => {
     // Empty-deps effect: cleanup runs once, on unmount only.
-    return () => { teardownAllRef.current?.(); };
+    return () => {
+      teardownAllRef.current?.();
+    };
   }, []);
 
   const skip = useCallback(() => {

@@ -31,7 +31,14 @@ interface PlaceTimelineProps {
   hasLoaded: boolean;
 }
 
-export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoaded }: PlaceTimelineProps) {
+export function PlaceTimeline({
+  eras,
+  isLoading,
+  error,
+  onLoad,
+  onRetry,
+  hasLoaded,
+}: PlaceTimelineProps) {
   const colors = useColors();
   const t = useT();
   const [expandedEra, setExpandedEra] = React.useState<number | null>(null);
@@ -63,10 +70,17 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
         >
           <Feather name="clock" size={20} color={colors.accent} />
           <View style={styles.loadButtonText}>
-            <Text style={[styles.loadButtonTitle, { color: colors.foreground }]}>
+            <Text
+              style={[styles.loadButtonTitle, { color: colors.foreground }]}
+            >
               {t.placeTimeline.title}
             </Text>
-            <Text style={[styles.loadButtonSubtitle, { color: colors.mutedForeground }]}>
+            <Text
+              style={[
+                styles.loadButtonSubtitle,
+                { color: colors.mutedForeground },
+              ]}
+            >
               {t.placeTimeline.subtitle}
             </Text>
           </View>
@@ -110,7 +124,9 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
               { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
             ]}
           >
-            <Text style={[styles.retryText, { color: colors.accent }]}>{t.common.retry}</Text>
+            <Text style={[styles.retryText, { color: colors.accent }]}>
+              {t.common.retry}
+            </Text>
           </Pressable>
         )}
       </View>
@@ -136,7 +152,11 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
           return (
             <Animated.View
               key={index}
-              entering={Platform.OS !== "web" ? FadeInDown.delay(index * 100) : undefined}
+              entering={
+                Platform.OS !== "web"
+                  ? FadeInDown.delay(index * 100)
+                  : undefined
+              }
             >
               <Pressable
                 onPress={() => setExpandedEra(isExpanded ? null : index)}
@@ -147,13 +167,20 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
                     style={[
                       styles.timelineDot,
                       {
-                        backgroundColor: isLast ? colors.accent : colors.accent + "60",
+                        backgroundColor: isLast
+                          ? colors.accent
+                          : colors.accent + "60",
                         borderColor: colors.accent,
                       },
                     ]}
                   />
                   {!isLast && (
-                    <View style={[styles.timelineLine, { backgroundColor: colors.accent + "30" }]} />
+                    <View
+                      style={[
+                        styles.timelineLine,
+                        { backgroundColor: colors.accent + "30" },
+                      ]}
+                    />
                   )}
                 </View>
 
@@ -173,7 +200,10 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
                   </Text>
 
                   <Text
-                    style={[styles.atmosphereText, { color: colors.mutedForeground }]}
+                    style={[
+                      styles.atmosphereText,
+                      { color: colors.mutedForeground },
+                    ]}
                     numberOfLines={isExpanded ? undefined : 2}
                   >
                     {era.atmosphere}
@@ -181,7 +211,12 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
 
                   {isExpanded && (
                     <View style={styles.expandedContent}>
-                      <Text style={[styles.descriptionText, { color: colors.foreground }]}>
+                      <Text
+                        style={[
+                          styles.descriptionText,
+                          { color: colors.foreground },
+                        ]}
+                      >
                         {era.description}
                       </Text>
 
@@ -189,11 +224,24 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
                         <View
                           style={[
                             styles.visualCard,
-                            { backgroundColor: colors.accent + "08", borderColor: colors.accent + "20" },
+                            {
+                              backgroundColor: colors.accent + "08",
+                              borderColor: colors.accent + "20",
+                            },
                           ]}
                         >
-                          <Feather name="eye" size={13} color={colors.accent} style={{ marginTop: 2 }} />
-                          <Text style={[styles.visualText, { color: colors.foreground }]}>
+                          <Feather
+                            name="eye"
+                            size={13}
+                            color={colors.accent}
+                            style={{ marginTop: 2 }}
+                          />
+                          <Text
+                            style={[
+                              styles.visualText,
+                              { color: colors.foreground },
+                            ]}
+                          >
                             {era.visualDescription}
                           </Text>
                         </View>
@@ -204,11 +252,21 @@ export function PlaceTimeline({ eras, isLoading, error, onLoad, onRetry, hasLoad
                           {era.keyFigures.map((figure, fi) => (
                             <View
                               key={fi}
-                              style={[styles.figureChip, { backgroundColor: colors.muted }]}
+                              style={[
+                                styles.figureChip,
+                                { backgroundColor: colors.muted },
+                              ]}
                             >
-                              <Feather name="user" size={11} color={colors.mutedForeground} />
+                              <Feather
+                                name="user"
+                                size={11}
+                                color={colors.mutedForeground}
+                              />
                               <Text
-                                style={[styles.figureText, { color: colors.foreground }]}
+                                style={[
+                                  styles.figureText,
+                                  { color: colors.foreground },
+                                ]}
                                 numberOfLines={2}
                               >
                                 {figure}

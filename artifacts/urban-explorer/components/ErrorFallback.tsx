@@ -89,10 +89,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
           ]}
         >
           <Text
-            style={[
-              styles.buttonText,
-              { color: colors.primaryForeground },
-            ]}
+            style={[styles.buttonText, { color: colors.primaryForeground }]}
           >
             Try Again
           </Text>

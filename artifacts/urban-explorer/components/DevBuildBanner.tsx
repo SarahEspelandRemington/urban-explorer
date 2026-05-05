@@ -2,7 +2,14 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import React, { useEffect, useRef, useState } from "react";
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { captureMessage, hasDsn } from "../lib/sentry";
 
 const IS_EXPO_GO = Constants.appOwnership === "expo";
@@ -140,10 +147,15 @@ export function DevBuildBanner() {
         style={[
           styles.toast,
           { top: statusBarHeight + bannerHeight + 8 },
-          { opacity: toastOpacity, transform: [{ translateY: toastTranslateY }] },
+          {
+            opacity: toastOpacity,
+            transform: [{ translateY: toastTranslateY }],
+          },
         ]}
       >
-        <Text style={styles.toastText}>Sentry event sent — check your dashboard</Text>
+        <Text style={styles.toastText}>
+          Sentry event sent — check your dashboard
+        </Text>
       </Animated.View>
     </>
   );

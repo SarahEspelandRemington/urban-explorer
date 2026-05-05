@@ -26,16 +26,21 @@ export function SaveToast({ visible, label, onHide }: SaveToastProps) {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(20);
   const onHideRef = React.useRef(onHide);
-  useEffect(() => { onHideRef.current = onHide; }, [onHide]);
+  useEffect(() => {
+    onHideRef.current = onHide;
+  }, [onHide]);
 
   useEffect(() => {
     const dismiss = () => onHideRef.current();
     if (visible) {
       opacity.value = withSequence(
         withTiming(1, { duration: 180 }),
-        withDelay(1600, withTiming(0, { duration: 240 }, (done) => {
-          if (done) runOnJS(dismiss)();
-        })),
+        withDelay(
+          1600,
+          withTiming(0, { duration: 240 }, (done) => {
+            if (done) runOnJS(dismiss)();
+          }),
+        ),
       );
       translateY.value = withSequence(
         withSpring(-4, { damping: 14, stiffness: 280 }),
@@ -45,7 +50,7 @@ export function SaveToast({ visible, label, onHide }: SaveToastProps) {
       opacity.value = 0;
       translateY.value = 20;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const animStyle = useAnimatedStyle(() => ({

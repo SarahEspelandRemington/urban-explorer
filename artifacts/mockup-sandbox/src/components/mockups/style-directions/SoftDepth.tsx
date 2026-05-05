@@ -1,5 +1,12 @@
-import React from 'react';
-import { MapPin, Clock, ArrowRight, Building2, Coffee, Landmark } from 'lucide-react';
+import React from "react";
+import {
+  MapPin,
+  Clock,
+  ArrowRight,
+  Building2,
+  Coffee,
+  Landmark,
+} from "lucide-react";
 
 export function SoftDepth() {
   return (
@@ -22,12 +29,13 @@ export function SoftDepth() {
             <MapPin className="w-3.5 h-3.5" />
             <span>Lower East Side</span>
           </div>
-          <h1 className="text-3xl font-normal tracking-tight text-[#E2DFD8]">Discover</h1>
+          <h1 className="text-3xl font-normal tracking-tight text-[#E2DFD8]">
+            Discover
+          </h1>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-5 pb-8 flex flex-col gap-6 hide-scrollbar">
-          
           {/* Card 1 */}
           <div className="group relative bg-[#2C2A28] rounded-3xl p-7 border-2 border-white/[0.02] hover:border-white/[0.06] transition-all duration-500 cursor-pointer shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             <div className="flex justify-between items-start mb-6">
@@ -39,16 +47,19 @@ export function SoftDepth() {
                   Historical
                 </span>
               </div>
-              <span className="text-[11px] font-mono tracking-wider text-[#858178]">120ft</span>
+              <span className="text-[11px] font-mono tracking-wider text-[#858178]">
+                120ft
+              </span>
             </div>
-            
+
             <h2 className="text-2xl font-normal text-[#E2DFD8] mb-3 leading-tight tracking-tight">
               Forward Building
             </h2>
             <p className="text-[14px] text-[#A6A298] leading-relaxed mb-8 font-light">
-              Once the headquarters of the Jewish Daily Forward, this Beaux-Arts tower was a beacon for immigrants.
+              Once the headquarters of the Jewish Daily Forward, this Beaux-Arts
+              tower was a beacon for immigrants.
             </p>
-            
+
             <div className="flex items-center justify-between mt-auto">
               <div className="flex gap-2.5">
                 <span className="px-3.5 py-1.5 rounded-lg bg-[#242220] text-[#9A968C] text-[11px] font-medium tracking-wide">
@@ -75,16 +86,19 @@ export function SoftDepth() {
                   Tenement
                 </span>
               </div>
-              <span className="text-[11px] font-mono tracking-wider text-[#858178]">350ft</span>
+              <span className="text-[11px] font-mono tracking-wider text-[#858178]">
+                350ft
+              </span>
             </div>
-            
+
             <h2 className="text-2xl font-normal text-[#E2DFD8] mb-3 leading-tight tracking-tight">
               97 Orchard Street
             </h2>
             <p className="text-[14px] text-[#A6A298] leading-relaxed mb-8 font-light">
-              A preserved 19th-century tenement building that housed working-class immigrants from over 20 nations.
+              A preserved 19th-century tenement building that housed
+              working-class immigrants from over 20 nations.
             </p>
-            
+
             <div className="flex items-center justify-between mt-auto">
               <div className="flex gap-2.5">
                 <span className="px-3.5 py-1.5 rounded-lg bg-[#242220] text-[#9A968C] text-[11px] font-medium tracking-wide">
@@ -111,16 +125,19 @@ export function SoftDepth() {
                   Culture
                 </span>
               </div>
-              <span className="text-[11px] font-mono tracking-wider text-[#858178]">0.2mi</span>
+              <span className="text-[11px] font-mono tracking-wider text-[#858178]">
+                0.2mi
+              </span>
             </div>
-            
+
             <h2 className="text-2xl font-normal text-[#E2DFD8] mb-3 leading-tight tracking-tight">
               Katz's Delicatessen
             </h2>
             <p className="text-[14px] text-[#A6A298] leading-relaxed mb-8 font-light">
-              An institution of Jewish immigrant culture, surviving a century of neighborhood transformation.
+              An institution of Jewish immigrant culture, surviving a century of
+              neighborhood transformation.
             </p>
-            
+
             <div className="flex items-center justify-between mt-auto">
               <div className="flex gap-2.5">
                 <span className="px-3.5 py-1.5 rounded-lg bg-[#242220] text-[#9A968C] text-[11px] font-medium tracking-wide">
@@ -135,19 +152,22 @@ export function SoftDepth() {
               </div>
             </div>
           </div>
-
         </div>
-        
+
         {/* Navigation Bar */}
         <div className="h-24 bg-gradient-to-t from-[#242220] via-[#242220] to-transparent absolute bottom-0 left-0 right-0 pointer-events-none" />
         <div className="h-20 bg-[#242220]/90 backdrop-blur-xl flex items-center justify-around px-6 pb-2 border-t border-white/[0.02] relative z-10">
           <div className="flex flex-col items-center gap-1.5 text-[#E2DFD8]">
             <MapPin className="w-5 h-5 stroke-[1.5]" />
-            <span className="text-[10px] font-medium tracking-wide">Explore</span>
+            <span className="text-[10px] font-medium tracking-wide">
+              Explore
+            </span>
           </div>
           <div className="flex flex-col items-center gap-1.5 text-[#736E66] hover:text-[#E2DFD8] transition-colors">
             <Clock className="w-5 h-5 stroke-[1.5]" />
-            <span className="text-[10px] font-medium tracking-wide">Timeline</span>
+            <span className="text-[10px] font-medium tracking-wide">
+              Timeline
+            </span>
           </div>
         </div>
       </div>

@@ -63,14 +63,18 @@ export function AddressInput({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (abortRef.current) {
-        try { abortRef.current.abort(); } catch {}
+        try {
+          abortRef.current.abort();
+        } catch {}
       }
     };
   }, []);
 
   const fetchSuggestions = async (text: string) => {
     if (abortRef.current) {
-      try { abortRef.current.abort(); } catch {}
+      try {
+        abortRef.current.abort();
+      } catch {}
     }
     const controller = new AbortController();
     abortRef.current = controller;
@@ -81,11 +85,15 @@ export function AddressInput({
       const r = await fetch(`${API_BASE}/api/explore/suggest-locations`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
-        body: JSON.stringify(near ? { query: text, nearLocation: near } : { query: text }),
+        body: JSON.stringify(
+          near ? { query: text, nearLocation: near } : { query: text },
+        ),
         signal: controller.signal,
       });
       if (controller.signal.aborted) return;
-      const data: { suggestions?: Suggestion[] } = r.ok ? await r.json() : { suggestions: [] };
+      const data: { suggestions?: Suggestion[] } = r.ok
+        ? await r.json()
+        : { suggestions: [] };
       if (controller.signal.aborted) return;
       const list = Array.isArray(data?.suggestions) ? data.suggestions : [];
       setSuggestions(list);
@@ -149,7 +157,9 @@ export function AddressInput({
           autoCorrect={false}
           autoCapitalize="words"
         />
-        {isLoading && <ActivityIndicator size="small" color={colors.mutedForeground} />}
+        {isLoading && (
+          <ActivityIndicator size="small" color={colors.mutedForeground} />
+        )}
         {!isLoading && value.length > 0 && (
           <Pressable
             onPress={() => {
@@ -203,7 +213,10 @@ export function AddressInput({
                   {s.name}
                 </Text>
                 <Text
-                  style={[styles.suggestionDesc, { color: colors.mutedForeground }]}
+                  style={[
+                    styles.suggestionDesc,
+                    { color: colors.mutedForeground },
+                  ]}
                   numberOfLines={1}
                 >
                   {s.description}
