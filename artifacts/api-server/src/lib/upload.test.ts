@@ -336,4 +336,25 @@ describe("createUpload integration", () => {
     expect(err).toBeInstanceOf(multer.MulterError);
     expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_VALUE");
   });
+
+  it("rejects a field whose name exceeds fieldNameSizeOverride with LIMIT_FIELD_KEY", async () => {
+    const FIELD_NAME_SIZE_BYTES = 5;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldNameSizeOverride: FIELD_NAME_SIZE_BYTES,
+    });
+
+    const tooLongName = "x".repeat(FIELD_NAME_SIZE_BYTES + 1);
+    const body = buildMultipartBodyWithFields([
+      { name: tooLongName, value: "ok" },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_KEY");
+  });
 });
