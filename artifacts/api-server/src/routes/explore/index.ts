@@ -16,8 +16,14 @@ import {
   RatePlaceBody,
   SuggestLocationsBody,
 } from "@workspace/api-zod";
-import { db, placeRatings, placePhotos, userPlaceRatings } from "@workspace/db";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import {
+  db,
+  placeRatings,
+  placePhotos,
+  userPlaceRatings,
+  apiCache,
+} from "@workspace/db";
+import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
@@ -173,6 +179,7 @@ function getCachedOSMPlaces(lat: number, lng: number): OSMPlace[] | null {
   if (!entry) return null;
   if (Date.now() - entry.timestamp > OSM_SUGGESTIONS_CACHE_TTL) {
     osmSuggestionsCache.delete(key);
+    void deleteCacheEntry("osm", key);
     return null;
   }
   return entry.data;
@@ -183,14 +190,19 @@ function setCachedOSMPlaces(
   lng: number,
   places: OSMPlace[],
 ): void {
+  const key = osmSuggestionsBucketKey(lat, lng);
   if (osmSuggestionsCache.size >= OSM_SUGGESTIONS_CACHE_MAX_SIZE) {
     const oldest = osmSuggestionsCache.keys().next().value;
-    if (oldest) osmSuggestionsCache.delete(oldest);
+    if (oldest) {
+      osmSuggestionsCache.delete(oldest);
+      void deleteCacheEntry("osm", oldest);
+    }
   }
-  osmSuggestionsCache.set(osmSuggestionsBucketKey(lat, lng), {
+  osmSuggestionsCache.set(key, {
     data: places,
     timestamp: Date.now(),
   });
+  void persistCacheEntry("osm", key, places, OSM_SUGGESTIONS_CACHE_TTL);
 }
 
 interface LLMCacheEntry<T = any> {
@@ -222,6 +234,7 @@ function getLLMCache<T>(key: string): T | null {
   if (!entry) return null;
   if (Date.now() - entry.timestamp > LLM_CACHE_TTL) {
     llmCache.delete(key);
+    void deleteCacheEntry("llm", key);
     return null;
   }
   return entry.data as T;
@@ -230,10 +243,103 @@ function getLLMCache<T>(key: string): T | null {
 function setLLMCache(key: string, data: any): void {
   if (llmCache.size >= LLM_CACHE_MAX_SIZE) {
     const oldest = llmCache.keys().next().value;
-    if (oldest) llmCache.delete(oldest);
+    if (oldest) {
+      llmCache.delete(oldest);
+      void deleteCacheEntry("llm", oldest);
+    }
   }
   llmCache.set(key, { data, timestamp: Date.now() });
+  void persistCacheEntry("llm", key, data, LLM_CACHE_TTL);
 }
+
+async function deleteCacheEntry(namespace: string, key: string): Promise<void> {
+  try {
+    await db
+      .delete(apiCache)
+      .where(
+        and(eq(apiCache.namespace, namespace), eq(apiCache.cacheKey, key)),
+      );
+  } catch (err) {
+    logger.warn(
+      { err, namespace, key },
+      "Failed to delete cache entry from DB",
+    );
+  }
+}
+
+async function persistCacheEntry(
+  namespace: string,
+  key: string,
+  data: unknown,
+  ttlMs: number,
+): Promise<void> {
+  const expiresAt = new Date(Date.now() + ttlMs);
+  try {
+    await db
+      .insert(apiCache)
+      .values({ namespace, cacheKey: key, data, expiresAt })
+      .onConflictDoUpdate({
+        target: [apiCache.namespace, apiCache.cacheKey],
+        set: { data, expiresAt },
+      });
+  } catch (err) {
+    logger.warn({ err, namespace, key }, "Failed to persist cache entry to DB");
+  }
+}
+
+async function warmCachesFromDb(): Promise<void> {
+  try {
+    const now = new Date();
+    const rows = await db
+      .select()
+      .from(apiCache)
+      .where(gt(apiCache.expiresAt, now));
+
+    let osmLoaded = 0;
+    let llmLoaded = 0;
+
+    for (const row of rows) {
+      const remainingMs = row.expiresAt.getTime() - Date.now();
+      if (remainingMs <= 0) continue;
+
+      if (row.namespace === "osm") {
+        if (osmSuggestionsCache.size < OSM_SUGGESTIONS_CACHE_MAX_SIZE) {
+          osmSuggestionsCache.set(row.cacheKey, {
+            data: row.data as OSMPlace[],
+            timestamp: Date.now() - (OSM_SUGGESTIONS_CACHE_TTL - remainingMs),
+          });
+          osmLoaded++;
+        }
+      } else if (row.namespace === "llm") {
+        if (llmCache.size < LLM_CACHE_MAX_SIZE) {
+          llmCache.set(row.cacheKey, {
+            data: row.data,
+            timestamp: Date.now() - (LLM_CACHE_TTL - remainingMs),
+          });
+          llmLoaded++;
+        }
+      }
+    }
+
+    logger.info(
+      { osmLoaded, llmLoaded },
+      "Warmed in-memory caches from database",
+    );
+  } catch (err) {
+    logger.warn({ err }, "Failed to warm caches from DB; starting cold");
+  }
+}
+
+async function cleanupExpiredCacheEntries(): Promise<void> {
+  try {
+    await db.delete(apiCache).where(lt(apiCache.expiresAt, new Date()));
+  } catch (err) {
+    logger.warn({ err }, "Failed to clean up expired cache entries");
+  }
+}
+
+void warmCachesFromDb();
+setInterval(() => void cleanupExpiredCacheEntries(), 5 * 60 * 1000);
 
 function getOSMCacheKey(
   lat: number,
@@ -1029,7 +1135,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v8:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v9:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
