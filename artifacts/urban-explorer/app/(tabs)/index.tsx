@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import Animated, {
   FadeIn,
+  FadeInDown,
   FadeOut,
   FadeOutDown,
 } from "react-native-reanimated";
@@ -820,7 +821,13 @@ export default function ExploreScreen() {
       </View>
 
       {(hasCoords || locationLoading) && (
-        <View
+        <Animated.View
+          entering={
+            Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
+          }
+          exiting={
+            Platform.OS !== "web" ? FadeOutDown.duration(250) : undefined
+          }
           style={[
             styles.radiusRow,
             {
@@ -890,7 +897,7 @@ export default function ExploreScreen() {
               </Pressable>
             );
           })}
-        </View>
+        </Animated.View>
       )}
 
       {showDriftBanner && (
