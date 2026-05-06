@@ -20,6 +20,7 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `AUDIO_DB_MAX_ENTRIES`: (Optional) Maximum audio rows kept in the database (positive integer, default 100). Missing values default silently to 100; present-but-invalid values log a warning and fall back to 100.
 - `UPLOAD_MAX_FILES`: (Optional) Maximum number of files per multipart upload request (positive integer, default 10).
 - `UPLOAD_MAX_FIELDS`: (Optional) Maximum number of non-file fields per multipart upload request (positive integer, default 20).
+- `UPLOAD_FIELD_SIZE`: (Optional) Maximum byte size for a non-file field value in any multipart upload request (positive integer, default 1048576 = 1 MB).
 
 ## Stack
 
