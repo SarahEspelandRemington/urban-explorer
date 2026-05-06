@@ -1,7 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -43,17 +49,36 @@ export default function InvestigateScreen() {
   const params = useLocalSearchParams<{
     nearLocation?: string;
     prefillAddress?: string;
+    autoFill?: string;
   }>();
 
   const addressInputRef = useRef<TextInput>(null);
 
-  const [address, setAddress] = useState("");
+  const shouldAutoFill = params.autoFill === "true" && !!params.prefillAddress;
+
+  const [address, setAddress] = useState(
+    shouldAutoFill ? (params.prefillAddress ?? "") : "",
+  );
   const [pickedCoords, setPickedCoords] = useState<{
     lat: number;
     lng: number;
     name: string;
   } | null>(null);
-  const [chipDismissed, setChipDismissed] = useState(false);
+  const [chipDismissed, setChipDismissed] = useState(shouldAutoFill);
+
+  useEffect(() => {
+    if (!shouldAutoFill || !params.prefillAddress) return;
+    const len = params.prefillAddress.length;
+    const timer = setTimeout(() => {
+      addressInputRef.current?.focus();
+      addressInputRef.current?.setNativeProps({
+        selection: { start: len, end: len },
+      });
+    }, 100);
+    return () => clearTimeout(timer);
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showChip =
     !!params.prefillAddress && !chipDismissed && address.length === 0;
