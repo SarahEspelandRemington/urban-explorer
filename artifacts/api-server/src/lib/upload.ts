@@ -86,6 +86,7 @@ import {
  * the global config defaults.
  */
 interface ActiveUploadLimits {
+  fileSize: number;
   files: number;
   fields: number;
   parts: number;
@@ -102,6 +103,16 @@ interface RequestWithUploadLimits extends Request {
 // ---------------------------------------------------------------------------
 // Shared multer-error handler
 // ---------------------------------------------------------------------------
+
+/**
+ * Format a byte count as a human-readable string (e.g. "10 MB", "512 KB", "200 B").
+ * Uses base-1024 units, rounded to the nearest whole number.
+ */
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${Math.round(bytes / (1024 * 1024))} MB`;
+  if (bytes >= 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${bytes} B`;
+}
 
 /**
  * HTTP status code for each multer error code.
@@ -131,8 +142,10 @@ function buildMulterErrorMessage(
   activeLimits: ActiveUploadLimits | undefined,
 ): string {
   switch (code) {
-    case "LIMIT_FILE_SIZE":
-      return "Uploaded file is too large.";
+    case "LIMIT_FILE_SIZE": {
+      const limit = activeLimits?.fileSize ?? UPLOAD_MAX_FILE_SIZE;
+      return `Uploaded file is too large (limit: ${formatBytes(limit)}).`;
+    }
     case "LIMIT_FILE_COUNT": {
       const limit = activeLimits?.files ?? UPLOAD_MAX_FILES;
       return `Too many files uploaded (limit: ${limit}).`;
@@ -307,7 +320,7 @@ export function createUpload(
     },
   });
 
-  return wrapWithActiveLimits(instance, { files, fields, parts });
+  return wrapWithActiveLimits(instance, { fileSize, files, fields, parts });
 }
 
 // ---------------------------------------------------------------------------

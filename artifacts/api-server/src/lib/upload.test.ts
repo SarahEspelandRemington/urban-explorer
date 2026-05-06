@@ -35,6 +35,7 @@ function makeRes() {
 }
 
 function makeReq(uploadLimits?: {
+  fileSize: number;
   files: number;
   fields: number;
   parts: number;
@@ -63,12 +64,27 @@ describe("handleUploadError", () => {
     next = makeNext();
   });
 
-  it("maps LIMIT_FILE_SIZE to 413", () => {
+  it("maps LIMIT_FILE_SIZE to 413 with the configured limit in the message", () => {
     handleUploadError(multerError("LIMIT_FILE_SIZE"), makeReq(), res, next);
 
     expect(res.status).toHaveBeenCalledWith(413);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Uploaded file is too large.",
+      error: "Uploaded file is too large (limit: 100 B).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("maps LIMIT_FILE_SIZE using _uploadLimits fileSize override when present", () => {
+    handleUploadError(
+      multerError("LIMIT_FILE_SIZE"),
+      makeReq({ fileSize: 5242880, files: 10, fields: 20, parts: 30 }),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Uploaded file is too large (limit: 5 MB).",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -86,7 +102,7 @@ describe("handleUploadError", () => {
   it("maps LIMIT_FILE_COUNT using _uploadLimits files override when present", () => {
     handleUploadError(
       multerError("LIMIT_FILE_COUNT"),
-      makeReq({ files: 3, fields: 20, parts: 30 }),
+      makeReq({ fileSize: 100, files: 3, fields: 20, parts: 30 }),
       res,
       next,
     );
@@ -111,7 +127,7 @@ describe("handleUploadError", () => {
   it("maps LIMIT_FIELD_COUNT using _uploadLimits fields override when present", () => {
     handleUploadError(
       multerError("LIMIT_FIELD_COUNT"),
-      makeReq({ files: 10, fields: 5, parts: 30 }),
+      makeReq({ fileSize: 100, files: 10, fields: 5, parts: 30 }),
       res,
       next,
     );
@@ -136,7 +152,7 @@ describe("handleUploadError", () => {
   it("maps LIMIT_PART_COUNT using _uploadLimits parts override when present", () => {
     handleUploadError(
       multerError("LIMIT_PART_COUNT"),
-      makeReq({ files: 10, fields: 20, parts: 7 }),
+      makeReq({ fileSize: 100, files: 10, fields: 20, parts: 7 }),
       res,
       next,
     );
@@ -312,6 +328,35 @@ describe("createUpload integration", () => {
 
     expect(err).toBeInstanceOf(multer.MulterError);
     expect((err as multer.MulterError).code).toBe("LIMIT_FILE_SIZE");
+  });
+
+  it("shows the fileSizeOverride value in the LIMIT_FILE_SIZE error message", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const oversizedContent = Buffer.alloc(LIMIT_BYTES + 1, "x");
+    const body = buildMultipartBody("oversized.bin", oversizedContent);
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Uploaded file is too large (limit: 10 B).",
+    });
   });
 
   it("accepts a file that is within the fileSizeOverride limit", async () => {
