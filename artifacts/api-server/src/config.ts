@@ -208,6 +208,32 @@ export const REQUEST_BODY_LIMIT = envVar(
 );
 
 // ---------------------------------------------------------------------------
+// Upload strict-config mode
+// ---------------------------------------------------------------------------
+
+/**
+ * When set to "true" (case-insensitive), any upload configuration mismatch
+ * that would otherwise emit a logger.warn (e.g. UPLOAD_MAX_FILE_SIZE exceeding
+ * UPLOAD_BODY_LIMIT) is instead treated as a hard startup failure: a
+ * descriptive Error is thrown and the process exits with code 1. This is
+ * intended for CI/CD pipelines where a misconfiguration should block
+ * deployment rather than silently degrade behaviour.
+ *
+ * Env var : UPLOAD_STRICT_CONFIG
+ * Expects : "true" or "false" (case-insensitive); any other value falls back
+ *           to false with a warning.
+ * Default : false
+ */
+export const UPLOAD_STRICT_CONFIG = envVar(
+  "UPLOAD_STRICT_CONFIG",
+  z
+    .string()
+    .regex(/^(true|false)$/i, { message: 'Must be "true" or "false"' })
+    .transform((v) => v.toLowerCase() === "true"),
+  false,
+);
+
+// ---------------------------------------------------------------------------
 // Upload (multipart/form-data) size limit
 // ---------------------------------------------------------------------------
 
@@ -281,14 +307,18 @@ export const UPLOAD_MAX_FILE_SIZE = envVar(
 {
   const uploadBodyLimitBytes = sizeStringToBytes(UPLOAD_BODY_LIMIT);
   if (UPLOAD_MAX_FILE_SIZE > uploadBodyLimitBytes) {
-    logger.warn(
-      {
-        UPLOAD_MAX_FILE_SIZE,
-        UPLOAD_BODY_LIMIT,
-        UPLOAD_BODY_LIMIT_bytes: uploadBodyLimitBytes,
-      },
-      `UPLOAD_MAX_FILE_SIZE (${UPLOAD_MAX_FILE_SIZE} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${uploadBodyLimitBytes} bytes); the multer per-file cap is looser than UPLOAD_BODY_LIMIT implies`,
-    );
+    const message = `UPLOAD_MAX_FILE_SIZE (${UPLOAD_MAX_FILE_SIZE} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${uploadBodyLimitBytes} bytes); the multer per-file cap is looser than UPLOAD_BODY_LIMIT implies`;
+    const context = {
+      UPLOAD_MAX_FILE_SIZE,
+      UPLOAD_BODY_LIMIT,
+      UPLOAD_BODY_LIMIT_bytes: uploadBodyLimitBytes,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
   }
 }
 

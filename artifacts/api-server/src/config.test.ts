@@ -69,3 +69,89 @@ describe("config — UPLOAD_MAX_FILE_SIZE vs UPLOAD_BODY_LIMIT startup check", (
     expect(uploadWarnCalls).toHaveLength(0);
   });
 });
+
+describe("config — UPLOAD_STRICT_CONFIG", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("throws when UPLOAD_STRICT_CONFIG=true and UPLOAD_MAX_FILE_SIZE exceeds UPLOAD_BODY_LIMIT", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "true";
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_MAX_FILE_SIZE"] = String(1024 * 1024 + 1);
+
+    await expect(import("./config")).rejects.toThrow(
+      /\[UPLOAD_STRICT_CONFIG\].*UPLOAD_MAX_FILE_SIZE/,
+    );
+  });
+
+  it("throws when UPLOAD_STRICT_CONFIG=TRUE (case-insensitive) and there is a mismatch", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "TRUE";
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_MAX_FILE_SIZE"] = String(1024 * 1024 + 1);
+
+    await expect(import("./config")).rejects.toThrow(
+      /\[UPLOAD_STRICT_CONFIG\]/,
+    );
+  });
+
+  it("does not throw when UPLOAD_STRICT_CONFIG=true but limits are within bounds", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "true";
+    process.env["UPLOAD_BODY_LIMIT"] = "10mb";
+    process.env["UPLOAD_MAX_FILE_SIZE"] = String(5 * 1024 * 1024);
+
+    await expect(import("./config")).resolves.toBeDefined();
+  });
+
+  it("warns but does not throw when UPLOAD_STRICT_CONFIG=false and there is a mismatch", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "false";
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_MAX_FILE_SIZE"] = String(1024 * 1024 + 1);
+
+    const { logger } = await import("./lib/logger");
+    await expect(import("./config")).resolves.toBeDefined();
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ UPLOAD_MAX_FILE_SIZE: 1024 * 1024 + 1 }),
+      expect.stringContaining("UPLOAD_MAX_FILE_SIZE"),
+    );
+  });
+
+  it("warns but does not throw when UPLOAD_STRICT_CONFIG is absent and there is a mismatch", async () => {
+    delete process.env["UPLOAD_STRICT_CONFIG"];
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_MAX_FILE_SIZE"] = String(1024 * 1024 + 1);
+
+    const { logger } = await import("./lib/logger");
+    await expect(import("./config")).resolves.toBeDefined();
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ UPLOAD_MAX_FILE_SIZE: 1024 * 1024 + 1 }),
+      expect.stringContaining("UPLOAD_MAX_FILE_SIZE"),
+    );
+  });
+
+  it("warns about invalid value and falls back to false (no throw on mismatch)", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "yes";
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_MAX_FILE_SIZE"] = String(1024 * 1024 + 1);
+
+    const { logger } = await import("./lib/logger");
+    await expect(import("./config")).resolves.toBeDefined();
+
+    const strictWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter((args) =>
+      String(args[1]).includes("UPLOAD_STRICT_CONFIG"),
+    );
+    expect(strictWarnCalls).toHaveLength(1);
+  });
+});
