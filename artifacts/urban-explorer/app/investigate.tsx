@@ -454,6 +454,25 @@ export default function InvestigateScreen() {
               {result.address}
             </Text>
 
+            {isEmptyResult ? (
+              <View
+                style={[
+                  styles.emptyResultBox,
+                  { borderColor: colors.border, backgroundColor: colors.muted },
+                ]}
+              >
+                <Feather name="info" size={14} color={colors.mutedForeground} />
+                <Text
+                  style={[
+                    styles.emptyResultText,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {t.investigate.emptyResult}
+                </Text>
+              </View>
+            ) : null}
+
             {result.buildingName ? (
               <Text style={[styles.resultName, { color: colors.foreground }]}>
                 {result.buildingName}
@@ -761,6 +780,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
     fontStyle: "italic",
+  },
+  emptyResultBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  emptyResultText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
   },
   refinementButton: {
     flexDirection: "row",
