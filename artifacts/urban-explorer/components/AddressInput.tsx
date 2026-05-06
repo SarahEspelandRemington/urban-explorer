@@ -38,19 +38,23 @@ interface AddressInputProps {
   nearLocation?: string | null;
 }
 
-export function AddressInput({
-  value,
-  onChangeText,
-  onSelectSuggestion,
-  onSubmitEditing,
-  placeholder,
-  dotColor,
-  editable = true,
-  returnKeyType = "next",
-  rightAdornment,
-  testID,
-  nearLocation,
-}: AddressInputProps) {
+export const AddressInput = React.forwardRef<TextInput, AddressInputProps>(
+  function AddressInput(
+    {
+      value,
+      onChangeText,
+      onSelectSuggestion,
+      onSubmitEditing,
+      placeholder,
+      dotColor,
+      editable = true,
+      returnKeyType = "next",
+      rightAdornment,
+      testID,
+      nearLocation,
+    }: AddressInputProps,
+    ref,
+  ) {
   const colors = useColors();
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -145,6 +149,7 @@ export function AddressInput({
       >
         <View style={[styles.dot, { backgroundColor: dotColor }]} />
         <TextInput
+          ref={ref}
           testID={testID}
           style={[styles.input, { color: colors.foreground }]}
           placeholder={placeholder}
@@ -228,7 +233,7 @@ export function AddressInput({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: { position: "relative", zIndex: 10 },

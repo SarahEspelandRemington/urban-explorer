@@ -170,6 +170,22 @@ export default function ExploreScreen() {
     [places],
   );
 
+  const closestPrefill = useMemo(() => {
+    if (places.length === 0) return undefined;
+    const withDist = places.filter(
+      (p) => typeof p.distanceMeters === "number",
+    );
+    const closest =
+      withDist.length > 0
+        ? withDist.reduce((a, b) =>
+            (a.distanceMeters ?? Infinity) <= (b.distanceMeters ?? Infinity)
+              ? a
+              : b,
+          )
+        : places[0];
+    return closest.address || closest.name || undefined;
+  }, [places]);
+
   const [showStillLoading, setShowStillLoading] = useState(false);
 
   useEffect(() => {
@@ -778,7 +794,12 @@ export default function ExploreScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push({
                   pathname: "/investigate",
-                  params: areaName ? { nearLocation: areaName } : {},
+                  params: {
+                    ...(areaName ? { nearLocation: areaName } : {}),
+                    ...(closestPrefill
+                      ? { prefillAddress: closestPrefill }
+                      : {}),
+                  },
                 });
               }}
               style={({ pressed }) => [

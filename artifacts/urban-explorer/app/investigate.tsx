@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -9,6 +9,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import Animated, {
@@ -44,12 +45,30 @@ export default function InvestigateScreen() {
     prefillAddress?: string;
   }>();
 
+  const addressInputRef = useRef<TextInput>(null);
+
   const [address, setAddress] = useState(params.prefillAddress ?? "");
   const [pickedCoords, setPickedCoords] = useState<{
     lat: number;
     lng: number;
     name: string;
   } | null>(null);
+
+  // When a prefill value is supplied, focus the input and place the cursor at
+  // the end so the user can immediately edit or submit without tapping first.
+  useEffect(() => {
+    if (!params.prefillAddress) return;
+    const len = params.prefillAddress.length;
+    const t = setTimeout(() => {
+      addressInputRef.current?.focus();
+      addressInputRef.current?.setNativeProps({
+        selection: { start: len, end: len },
+      });
+    }, 150);
+    return () => clearTimeout(t);
+    // Intentionally only runs on mount — params are stable after navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const investigate = useInvestigateAddress();
   const result = investigate.data;
@@ -110,14 +129,6 @@ export default function InvestigateScreen() {
     return t.investigate.genericError;
   }, [error, t]);
 
-  // Pre-populate the input if the caller provided a near location (used as default city context).
-  useEffect(() => {
-    if (params.nearLocation && !address) {
-      // Don't auto-fill the address (user types the building); just keep nearLocation
-      // available to bias suggestions.
-    }
-  }, [params.nearLocation, address]);
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -161,6 +172,7 @@ export default function InvestigateScreen() {
       >
         <View style={styles.inputBlock}>
           <AddressInput
+            ref={addressInputRef}
             value={address}
             onChangeText={handleChangeAddress}
             onSelectSuggestion={handleSelectSuggestion}
