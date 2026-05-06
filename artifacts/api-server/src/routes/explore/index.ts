@@ -208,6 +208,7 @@ const LLM_CACHE_MAX_SIZE = 200;
 const inFlightNarration = new Map<string, Promise<string>>();
 const inFlightAudio = new Map<string, Promise<Buffer>>();
 const inFlightDetail = new Map<string, Promise<any>>();
+const inFlightSuggestion = new Map<string, Promise<string[]>>();
 
 // Cache key versioning convention:
 // Every LLM-backed cache key includes a version segment (e.g. ":v1:").
@@ -1639,27 +1640,45 @@ router.post("/explore/investigate-address", async (req, res) => {
     if (results.length === 0) {
       // Attempt a broader fuzzy search to surface 1-2 nearby-landmark suggestions
       // so the user has concrete alternatives to try instead of a bare error.
-      const suggestionCacheKey = `suggest404:v3:${trimmedAddress.toLowerCase()}`;
+      const suggestionCacheKey = `suggest404:v5:${trimmedAddress.toLowerCase()}`;
       const cachedSuggestions = getLLMCache<string[]>(suggestionCacheKey);
       let suggestions: string[] = cachedSuggestions ?? [];
       if (!cachedSuggestions) {
-        try {
-          // Strip leading house number to broaden the query (e.g. "123 Main St, NYC" → "Main St, NYC").
-          const strippedQuery = trimmedAddress.replace(/^\d+\s+/, "");
-          const fuzzyQuery =
-            strippedQuery.length >= 3 && strippedQuery !== trimmedAddress
-              ? strippedQuery
-              : trimmedAddress;
-          const fuzzyResults = await scheduleNominatimCall(() =>
-            nominatimSearch(fuzzyQuery, 3),
+        const existingSuggestionFlight =
+          inFlightSuggestion.get(suggestionCacheKey);
+        if (existingSuggestionFlight) {
+          try {
+            suggestions = await existingSuggestionFlight;
+          } catch {
+            // Fuzzy search is best-effort; proceed without suggestions.
+          }
+        } else {
+          const suggestionPromise = (async () => {
+            // Strip leading house number to broaden the query (e.g. "123 Main St, NYC" → "Main St, NYC").
+            const strippedQuery = trimmedAddress.replace(/^\d+\s+/, "");
+            const fuzzyQuery =
+              strippedQuery.length >= 3 && strippedQuery !== trimmedAddress
+                ? strippedQuery
+                : trimmedAddress;
+            const fuzzyResults = await scheduleNominatimCall(() =>
+              nominatimSearch(fuzzyQuery, 3),
+            );
+            const resolved = fuzzyResults
+              .slice(0, 2)
+              .map((r) => formatNominatimDisplayName(r.display_name))
+              .filter(Boolean);
+            setLLMCache(suggestionCacheKey, resolved);
+            return resolved;
+          })();
+          inFlightSuggestion.set(suggestionCacheKey, suggestionPromise);
+          suggestionPromise.finally(() =>
+            inFlightSuggestion.delete(suggestionCacheKey),
           );
-          suggestions = fuzzyResults
-            .slice(0, 2)
-            .map((r) => formatNominatimDisplayName(r.display_name))
-            .filter(Boolean);
-          setLLMCache(suggestionCacheKey, suggestions);
-        } catch {
-          // Fuzzy search is best-effort; proceed without suggestions.
+          try {
+            suggestions = await suggestionPromise;
+          } catch {
+            // Fuzzy search is best-effort; proceed without suggestions.
+          }
         }
       }
       res.status(404).json({
