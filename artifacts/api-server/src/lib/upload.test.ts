@@ -1881,6 +1881,76 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     expect(captured[0]!.err).toBe(genericError);
   });
 
+  // A lightweight "rate-limit error handler" that only handles errors with a
+  // specific marker, passing everything else to the next error handler.
+  // This simulates express-rate-limit's custom handler or any 429 responder
+  // that sits before handleUploadError in the production middleware stack.
+  function rateLimitErrorHandler(
+    err: unknown,
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    if (
+      err instanceof Error &&
+      (err as Error & { type?: string }).type === "rate_limit"
+    ) {
+      res.status(429).json({ error: "Too many requests." });
+      return;
+    }
+    next(err);
+  }
+
+  it("multer LIMIT_FILE_SIZE still resolves to 413 when a preceding rate-limit error handler is mounted first", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("photo"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Rate-limit handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.alloc(LIMIT_BYTES + 1, "x"), "oversized.bin");
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Uploaded file in field 'photo' is too large (limit: 10 B).",
+    });
+  });
+
+  it("a rate-limit error produces 429 and does not reach handleUploadError", async () => {
+    const { handler: fallback, captured } = makeFallbackHandler();
+
+    const app = express();
+    app.post("/upload", (_req: Request, _res: Response, next: NextFunction) => {
+      const err = new Error("rate limit exceeded") as Error & { type: string };
+      err.type = "rate_limit";
+      next(err);
+    });
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+    app.use(fallback);
+
+    const res = await request(app).post("/upload").field("x", "y");
+
+    // Rate-limit handler should have responded with 429.
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual({ error: "Too many requests." });
+    // handleUploadError (and the fallback) must not have been reached.
+    expect(captured).toHaveLength(0);
+  });
+
   it("multer error is not passed to downstream fallback when handleUploadError handles it", async () => {
     // Ensures handleUploadError does NOT call next() after responding to a
     // multer error (i.e. it terminates the error chain, not double-handles).
