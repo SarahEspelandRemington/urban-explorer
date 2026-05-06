@@ -822,6 +822,7 @@ export default function ExploreScreen() {
 
       {(hasCoords || locationLoading) && (
         <Animated.View
+          key={manualCoords ? "radius-manual" : "radius-gps"}
           entering={
             Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
           }
