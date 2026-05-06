@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Keyboard,
@@ -47,28 +47,29 @@ export default function InvestigateScreen() {
 
   const addressInputRef = useRef<TextInput>(null);
 
-  const [address, setAddress] = useState(params.prefillAddress ?? "");
+  const [address, setAddress] = useState("");
   const [pickedCoords, setPickedCoords] = useState<{
     lat: number;
     lng: number;
     name: string;
   } | null>(null);
+  const [chipDismissed, setChipDismissed] = useState(false);
 
-  // When a prefill value is supplied, focus the input and place the cursor at
-  // the end so the user can immediately edit or submit without tapping first.
-  useEffect(() => {
+  const showChip =
+    !!params.prefillAddress && !chipDismissed && address.length === 0;
+
+  const handleChipPress = useCallback(() => {
     if (!params.prefillAddress) return;
+    setAddress(params.prefillAddress);
+    setChipDismissed(true);
     const len = params.prefillAddress.length;
-    const t = setTimeout(() => {
+    setTimeout(() => {
       addressInputRef.current?.focus();
       addressInputRef.current?.setNativeProps({
         selection: { start: len, end: len },
       });
-    }, 150);
-    return () => clearTimeout(t);
-    // Intentionally only runs on mount — params are stable after navigation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    }, 50);
+  }, [params.prefillAddress]);
 
   const investigate = useInvestigateAddress();
   const result = investigate.data;
@@ -183,6 +184,46 @@ export default function InvestigateScreen() {
             nearLocation={params.nearLocation ?? null}
             testID="investigate-address-input"
           />
+
+          {showChip && (
+            <View style={styles.chipRow}>
+              <Pressable
+                onPress={handleChipPress}
+                style={[
+                  styles.prefillChip,
+                  {
+                    backgroundColor: colors.muted,
+                    borderColor: colors.border,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${t.investigate.nearestChipPrefix} ${params.prefillAddress}`}
+                accessibilityHint={t.investigate.nearestChipDismiss}
+              >
+                <Feather name="map-pin" size={12} color={colors.primary} />
+                <Text
+                  style={[styles.prefillChipText, { color: colors.foreground }]}
+                  numberOfLines={1}
+                >
+                  {t.investigate.nearestChipPrefix}{" "}
+                  <Text style={{ color: colors.primary }}>
+                    {params.prefillAddress}
+                  </Text>
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setChipDismissed(true)}
+                hitSlop={8}
+                accessibilityLabel={t.investigate.nearestChipDismiss}
+                style={[
+                  styles.chipDismiss,
+                  { backgroundColor: colors.muted, borderColor: colors.border },
+                ]}
+              >
+                <Feather name="x" size={12} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+          )}
 
           <Pressable
             onPress={handleSubmit}
@@ -465,6 +506,35 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
     paddingHorizontal: 2,
+  },
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  prefillChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
+    flex: 1,
+    minWidth: 0,
+  },
+  prefillChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
+  },
+  chipDismiss: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorCard: {
     flexDirection: "row",
