@@ -19,6 +19,7 @@ import type {
 import type {
   AddressInvestigationRequest,
   AddressInvestigationResponse,
+  AddressNotFoundError,
   AuthUserEnvelope,
   BeginBrowserLoginParams,
   DiscoverRequest,
@@ -414,7 +415,7 @@ export const investigateAddress = async (
 };
 
 export const getInvestigateAddressMutationOptions = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<AddressNotFoundError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -456,13 +457,13 @@ export type InvestigateAddressMutationResult = NonNullable<
 >;
 export type InvestigateAddressMutationBody =
   BodyType<AddressInvestigationRequest>;
-export type InvestigateAddressMutationError = ErrorType<unknown>;
+export type InvestigateAddressMutationError = ErrorType<AddressNotFoundError>;
 
 /**
  * @summary Deep-dive investigation of a specific street address
  */
 export const useInvestigateAddress = <
-  TError = ErrorType<unknown>,
+  TError = ErrorType<AddressNotFoundError>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<

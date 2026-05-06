@@ -104,6 +104,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AddressInvestigationResponse"
+        "404":
+          description: Address could not be geocoded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AddressNotFoundError"
   /explore/place-detail:
     post:
       operationId: getPlaceDetail
@@ -503,6 +509,19 @@ components:
         - latitude
         - longitude
         - displayName
+    AddressNotFoundError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: "Human-readable error message"
+        suggestions:
+          type: array
+          items:
+            type: string
+          description: "1-2 alternative place names the user could try searching for instead"
+      required:
+        - error
     AddressInvestigationRequest:
       type: object
       properties:

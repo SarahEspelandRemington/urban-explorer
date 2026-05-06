@@ -7,6 +7,7 @@
 
 export * from "./addressInvestigationRequest";
 export * from "./addressInvestigationResponse";
+export * from "./addressNotFoundError";
 export * from "./authUser";
 export * from "./authUserEnvelope";
 export * from "./authorizationSessionHeaderParameter";

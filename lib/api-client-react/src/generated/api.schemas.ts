@@ -118,6 +118,13 @@ export interface GeocodeResponse {
   displayName: string;
 }
 
+export interface AddressNotFoundError {
+  /** Human-readable error message */
+  error: string;
+  /** 1-2 alternative place names the user could try searching for instead */
+  suggestions?: string[];
+}
+
 export interface AddressInvestigationRequest {
   /**
    * Free-text street address the user wants to investigate (e.g., '538 W 38th St, New York, NY')

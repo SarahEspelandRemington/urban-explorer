@@ -97,6 +97,7 @@ export default function InvestigateScreen() {
   const error = investigate.error as {
     status?: number;
     message?: string;
+    data?: { suggestions?: string[] };
   } | null;
   const showStillLoading = useStillLoading(investigate.isPending);
 
@@ -202,6 +203,15 @@ export default function InvestigateScreen() {
     }
     return null;
   }, [error, t]);
+
+  const errorSuggestions = useMemo(() => {
+    if (!error || error.status !== 404) return [];
+    const suggestions = error.data?.suggestions;
+    if (!Array.isArray(suggestions)) return [];
+    return suggestions.filter(
+      (s): s is string => typeof s === "string" && s.length > 0,
+    );
+  }, [error]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -391,6 +401,46 @@ export default function InvestigateScreen() {
               >
                 {errorTip}
               </Text>
+            )}
+            {errorSuggestions.length > 0 && (
+              <Animated.View
+                entering={
+                  Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
+                }
+                style={styles.searchSuggestionsRow}
+              >
+                {errorSuggestions.map((suggestion, index) => (
+                  <Pressable
+                    key={index}
+                    onPress={() => handleSuggestionChipPress(suggestion)}
+                    style={({ pressed }) => [
+                      styles.searchSuggestionChip,
+                      {
+                        backgroundColor: colors.muted,
+                        borderColor: colors.primary,
+                        opacity: pressed ? 0.75 : 1,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t.investigate.searchSuggestionsPrefix} ${suggestion}`}
+                    accessibilityHint={t.investigate.searchSuggestionsHint}
+                  >
+                    <Feather name="search" size={11} color={colors.primary} />
+                    <Text
+                      style={[
+                        styles.searchSuggestionChipText,
+                        { color: colors.foreground },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      <Text style={{ color: colors.mutedForeground }}>
+                        {t.investigate.searchSuggestionsPrefix}{" "}
+                      </Text>
+                      {suggestion}
+                    </Text>
+                  </Pressable>
+                ))}
+              </Animated.View>
             )}
             {!showRefinementInput && (
               <Animated.View
