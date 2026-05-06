@@ -161,6 +161,7 @@ const OSM_CACHE_DISTANCE = 200;
 // skipped entirely by checking this cache first.
 const osmSuggestionsCache = new Map<string, LLMCacheEntry<OSMPlace[]>>();
 const OSM_SUGGESTIONS_CACHE_TTL = 30 * 60 * 1000;
+const OSM_SUGGESTIONS_CACHE_MAX_SIZE = 500;
 
 function osmSuggestionsBucketKey(lat: number, lng: number): string {
   return `${lat.toFixed(3)},${lng.toFixed(3)}`;
@@ -182,6 +183,10 @@ function setCachedOSMPlaces(
   lng: number,
   places: OSMPlace[],
 ): void {
+  if (osmSuggestionsCache.size >= OSM_SUGGESTIONS_CACHE_MAX_SIZE) {
+    const oldest = osmSuggestionsCache.keys().next().value;
+    if (oldest) osmSuggestionsCache.delete(oldest);
+  }
   osmSuggestionsCache.set(osmSuggestionsBucketKey(lat, lng), {
     data: places,
     timestamp: Date.now(),
@@ -1023,7 +1028,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v7:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v8:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -2471,7 +2476,7 @@ router.post("/explore/deep-narration", async (req, res) => {
   const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
-  const deepCacheKey = `deep-narration:v1:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const deepCacheKey = `deep-narration:v2:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
