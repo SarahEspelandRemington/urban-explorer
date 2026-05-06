@@ -28,6 +28,7 @@ import Animated, {
   FadeInDown,
   FadeOut,
   FadeOutDown,
+  FadeOutUp,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -578,37 +579,8 @@ export default function ExploreScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
-  if ((!permission?.granted && !manualCoords) || showLocationSearch) {
-    return (
-      <LocationPermission
-        permission={permission}
-        requestPermission={async () => {
-          const result = await requestPermission();
-          if (result.granted) {
-            setShowLocationSearch(false);
-          }
-          return result;
-        }}
-        onManualLocation={handleManualLocation}
-        isGeocoding={geocodeMutation.isPending}
-        geocodeError={geocodeError}
-        showBackButton={
-          showLocationSearch && (permission?.granted || !!manualCoords)
-        }
-        onBack={() => setShowLocationSearch(false)}
-        onWalkMode={() => {
-          if (Platform.OS !== "web")
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          router.push("/walk-mode");
-        }}
-        onWalkPlan={() => {
-          if (Platform.OS !== "web")
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push("/walk-plan");
-        }}
-      />
-    );
-  }
+  const showLocationPermission =
+    (!permission?.granted && !manualCoords) || showLocationSearch;
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
@@ -623,597 +595,604 @@ export default function ExploreScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Animated.View
-        entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top + webTopInset + 12,
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <View style={styles.headerTopRow}>
-          <Text
-            style={[styles.greeting, { color: colors.mutedForeground }]}
-            numberOfLines={1}
-          >
-            {locationCalibrating
-              ? t.explore.improvingGps
-              : locationLoading
-                ? t.explore.locating
-                : areaName || t.explore.readyToExplore}
-            {!locationLoading && !manualCoords && location?.coords.accuracy
-              ? `  ·  ±${Math.round(location.coords.accuracy)}m`
-              : ""}
-          </Text>
-          <Pressable
-            onPress={() => {
+      {showLocationPermission ? (
+        <Animated.View
+          style={styles.locationPermissionWrapper}
+          exiting={Platform.OS !== "web" ? FadeOutUp.duration(300) : undefined}
+        >
+          <LocationPermission
+            permission={permission}
+            requestPermission={async () => {
+              const result = await requestPermission();
+              if (result.granted) {
+                setShowLocationSearch(false);
+              }
+              return result;
+            }}
+            onManualLocation={handleManualLocation}
+            isGeocoding={geocodeMutation.isPending}
+            geocodeError={geocodeError}
+            showBackButton={
+              showLocationSearch && (permission?.granted || !!manualCoords)
+            }
+            onBack={() => setShowLocationSearch(false)}
+            onWalkMode={() => {
+              if (Platform.OS !== "web")
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/walk-mode");
+            }}
+            onWalkPlan={() => {
               if (Platform.OS !== "web")
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setShowLanguagePicker(true);
+              router.push("/walk-plan");
             }}
-            style={({ pressed }) => [
-              styles.languageChip,
-              { backgroundColor: colors.muted, opacity: pressed ? 0.8 : 1 },
+          />
+        </Animated.View>
+      ) : (
+        <>
+          <Animated.View
+            entering={
+              Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
+            }
+            exiting={
+              Platform.OS !== "web" ? FadeOutUp.duration(300) : undefined
+            }
+            style={[
+              styles.header,
+              {
+                paddingTop: insets.top + webTopInset + 12,
+                backgroundColor: colors.background,
+                borderBottomColor: colors.border,
+              },
             ]}
-            accessibilityRole="button"
-            accessibilityLabel="Walk notification language"
           >
-            <Feather name="globe" size={13} color={colors.mutedForeground} />
-          </Pressable>
-        </View>
-        <View style={styles.headerBottomRow}>
-          <Text
-            style={[styles.title, { color: colors.foreground }]}
-            numberOfLines={1}
-          >
-            {t.explore.discover}
-          </Text>
-          <View style={styles.headerActions}>
-            {showContent && (
-              <View
-                style={[
-                  styles.toggleContainer,
-                  { backgroundColor: colors.muted },
-                ]}
-              >
-                <Pressable
-                  onPress={() => {
-                    setViewMode("list");
-                    if (Platform.OS !== "web")
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.toggleButton,
-                    viewMode === "list" && { backgroundColor: colors.card },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="List view"
-                  accessibilityState={{ selected: viewMode === "list" }}
-                >
-                  <Feather
-                    name="list"
-                    size={16}
-                    color={
-                      viewMode === "list"
-                        ? colors.foreground
-                        : colors.mutedForeground
-                    }
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setViewMode("map");
-                    if (Platform.OS !== "web")
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  style={[
-                    styles.toggleButton,
-                    viewMode === "map" && { backgroundColor: colors.card },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Map view"
-                  accessibilityState={{ selected: viewMode === "map" }}
-                >
-                  <Feather
-                    name="map"
-                    size={16}
-                    color={
-                      viewMode === "map"
-                        ? colors.foreground
-                        : colors.mutedForeground
-                    }
-                  />
-                </Pressable>
-              </View>
-            )}
-            <Pressable
-              onPress={handleDiscover}
-              disabled={discoverMutation.isPending || locationLoading}
-              style={({ pressed }) => [
-                styles.labeledHeaderBtn,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: pressed ? 0.85 : 1,
-                  transform: [{ scale: pressed ? 0.95 : 1 }],
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Discover nearby places"
-            >
-              {discoverMutation.isPending ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primaryForeground}
-                />
-              ) : (
-                <Feather
-                  name="compass"
-                  size={20}
-                  color={colors.primaryForeground}
-                />
-              )}
+            <View style={styles.headerTopRow}>
               <Text
-                style={[
-                  styles.labeledHeaderBtnText,
-                  { color: colors.primaryForeground },
-                ]}
+                style={[styles.greeting, { color: colors.mutedForeground }]}
+                numberOfLines={1}
               >
-                Discover
+                {locationCalibrating
+                  ? t.explore.improvingGps
+                  : locationLoading
+                    ? t.explore.locating
+                    : areaName || t.explore.readyToExplore}
+                {!locationLoading && !manualCoords && location?.coords.accuracy
+                  ? `  ·  ±${Math.round(location.coords.accuracy)}m`
+                  : ""}
               </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                if (Platform.OS !== "web")
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push({
-                  pathname: "/investigate",
-                  params: {
-                    ...(areaName ? { nearLocation: areaName } : {}),
-                    ...(closestPrefill
-                      ? { prefillAddress: closestPrefill }
-                      : {}),
-                  },
-                });
-              }}
-              style={({ pressed }) => [
-                styles.labeledHeaderBtn,
-                { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Investigate a building by address"
-            >
-              <Feather name="book-open" size={17} color={colors.foreground} />
-              <Text
-                style={[
-                  styles.labeledHeaderBtnText,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                Investigate
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                setGeocodeError(null);
-                setShowLocationSearch(true);
-              }}
-              style={({ pressed }) => [
-                styles.labeledHeaderBtn,
-                { backgroundColor: colors.muted, opacity: pressed ? 0.85 : 1 },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Search by location"
-            >
-              <Feather name="search" size={18} color={colors.foreground} />
-              <Text
-                style={[
-                  styles.labeledHeaderBtnText,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                Search
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Animated.View>
-
-      {(hasCoords || locationLoading) && (
-        <Animated.View
-          key={manualCoords ? "radius-manual" : "radius-gps"}
-          entering={
-            Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
-          }
-          exiting={
-            Platform.OS !== "web" ? FadeOutDown.duration(250) : undefined
-          }
-          style={[
-            styles.radiusRow,
-            {
-              borderBottomColor: colors.border,
-              backgroundColor: colors.background,
-            },
-          ]}
-        >
-          <Text style={[styles.radiusLabel, { color: colors.mutedForeground }]}>
-            {t.explore.range}
-          </Text>
-          {([150, 300, 500] as const).map((r) => {
-            const isActive = searchRadius === r;
-            return (
               <Pressable
-                key={`r-${r}`}
                 onPress={() => {
-                  if (r === searchRadius) return;
-                  setSearchRadius(r);
                   if (Platform.OS !== "web")
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  if (manualCoords) {
-                    discoverAt(
-                      manualCoords.latitude,
-                      manualCoords.longitude,
-                      null,
-                      r,
-                    );
-                  } else if (location) {
-                    discoverAt(
-                      location.coords.latitude,
-                      location.coords.longitude,
-                      location.coords.accuracy,
-                      r,
-                    );
-                  }
+                  setShowLanguagePicker(true);
                 }}
-                style={[
-                  styles.radiusChip,
-                  {
-                    backgroundColor: isActive
-                      ? colors.foreground
-                      : colors.muted,
-                  },
+                style={({ pressed }) => [
+                  styles.languageChip,
+                  { backgroundColor: colors.muted, opacity: pressed ? 0.8 : 1 },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={`Set discovery range to ${r} meters`}
-                accessibilityState={{ selected: isActive }}
+                accessibilityLabel="Walk notification language"
               >
-                <Text
-                  style={[
-                    styles.radiusChipText,
-                    {
-                      color: isActive
-                        ? colors.background
-                        : colors.mutedForeground,
-                    },
-                  ]}
-                >
-                  {r === 150
-                    ? t.explore.rangeClose
-                    : r === 300
-                      ? t.explore.rangeMedium
-                      : t.explore.rangeWide}{" "}
-                  · {r}m
-                </Text>
+                <Feather
+                  name="globe"
+                  size={13}
+                  color={colors.mutedForeground}
+                />
               </Pressable>
-            );
-          })}
-        </Animated.View>
-      )}
-
-      {showDriftBanner && (
-        <Animated.View
-          entering={FadeIn.duration(300)}
-          exiting={FadeOut.duration(200)}
-        >
-          <Pressable
-            onPress={handleDiscover}
-            style={[styles.driftBanner, { backgroundColor: colors.primary }]}
-            accessibilityRole="button"
-            accessibilityLabel={`You've moved ${Math.round(driftMeters)}m — tap to refresh results for this area`}
-          >
-            <Feather
-              name="navigation"
-              size={14}
-              color={colors.primaryForeground}
-            />
-            <Text
-              style={[
-                styles.driftBannerText,
-                { color: colors.primaryForeground },
-              ]}
-            >
-              {t.explore.driftBanner}
-            </Text>
-            <Feather
-              name="refresh-cw"
-              size={14}
-              color={colors.primaryForeground}
-            />
-          </Pressable>
-        </Animated.View>
-      )}
-
-      {showContent && viewMode === "map" ? (
-        <PlaceMapView
-          places={allMapPlaces}
-          userLatitude={effectiveLatitude}
-          userLongitude={effectiveLongitude}
-          onMapRegionDiscover={handleMapRegionDiscover}
-          isLoadingMore={mapLoading}
-        />
-      ) : (
-        <FlatList
-          data={sortedPlaces}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPlaceItem}
-          contentContainerStyle={[
-            styles.list,
-            { paddingBottom: insets.bottom + webBottomInset + 90 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          removeClippedSubviews
-          windowSize={5}
-          maxToRenderPerBatch={8}
-          initialNumToRender={6}
-          ListHeaderComponent={
-            <View>
-              {showWalkBanner ? (
-                <Animated.View
-                  entering={FadeIn.duration(300)}
-                  exiting={FadeOut.duration(200)}
-                  style={[
-                    styles.walkBanner,
-                    {
-                      backgroundColor: colors.primary + "18",
-                      borderColor: colors.primary + "40",
-                    },
-                  ]}
-                >
-                  <Pressable
-                    onPress={handleWalkBannerTap}
-                    style={styles.walkBannerContent}
-                    accessibilityRole="button"
-                    accessibilityLabel="Start Walking — tap to open Walk tab"
-                    accessibilityHint="Opens the Walk tab to start your audio tour"
-                  >
-                    <Feather
-                      name="headphones"
-                      size={16}
-                      color={colors.primary}
-                    />
-                    <Text
-                      style={[styles.walkBannerText, { color: colors.primary }]}
-                    >
-                      Tap Walk tab to start your audio tour
-                    </Text>
-                    <Feather
-                      name="arrow-right"
-                      size={14}
-                      color={colors.primary}
-                    />
-                  </Pressable>
-                  <Pressable
-                    onPress={dismissWalkBanner}
-                    hitSlop={12}
-                    accessibilityRole="button"
-                    accessibilityLabel="Dismiss tip"
-                  >
-                    <Feather
-                      name="x"
-                      size={14}
-                      color={colors.primary}
-                      style={{ opacity: 0.6 }}
-                    />
-                  </Pressable>
-                </Animated.View>
-              ) : null}
-
-              {showContent ? (
-                <>
-                  <Pressable
-                    onPress={() => {
-                      if (Platform.OS !== "web")
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push({
-                        pathname: "/investigate",
-                        params: {
-                          ...(areaName ? { nearLocation: areaName } : {}),
-                          ...(closestPrefill
-                            ? { prefillAddress: closestPrefill }
-                            : {}),
-                        },
-                      });
-                    }}
-                    style={({ pressed }) => [
-                      styles.investigateCard,
-                      {
-                        backgroundColor: colors.card,
-                        borderColor: colors.border,
-                        opacity: pressed ? 0.9 : 1,
-                        transform: [{ scale: pressed ? 0.98 : 1 }],
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Investigate an Address"
-                    accessibilityHint="Look up the history of a specific building by address"
-                  >
-                    <View style={styles.cardRow}>
-                      <Feather
-                        name="search"
-                        size={20}
-                        color={colors.foreground}
-                      />
-                      <View style={styles.cardRowText}>
-                        <Text
-                          style={[
-                            styles.investigateCardTitle,
-                            { color: colors.foreground },
-                          ]}
-                        >
-                          {t.explore.investigateTitle}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.investigateCardSubtitle,
-                            { color: colors.mutedForeground },
-                          ]}
-                        >
-                          {t.explore.investigateSubtitle}
-                        </Text>
-                      </View>
-                      <Feather
-                        name="chevron-right"
-                        size={18}
-                        color={colors.mutedForeground}
-                      />
-                    </View>
-                  </Pressable>
-
-                  {showRatingPaceWarning ? (
-                    <Animated.View
-                      entering={FadeIn.duration(250)}
-                      exiting={FadeOut.duration(200)}
-                      style={styles.ratingPaceWarning}
-                      accessibilityRole="alert"
-                      accessibilityLabel="You're rating quickly — pace yourself"
-                    >
-                      <Feather name="clock" size={14} color="#92400e" />
-                      <Text style={styles.ratingPaceWarningText}>
-                        {t.explore.ratingPaceWarning}
-                      </Text>
-                      <Pressable
-                        onPress={dismissWarning}
-                        hitSlop={12}
-                        accessibilityRole="button"
-                        accessibilityLabel="Dismiss warning"
-                      >
-                        <Feather
-                          name="x"
-                          size={14}
-                          color="#92400e"
-                          style={{ opacity: 0.7 }}
-                        />
-                      </Pressable>
-                    </Animated.View>
-                  ) : null}
-                </>
-              ) : null}
             </View>
-          }
-          refreshControl={
-            <RefreshControl
-              refreshing={discoverMutation.isPending}
-              onRefresh={handleDiscover}
-              tintColor={colors.primary}
-            />
-          }
-          ListEmptyComponent={
-            discoverMutation.isPending ? (
-              <Animated.View
-                entering={Platform.OS !== "web" ? FadeIn : undefined}
-                style={styles.skeletonContainer}
+            <View style={styles.headerBottomRow}>
+              <Text
+                style={[styles.title, { color: colors.foreground }]}
+                numberOfLines={1}
               >
-                <PlaceCardSkeleton count={4} />
-                <LoadingMessages variant="discovery" />
-                {showStillLoading ? (
-                  <StillLoadingHint
-                    hint={t.explore.stillLoading}
-                    variant="fadeIn"
-                    exiting={FadeOutDown.duration(300)}
-                  />
-                ) : null}
-              </Animated.View>
-            ) : discoverMutation.isError ? (
-              <View style={styles.emptyContainer}>
-                <Feather
-                  name="alert-circle"
-                  size={40}
-                  color={colors.mutedForeground}
-                />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  {(discoverMutation.error as any)?.status === 429 ||
-                  (discoverMutation.error as any)?.status === 503
-                    ? t.explore.busyTitle
-                    : t.explore.errorTitle}
-                </Text>
-                <Text
-                  style={[styles.emptyText, { color: colors.mutedForeground }]}
-                >
-                  {(discoverMutation.error as any)?.status === 429 ||
-                  (discoverMutation.error as any)?.status === 503
-                    ? t.explore.busyDetail
-                    : t.explore.errorDetail}
-                </Text>
-                <Pressable
-                  onPress={handleDiscover}
-                  style={({ pressed }) => [
-                    styles.retryButton,
-                    {
-                      backgroundColor: colors.primary,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Retry discovering places"
-                >
-                  <Feather
-                    name="refresh-cw"
-                    size={16}
-                    color={colors.primaryForeground}
-                  />
-                  <Text
+                {t.explore.discover}
+              </Text>
+              <View style={styles.headerActions}>
+                {showContent && (
+                  <View
                     style={[
-                      styles.retryText,
-                      { color: colors.primaryForeground },
+                      styles.toggleContainer,
+                      { backgroundColor: colors.muted },
                     ]}
                   >
-                    {t.common.retry}
-                  </Text>
-                </Pressable>
-              </View>
-            ) : discoverMutation.isSuccess ? (
-              <View style={styles.emptyContainer}>
-                <Feather
-                  name="map-pin"
-                  size={40}
-                  color={colors.mutedForeground}
-                />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  {t.explore.nothingFoundTitle}
-                </Text>
-                <Text
-                  style={[styles.emptyText, { color: colors.mutedForeground }]}
-                >
-                  {t.explore.nothingFoundDetail}
-                </Text>
-                <View style={styles.emptyActions}>
-                  {searchRadius < 500 && (
                     <Pressable
                       onPress={() => {
-                        const next = searchRadius === 150 ? 300 : 500;
-                        setSearchRadius(next);
+                        setViewMode("list");
                         if (Platform.OS !== "web")
                           Haptics.impactAsync(
                             Haptics.ImpactFeedbackStyle.Light,
                           );
-                        const coords =
-                          manualCoords ??
-                          (location
-                            ? {
-                                latitude: location.coords.latitude,
-                                longitude: location.coords.longitude,
-                              }
-                            : null);
-                        if (coords)
-                          discoverAt(
-                            coords.latitude,
-                            coords.longitude,
-                            location?.coords.accuracy ?? null,
-                            next,
+                      }}
+                      style={[
+                        styles.toggleButton,
+                        viewMode === "list" && { backgroundColor: colors.card },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="List view"
+                      accessibilityState={{ selected: viewMode === "list" }}
+                    >
+                      <Feather
+                        name="list"
+                        size={16}
+                        color={
+                          viewMode === "list"
+                            ? colors.foreground
+                            : colors.mutedForeground
+                        }
+                      />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => {
+                        setViewMode("map");
+                        if (Platform.OS !== "web")
+                          Haptics.impactAsync(
+                            Haptics.ImpactFeedbackStyle.Light,
                           );
                       }}
+                      style={[
+                        styles.toggleButton,
+                        viewMode === "map" && { backgroundColor: colors.card },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Map view"
+                      accessibilityState={{ selected: viewMode === "map" }}
+                    >
+                      <Feather
+                        name="map"
+                        size={16}
+                        color={
+                          viewMode === "map"
+                            ? colors.foreground
+                            : colors.mutedForeground
+                        }
+                      />
+                    </Pressable>
+                  </View>
+                )}
+                <Pressable
+                  onPress={handleDiscover}
+                  disabled={discoverMutation.isPending || locationLoading}
+                  style={({ pressed }) => [
+                    styles.labeledHeaderBtn,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: pressed ? 0.85 : 1,
+                      transform: [{ scale: pressed ? 0.95 : 1 }],
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Discover nearby places"
+                >
+                  {discoverMutation.isPending ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.primaryForeground}
+                    />
+                  ) : (
+                    <Feather
+                      name="compass"
+                      size={20}
+                      color={colors.primaryForeground}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.labeledHeaderBtnText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
+                    Discover
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    if (Platform.OS !== "web")
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push({
+                      pathname: "/investigate",
+                      params: {
+                        ...(areaName ? { nearLocation: areaName } : {}),
+                        ...(closestPrefill
+                          ? { prefillAddress: closestPrefill }
+                          : {}),
+                      },
+                    });
+                  }}
+                  style={({ pressed }) => [
+                    styles.labeledHeaderBtn,
+                    {
+                      backgroundColor: colors.muted,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Investigate a building by address"
+                >
+                  <Feather
+                    name="book-open"
+                    size={17}
+                    color={colors.foreground}
+                  />
+                  <Text
+                    style={[
+                      styles.labeledHeaderBtnText,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    Investigate
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setGeocodeError(null);
+                    setShowLocationSearch(true);
+                  }}
+                  style={({ pressed }) => [
+                    styles.labeledHeaderBtn,
+                    {
+                      backgroundColor: colors.muted,
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search by location"
+                >
+                  <Feather name="search" size={18} color={colors.foreground} />
+                  <Text
+                    style={[
+                      styles.labeledHeaderBtnText,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    Search
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </Animated.View>
+
+          {(hasCoords || locationLoading) && (
+            <Animated.View
+              key={manualCoords ? "radius-manual" : "radius-gps"}
+              entering={
+                Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
+              }
+              exiting={
+                Platform.OS !== "web" ? FadeOutDown.duration(250) : undefined
+              }
+              style={[
+                styles.radiusRow,
+                {
+                  borderBottomColor: colors.border,
+                  backgroundColor: colors.background,
+                },
+              ]}
+            >
+              <Text
+                style={[styles.radiusLabel, { color: colors.mutedForeground }]}
+              >
+                {t.explore.range}
+              </Text>
+              {([150, 300, 500] as const).map((r) => {
+                const isActive = searchRadius === r;
+                return (
+                  <Pressable
+                    key={`r-${r}`}
+                    onPress={() => {
+                      if (r === searchRadius) return;
+                      setSearchRadius(r);
+                      if (Platform.OS !== "web")
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (manualCoords) {
+                        discoverAt(
+                          manualCoords.latitude,
+                          manualCoords.longitude,
+                          null,
+                          r,
+                        );
+                      } else if (location) {
+                        discoverAt(
+                          location.coords.latitude,
+                          location.coords.longitude,
+                          location.coords.accuracy,
+                          r,
+                        );
+                      }
+                    }}
+                    style={[
+                      styles.radiusChip,
+                      {
+                        backgroundColor: isActive
+                          ? colors.foreground
+                          : colors.muted,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Set discovery range to ${r} meters`}
+                    accessibilityState={{ selected: isActive }}
+                  >
+                    <Text
+                      style={[
+                        styles.radiusChipText,
+                        {
+                          color: isActive
+                            ? colors.background
+                            : colors.mutedForeground,
+                        },
+                      ]}
+                    >
+                      {r === 150
+                        ? t.explore.rangeClose
+                        : r === 300
+                          ? t.explore.rangeMedium
+                          : t.explore.rangeWide}{" "}
+                      · {r}m
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </Animated.View>
+          )}
+
+          {showDriftBanner && (
+            <Animated.View
+              entering={FadeIn.duration(300)}
+              exiting={FadeOut.duration(200)}
+            >
+              <Pressable
+                onPress={handleDiscover}
+                style={[
+                  styles.driftBanner,
+                  { backgroundColor: colors.primary },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`You've moved ${Math.round(driftMeters)}m — tap to refresh results for this area`}
+              >
+                <Feather
+                  name="navigation"
+                  size={14}
+                  color={colors.primaryForeground}
+                />
+                <Text
+                  style={[
+                    styles.driftBannerText,
+                    { color: colors.primaryForeground },
+                  ]}
+                >
+                  {t.explore.driftBanner}
+                </Text>
+                <Feather
+                  name="refresh-cw"
+                  size={14}
+                  color={colors.primaryForeground}
+                />
+              </Pressable>
+            </Animated.View>
+          )}
+
+          {showContent && viewMode === "map" ? (
+            <PlaceMapView
+              places={allMapPlaces}
+              userLatitude={effectiveLatitude}
+              userLongitude={effectiveLongitude}
+              onMapRegionDiscover={handleMapRegionDiscover}
+              isLoadingMore={mapLoading}
+            />
+          ) : (
+            <FlatList
+              data={sortedPlaces}
+              keyExtractor={(item) => item.id}
+              renderItem={renderPlaceItem}
+              contentContainerStyle={[
+                styles.list,
+                { paddingBottom: insets.bottom + webBottomInset + 90 },
+              ]}
+              showsVerticalScrollIndicator={false}
+              removeClippedSubviews
+              windowSize={5}
+              maxToRenderPerBatch={8}
+              initialNumToRender={6}
+              ListHeaderComponent={
+                <View>
+                  {showWalkBanner ? (
+                    <Animated.View
+                      entering={FadeIn.duration(300)}
+                      exiting={FadeOut.duration(200)}
+                      style={[
+                        styles.walkBanner,
+                        {
+                          backgroundColor: colors.primary + "18",
+                          borderColor: colors.primary + "40",
+                        },
+                      ]}
+                    >
+                      <Pressable
+                        onPress={handleWalkBannerTap}
+                        style={styles.walkBannerContent}
+                        accessibilityRole="button"
+                        accessibilityLabel="Start Walking — tap to open Walk tab"
+                        accessibilityHint="Opens the Walk tab to start your audio tour"
+                      >
+                        <Feather
+                          name="headphones"
+                          size={16}
+                          color={colors.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.walkBannerText,
+                            { color: colors.primary },
+                          ]}
+                        >
+                          Tap Walk tab to start your audio tour
+                        </Text>
+                        <Feather
+                          name="arrow-right"
+                          size={14}
+                          color={colors.primary}
+                        />
+                      </Pressable>
+                      <Pressable
+                        onPress={dismissWalkBanner}
+                        hitSlop={12}
+                        accessibilityRole="button"
+                        accessibilityLabel="Dismiss tip"
+                      >
+                        <Feather
+                          name="x"
+                          size={14}
+                          color={colors.primary}
+                          style={{ opacity: 0.6 }}
+                        />
+                      </Pressable>
+                    </Animated.View>
+                  ) : null}
+
+                  {showContent ? (
+                    <>
+                      <Pressable
+                        onPress={() => {
+                          if (Platform.OS !== "web")
+                            Haptics.impactAsync(
+                              Haptics.ImpactFeedbackStyle.Light,
+                            );
+                          router.push({
+                            pathname: "/investigate",
+                            params: {
+                              ...(areaName ? { nearLocation: areaName } : {}),
+                              ...(closestPrefill
+                                ? { prefillAddress: closestPrefill }
+                                : {}),
+                            },
+                          });
+                        }}
+                        style={({ pressed }) => [
+                          styles.investigateCard,
+                          {
+                            backgroundColor: colors.card,
+                            borderColor: colors.border,
+                            opacity: pressed ? 0.9 : 1,
+                            transform: [{ scale: pressed ? 0.98 : 1 }],
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Investigate an Address"
+                        accessibilityHint="Look up the history of a specific building by address"
+                      >
+                        <View style={styles.cardRow}>
+                          <Feather
+                            name="search"
+                            size={20}
+                            color={colors.foreground}
+                          />
+                          <View style={styles.cardRowText}>
+                            <Text
+                              style={[
+                                styles.investigateCardTitle,
+                                { color: colors.foreground },
+                              ]}
+                            >
+                              {t.explore.investigateTitle}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.investigateCardSubtitle,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
+                              {t.explore.investigateSubtitle}
+                            </Text>
+                          </View>
+                          <Feather
+                            name="chevron-right"
+                            size={18}
+                            color={colors.mutedForeground}
+                          />
+                        </View>
+                      </Pressable>
+
+                      {showRatingPaceWarning ? (
+                        <Animated.View
+                          entering={FadeIn.duration(250)}
+                          exiting={FadeOut.duration(200)}
+                          style={styles.ratingPaceWarning}
+                          accessibilityRole="alert"
+                          accessibilityLabel="You're rating quickly — pace yourself"
+                        >
+                          <Feather name="clock" size={14} color="#92400e" />
+                          <Text style={styles.ratingPaceWarningText}>
+                            {t.explore.ratingPaceWarning}
+                          </Text>
+                          <Pressable
+                            onPress={dismissWarning}
+                            hitSlop={12}
+                            accessibilityRole="button"
+                            accessibilityLabel="Dismiss warning"
+                          >
+                            <Feather
+                              name="x"
+                              size={14}
+                              color="#92400e"
+                              style={{ opacity: 0.7 }}
+                            />
+                          </Pressable>
+                        </Animated.View>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+              }
+              refreshControl={
+                <RefreshControl
+                  refreshing={discoverMutation.isPending}
+                  onRefresh={handleDiscover}
+                  tintColor={colors.primary}
+                />
+              }
+              ListEmptyComponent={
+                discoverMutation.isPending ? (
+                  <Animated.View
+                    entering={Platform.OS !== "web" ? FadeIn : undefined}
+                    style={styles.skeletonContainer}
+                  >
+                    <PlaceCardSkeleton count={4} />
+                    <LoadingMessages variant="discovery" />
+                    {showStillLoading ? (
+                      <StillLoadingHint
+                        hint={t.explore.stillLoading}
+                        variant="fadeIn"
+                        exiting={FadeOutDown.duration(300)}
+                      />
+                    ) : null}
+                  </Animated.View>
+                ) : discoverMutation.isError ? (
+                  <View style={styles.emptyContainer}>
+                    <Feather
+                      name="alert-circle"
+                      size={40}
+                      color={colors.mutedForeground}
+                    />
+                    <Text
+                      style={[styles.emptyTitle, { color: colors.foreground }]}
+                    >
+                      {(discoverMutation.error as any)?.status === 429 ||
+                      (discoverMutation.error as any)?.status === 503
+                        ? t.explore.busyTitle
+                        : t.explore.errorTitle}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.emptyText,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
+                      {(discoverMutation.error as any)?.status === 429 ||
+                      (discoverMutation.error as any)?.status === 503
+                        ? t.explore.busyDetail
+                        : t.explore.errorDetail}
+                    </Text>
+                    <Pressable
+                      onPress={handleDiscover}
                       style={({ pressed }) => [
                         styles.retryButton,
                         {
@@ -1222,10 +1201,10 @@ export default function ExploreScreen() {
                         },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel="Try wider search range"
+                      accessibilityLabel="Retry discovering places"
                     >
                       <Feather
-                        name="maximize"
+                        name="refresh-cw"
                         size={16}
                         color={colors.primaryForeground}
                       />
@@ -1235,65 +1214,151 @@ export default function ExploreScreen() {
                           { color: colors.primaryForeground },
                         ]}
                       >
-                        {t.explore.tryRange(searchRadius === 150 ? 300 : 500)}
+                        {t.common.retry}
                       </Text>
                     </Pressable>
-                  )}
-                  <Pressable
-                    onPress={handleDiscover}
-                    style={({ pressed }) => [
-                      styles.retryButton,
-                      {
-                        backgroundColor: colors.muted,
-                        opacity: pressed ? 0.85 : 1,
-                      },
-                    ]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Search again"
-                  >
+                  </View>
+                ) : discoverMutation.isSuccess ? (
+                  <View style={styles.emptyContainer}>
                     <Feather
-                      name="refresh-cw"
-                      size={16}
-                      color={colors.foreground}
+                      name="map-pin"
+                      size={40}
+                      color={colors.mutedForeground}
                     />
                     <Text
-                      style={[styles.retryText, { color: colors.foreground }]}
+                      style={[styles.emptyTitle, { color: colors.foreground }]}
                     >
-                      {t.explore.searchAgain}
+                      {t.explore.nothingFoundTitle}
                     </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Feather
-                  name="compass"
-                  size={40}
-                  color={colors.mutedForeground}
-                />
-                <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                  {t.explore.startExploringTitle}
-                </Text>
-                <Text
-                  style={[styles.emptyText, { color: colors.mutedForeground }]}
-                >
-                  {t.explore.startExploringDetail}
-                </Text>
-              </View>
-            )
-          }
-        />
+                    <Text
+                      style={[
+                        styles.emptyText,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
+                      {t.explore.nothingFoundDetail}
+                    </Text>
+                    <View style={styles.emptyActions}>
+                      {searchRadius < 500 && (
+                        <Pressable
+                          onPress={() => {
+                            const next = searchRadius === 150 ? 300 : 500;
+                            setSearchRadius(next);
+                            if (Platform.OS !== "web")
+                              Haptics.impactAsync(
+                                Haptics.ImpactFeedbackStyle.Light,
+                              );
+                            const coords =
+                              manualCoords ??
+                              (location
+                                ? {
+                                    latitude: location.coords.latitude,
+                                    longitude: location.coords.longitude,
+                                  }
+                                : null);
+                            if (coords)
+                              discoverAt(
+                                coords.latitude,
+                                coords.longitude,
+                                location?.coords.accuracy ?? null,
+                                next,
+                              );
+                          }}
+                          style={({ pressed }) => [
+                            styles.retryButton,
+                            {
+                              backgroundColor: colors.primary,
+                              opacity: pressed ? 0.85 : 1,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel="Try wider search range"
+                        >
+                          <Feather
+                            name="maximize"
+                            size={16}
+                            color={colors.primaryForeground}
+                          />
+                          <Text
+                            style={[
+                              styles.retryText,
+                              { color: colors.primaryForeground },
+                            ]}
+                          >
+                            {t.explore.tryRange(
+                              searchRadius === 150 ? 300 : 500,
+                            )}
+                          </Text>
+                        </Pressable>
+                      )}
+                      <Pressable
+                        onPress={handleDiscover}
+                        style={({ pressed }) => [
+                          styles.retryButton,
+                          {
+                            backgroundColor: colors.muted,
+                            opacity: pressed ? 0.85 : 1,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Search again"
+                      >
+                        <Feather
+                          name="refresh-cw"
+                          size={16}
+                          color={colors.foreground}
+                        />
+                        <Text
+                          style={[
+                            styles.retryText,
+                            { color: colors.foreground },
+                          ]}
+                        >
+                          {t.explore.searchAgain}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : (
+                  <View style={styles.emptyContainer}>
+                    <Feather
+                      name="compass"
+                      size={40}
+                      color={colors.mutedForeground}
+                    />
+                    <Text
+                      style={[styles.emptyTitle, { color: colors.foreground }]}
+                    >
+                      {t.explore.startExploringTitle}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.emptyText,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
+                      {t.explore.startExploringDetail}
+                    </Text>
+                  </View>
+                )
+              }
+            />
+          )}
+          <LanguagePickerModal
+            visible={showLanguagePicker}
+            onClose={() => setShowLanguagePicker(false)}
+          />
+        </>
       )}
-      <LanguagePickerModal
-        visible={showLanguagePicker}
-        onClose={() => setShowLanguagePicker(false)}
-      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  locationPermissionWrapper: {
     flex: 1,
   },
   header: {

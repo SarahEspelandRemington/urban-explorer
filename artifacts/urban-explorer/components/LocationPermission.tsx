@@ -14,7 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
@@ -124,6 +124,7 @@ export function LocationPermission({
       <Animated.View
         style={styles.content}
         entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
+        exiting={Platform.OS !== "web" ? FadeOutUp.duration(300) : undefined}
       >
         <View
           style={[
