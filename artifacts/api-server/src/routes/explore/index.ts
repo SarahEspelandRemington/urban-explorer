@@ -1579,7 +1579,7 @@ router.post("/explore/geocode", async (req, res) => {
 
   const { query } = parsed.data;
 
-  const geocodeCacheKey = `geocode:v1:${query.trim().toLowerCase()}`;
+  const geocodeCacheKey = `geocode:v3:${query.trim().toLowerCase()}`;
   const cachedGeocode = getLLMCache(geocodeCacheKey);
   if (cachedGeocode) {
     res.json(cachedGeocode);
@@ -1736,19 +1736,27 @@ router.post("/explore/investigate-address", async (req, res) => {
     //
     // Guard with inFlightGeocode so concurrent requests for the same address
     // share a single pending Nominatim call instead of each issuing their own.
-    const geocodeCacheKey = `geocode:v1:${trimmedAddress.toLowerCase()}`;
+    const geocodeCacheKey = `geocode:v3:${trimmedAddress.toLowerCase()}`;
     let results: NominatimResult[];
     try {
-      const existingGeocodeFlight = inFlightGeocode.get(geocodeCacheKey);
-      if (existingGeocodeFlight) {
-        results = await existingGeocodeFlight;
+      const cachedGeocode = getLLMCache<NominatimResult[]>(geocodeCacheKey);
+      if (cachedGeocode) {
+        results = cachedGeocode;
       } else {
-        const geocodePromise = scheduleNominatimCall(() =>
-          nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
-        );
-        inFlightGeocode.set(geocodeCacheKey, geocodePromise);
-        geocodePromise.finally(() => inFlightGeocode.delete(geocodeCacheKey));
-        results = await geocodePromise;
+        const existingGeocodeFlight = inFlightGeocode.get(geocodeCacheKey);
+        if (existingGeocodeFlight) {
+          results = await existingGeocodeFlight;
+        } else {
+          const geocodePromise = scheduleNominatimCall(() =>
+            nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
+          );
+          inFlightGeocode.set(geocodeCacheKey, geocodePromise);
+          geocodePromise.finally(() => inFlightGeocode.delete(geocodeCacheKey));
+          results = await geocodePromise;
+          if (results.length > 0) {
+            setLLMCache(geocodeCacheKey, results);
+          }
+        }
       }
     } catch {
       res.status(503).json({
