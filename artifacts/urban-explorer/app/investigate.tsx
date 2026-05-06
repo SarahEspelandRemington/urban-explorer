@@ -65,6 +65,7 @@ export default function InvestigateScreen() {
     name: string;
   } | null>(null);
   const [chipDismissed, setChipDismissed] = useState(shouldAutoFill);
+  const [showRefinementInput, setShowRefinementInput] = useState(false);
 
   useEffect(() => {
     if (!shouldAutoFill || !params.prefillAddress) return;
@@ -129,6 +130,7 @@ export default function InvestigateScreen() {
     const trimmed = address.trim();
     if (trimmed.length < 3) return;
     Keyboard.dismiss();
+    setShowRefinementInput(false);
     if (Platform.OS !== "web")
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     investigate.mutate({
@@ -140,6 +142,19 @@ export default function InvestigateScreen() {
       },
     });
   }, [address, pickedCoords, investigate]);
+
+  const handleTryDifferentName = useCallback(() => {
+    setShowRefinementInput(true);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => {
+      addressInputRef.current?.focus();
+      const len = address.length;
+      addressInputRef.current?.setNativeProps({
+        selection: { start: 0, end: len },
+      });
+    }, 80);
+  }, [address]);
 
   const canSubmit = address.trim().length >= 3 && !investigate.isPending;
 
@@ -199,7 +214,7 @@ export default function InvestigateScreen() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
-        {!shouldAutoFill && (
+        {(!shouldAutoFill || showRefinementInput) && (
           <View style={styles.inputBlock}>
             <AddressInput
               ref={addressInputRef}
@@ -214,7 +229,7 @@ export default function InvestigateScreen() {
               testID="investigate-address-input"
             />
 
-            {showChip && (
+            {showChip && !showRefinementInput && (
               <Animated.View
                 style={styles.chipRow}
                 entering={
@@ -310,29 +325,64 @@ export default function InvestigateScreen() {
               )}
             </Pressable>
 
-            <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-              {t.investigate.hint}
-            </Text>
+            {!showRefinementInput && (
+              <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+                {t.investigate.hint}
+              </Text>
+            )}
           </View>
         )}
 
         {errorMessage && (
-          <Animated.View
-            entering={Platform.OS !== "web" ? FadeInUp : undefined}
-            style={[
-              styles.errorCard,
-              { backgroundColor: colors.card, borderColor: colors.border },
-            ]}
-          >
-            <Feather
-              name="alert-circle"
-              size={18}
-              color={colors.mutedForeground}
-            />
-            <Text style={[styles.errorText, { color: colors.foreground }]}>
-              {errorMessage}
-            </Text>
-          </Animated.View>
+          <>
+            <Animated.View
+              entering={Platform.OS !== "web" ? FadeInUp : undefined}
+              style={[
+                styles.errorCard,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Feather
+                name="alert-circle"
+                size={18}
+                color={colors.mutedForeground}
+              />
+              <Text style={[styles.errorText, { color: colors.foreground }]}>
+                {errorMessage}
+              </Text>
+            </Animated.View>
+            {shouldAutoFill && !showRefinementInput && (
+              <Animated.View
+                entering={
+                  Platform.OS !== "web" ? FadeInDown.duration(250) : undefined
+                }
+              >
+                <Pressable
+                  onPress={handleTryDifferentName}
+                  style={({ pressed }) => [
+                    styles.refinementButton,
+                    {
+                      backgroundColor: colors.muted,
+                      borderColor: colors.border,
+                      opacity: pressed ? 0.75 : 1,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t.investigate.tryDifferentName}
+                >
+                  <Feather name="edit-2" size={14} color={colors.primary} />
+                  <Text
+                    style={[
+                      styles.refinementButtonText,
+                      { color: colors.foreground },
+                    ]}
+                  >
+                    {t.investigate.tryDifferentName}
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            )}
+          </>
         )}
 
         {investigate.isPending && (
@@ -670,5 +720,19 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     lineHeight: 17,
     fontStyle: "italic",
+  },
+  refinementButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  refinementButtonText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
   },
 });

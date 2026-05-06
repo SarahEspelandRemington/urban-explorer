@@ -218,6 +218,7 @@ export interface Strings {
     stillLoading: string;
     nearestChipPrefix: string;
     nearestChipDismiss: string;
+    tryDifferentName: string;
   };
   login: {
     title: string;
@@ -500,6 +501,7 @@ const en: Strings = {
     stillLoading: "Taking longer than usual… still working on it.",
     nearestChipPrefix: "Nearest:",
     nearestChipDismiss: "Dismiss suggestion",
+    tryDifferentName: "Try a different name",
   },
   login: {
     title: "Urban Explorer",
@@ -790,6 +792,7 @@ const es: Strings = {
     stillLoading: "Tomando más tiempo de lo habitual… seguimos trabajando.",
     nearestChipPrefix: "Más cercano:",
     nearestChipDismiss: "Descartar sugerencia",
+    tryDifferentName: "Probar con otro nombre",
   },
   login: {
     title: "Urban Explorer",
@@ -1080,6 +1083,7 @@ const fr: Strings = {
     stillLoading: "Ça prend plus de temps que prévu… on continue.",
     nearestChipPrefix: "Le plus proche :",
     nearestChipDismiss: "Ignorer la suggestion",
+    tryDifferentName: "Essayer un autre nom",
   },
   login: {
     title: "Urban Explorer",
@@ -1368,6 +1372,7 @@ const de: Strings = {
     stillLoading: "Dauert länger als üblich… wir sind noch dabei.",
     nearestChipPrefix: "Nächstgelegenes:",
     nearestChipDismiss: "Vorschlag schließen",
+    tryDifferentName: "Anderen Namen versuchen",
   },
   login: {
     title: "Urban Explorer",
@@ -1655,6 +1660,7 @@ const it: Strings = {
     stillLoading: "Ci vuole più del solito… stiamo ancora lavorando.",
     nearestChipPrefix: "Più vicino:",
     nearestChipDismiss: "Chiudi suggerimento",
+    tryDifferentName: "Prova un altro nome",
   },
   login: {
     title: "Urban Explorer",
@@ -1946,6 +1952,7 @@ const pt: Strings = {
       "Está demorando mais que o normal… ainda estamos a trabalhar.",
     nearestChipPrefix: "Mais próximo:",
     nearestChipDismiss: "Fechar sugestão",
+    tryDifferentName: "Tentar outro nome",
   },
   login: {
     title: "Urban Explorer",
@@ -2230,6 +2237,7 @@ const nl: Strings = {
     stillLoading: "Duurt langer dan gewoonlijk… we zijn er nog mee bezig.",
     nearestChipPrefix: "Dichtstbijzijnde:",
     nearestChipDismiss: "Suggestie sluiten",
+    tryDifferentName: "Probeer een andere naam",
   },
   login: {
     title: "Urban Explorer",
@@ -2515,6 +2523,7 @@ const ja: Strings = {
     stillLoading: "通常より時間がかかっています…まだ処理中です。",
     nearestChipPrefix: "最寄り：",
     nearestChipDismiss: "候補を閉じる",
+    tryDifferentName: "別の名前で試す",
   },
   login: {
     title: "Urban Explorer",
@@ -2792,6 +2801,7 @@ const ko: Strings = {
     stillLoading: "평소보다 오래 걸리고 있어요… 아직 처리 중입니다.",
     nearestChipPrefix: "가장 가까운:",
     nearestChipDismiss: "제안 닫기",
+    tryDifferentName: "다른 이름으로 시도하기",
   },
   login: {
     title: "Urban Explorer",
@@ -3063,6 +3073,7 @@ const zh: Strings = {
     stillLoading: "比平时花的时间长一些……我们还在努力。",
     nearestChipPrefix: "最近：",
     nearestChipDismiss: "关闭建议",
+    tryDifferentName: "尝试其他名称",
   },
   login: {
     title: "Urban Explorer",
