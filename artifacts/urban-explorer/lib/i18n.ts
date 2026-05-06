@@ -394,7 +394,8 @@ const en: Strings = {
     pauseAccessibility: "Pause",
     skipAccessibility: "Skip",
     confirmEndTitle: "End this walk?",
-    confirmEndMessage: "Your walk history will be saved, but the session will end.",
+    confirmEndMessage:
+      "Your walk history will be saved, but the session will end.",
     confirmEndOk: "End Walk",
     confirmEndCancel: "Keep Walking",
   },
@@ -661,7 +662,8 @@ const es: Strings = {
       "p. ej. visité un martes lluvioso, me encantó la arquitectura…",
     noteModalSave: "Guardar nota",
     noteModalDone: "Listo",
-    sortNearestNoLocation: "Permite el acceso a la ubicación para ordenar por distancia",
+    sortNearestNoLocation:
+      "Permite el acceso a la ubicación para ordenar por distancia",
   },
   walkMode: {
     end: "Fin",
@@ -1009,7 +1011,8 @@ const fr: Strings = {
     pauseAccessibility: "Pause",
     skipAccessibility: "Passer",
     confirmEndTitle: "Terminer la balade ?",
-    confirmEndMessage: "Votre historique sera sauvegardé, mais la session prendra fin.",
+    confirmEndMessage:
+      "Votre historique sera sauvegardé, mais la session prendra fin.",
     confirmEndOk: "Terminer",
     confirmEndCancel: "Continuer",
   },
@@ -1277,7 +1280,8 @@ const de: Strings = {
       "z. B. an einem regnerischen Dienstag besucht, tolle Architektur…",
     noteModalSave: "Notiz speichern",
     noteModalDone: "Fertig",
-    sortNearestNoLocation: "Standortzugriff erlauben, um nach Entfernung zu sortieren",
+    sortNearestNoLocation:
+      "Standortzugriff erlauben, um nach Entfernung zu sortieren",
   },
   walkMode: {
     end: "Ende",
@@ -1316,7 +1320,8 @@ const de: Strings = {
     pauseAccessibility: "Pause",
     skipAccessibility: "Überspringen",
     confirmEndTitle: "Lauf beenden?",
-    confirmEndMessage: "Dein Lauf-Verlauf wird gespeichert, aber die Sitzung endet.",
+    confirmEndMessage:
+      "Dein Lauf-Verlauf wird gespeichert, aber die Sitzung endet.",
     confirmEndOk: "Beenden",
     confirmEndCancel: "Weiterlaufen",
   },
@@ -1586,7 +1591,8 @@ const it: Strings = {
       "es. visitato un martedì piovoso, architettura fantastica…",
     noteModalSave: "Salva nota",
     noteModalDone: "Fine",
-    sortNearestNoLocation: "Consenti l'accesso alla posizione per ordinare per distanza",
+    sortNearestNoLocation:
+      "Consenti l'accesso alla posizione per ordinare per distanza",
   },
   walkMode: {
     end: "Fine",
@@ -1892,7 +1898,8 @@ const pt: Strings = {
       "ex. visitei numa terça chuvosa, adorei a arquitetura…",
     noteModalSave: "Salvar nota",
     noteModalDone: "Concluído",
-    sortNearestNoLocation: "Permita o acesso à localização para ordenar por distância",
+    sortNearestNoLocation:
+      "Permita o acesso à localização para ordenar por distância",
   },
   walkMode: {
     end: "Fim",
@@ -2237,7 +2244,8 @@ const nl: Strings = {
     pauseAccessibility: "Pauzeren",
     skipAccessibility: "Overslaan",
     confirmEndTitle: "Wandeling beëindigen?",
-    confirmEndMessage: "Je wandelgeschiedenis wordt opgeslagen, maar de sessie eindigt.",
+    confirmEndMessage:
+      "Je wandelgeschiedenis wordt opgeslagen, maar de sessie eindigt.",
     confirmEndOk: "Beëindigen",
     confirmEndCancel: "Doorgaan",
   },

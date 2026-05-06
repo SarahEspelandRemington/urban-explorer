@@ -47,24 +47,20 @@ export default function WalkModeScreen() {
   }, []);
 
   const handleStop = () => {
-    Alert.alert(
-      t.walkMode.confirmEndTitle,
-      t.walkMode.confirmEndMessage,
-      [
-        { text: t.walkMode.confirmEndCancel, style: "cancel" },
-        {
-          text: t.walkMode.confirmEndOk,
-          style: "destructive",
-          onPress: () => {
-            if (Platform.OS !== "web")
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            walk.stopWalk();
-            router.dismissAll?.();
-            router.replace("/(tabs)/walk");
-          },
+    Alert.alert(t.walkMode.confirmEndTitle, t.walkMode.confirmEndMessage, [
+      { text: t.walkMode.confirmEndCancel, style: "cancel" },
+      {
+        text: t.walkMode.confirmEndOk,
+        style: "destructive",
+        onPress: () => {
+          if (Platform.OS !== "web")
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          walk.stopWalk();
+          router.dismissAll?.();
+          router.replace("/(tabs)/walk");
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const setDensity = (d: WalkDensity) => {
@@ -249,43 +245,46 @@ export default function WalkModeScreen() {
               showsVerticalScrollIndicator={false}
             >
               {__DEV__ && (
-              <Pressable
-                onPress={() => togglePrefetchStats(!walk.showPrefetchStats)}
-                style={[styles.groupRow, { borderBottomColor: colors.border }]}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: walk.showPrefetchStats }}
-                accessibilityLabel={t.walkMode.showPrefetchStats}
-              >
-                <View style={styles.groupText}>
-                  <Text
-                    style={[styles.groupName, { color: colors.foreground }]}
-                  >
-                    {t.walkMode.showPrefetchStats}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.groupDesc,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {t.walkMode.showPrefetchStatsDescription}
-                  </Text>
-                </View>
-                <Switch
-                  value={walk.showPrefetchStats}
-                  onValueChange={togglePrefetchStats}
-                  trackColor={{
-                    false: colors.muted,
-                    true: colors.primary + "80",
-                  }}
-                  thumbColor={
-                    walk.showPrefetchStats
-                      ? colors.primary
-                      : colors.mutedForeground
-                  }
-                />
-              </Pressable>
-            )}
+                <Pressable
+                  onPress={() => togglePrefetchStats(!walk.showPrefetchStats)}
+                  style={[
+                    styles.groupRow,
+                    { borderBottomColor: colors.border },
+                  ]}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: walk.showPrefetchStats }}
+                  accessibilityLabel={t.walkMode.showPrefetchStats}
+                >
+                  <View style={styles.groupText}>
+                    <Text
+                      style={[styles.groupName, { color: colors.foreground }]}
+                    >
+                      {t.walkMode.showPrefetchStats}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.groupDesc,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
+                      {t.walkMode.showPrefetchStatsDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={walk.showPrefetchStats}
+                    onValueChange={togglePrefetchStats}
+                    trackColor={{
+                      false: colors.muted,
+                      true: colors.primary + "80",
+                    }}
+                    thumbColor={
+                      walk.showPrefetchStats
+                        ? colors.primary
+                        : colors.mutedForeground
+                    }
+                  />
+                </Pressable>
+              )}
               {BUILDING_TYPE_GROUPS.map((group) => {
                 const key = group.key as BuildingGroupKey;
                 const enabled = walk.enabledBuildingGroups.has(key);
