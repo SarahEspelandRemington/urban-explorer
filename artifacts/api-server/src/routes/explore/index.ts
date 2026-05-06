@@ -221,6 +221,7 @@ const inFlightNarration = new Map<string, Promise<string>>();
 const inFlightAudio = new Map<string, Promise<Buffer>>();
 const inFlightDetail = new Map<string, Promise<any>>();
 const inFlightSuggestion = new Map<string, Promise<string[]>>();
+const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 
 // Cache key versioning convention:
 // Every LLM-backed cache key includes a version segment (e.g. ":v1:").
@@ -1732,11 +1733,23 @@ router.post("/explore/investigate-address", async (req, res) => {
     // Use the shared Nominatim slot scheduler so this request respects the
     // global 1 req/sec rate limit alongside any concurrent discover or
     // verifyPlaceCoordinates calls.
+    //
+    // Guard with inFlightGeocode so concurrent requests for the same address
+    // share a single pending Nominatim call instead of each issuing their own.
+    const geocodeCacheKey = `geocode:v1:${trimmedAddress.toLowerCase()}`;
     let results: NominatimResult[];
     try {
-      results = await scheduleNominatimCall(() =>
-        nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
-      );
+      const existingGeocodeFlight = inFlightGeocode.get(geocodeCacheKey);
+      if (existingGeocodeFlight) {
+        results = await existingGeocodeFlight;
+      } else {
+        const geocodePromise = scheduleNominatimCall(() =>
+          nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
+        );
+        inFlightGeocode.set(geocodeCacheKey, geocodePromise);
+        geocodePromise.finally(() => inFlightGeocode.delete(geocodeCacheKey));
+        results = await geocodePromise;
+      }
     } catch {
       res.status(503).json({
         error: "Address lookup temporarily unavailable. Please try again.",
