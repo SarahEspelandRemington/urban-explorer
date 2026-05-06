@@ -170,8 +170,10 @@ function buildMulterErrorMessage(
     }
     case "LIMIT_FIELD_KEY":
       return "Form field name is too long.";
-    case "LIMIT_UNEXPECTED_FILE":
-      return "Unexpected file field in the request.";
+    case "LIMIT_UNEXPECTED_FILE": {
+      const fieldClause = err.field ? ` '${err.field}'` : "";
+      return `Unexpected file field${fieldClause} in the request.`;
+    }
     default:
       return "Upload error.";
   }

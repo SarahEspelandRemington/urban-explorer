@@ -195,7 +195,7 @@ describe("handleUploadError", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("maps LIMIT_UNEXPECTED_FILE to 422", () => {
+  it("maps LIMIT_UNEXPECTED_FILE to 422 without field name when MulterError.field is not set", () => {
     handleUploadError(
       multerError("LIMIT_UNEXPECTED_FILE"),
       makeReq(),
@@ -206,6 +206,21 @@ describe("handleUploadError", () => {
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
       error: "Unexpected file field in the request.",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("includes the field name in LIMIT_UNEXPECTED_FILE message when MulterError.field is set", () => {
+    handleUploadError(
+      multerErrorWithField("LIMIT_UNEXPECTED_FILE", "photo"),
+      makeReq(),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Unexpected file field 'photo' in the request.",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -893,5 +908,40 @@ describe("createUpload integration", () => {
     );
 
     expect(err).toBeUndefined();
+  });
+
+  it("populates err.field with the unexpected field name on LIMIT_UNEXPECTED_FILE and includes it in the error message", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const body = Buffer.concat([
+      Buffer.from(`--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="photo"; filename="pic.jpg"\r\n` +
+          `Content-Type: image/jpeg\r\n\r\n`,
+      ),
+      Buffer.from("fakeimagecontent"),
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.single("avatar") as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_UNEXPECTED_FILE");
+    expect((err as multer.MulterError).field).toBe("photo");
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Unexpected file field 'photo' in the request.",
+    });
   });
 });
