@@ -98,8 +98,8 @@ const MULTER_ERROR_RESPONSES: Record<
     message: "Too many form fields in the request.",
   },
   LIMIT_PART_COUNT: {
-    status: 422,
-    message: "Too many parts in the multipart request.",
+    status: 400,
+    message: `Too many parts in the multipart request (limit: ${UPLOAD_MAX_PARTS}).`,
   },
   LIMIT_FIELD_VALUE: { status: 413, message: "Form field value is too large." },
   LIMIT_FIELD_KEY: {

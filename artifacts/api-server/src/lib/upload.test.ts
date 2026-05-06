@@ -85,6 +85,16 @@ describe("handleUploadError", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("maps LIMIT_PART_COUNT to 400 with the configured limit in the message", () => {
+    handleUploadError(multerError("LIMIT_PART_COUNT"), makeReq(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many parts in the multipart request (limit: 30).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("maps LIMIT_UNEXPECTED_FILE to 422", () => {
     handleUploadError(
       multerError("LIMIT_UNEXPECTED_FILE"),
