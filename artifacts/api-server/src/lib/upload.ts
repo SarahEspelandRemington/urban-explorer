@@ -65,7 +65,7 @@
  */
 
 import multer from "multer";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction, RequestHandler } from "express";
 import {
   UPLOAD_MAX_FILE_SIZE,
   UPLOAD_MAX_FILES,
@@ -76,54 +76,110 @@ import {
 } from "../config";
 
 // ---------------------------------------------------------------------------
+// Active-limits annotation
+// ---------------------------------------------------------------------------
+
+/**
+ * Shape of the active upload limits attached to a request by the middleware
+ * created by {@link createUpload}. `handleUploadError` reads these values to
+ * produce accurate error messages even when per-endpoint overrides differ from
+ * the global config defaults.
+ */
+interface ActiveUploadLimits {
+  files: number;
+  fields: number;
+  parts: number;
+}
+
+/**
+ * Extension of Express `Request` with the optional active-limits annotation
+ * attached by the wrappers returned from {@link createUpload}.
+ */
+interface RequestWithUploadLimits extends Request {
+  _uploadLimits?: ActiveUploadLimits;
+}
+
+// ---------------------------------------------------------------------------
 // Shared multer-error handler
 // ---------------------------------------------------------------------------
+
+/**
+ * HTTP status code for each multer error code.
+ */
+const MULTER_ERROR_STATUS: Record<string, number> = {
+  LIMIT_FILE_SIZE: 413,
+  LIMIT_FILE_COUNT: 422,
+  LIMIT_FIELD_COUNT: 422,
+  LIMIT_PART_COUNT: 400,
+  LIMIT_FIELD_VALUE: 413,
+  LIMIT_FIELD_KEY: 400,
+  LIMIT_UNEXPECTED_FILE: 422,
+};
+
+/**
+ * Build the user-facing error message for a multer error code.
+ *
+ * For limit-count codes (`LIMIT_FILE_COUNT`, `LIMIT_FIELD_COUNT`,
+ * `LIMIT_PART_COUNT`) the active limit value is embedded in the message.
+ * `activeLimits` is provided by the middleware wrapper created in
+ * {@link createUpload} and reflects per-endpoint overrides. When it is absent
+ * (e.g. an upload instance created outside this module), the global config
+ * values are used as a fallback.
+ */
+function buildMulterErrorMessage(
+  code: string,
+  activeLimits: ActiveUploadLimits | undefined,
+): string {
+  switch (code) {
+    case "LIMIT_FILE_SIZE":
+      return "Uploaded file is too large.";
+    case "LIMIT_FILE_COUNT": {
+      const limit = activeLimits?.files ?? UPLOAD_MAX_FILES;
+      return `Too many files uploaded (limit: ${limit}).`;
+    }
+    case "LIMIT_FIELD_COUNT": {
+      const limit = activeLimits?.fields ?? UPLOAD_MAX_FIELDS;
+      return `Too many form fields in the request (limit: ${limit}).`;
+    }
+    case "LIMIT_PART_COUNT": {
+      const limit = activeLimits?.parts ?? UPLOAD_MAX_PARTS;
+      return `Too many parts in the multipart request (limit: ${limit}).`;
+    }
+    case "LIMIT_FIELD_VALUE":
+      return "Form field value is too large.";
+    case "LIMIT_FIELD_KEY":
+      return "Form field name is too long.";
+    case "LIMIT_UNEXPECTED_FILE":
+      return "Unexpected file field in the request.";
+    default:
+      return "Upload error.";
+  }
+}
 
 /**
  * Maps multer `MulterError` codes to HTTP status codes and user-facing
  * messages. All size/count violations → 413; malformed field names or
  * unexpected file fields → 400.
  *
+ * For `LIMIT_FILE_COUNT`, `LIMIT_FIELD_COUNT`, and `LIMIT_PART_COUNT` the
+ * active per-endpoint limit is embedded in the message. The value is read from
+ * `req._uploadLimits` (attached by the wrappers returned by
+ * {@link createUpload}) and falls back to the global config when not present.
+ *
  * This middleware is mounted in `app.ts` so that every upload route benefits
  * automatically. Mount it before the global catch-all error handler.
  */
-const MULTER_ERROR_RESPONSES: Record<
-  string,
-  { status: number; message: string }
-> = {
-  LIMIT_FILE_SIZE: { status: 413, message: "Uploaded file is too large." },
-  LIMIT_FILE_COUNT: { status: 422, message: "Too many files uploaded." },
-  LIMIT_FIELD_COUNT: {
-    status: 422,
-    message: "Too many form fields in the request.",
-  },
-  LIMIT_PART_COUNT: {
-    status: 400,
-    message: `Too many parts in the multipart request (limit: ${UPLOAD_MAX_PARTS}).`,
-  },
-  LIMIT_FIELD_VALUE: { status: 413, message: "Form field value is too large." },
-  LIMIT_FIELD_KEY: {
-    status: 400,
-    message: "Form field name is too long.",
-  },
-  LIMIT_UNEXPECTED_FILE: {
-    status: 422,
-    message: "Unexpected file field in the request.",
-  },
-};
-
 export function handleUploadError(
   err: unknown,
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): void {
   if (err instanceof multer.MulterError) {
-    const mapped = MULTER_ERROR_RESPONSES[err.code] ?? {
-      status: 400,
-      message: "Upload error.",
-    };
-    res.status(mapped.status).json({ error: mapped.message });
+    const status = MULTER_ERROR_STATUS[err.code] ?? 400;
+    const activeLimits = (req as RequestWithUploadLimits)._uploadLimits;
+    const message = buildMulterErrorMessage(err.code, activeLimits);
+    res.status(status).json({ error: message });
     return;
   }
   next(err);
@@ -176,6 +232,41 @@ export interface CreateUploadOptions {
 }
 
 /**
+ * Wrap a single multer `RequestHandler` so that it attaches the active upload
+ * limits to `req._uploadLimits` before delegating to the real handler.
+ * `handleUploadError` reads these limits to build accurate error messages.
+ */
+function withActiveLimits(
+  handler: RequestHandler,
+  limits: ActiveUploadLimits,
+): RequestHandler {
+  return (req, res, next) => {
+    (req as RequestWithUploadLimits)._uploadLimits = limits;
+    handler(req, res, next);
+  };
+}
+
+/**
+ * Wrap an entire multer instance so that every middleware method it exposes
+ * (`single`, `array`, `fields`, `none`, `any`) annotates the request with the
+ * active upload limits before processing. This makes `handleUploadError` able
+ * to reflect per-endpoint overrides in its error messages.
+ */
+function wrapWithActiveLimits(
+  instance: multer.Multer,
+  limits: ActiveUploadLimits,
+): multer.Multer {
+  return {
+    single: (fieldname) => withActiveLimits(instance.single(fieldname), limits),
+    array: (fieldname, maxCount) =>
+      withActiveLimits(instance.array(fieldname, maxCount), limits),
+    fields: (fields) => withActiveLimits(instance.fields(fields), limits),
+    none: () => withActiveLimits(instance.none(), limits),
+    any: () => withActiveLimits(instance.any(), limits),
+  } as multer.Multer;
+}
+
+/**
  * Create a new multer instance with the given storage engine and the
  * UPLOAD_MAX_FILE_SIZE cap applied. Use this when you need disk storage or a
  * custom per-endpoint file-size, file-count, or field-count limit.
@@ -183,6 +274,11 @@ export interface CreateUploadOptions {
  * Per-call overrides in `options` take precedence over the corresponding
  * global config values (`UPLOAD_MAX_FILE_SIZE`, `UPLOAD_MAX_FILES`,
  * `UPLOAD_MAX_FIELDS`).
+ *
+ * The returned instance annotates every request it processes with the resolved
+ * active limits so that `handleUploadError` can embed the exact ceiling in its
+ * error messages, even when per-endpoint overrides differ from the global
+ * defaults.
  *
  * @param storage - Multer storage engine (defaults to memoryStorage).
  * @param options - Optional per-call limit overrides.
@@ -198,7 +294,8 @@ export function createUpload(
   const fieldSize = options?.fieldSizeOverride ?? UPLOAD_FIELD_SIZE;
   const fieldNameSize =
     options?.fieldNameSizeOverride ?? UPLOAD_FIELD_NAME_SIZE;
-  return multer({
+
+  const instance = multer({
     storage,
     limits: {
       fileSize,
@@ -209,6 +306,8 @@ export function createUpload(
       fieldNameSize,
     },
   });
+
+  return wrapWithActiveLimits(instance, { files, fields, parts });
 }
 
 // ---------------------------------------------------------------------------

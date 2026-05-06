@@ -34,8 +34,16 @@ function makeRes() {
   return res;
 }
 
-function makeReq() {
-  return {} as Request;
+function makeReq(uploadLimits?: {
+  files: number;
+  fields: number;
+  parts: number;
+}) {
+  const req = {} as Request;
+  if (uploadLimits !== undefined) {
+    (req as Request & { _uploadLimits?: unknown })._uploadLimits = uploadLimits;
+  }
+  return req;
 }
 
 function makeNext() {
@@ -65,22 +73,52 @@ describe("handleUploadError", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("maps LIMIT_FILE_COUNT to 422", () => {
+  it("maps LIMIT_FILE_COUNT to 422 with the configured limit in the message", () => {
     handleUploadError(multerError("LIMIT_FILE_COUNT"), makeReq(), res, next);
 
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Too many files uploaded.",
+      error: "Too many files uploaded (limit: 10).",
     });
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("maps LIMIT_FIELD_COUNT to 422", () => {
+  it("maps LIMIT_FILE_COUNT using _uploadLimits files override when present", () => {
+    handleUploadError(
+      multerError("LIMIT_FILE_COUNT"),
+      makeReq({ files: 3, fields: 20, parts: 30 }),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many files uploaded (limit: 3).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("maps LIMIT_FIELD_COUNT to 422 with the configured limit in the message", () => {
     handleUploadError(multerError("LIMIT_FIELD_COUNT"), makeReq(), res, next);
 
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Too many form fields in the request.",
+      error: "Too many form fields in the request (limit: 20).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("maps LIMIT_FIELD_COUNT using _uploadLimits fields override when present", () => {
+    handleUploadError(
+      multerError("LIMIT_FIELD_COUNT"),
+      makeReq({ files: 10, fields: 5, parts: 30 }),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many form fields in the request (limit: 5).",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -91,6 +129,21 @@ describe("handleUploadError", () => {
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       error: "Too many parts in the multipart request (limit: 30).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("maps LIMIT_PART_COUNT using _uploadLimits parts override when present", () => {
+    handleUploadError(
+      multerError("LIMIT_PART_COUNT"),
+      makeReq({ files: 10, fields: 20, parts: 7 }),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many parts in the multipart request (limit: 7).",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -223,9 +276,10 @@ function makeMultipartReq(body: Buffer): IncomingMessage {
 }
 
 /**
- * Invoke a multer middleware function and resolve with whatever error (if any)
- * it passes to `next`. Resolves with `undefined` when multer calls `next()`
- * without an argument (i.e. success).
+ * Invoke a multer middleware function and resolve with whatever the middleware
+ * passed to `next` (if anything) plus the annotated request object.
+ * Resolves with `err: undefined` when multer calls `next()` without an
+ * argument (i.e. success).
  */
 function runMiddleware(
   middleware: (
@@ -234,9 +288,9 @@ function runMiddleware(
     next: (err?: unknown) => void,
   ) => void,
   req: IncomingMessage,
-): Promise<unknown> {
+): Promise<{ err: unknown; req: IncomingMessage }> {
   return new Promise((resolve) => {
-    middleware(req, {}, (err?: unknown) => resolve(err));
+    middleware(req, {}, (err?: unknown) => resolve({ err, req }));
   });
 }
 
@@ -251,7 +305,7 @@ describe("createUpload integration", () => {
     const body = buildMultipartBody("oversized.bin", oversizedContent);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -270,7 +324,7 @@ describe("createUpload integration", () => {
     const body = buildMultipartBody("small.bin", smallContent);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -285,7 +339,7 @@ describe("createUpload integration", () => {
     const body = buildMultipartBody("oversized.bin", oversizedContent);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -301,7 +355,7 @@ describe("createUpload integration", () => {
     const body = buildMultipartBody("ok.bin", okContent);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -332,13 +386,55 @@ describe("createUpload integration", () => {
 
     const req = makeMultipartReq(combinedBody);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.array("files", 2) as Parameters<typeof runMiddleware>[0],
       req,
     );
 
     expect(err).toBeInstanceOf(multer.MulterError);
     expect((err as multer.MulterError).code).toBe("LIMIT_FILE_COUNT");
+  });
+
+  it("shows the maxFiles override value in the LIMIT_FILE_COUNT error message", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 1,
+    });
+
+    const combinedBody = Buffer.concat([
+      Buffer.from(`--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="files"; filename="a.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("hello"),
+      Buffer.from(`\r\n--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="files"; filename="b.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("world"),
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+
+    const req = makeMultipartReq(combinedBody);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.array("files", 2) as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many files uploaded (limit: 1).",
+    });
   });
 
   it("rejects when non-file field count exceeds maxFields override with LIMIT_FIELD_COUNT", async () => {
@@ -352,13 +448,43 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
 
     expect(err).toBeInstanceOf(multer.MulterError);
     expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_COUNT");
+  });
+
+  it("shows the maxFields override value in the LIMIT_FIELD_COUNT error message", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 1,
+    });
+
+    const body = buildMultipartBodyWithFields([
+      { name: "alpha", value: "first" },
+      { name: "beta", value: "second" },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many form fields in the request (limit: 1).",
+    });
   });
 
   it("rejects a field value that exceeds fieldSizeOverride with LIMIT_FIELD_VALUE", async () => {
@@ -373,7 +499,7 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -394,7 +520,7 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -412,7 +538,7 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -428,7 +554,7 @@ describe("createUpload integration", () => {
     const body = buildMultipartBodyWithFields([{ name: okName, value: "ok" }]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -445,7 +571,7 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -463,7 +589,7 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -485,7 +611,7 @@ describe("createUpload integration", () => {
     const body = buildMultipartBodyWithFields(fields);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -508,7 +634,7 @@ describe("createUpload integration", () => {
     const body = buildMultipartBodyWithFields(fields);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -528,7 +654,7 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
@@ -548,7 +674,7 @@ describe("createUpload integration", () => {
     ]);
     const req = makeMultipartReq(body);
 
-    const err = await runMiddleware(
+    const { err } = await runMiddleware(
       uploadInstance.none() as Parameters<typeof runMiddleware>[0],
       req,
     );
