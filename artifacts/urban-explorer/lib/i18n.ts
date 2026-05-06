@@ -206,7 +206,9 @@ export interface Strings {
     investigate: string;
     hint: string;
     notFoundError: string;
+    notFoundErrorTip: string;
     busyError: string;
+    busyErrorTip: string;
     genericError: string;
     originallyPrefix: string;
     sectionOriginally: string;
@@ -490,7 +492,10 @@ const en: Strings = {
     hint: "Best for older or non-landmark buildings you've noticed in person — the AI will reason from the architecture and neighborhood when records are sparse.",
     notFoundError:
       "Couldn't find that address. Try including a city or zip (e.g., '538 W 38th St, New York, NY').",
+    notFoundErrorTip:
+      "Try a street address or neighbourhood name, and include the city or zip code.",
     busyError: "We're a bit busy — give it a moment and try again.",
+    busyErrorTip: "Try again in a moment.",
     genericError: "Something went wrong. Try again in a moment.",
     originallyPrefix: "Originally:",
     sectionOriginally: "Originally",
@@ -782,8 +787,11 @@ const es: Strings = {
     hint: "Ideal para edificios antiguos o no famosos que hayas visto en persona — la IA razonará a partir de la arquitectura y el barrio cuando los registros sean escasos.",
     notFoundError:
       "No encontramos esa dirección. Intenta incluir una ciudad o código postal.",
+    notFoundErrorTip:
+      "Prueba con una dirección de calle o nombre de barrio, e incluye la ciudad o el código postal.",
     busyError:
       "Estamos un poco ocupados — espera un momento e inténtalo de nuevo.",
+    busyErrorTip: "Vuelve a intentarlo en un momento.",
     genericError: "Algo salió mal. Inténtalo de nuevo en un momento.",
     originallyPrefix: "Originalmente:",
     sectionOriginally: "Originalmente",
@@ -1076,7 +1084,10 @@ const fr: Strings = {
     hint: "Idéal pour les bâtiments anciens ou non emblématiques que vous avez remarqués — l'IA raisonne à partir de l'architecture et du quartier quand les archives sont rares.",
     notFoundError:
       "Adresse introuvable. Essayez d'inclure une ville ou un code postal.",
+    notFoundErrorTip:
+      "Essayez une adresse de rue ou un nom de quartier, avec la ville ou le code postal.",
     busyError: "Nous sommes occupés — patientez un instant et réessayez.",
+    busyErrorTip: "Réessayez dans un instant.",
     genericError: "Une erreur est survenue. Réessayez dans un instant.",
     originallyPrefix: "À l'origine :",
     sectionOriginally: "À l'origine",
@@ -1367,7 +1378,10 @@ const de: Strings = {
     hint: "Am besten für ältere oder unbekannte Gebäude, die du gesehen hast — die KI schließt aus Architektur und Umgebung, wenn Quellen knapp sind.",
     notFoundError:
       "Adresse nicht gefunden. Versuche es mit Stadt oder Postleitzahl.",
+    notFoundErrorTip:
+      "Versuche eine Straßenadresse oder einen Stadtteilnamen, ggf. mit Stadt oder Postleitzahl.",
     busyError: "Wir sind etwas beschäftigt — kurz warten und erneut versuchen.",
+    busyErrorTip: "In einem Moment erneut versuchen.",
     genericError: "Etwas ist schiefgelaufen. In einem Moment erneut versuchen.",
     originallyPrefix: "Ursprünglich:",
     sectionOriginally: "Ursprünglich",
@@ -1657,7 +1671,10 @@ const it: Strings = {
     hint: "Ideale per edifici vecchi o non famosi che hai notato — l'IA ragiona sull'architettura e il quartiere quando le fonti sono scarse.",
     notFoundError:
       "Indirizzo non trovato. Prova a includere città o codice postale.",
+    notFoundErrorTip:
+      "Prova con un indirizzo di via o il nome del quartiere, includendo città o CAP.",
     busyError: "Siamo un po' impegnati — aspetta e riprova.",
+    busyErrorTip: "Riprova tra poco.",
     genericError: "Qualcosa è andato storto. Riprova tra poco.",
     originallyPrefix: "Originariamente:",
     sectionOriginally: "Originariamente",
@@ -1949,8 +1966,11 @@ const pt: Strings = {
     investigate: "Investigar",
     hint: "Ideal para prédios antigos ou não famosos que você notou — a IA raciocina pela arquitetura e o bairro quando faltam registros.",
     notFoundError: "Endereço não encontrado. Tente incluir cidade ou CEP.",
+    notFoundErrorTip:
+      "Tente um endereço de rua ou nome de bairro, incluindo a cidade ou o CEP.",
     busyError:
       "Estamos um pouco ocupados — aguarde um momento e tente de novo.",
+    busyErrorTip: "Tente de novo em instantes.",
     genericError: "Algo deu errado. Tente de novo em instantes.",
     originallyPrefix: "Originalmente:",
     sectionOriginally: "Originalmente",
@@ -2238,7 +2258,10 @@ const nl: Strings = {
     investigate: "Onderzoek",
     hint: "Ideaal voor oudere of onbekende gebouwen die je hebt opgemerkt — de AI redeneert vanuit architectuur en buurt als bronnen schaars zijn.",
     notFoundError: "Adres niet gevonden. Voeg een stad of postcode toe.",
+    notFoundErrorTip:
+      "Probeer een straatadres of wijknaam, inclusief stad of postcode.",
     busyError: "Het is even druk — wacht een momentje en probeer opnieuw.",
+    busyErrorTip: "Probeer het zo opnieuw.",
     genericError: "Er ging iets mis. Probeer het zo opnieuw.",
     originallyPrefix: "Oorspronkelijk:",
     sectionOriginally: "Oorspronkelijk",
@@ -2526,7 +2549,10 @@ const ja: Strings = {
     hint: "実際に見かけた古い建物や知られていない建物に最適 — 記録が少ない時は、AIが建築や周辺から推測します。",
     notFoundError:
       "その住所が見つかりません。市区町村や郵便番号を含めてみてください。",
+    notFoundErrorTip:
+      "番地や地区名を試し、市区町村や郵便番号も一緒に入力してみてください。",
     busyError: "少し混み合っています — 少し待ってから再試行してください。",
+    busyErrorTip: "しばらくしてから再試行してください。",
     genericError: "問題が発生しました。少ししてからお試しください。",
     originallyPrefix: "もともと：",
     sectionOriginally: "もともと",
@@ -2806,7 +2832,10 @@ const ko: Strings = {
     investigate: "조사하기",
     hint: "실제로 본 오래되거나 잘 알려지지 않은 건물에 가장 적합해요 — 자료가 부족할 때 AI가 건축과 동네를 통해 추론합니다.",
     notFoundError: "주소를 찾지 못했어요. 도시나 우편번호를 포함해 보세요.",
+    notFoundErrorTip:
+      "도로명 주소나 동네 이름을 도시 또는 우편번호와 함께 입력해 보세요.",
     busyError: "조금 바빠요 — 잠시 후 다시 시도해 주세요.",
+    busyErrorTip: "잠시 후 다시 시도해 주세요.",
     genericError: "문제가 발생했어요. 잠시 후 다시 시도해 주세요.",
     originallyPrefix: "원래:",
     sectionOriginally: "원래",
@@ -3080,7 +3109,9 @@ const zh: Strings = {
     investigate: "开始调查",
     hint: "最适合你亲眼见过的老建筑或非地标 — 资料稀缺时，AI 会从建筑风格和街区背景推断。",
     notFoundError: "没找到该地址。请尝试加上城市或邮编。",
+    notFoundErrorTip: "试试街道地址或社区名称，并附上城市或邮政编码。",
     busyError: "我们有点忙 — 请稍候再试。",
+    busyErrorTip: "稍候片刻再试。",
     genericError: "出了点问题，请稍后再试。",
     originallyPrefix: "最初：",
     sectionOriginally: "最初",

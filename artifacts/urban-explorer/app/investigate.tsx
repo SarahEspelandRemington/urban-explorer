@@ -178,6 +178,17 @@ export default function InvestigateScreen() {
     return t.investigate.genericError;
   }, [error, t]);
 
+  const errorTip = useMemo(() => {
+    if (!error) return null;
+    if (error.status === 404) {
+      return t.investigate.notFoundErrorTip;
+    }
+    if (error.status === 429 || error.status === 503) {
+      return t.investigate.busyErrorTip;
+    }
+    return null;
+  }, [error, t]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -360,6 +371,13 @@ export default function InvestigateScreen() {
                 {errorMessage}
               </Text>
             </Animated.View>
+            {errorTip && (
+              <Text
+                style={[styles.errorTip, { color: colors.mutedForeground }]}
+              >
+                {errorTip}
+              </Text>
+            )}
             {!showRefinementInput && (
               <Animated.View
                 entering={
@@ -703,6 +721,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     lineHeight: 20,
+  },
+  errorTip: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 18,
+    marginTop: 4,
+    paddingHorizontal: 2,
   },
   loadingContainer: {
     paddingVertical: 36,
