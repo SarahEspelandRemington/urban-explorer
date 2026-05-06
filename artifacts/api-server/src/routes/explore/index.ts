@@ -1258,7 +1258,12 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   if (!isEmpty) {
     (async () => {
       try {
-        await verifyPlaceCoordinates(data.places, latitude, longitude, searchRadius);
+        await verifyPlaceCoordinates(
+          data.places,
+          latitude,
+          longitude,
+          searchRadius,
+        );
         // Re-filter: a corrected coordinate might have moved a place outside radius.
         const maxDist = searchRadius * 1.1;
         data.places = data.places.filter(
@@ -1765,7 +1770,8 @@ router.post("/explore/place-detail", async (req, res) => {
     } catch {
       if (!res.headersSent && res.socket?.writable)
         res.status(503).json({
-          error: "Place detail service temporarily unavailable. Please try again.",
+          error:
+            "Place detail service temporarily unavailable. Please try again.",
         });
     }
     return;
@@ -1848,8 +1854,7 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
       const GENERIC_RE =
         /^(local lore holds that |community memory has it that |neighborhood accounts suggest that ).{0,120}$/i;
       const hasAnchor = (s: string) =>
-        /\b(18|19|20)\d{2}\b/.test(s) ||
-        /\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(s);
+        /\b(18|19|20)\d{2}\b/.test(s) || /\b[A-Z][a-z]+ [A-Z][a-z]+\b/.test(s);
       data.funFacts = data.funFacts.filter((f: unknown) => {
         if (typeof f !== "string") return false;
         if (COORD_RE.test(f)) return false;
@@ -2207,10 +2212,12 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         narrationText = await existingNarrationFlight;
       } catch (err: any) {
         if (abortController.signal.aborted) return;
-        const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+        const status =
+          err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
         if (!res.headersSent)
           res.status(status).json({
-            error: "Narration service temporarily unavailable. Please try again.",
+            error:
+              "Narration service temporarily unavailable. Please try again.",
           });
         return;
       }
@@ -2266,10 +2273,12 @@ How to write for speech:
             res.status(500).json({ error: "Failed to generate narration" });
           return;
         }
-        const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+        const status =
+          err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
         if (!res.headersSent)
           res.status(status).json({
-            error: "Narration service temporarily unavailable. Please try again.",
+            error:
+              "Narration service temporarily unavailable. Please try again.",
           });
         return;
       }
@@ -2402,7 +2411,8 @@ How to write for speech:
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
     res.status(status).json({
-      error: "Deep narration service temporarily unavailable. Please try again.",
+      error:
+        "Deep narration service temporarily unavailable. Please try again.",
     });
     return;
   }
@@ -2505,9 +2515,9 @@ router.post("/explore/route", async (req, res) => {
     // service itself is unavailable → 502.
     const anyReachable = providerResults.some((r) => r !== null);
     if (anyReachable) {
-      res
-        .status(404)
-        .json({ error: "No walking route could be found between those points" });
+      res.status(404).json({
+        error: "No walking route could be found between those points",
+      });
     } else {
       res.status(502).json({ error: "Routing service unavailable" });
     }

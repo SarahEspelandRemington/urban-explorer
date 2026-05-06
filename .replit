@@ -40,6 +40,10 @@ args = "conflict-markers"
 task = "workflow.run"
 args = "spec-sync"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "format"
+
 [[workflows.workflow]]
 name = "privacy-tests"
 author = "agent"
@@ -103,6 +107,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm run spec-sync"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "format"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run format:check"
 
 [workflows.workflow.metadata]
 isValidation = true

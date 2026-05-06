@@ -148,9 +148,7 @@ export default function ExploreScreen() {
 
   const closestPrefill = useMemo(() => {
     if (places.length === 0) return undefined;
-    const withDist = places.filter(
-      (p) => typeof p.distanceMeters === "number",
-    );
+    const withDist = places.filter((p) => typeof p.distanceMeters === "number");
     const closest =
       withDist.length > 0
         ? withDist.reduce((a, b) =>
@@ -894,7 +892,6 @@ export default function ExploreScreen() {
           })}
         </View>
       )}
-
 
       {showDriftBanner && (
         <Animated.View

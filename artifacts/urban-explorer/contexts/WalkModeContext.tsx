@@ -851,7 +851,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // narration finishes and the movement gate clears.
       prefetchNextRef.current?.();
     },
-    [enqueueNarration, fetchNarrationPayload, getStalePrefetchPool, handlePrefetchEvent],
+    [
+      enqueueNarration,
+      fetchNarrationPayload,
+      getStalePrefetchPool,
+      handlePrefetchEvent,
+    ],
   );
 
   /**

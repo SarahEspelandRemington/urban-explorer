@@ -109,11 +109,7 @@ for (const key of Object.keys(manifest.entries).sort()) {
 }
 manifest.entries = sortedEntries;
 
-writeFileSync(
-  MANIFEST_FILE,
-  JSON.stringify(manifest, null, 2) + "\n",
-  "utf8",
-);
+writeFileSync(MANIFEST_FILE, JSON.stringify(manifest, null, 2) + "\n", "utf8");
 
 console.log(
   `[update-prompt-manifest] Done. ${added} added, ${updated} updated, ${skipped} unchanged` +

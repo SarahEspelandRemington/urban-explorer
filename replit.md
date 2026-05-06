@@ -12,6 +12,7 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `pnpm --filter @workspace/api-server run dev`: Run API server locally.
 
 **Required Environment Variables:**
+
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` (provisioned by Replit OpenAI integration)
 - `AI_INTEGRATIONS_OPENAI_API_KEY` (provisioned by Replit OpenAI integration)
 - `SESSION_SECRET`: A long random string (e.g., `openssl rand -hex 32`).
@@ -70,7 +71,7 @@ A mobile app that surfaces AI-generated historical and factual information about
 
 - **OpenAI Integration**: The API server requires the Replit OpenAI integration to be connected to provision necessary environment variables.
 - **Secrets**: `SESSION_SECRET` must be manually added to Replit Secrets. Sentry source map upload secrets are EAS build-time secrets, not Replit secrets.
-- **Database**: Database contents are *not* exported. `db push` recreates the schema but wipes data.
+- **Database**: Database contents are _not_ exported. `db push` recreates the schema but wipes data.
 - **PII Scrubbing**: Be mindful of PII when interacting with Sentry calls, as sensitive data is automatically scrubbed. Use the custom ESLint rule `no-pii-in-sentry.mjs` to detect potential leaks.
 - **Sentry Anomaly Detection**: Requires ~7 days of history to build a reliable baseline. Use `PREFETCH_ALERT_DETECTION_TYPE=static` or `AUDIO_FALLBACK_ALERT_DETECTION_TYPE=static` for setup scripts if history is insufficient or Sentry plan doesn't support it.
 - **Legacy Sentry Alerts**: If migrating from older Sentry configurations, ensure legacy combined audio fallback alerts are manually disabled/deleted to avoid double-paging.
