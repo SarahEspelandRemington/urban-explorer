@@ -321,6 +321,7 @@ async function warmCachesFromDb(): Promise<void> {
 
     let osmLoaded = 0;
     let llmLoaded = 0;
+    let audioLoaded = 0;
 
     for (const row of rows) {
       const remainingMs = row.expiresAt.getTime() - Date.now();
@@ -342,11 +343,25 @@ async function warmCachesFromDb(): Promise<void> {
           });
           llmLoaded++;
         }
+      } else if (row.namespace === "audio") {
+        if (audioCache.size < AUDIO_CACHE_MAX_SIZE) {
+          try {
+            const base64 = (row.data as { bytes: string }).bytes;
+            const bytes = Buffer.from(base64, "base64");
+            audioCache.set(row.cacheKey, {
+              bytes,
+              timestamp: Date.now() - (AUDIO_CACHE_TTL - remainingMs),
+            });
+            audioLoaded++;
+          } catch {
+            // Skip malformed audio cache entries rather than crashing warmup.
+          }
+        }
       }
     }
 
     logger.info(
-      { osmLoaded, llmLoaded },
+      { osmLoaded, llmLoaded, audioLoaded },
       "Warmed in-memory caches from database",
     );
   } catch (err) {
@@ -1640,7 +1655,7 @@ router.post("/explore/geocode", async (req, res) => {
 
   const { query } = parsed.data;
 
-  const geocodeCacheKey = `geocode:v3:${query.trim().toLowerCase()}`;
+  const geocodeCacheKey = `geocode:v4:${query.trim().toLowerCase()}`;
   const cachedGeocode = getLLMCache(geocodeCacheKey);
   if (cachedGeocode) {
     res.json(cachedGeocode);
@@ -1727,7 +1742,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     return;
   }
 
-  const cacheKey = `revgeo:v3:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cacheKey = `revgeo:v7:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
   if (cached) {
     res.json(cached);
@@ -1797,7 +1812,7 @@ router.post("/explore/investigate-address", async (req, res) => {
     //
     // Guard with inFlightGeocode so concurrent requests for the same address
     // share a single pending Nominatim call instead of each issuing their own.
-    const geocodeCacheKey = `geocode:v3:${trimmedAddress.toLowerCase()}`;
+    const geocodeCacheKey = `geocode:v4:${trimmedAddress.toLowerCase()}`;
     let results: NominatimResult[];
     try {
       const cachedGeocode = getLLMCache<NominatimResult[]>(geocodeCacheKey);
@@ -2365,7 +2380,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact } = parsed.data;
 
-  const narrationCacheKey = `narration:v2:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v3:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2455,14 +2470,49 @@ interface AudioCacheEntry {
 const audioCache = new Map<string, AudioCacheEntry>();
 const AUDIO_CACHE_TTL = 30 * 60 * 1000; // 30 min — TTS is expensive, cache longer
 const AUDIO_CACHE_MAX_SIZE = 50;
-function getAudioCache(key: string): Buffer | null {
+async function getAudioCache(key: string): Promise<Buffer | null> {
   const entry = audioCache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.timestamp > AUDIO_CACHE_TTL) {
-    audioCache.delete(key);
-    return null;
+  if (entry) {
+    if (Date.now() - entry.timestamp > AUDIO_CACHE_TTL) {
+      audioCache.delete(key);
+      void deleteCacheEntry("audio", key);
+    } else {
+      return entry.bytes;
+    }
   }
-  return entry.bytes;
+  // In-memory miss — check DB for persisted audio bytes that survived a restart.
+  try {
+    const rows = await db
+      .select()
+      .from(apiCache)
+      .where(
+        and(
+          eq(apiCache.namespace, "audio"),
+          eq(apiCache.cacheKey, key),
+          gt(apiCache.expiresAt, new Date()),
+        ),
+      )
+      .limit(1);
+    if (rows.length > 0) {
+      const row = rows[0]!;
+      const base64 = (row.data as { bytes: string }).bytes;
+      const bytes = Buffer.from(base64, "base64");
+      const remainingMs = row.expiresAt.getTime() - Date.now();
+      // Re-warm the in-memory cache so subsequent requests are instant.
+      if (audioCache.size >= AUDIO_CACHE_MAX_SIZE) {
+        const oldest = audioCache.keys().next().value;
+        if (oldest) audioCache.delete(oldest);
+      }
+      audioCache.set(key, {
+        bytes,
+        timestamp: Date.now() - (AUDIO_CACHE_TTL - remainingMs),
+      });
+      return bytes;
+    }
+  } catch (err) {
+    logger.warn({ err, key }, "Failed to look up audio cache in DB");
+  }
+  return null;
 }
 function setAudioCache(key: string, bytes: Buffer): void {
   if (audioCache.size >= AUDIO_CACHE_MAX_SIZE) {
@@ -2470,6 +2520,13 @@ function setAudioCache(key: string, bytes: Buffer): void {
     if (oldest) audioCache.delete(oldest);
   }
   audioCache.set(key, { bytes, timestamp: Date.now() });
+  // Persist to DB so audio survives server restarts for the full TTL window.
+  void persistCacheEntry(
+    "audio",
+    key,
+    { bytes: bytes.toString("base64") },
+    AUDIO_CACHE_TTL,
+  );
 }
 
 // POST /explore/walk-narration-audio — returns natural-voice MP3 audio for a place.
@@ -2511,10 +2568,10 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v2:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v3:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
-  const cachedAudio = getAudioCache(audioCacheKey);
+  const cachedAudio = await getAudioCache(audioCacheKey);
   if (cachedAudio) {
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "private, max-age=900");
