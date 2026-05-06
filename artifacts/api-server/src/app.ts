@@ -110,6 +110,13 @@ for (const path of expensiveEndpoints) {
 app.use("/api", router);
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  if (
+    (err as NodeJS.ErrnoException & { type?: string }).type ===
+    "entity.too.large"
+  ) {
+    res.status(413).json({ error: "Request body too large" });
+    return;
+  }
   logger.error({ err }, "Unhandled error");
   res.status(500).json({ error: "Internal server error" });
 });
