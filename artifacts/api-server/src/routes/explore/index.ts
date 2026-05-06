@@ -2,8 +2,14 @@ import { Router } from "express";
 import { logger } from "../../lib/logger";
 import {
   AUDIO_DB_MAX_ENTRIES,
+  AUDIO_CACHE_MAX_SIZE,
+  AUDIO_CACHE_TTL_MS,
   BORING_BUILDING_TYPES_ENV,
   BORING_BUILDING_TYPES_FILE_ENV,
+  LLM_CACHE_MAX_SIZE,
+  LLM_CACHE_TTL_MS,
+  OSM_CACHE_TTL_MS,
+  OSM_SUGGESTIONS_CACHE_MAX_SIZE,
   WALK_FORWARD_BIAS_METERS,
   WALK_OFF_AXIS_PENALTY_DEG,
   WALK_OFF_AXIS_PENALTY_METERS,
@@ -134,7 +140,6 @@ const WALK_CONFIG: WalkConfig = {
 logger.info(WALK_CONFIG, "Walk Mode heading-bias config loaded");
 
 const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
-const OSM_CACHE_TTL = 5 * 60 * 1000;
 const OSM_CACHE_DISTANCE = 200;
 
 // Separate cache for nearby OSM places, keyed by a coarse coordinate bucket
@@ -149,7 +154,6 @@ const OSM_CACHE_DISTANCE = 200;
 // skipped entirely by checking this cache first.
 const osmSuggestionsCache = new Map<string, LLMCacheEntry<OSMPlace[]>>();
 const OSM_SUGGESTIONS_CACHE_TTL = 30 * 60 * 1000;
-const OSM_SUGGESTIONS_CACHE_MAX_SIZE = 500;
 
 function osmSuggestionsBucketKey(lat: number, lng: number): string {
   return `${lat.toFixed(3)},${lng.toFixed(3)}`;
@@ -193,8 +197,6 @@ interface LLMCacheEntry<T = any> {
 }
 
 const llmCache = new Map<string, LLMCacheEntry>();
-const LLM_CACHE_TTL = 15 * 60 * 1000;
-const LLM_CACHE_MAX_SIZE = 200;
 
 // In-flight deduplication: if two requests miss the same cache key simultaneously,
 // only one LLM/TTS call is made. The second caller awaits the first's promise and
@@ -225,7 +227,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["full", "v9"], // discover — full mode
   ["suggest", "v10"], // location suggestions
   ["geocode", "v3"], // geocode
-  ["revgeo", "v3"], // reverse geocode
+  ["revgeo", "v9"], // reverse geocode
   ["suggest404", "v5"], // address-not-found suggestions
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
@@ -238,7 +240,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
 function getLLMCache<T>(key: string): T | null {
   const entry = llmCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.timestamp > LLM_CACHE_TTL) {
+  if (Date.now() - entry.timestamp > LLM_CACHE_TTL_MS) {
     llmCache.delete(key);
     void deleteCacheEntry("llm", key);
     return null;
@@ -255,7 +257,7 @@ function setLLMCache(key: string, data: any): void {
     }
   }
   llmCache.set(key, { data, timestamp: Date.now() });
-  void persistCacheEntry("llm", key, data, LLM_CACHE_TTL);
+  void persistCacheEntry("llm", key, data, LLM_CACHE_TTL_MS);
 }
 
 async function deleteCacheEntry(namespace: string, key: string): Promise<void> {
@@ -321,7 +323,7 @@ async function warmCachesFromDb(): Promise<void> {
         if (llmCache.size < LLM_CACHE_MAX_SIZE) {
           llmCache.set(row.cacheKey, {
             data: row.data,
-            timestamp: Date.now() - (LLM_CACHE_TTL - remainingMs),
+            timestamp: Date.now() - (LLM_CACHE_TTL_MS - remainingMs),
           });
           llmLoaded++;
         }
@@ -332,7 +334,7 @@ async function warmCachesFromDb(): Promise<void> {
             const bytes = Buffer.from(base64, "base64");
             audioCache.set(row.cacheKey, {
               bytes,
-              timestamp: Date.now() - (AUDIO_CACHE_TTL - remainingMs),
+              timestamp: Date.now() - (AUDIO_CACHE_TTL_MS - remainingMs),
             });
             audioLoaded++;
           } catch {
@@ -431,7 +433,7 @@ function getOSMCacheKey(
 ): { key: string; places: OSMPlace[] } | null {
   const now = Date.now();
   for (const [key, entry] of osmCache) {
-    if (now - entry.timestamp > OSM_CACHE_TTL) {
+    if (now - entry.timestamp > OSM_CACHE_TTL_MS) {
       osmCache.delete(key);
       continue;
     }
@@ -1475,7 +1477,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     const SHORT_TTL_MS = 2 * 60 * 1000;
     llmCache.set(discoverCacheKey, {
       data,
-      timestamp: Date.now() - (LLM_CACHE_TTL - SHORT_TTL_MS),
+      timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
     });
   } else {
     setLLMCache(discoverCacheKey, data);
@@ -1749,7 +1751,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     return;
   }
 
-  const cacheKey = `revgeo:v8:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cacheKey = `revgeo:v9:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
   if (cached) {
     res.json(cached);
@@ -2475,8 +2477,6 @@ interface AudioCacheEntry {
   timestamp: number;
 }
 const audioCache = new Map<string, AudioCacheEntry>();
-const AUDIO_CACHE_TTL = 30 * 60 * 1000; // 30 min — TTS is expensive, cache longer
-const AUDIO_CACHE_MAX_SIZE = 50;
 // Maximum number of audio rows to keep in the DB. Each row is 30–200 KB of
 // base64-encoded MP3, so 100 rows ≈ 5–20 MB. Rows are ranked by expires_at
 // DESC (most-recently-written first) so the freshest entries are preserved.
@@ -2485,7 +2485,7 @@ const AUDIO_CACHE_MAX_SIZE = 50;
 async function getAudioCache(key: string): Promise<Buffer | null> {
   const entry = audioCache.get(key);
   if (entry) {
-    if (Date.now() - entry.timestamp > AUDIO_CACHE_TTL) {
+    if (Date.now() - entry.timestamp > AUDIO_CACHE_TTL_MS) {
       audioCache.delete(key);
       void deleteCacheEntry("audio", key);
     } else {
@@ -2517,7 +2517,7 @@ async function getAudioCache(key: string): Promise<Buffer | null> {
       }
       audioCache.set(key, {
         bytes,
-        timestamp: Date.now() - (AUDIO_CACHE_TTL - remainingMs),
+        timestamp: Date.now() - (AUDIO_CACHE_TTL_MS - remainingMs),
       });
       return bytes;
     }
@@ -2539,7 +2539,7 @@ function setAudioCache(key: string, bytes: Buffer): void {
     "audio",
     key,
     { bytes: bytes.toString("base64") },
-    AUDIO_CACHE_TTL,
+    AUDIO_CACHE_TTL_MS,
   ).then(() => evictExcessAudioDbEntries());
 }
 
@@ -3628,11 +3628,11 @@ setInterval(
     const now = Date.now();
 
     for (const [key, entry] of llmCache) {
-      if (now - entry.timestamp > LLM_CACHE_TTL) llmCache.delete(key);
+      if (now - entry.timestamp > LLM_CACHE_TTL_MS) llmCache.delete(key);
     }
 
     for (const [key, entry] of osmCache) {
-      if (now - entry.timestamp > OSM_CACHE_TTL) osmCache.delete(key);
+      if (now - entry.timestamp > OSM_CACHE_TTL_MS) osmCache.delete(key);
     }
 
     for (const [key, entry] of osmSuggestionsCache) {
@@ -3641,7 +3641,7 @@ setInterval(
     }
 
     for (const [key, entry] of audioCache) {
-      if (now - entry.timestamp > AUDIO_CACHE_TTL) audioCache.delete(key);
+      if (now - entry.timestamp > AUDIO_CACHE_TTL_MS) audioCache.delete(key);
     }
   },
   5 * 60 * 1000,

@@ -208,6 +208,100 @@ export const REQUEST_BODY_LIMIT = envVar(
 );
 
 // ---------------------------------------------------------------------------
+// In-memory cache TTLs and size caps
+// ---------------------------------------------------------------------------
+
+/**
+ * Time-to-live for the short proximity OSM cache (osmCache), in milliseconds.
+ * Entries are keyed by (lat,lng) and expire when a request hits the same area
+ * again after this duration.
+ *
+ * Env var : OSM_CACHE_TTL_MS
+ * Expects : positive integer (milliseconds)
+ * Default : 300000 (5 minutes)
+ */
+export const OSM_CACHE_TTL_MS = envVar(
+  "OSM_CACHE_TTL_MS",
+  z.coerce.number().int().positive(),
+  5 * 60 * 1000,
+);
+
+/**
+ * Time-to-live for LLM response entries in the in-memory LLM cache, in
+ * milliseconds. Longer values reduce OpenAI spend at the cost of serving
+ * slightly stale AI-generated descriptions.
+ *
+ * Env var : LLM_CACHE_TTL_MS
+ * Expects : positive integer (milliseconds)
+ * Default : 900000 (15 minutes)
+ */
+export const LLM_CACHE_TTL_MS = envVar(
+  "LLM_CACHE_TTL_MS",
+  z.coerce.number().int().positive(),
+  15 * 60 * 1000,
+);
+
+/**
+ * Time-to-live for in-memory TTS audio cache entries, in milliseconds.
+ * TTS synthesis is expensive; a longer TTL amortises the cost over more
+ * requests but increases memory usage proportionally.
+ *
+ * Env var : AUDIO_CACHE_TTL_MS
+ * Expects : positive integer (milliseconds)
+ * Default : 1800000 (30 minutes)
+ */
+export const AUDIO_CACHE_TTL_MS = envVar(
+  "AUDIO_CACHE_TTL_MS",
+  z.coerce.number().int().positive(),
+  30 * 60 * 1000,
+);
+
+/**
+ * Maximum number of entries kept in the in-memory LLM response cache.
+ * When the cap is reached, the oldest entry is evicted before inserting a new
+ * one. Each entry is a parsed JSON object (a few KB at most).
+ *
+ * Env var : LLM_CACHE_MAX_SIZE
+ * Expects : positive integer
+ * Default : 200
+ */
+export const LLM_CACHE_MAX_SIZE = envVar(
+  "LLM_CACHE_MAX_SIZE",
+  z.coerce.number().int().positive(),
+  200,
+);
+
+/**
+ * Maximum number of entries kept in the in-memory OSM suggestions cache
+ * (osmSuggestionsCache), keyed by a coarse coordinate bucket (~100 m grid).
+ *
+ * Env var : OSM_SUGGESTIONS_CACHE_MAX_SIZE
+ * Expects : positive integer
+ * Default : 500
+ */
+export const OSM_SUGGESTIONS_CACHE_MAX_SIZE = envVar(
+  "OSM_SUGGESTIONS_CACHE_MAX_SIZE",
+  z.coerce.number().int().positive(),
+  500,
+);
+
+/**
+ * Maximum number of entries kept in the in-memory TTS audio cache.
+ * Each entry holds a raw MP3 Buffer (roughly 30–200 KB), so the ceiling for
+ * memory consumed by this cache is approximately
+ * AUDIO_CACHE_MAX_SIZE × 200 KB.
+ *
+ * Env var : AUDIO_CACHE_MAX_SIZE
+ * Expects : positive integer
+ * Default : 50
+ */
+export const AUDIO_CACHE_MAX_SIZE = envVar(
+  "AUDIO_CACHE_MAX_SIZE",
+  z.coerce.number().int().positive(),
+  50,
+);
+
+// ---------------------------------------------------------------------------
 // Auth / OIDC
 // ---------------------------------------------------------------------------
 
