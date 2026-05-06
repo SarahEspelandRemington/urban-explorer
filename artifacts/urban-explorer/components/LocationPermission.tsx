@@ -146,7 +146,16 @@ export function LocationPermission({
         </Text>
 
         {showSearch ? (
-          <View style={styles.searchSection}>
+          <Animated.View
+            key="search-section"
+            style={styles.searchSection}
+            entering={
+              Platform.OS !== "web" ? FadeInDown.duration(220) : undefined
+            }
+            exiting={
+              Platform.OS !== "web" ? FadeOutUp.duration(180) : undefined
+            }
+          >
             <View style={styles.inputWrapper}>
               <View
                 style={[
@@ -344,9 +353,18 @@ export function LocationPermission({
                 </Text>
               </Pressable>
             )}
-          </View>
+          </Animated.View>
         ) : (
-          <View style={styles.buttonsSection}>
+          <Animated.View
+            key="buttons-section"
+            style={styles.buttonsSection}
+            entering={
+              Platform.OS !== "web" ? FadeInDown.duration(220) : undefined
+            }
+            exiting={
+              Platform.OS !== "web" ? FadeOutUp.duration(180) : undefined
+            }
+          >
             {denied ? (
               Platform.OS !== "web" ? (
                 <Pressable
@@ -571,7 +589,7 @@ export function LocationPermission({
                 </Pressable>
               </>
             )}
-          </View>
+          </Animated.View>
         )}
       </Animated.View>
     </KeyboardAvoidingView>
