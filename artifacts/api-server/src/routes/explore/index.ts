@@ -1639,23 +1639,28 @@ router.post("/explore/investigate-address", async (req, res) => {
     if (results.length === 0) {
       // Attempt a broader fuzzy search to surface 1-2 nearby-landmark suggestions
       // so the user has concrete alternatives to try instead of a bare error.
-      let suggestions: string[] = [];
-      try {
-        // Strip leading house number to broaden the query (e.g. "123 Main St, NYC" → "Main St, NYC").
-        const strippedQuery = trimmedAddress.replace(/^\d+\s+/, "");
-        const fuzzyQuery =
-          strippedQuery.length >= 3 && strippedQuery !== trimmedAddress
-            ? strippedQuery
-            : trimmedAddress;
-        const fuzzyResults = await scheduleNominatimCall(() =>
-          nominatimSearch(fuzzyQuery, 3),
-        );
-        suggestions = fuzzyResults
-          .slice(0, 2)
-          .map((r) => formatNominatimDisplayName(r.display_name))
-          .filter(Boolean);
-      } catch {
-        // Fuzzy search is best-effort; proceed without suggestions.
+      const suggestionCacheKey = `suggest404:v3:${trimmedAddress.toLowerCase()}`;
+      const cachedSuggestions = getLLMCache<string[]>(suggestionCacheKey);
+      let suggestions: string[] = cachedSuggestions ?? [];
+      if (!cachedSuggestions) {
+        try {
+          // Strip leading house number to broaden the query (e.g. "123 Main St, NYC" → "Main St, NYC").
+          const strippedQuery = trimmedAddress.replace(/^\d+\s+/, "");
+          const fuzzyQuery =
+            strippedQuery.length >= 3 && strippedQuery !== trimmedAddress
+              ? strippedQuery
+              : trimmedAddress;
+          const fuzzyResults = await scheduleNominatimCall(() =>
+            nominatimSearch(fuzzyQuery, 3),
+          );
+          suggestions = fuzzyResults
+            .slice(0, 2)
+            .map((r) => formatNominatimDisplayName(r.display_name))
+            .filter(Boolean);
+          setLLMCache(suggestionCacheKey, suggestions);
+        } catch {
+          // Fuzzy search is best-effort; proceed without suggestions.
+        }
       }
       res.status(404).json({
         error:
