@@ -9,6 +9,7 @@ vi.mock("../config", () => ({
   UPLOAD_BODY_LIMIT: "10mb",
   UPLOAD_MAX_FILES: 10,
   UPLOAD_MAX_FIELDS: 20,
+  UPLOAD_FIELD_NAME_SIZE: 100,
 }));
 
 vi.mock("./logger", () => ({
@@ -356,5 +357,38 @@ describe("createUpload integration", () => {
 
     expect(err).toBeInstanceOf(multer.MulterError);
     expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_KEY");
+  });
+
+  it("rejects a field whose name exceeds the UPLOAD_FIELD_NAME_SIZE baseline without any override", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const tooLongName = "x".repeat(101);
+    const body = buildMultipartBodyWithFields([
+      { name: tooLongName, value: "ok" },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_KEY");
+  });
+
+  it("accepts a field whose name is within the UPLOAD_FIELD_NAME_SIZE baseline without any override", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const okName = "x".repeat(100);
+    const body = buildMultipartBodyWithFields([{ name: okName, value: "ok" }]);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeUndefined();
   });
 });

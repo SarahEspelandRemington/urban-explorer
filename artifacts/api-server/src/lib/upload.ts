@@ -69,6 +69,7 @@ import {
   UPLOAD_BODY_LIMIT,
   UPLOAD_MAX_FILES,
   UPLOAD_MAX_FIELDS,
+  UPLOAD_FIELD_NAME_SIZE,
 } from "../config";
 
 // ---------------------------------------------------------------------------
@@ -187,7 +188,7 @@ export interface CreateUploadOptions {
   fieldSizeOverride?: number;
   /**
    * Maximum byte length allowed for a non-file field name. When omitted,
-   * multer's built-in default (100 bytes) is used. Use this to enforce a
+   * UPLOAD_FIELD_NAME_SIZE (default 100 bytes) is used. Use this to enforce a
    * tighter cap on field-name length for a given endpoint.
    */
   fieldNameSizeOverride?: number;
@@ -214,7 +215,8 @@ export function createUpload(
   const files = options?.maxFiles ?? UPLOAD_MAX_FILES;
   const fields = options?.maxFields ?? UPLOAD_MAX_FIELDS;
   const fieldSize = options?.fieldSizeOverride;
-  const fieldNameSize = options?.fieldNameSizeOverride;
+  const fieldNameSize =
+    options?.fieldNameSizeOverride ?? UPLOAD_FIELD_NAME_SIZE;
   return multer({
     storage,
     limits: {
@@ -223,7 +225,7 @@ export function createUpload(
       files,
       parts: files + fields,
       ...(fieldSize !== undefined && { fieldSize }),
-      ...(fieldNameSize !== undefined && { fieldNameSize }),
+      fieldNameSize,
     },
   });
 }

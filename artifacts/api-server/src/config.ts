@@ -270,6 +270,23 @@ export const UPLOAD_MAX_FIELDS = envVar(
   20,
 );
 
+/**
+ * Maximum byte length allowed for a non-file field name in any multipart
+ * upload request, passed to the shared multer factory in `lib/upload.ts`.
+ * This makes the project-wide default explicit and auditable rather than
+ * relying on multer's undocumented built-in value. Individual endpoints can
+ * still tighten the limit via `fieldNameSizeOverride` in `createUpload`.
+ *
+ * Env var : UPLOAD_FIELD_NAME_SIZE
+ * Expects : positive integer
+ * Default : 100
+ */
+export const UPLOAD_FIELD_NAME_SIZE = envVar(
+  "UPLOAD_FIELD_NAME_SIZE",
+  z.coerce.number().int().positive(),
+  100,
+);
+
 // ---------------------------------------------------------------------------
 // In-memory cache TTLs and size caps
 // ---------------------------------------------------------------------------
