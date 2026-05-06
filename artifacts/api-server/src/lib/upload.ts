@@ -16,7 +16,7 @@
  * `multer()` instance yourself. Never call `multer()` directly in route files.
  *
  * ```ts
- * import { upload } from "../lib/upload";
+ * import { upload, handleUploadError } from "../lib/upload";
  *
  * // Single file in the "photo" field:
  * router.post("/photo", upload.single("photo"), (req, res) => { ... });
@@ -39,15 +39,32 @@
  *
  * ## Error handling
  *
- * Multer emits a `MulterError` with `code === "LIMIT_FILE_SIZE"` when the
- * limit is exceeded. The global error handler in `app.ts` delegates all
- * `MulterError` instances to `middlewares/uploadErrorHandler.ts`, which
- * returns a friendly 413 JSON response automatically. No per-route error
- * handler is needed — just mount the multer middleware and let the global
- * handler take care of the rest.
+ * Multer emits `MulterError` for all limit violations. The `handleUploadError`
+ * middleware exported from this module maps every `MulterError` code to an
+ * appropriate HTTP status and a user-facing message. Mount it in `app.ts` (or
+ * at the route level) so callers always receive a clear 400/413 response
+ * instead of a generic 500.
+ *
+ * The global error handler in `app.ts` already mounts `handleUploadError`
+ * before its own catch-all, so individual routes do NOT need to add their own
+ * handler. If a route needs custom logic for a specific code, add a route-level
+ * handler first and call `next(err)` for anything it does not recognise:
+ *
+ * ```ts
+ * import { upload, handleUploadError } from "../lib/upload";
+ *
+ * router.post("/photo", upload.single("photo"), (req, res) => { ... });
+ *
+ * // Optional route-level override for custom behaviour:
+ * router.use("/photo", (err, _req, res, next) => {
+ *   // custom handling …
+ *   next(err); // fall through to handleUploadError / global handler
+ * });
+ * ```
  */
 
 import multer from "multer";
+import type { Request, Response, NextFunction } from "express";
 import {
   UPLOAD_BODY_LIMIT,
   UPLOAD_MAX_FILES,
@@ -81,6 +98,60 @@ function parseSizeToBytes(sizeStr: string): number {
   const value = parseFloat(match[1]);
   const unit = match[2].toLowerCase();
   return Math.floor(value * (UNIT_MULTIPLIERS[unit] ?? 1));
+}
+
+// ---------------------------------------------------------------------------
+// Shared multer-error handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Maps multer `MulterError` codes to HTTP status codes and user-facing
+ * messages. All size/count violations → 413; malformed field names or
+ * unexpected file fields → 400.
+ *
+ * This middleware is mounted in `app.ts` so that every upload route benefits
+ * automatically. Mount it before the global catch-all error handler.
+ */
+const MULTER_ERROR_RESPONSES: Record<
+  string,
+  { status: number; message: string }
+> = {
+  LIMIT_FILE_SIZE: { status: 413, message: "Uploaded file is too large." },
+  LIMIT_FILE_COUNT: { status: 413, message: "Too many files uploaded." },
+  LIMIT_FIELD_COUNT: {
+    status: 413,
+    message: "Too many form fields in the request.",
+  },
+  LIMIT_PART_COUNT: {
+    status: 413,
+    message: "Too many parts in the multipart request.",
+  },
+  LIMIT_FIELD_VALUE: { status: 413, message: "Form field value is too large." },
+  LIMIT_FIELD_KEY: {
+    status: 400,
+    message: "Form field name is too long.",
+  },
+  LIMIT_UNEXPECTED_FILE: {
+    status: 400,
+    message: "Unexpected file field in the request.",
+  },
+};
+
+export function handleUploadError(
+  err: unknown,
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (err instanceof multer.MulterError) {
+    const mapped = MULTER_ERROR_RESPONSES[err.code] ?? {
+      status: 400,
+      message: "Upload error.",
+    };
+    res.status(mapped.status).json({ error: mapped.message });
+    return;
+  }
+  next(err);
 }
 
 // ---------------------------------------------------------------------------
