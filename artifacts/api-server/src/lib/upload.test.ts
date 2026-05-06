@@ -1322,6 +1322,300 @@ describe("createUpload integration", () => {
 });
 
 // ---------------------------------------------------------------------------
+// End-to-end: real Express route — all upload error codes
+// ---------------------------------------------------------------------------
+
+describe("upload error codes end-to-end via real Express route", () => {
+  // ---- LIMIT_FILE_SIZE -------------------------------------------------------
+
+  it("LIMIT_FILE_SIZE: returns 413 with field name when a file exceeds fileSizeOverride", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("photo"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.alloc(LIMIT_BYTES + 1, "x"), "oversized.bin");
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Uploaded file in field 'photo' is too large (limit: 10 B).",
+    });
+  });
+
+  it("LIMIT_FILE_SIZE: returns 413 with the global UPLOAD_MAX_FILE_SIZE baseline (100 B) when no override is set", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("file"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("file", Buffer.alloc(101, "x"), "oversized.bin");
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Uploaded file in field 'file' is too large (limit: 100 B).",
+    });
+  });
+
+  // ---- LIMIT_FILE_COUNT ------------------------------------------------------
+
+  it("LIMIT_FILE_COUNT: returns 422 with limit when more files are uploaded than maxFiles allows", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.array("files", 5),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("files", Buffer.from("hello"), "a.bin")
+      .attach("files", Buffer.from("world"), "b.bin");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many files uploaded (limit: 1).",
+    });
+  });
+
+  it("LIMIT_FILE_COUNT (per-field via array): returns 422 with per-field limit when the declared field maxCount is exceeded", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 10,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.array("photos", 1),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photos", Buffer.from("img1"), "a.jpg")
+      .attach("photos", Buffer.from("img2"), "b.jpg");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many files in field 'photos' (limit: 1).",
+    });
+  });
+
+  it("LIMIT_FILE_COUNT (per-field via fields): returns 422 with per-field limit when declared field maxCount is exceeded", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 10,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.fields([{ name: "attachments", maxCount: 1 }]),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("attachments", Buffer.from("hello"), "a.bin")
+      .attach("attachments", Buffer.from("world"), "b.bin");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many files in field 'attachments' (limit: 1).",
+    });
+  });
+
+  // ---- LIMIT_FIELD_COUNT -----------------------------------------------------
+
+  it("LIMIT_FIELD_COUNT: returns 422 with limit when more non-file fields are sent than maxFields allows", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .field("alpha", "first")
+      .field("beta", "second");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many form fields in the request (limit: 1).",
+    });
+  });
+
+  it("LIMIT_FIELD_COUNT: returns 422 with the global UPLOAD_MAX_FIELDS baseline (20) when no override is set", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const bodyBuilder = request(app).post("/upload");
+    for (let i = 0; i <= 20; i++) {
+      bodyBuilder.field(`field${i}`, "v");
+    }
+    const res = await bodyBuilder;
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many form fields in the request (limit: 20).",
+    });
+  });
+
+  // ---- LIMIT_PART_COUNT ------------------------------------------------------
+
+  it("LIMIT_PART_COUNT: returns 400 with limit when total parts exceed maxParts override", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxParts: 2,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .field("alpha", "1")
+      .field("beta", "2")
+      .field("gamma", "3");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Too many parts in the multipart request (limit: 2).",
+    });
+  });
+
+  it("LIMIT_PART_COUNT: returns 400 with the global UPLOAD_MAX_PARTS baseline (30) when no override is set", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 50,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const bodyBuilder = request(app).post("/upload");
+    for (let i = 0; i <= 30; i++) {
+      bodyBuilder.field(`field${i}`, "v");
+    }
+    const res = await bodyBuilder;
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Too many parts in the multipart request (limit: 30).",
+    });
+  });
+
+  // ---- LIMIT_UNEXPECTED_FILE -------------------------------------------------
+
+  it("LIMIT_UNEXPECTED_FILE: returns 422 with the unexpected field name when a file is sent in an undeclared field", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("avatar"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.from("fakeimagecontent"), "pic.jpg");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Unexpected file field 'photo' in the request.",
+    });
+  });
+
+  it("LIMIT_UNEXPECTED_FILE: returns 422 with the unexpected field name when using upload.fields and an undeclared file field is sent", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.fields([{ name: "attachments", maxCount: 3 }]),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("avatar", Buffer.from("fakeimagecontent"), "pic.jpg");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Unexpected file field 'avatar' in the request.",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // End-to-end: real Express route returns 413 with field name in body
 // ---------------------------------------------------------------------------
 
