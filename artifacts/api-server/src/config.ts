@@ -236,6 +236,41 @@ export const UPLOAD_BODY_LIMIT = envVar(
 );
 
 // ---------------------------------------------------------------------------
+// Upload (multipart/form-data) cardinality limits
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum number of files allowed in a single multipart/form-data upload
+ * request, passed to the shared multer factory in `lib/upload.ts`.
+ *
+ * A low cap prevents attackers from exhausting server memory by submitting
+ * many small files that each stay under the per-file size limit.
+ *
+ * Env var : UPLOAD_MAX_FILES
+ * Expects : positive integer
+ * Default : 10
+ */
+export const UPLOAD_MAX_FILES = envVar(
+  "UPLOAD_MAX_FILES",
+  z.coerce.number().int().positive(),
+  10,
+);
+
+/**
+ * Maximum number of non-file fields allowed in a single multipart/form-data
+ * upload request, passed to the shared multer factory in `lib/upload.ts`.
+ *
+ * Env var : UPLOAD_MAX_FIELDS
+ * Expects : positive integer
+ * Default : 20
+ */
+export const UPLOAD_MAX_FIELDS = envVar(
+  "UPLOAD_MAX_FIELDS",
+  z.coerce.number().int().positive(),
+  20,
+);
+
+// ---------------------------------------------------------------------------
 // In-memory cache TTLs and size caps
 // ---------------------------------------------------------------------------
 

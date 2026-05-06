@@ -60,7 +60,11 @@
  */
 
 import multer from "multer";
-import { UPLOAD_BODY_LIMIT } from "../config";
+import {
+  UPLOAD_BODY_LIMIT,
+  UPLOAD_MAX_FILES,
+  UPLOAD_MAX_FIELDS,
+} from "../config";
 
 // ---------------------------------------------------------------------------
 // Internal helper: parse "512kb" / "10mb" → bytes as a number
@@ -113,9 +117,9 @@ export function createUpload(
     storage,
     limits: {
       fileSize,
-      fields: 20,
-      files: 10,
-      parts: 30,
+      fields: UPLOAD_MAX_FIELDS,
+      files: UPLOAD_MAX_FILES,
+      parts: UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS,
     },
   });
 }
