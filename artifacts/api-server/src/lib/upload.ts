@@ -117,13 +117,13 @@ const MULTER_ERROR_RESPONSES: Record<
   { status: number; message: string }
 > = {
   LIMIT_FILE_SIZE: { status: 413, message: "Uploaded file is too large." },
-  LIMIT_FILE_COUNT: { status: 413, message: "Too many files uploaded." },
+  LIMIT_FILE_COUNT: { status: 422, message: "Too many files uploaded." },
   LIMIT_FIELD_COUNT: {
-    status: 413,
+    status: 422,
     message: "Too many form fields in the request.",
   },
   LIMIT_PART_COUNT: {
-    status: 413,
+    status: 422,
     message: "Too many parts in the multipart request.",
   },
   LIMIT_FIELD_VALUE: { status: 413, message: "Form field value is too large." },
@@ -132,7 +132,7 @@ const MULTER_ERROR_RESPONSES: Record<
     message: "Form field name is too long.",
   },
   LIMIT_UNEXPECTED_FILE: {
-    status: 400,
+    status: 422,
     message: "Unexpected file field in the request.",
   },
 };
