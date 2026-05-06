@@ -161,7 +161,6 @@ const LLM_CACHE_MAX_SIZE = 200;
 // In-flight deduplication: if two requests miss the same cache key simultaneously,
 // only one LLM/TTS call is made. The second caller awaits the first's promise and
 // reuses its result — preventing duplicate paid API calls on cold-cache surges.
-// guard:v10:
 const inFlightNarration = new Map<string, Promise<string>>();
 const inFlightAudio = new Map<string, Promise<Buffer>>();
 const inFlightDetail = new Map<string, Promise<any>>();
