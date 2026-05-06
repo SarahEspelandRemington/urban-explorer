@@ -11,6 +11,7 @@ import { rateLimit } from "express-rate-limit";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { uploadErrorHandler } from "./middlewares/uploadErrorHandler";
 import { REQUEST_BODY_LIMIT } from "./config";
 
 const app: Express = express();
@@ -107,7 +108,9 @@ for (const path of expensiveEndpoints) {
 
 app.use("/api", router);
 
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  if (uploadErrorHandler(err, req, res, next)) return;
+
   if (
     (err as NodeJS.ErrnoException & { type?: string }).type ===
     "entity.too.large"

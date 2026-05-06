@@ -40,23 +40,11 @@
  * ## Error handling
  *
  * Multer emits a `MulterError` with `code === "LIMIT_FILE_SIZE"` when the
- * limit is exceeded. The global error handler in app.ts does NOT catch this
- * automatically — add a route-level handler:
- *
- * ```ts
- * import multer from "multer";
- *
- * router.post("/photo", upload.single("photo"), (req, res) => { ... });
- *
- * // After the route handler, catch multer size errors:
- * router.use("/photo", (err, _req, res, next) => {
- *   if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
- *     res.status(413).json({ error: "Uploaded file is too large" });
- *     return;
- *   }
- *   next(err);
- * });
- * ```
+ * limit is exceeded. The global error handler in `app.ts` delegates all
+ * `MulterError` instances to `middlewares/uploadErrorHandler.ts`, which
+ * returns a friendly 413 JSON response automatically. No per-route error
+ * handler is needed — just mount the multer middleware and let the global
+ * handler take care of the rest.
  */
 
 import multer from "multer";
