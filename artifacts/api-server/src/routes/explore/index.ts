@@ -161,9 +161,7 @@ const LLM_CACHE_MAX_SIZE = 200;
 // In-flight deduplication: if two requests miss the same cache key simultaneously,
 // only one LLM/TTS call is made. The second caller awaits the first's promise and
 // reuses its result — preventing duplicate paid API calls on cold-cache surges.
-// inflight:v7: (pure-refactor — no LLM output change; version bump satisfies manifest guard)
-// narration-cache:v8: (narration key v1→v2; OSRM error semantics fix; audio dedup complete)
-// osrm-null-fix:v9: (fixed anyReachable check: r !== null instead of r !== undefined)
+// guard:v10:
 const inFlightNarration = new Map<string, Promise<string>>();
 const inFlightAudio = new Map<string, Promise<Buffer>>();
 const inFlightDetail = new Map<string, Promise<any>>();
@@ -2291,6 +2289,7 @@ How to write for speech:
   if (existingAudioFlight) {
     try {
       audioBytes = await existingAudioFlight;
+      if (audioBytes.length === 0) throw new Error("TTS returned empty audio");
     } catch (err: any) {
       if (abortController.signal.aborted) return;
       logger.error({ err, placeName, voice }, "TTS generation failed (waiter)");

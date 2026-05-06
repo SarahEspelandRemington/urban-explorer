@@ -49,7 +49,8 @@ A mobile app that surfaces AI-generated historical and factual information about
 - **Location Grounding**: Prioritizes Nominatim (OpenStreetMap) for geocoding and location suggestions, falling back to LLMs for ambiguity. Integrates Overpass API to ground AI-generated history with verified OSM data.
 - **Walk Mode Narration**: Prioritizes native pre-rendered MP3 audio via `expo-audio` for natural-voice TTS, falling back to `expo-speech` or Web Speech API. Includes a custom "Now Playing" module for lock screen integration.
 - **Dynamic Map Discovery**: Implements a debounced auto-discovery mechanism (150m+ pan) for map views, accumulating and deduplicating markers.
-- **Robust Caching**: Utilizes in-memory caches for LLM results (15min TTL) and OSM Overpass results (5min TTL) to improve response times and reduce API calls. Cache keys are comprehensive, including prompt-shaping inputs.
+- **Robust Caching & In-Flight Dedup**: In-memory caches for LLM results (15min TTL) and Overpass results (5min TTL). Concurrent cache-miss requests for the same key are coalesced onto a single LLM/TTS call via in-flight Maps (`inFlightNarration`, `inFlightAudio`, `inFlightDetail`), preventing duplicate paid API calls.
+- **OSRM Provider Racing**: Route endpoint races multiple OSRM providers with `Promise.any()` and returns the fastest successful result. Distinguishes reachable-but-no-route (404) from all-providers-failed (502).
 - **Privacy by Design**: Extensive PII scrubbing and anonymization for Sentry crash reporting, tested with a dedicated test suite and enforced by a custom ESLint rule.
 
 ## Product
