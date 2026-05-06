@@ -1010,7 +1010,15 @@ export default function ExploreScreen() {
                     onPress={() => {
                       if (Platform.OS !== "web")
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push("/investigate");
+                      router.push({
+                        pathname: "/investigate",
+                        params: {
+                          ...(areaName ? { nearLocation: areaName } : {}),
+                          ...(closestPrefill
+                            ? { prefillAddress: closestPrefill }
+                            : {}),
+                        },
+                      });
                     }}
                     style={({ pressed }) => [
                       styles.investigateCard,
