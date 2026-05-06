@@ -181,6 +181,33 @@ export const BORING_BUILDING_TYPES_FILE_ENV = envOptional(
 );
 
 // ---------------------------------------------------------------------------
+// Request body size limit
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum allowed size for incoming request bodies, passed directly to
+ * `express.json()` and `express.urlencoded()`. Uses Express / bytes notation
+ * (e.g. "512kb", "1mb"). Applies to both JSON and URL-encoded payloads.
+ *
+ * Several explore endpoints accept free-text fields, coordinate arrays, and
+ * GeoJSON route geometries that can be sizeable; a conservative upper bound
+ * prevents pathologically large payloads from exhausting memory or stalling
+ * the event loop.
+ *
+ * Env var : REQUEST_BODY_LIMIT
+ * Expects : string matching ^\d+(?:\.\d+)?\s*(?:b|kb|mb|gb)$ (case-insensitive)
+ * Default : "512kb"
+ */
+export const REQUEST_BODY_LIMIT = envVar(
+  "REQUEST_BODY_LIMIT",
+  z.string().regex(/^\d+(?:\.\d+)?\s*(?:b|kb|mb|gb)$/i, {
+    message:
+      'Must be a size string such as "512kb" or "1mb" (number + b/kb/mb/gb)',
+  }),
+  "512kb",
+);
+
+// ---------------------------------------------------------------------------
 // Auth / OIDC
 // ---------------------------------------------------------------------------
 
