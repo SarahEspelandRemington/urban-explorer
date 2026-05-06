@@ -224,6 +224,12 @@ export const InvestigateAddressResponse = zod.object({
     .describe(
       "Honest disclosure of what's speculative vs documented. Empty string if fully confident.",
     ),
+  searchSuggestions: zod
+    .array(zod.string())
+    .optional()
+    .describe(
+      "1-2 alternative search suggestions derived from nearby OSM landmarks, populated only when the result is empty so the user has concrete alternatives to try",
+    ),
 });
 
 /**

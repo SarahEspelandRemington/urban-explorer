@@ -1608,7 +1608,7 @@ router.post("/explore/investigate-address", async (req, res) => {
 
   // Cache key: normalized address + coord bucket. Investigations are deterministic
   // per-building so a longer TTL is fine; share the LLM cache.
-  const investigateCacheKey = `investigate:v1:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const investigateCacheKey = `investigate:v3:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
   const cached = getLLMCache(investigateCacheKey);
   if (cached) {
     res.json(cached);
@@ -1618,11 +1618,13 @@ router.post("/explore/investigate-address", async (req, res) => {
   // Pull a small ring of nearby OSM landmarks for neighborhood context.
   // Keep the radius tight (120m) so the AI doesn't drift to famous landmarks
   // a few blocks away — the whole point is to focus on THIS building.
+  // Also retained after the LLM call to derive search suggestions on empty results.
   let osmContext = "";
+  let nearbyOSMPlaces: OSMPlace[] = [];
   try {
-    const nearby = await fetchNearbyOSMPlaces(lat, lng, 120);
-    if (nearby.length > 0) {
-      osmContext = nearby
+    nearbyOSMPlaces = await fetchNearbyOSMPlaces(lat, lng, 120);
+    if (nearbyOSMPlaces.length > 0) {
+      osmContext = nearbyOSMPlaces
         .slice(0, 8)
         .map((p) => {
           const dist = Math.round(haversineDistance(lat, lng, p.lat, p.lon));
@@ -1711,12 +1713,34 @@ What is this building? What was it originally? What should I look at?`,
     return;
   }
 
+  const facts = Array.isArray(data.facts)
+    ? data.facts.filter((f: unknown) => typeof f === "string")
+    : [];
+  const buildingName =
+    typeof data.buildingName === "string" ? data.buildingName : "";
+  const history = typeof data.history === "string" ? data.history : "";
+
+  // Derive 1-2 search suggestions from nearby OSM places when the result is
+  // empty — i.e. the LLM couldn't find meaningful information about the address.
+  // Suggestions are the closest named landmarks the user could search for instead.
+  const isEmptyResult = !buildingName && !history && facts.length === 0;
+  let searchSuggestions: string[] = [];
+  if (isEmptyResult && nearbyOSMPlaces.length > 0) {
+    searchSuggestions = nearbyOSMPlaces
+      .map((p) => ({
+        name: p.name,
+        dist: haversineDistance(lat, lng, p.lat, p.lon),
+      }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 2)
+      .map((p) => p.name);
+  }
+
   const result = {
     address: canonicalAddress,
     latitude: lat,
     longitude: lng,
-    buildingName:
-      typeof data.buildingName === "string" ? data.buildingName : "",
+    buildingName,
     yearBuilt: typeof data.yearBuilt === "string" ? data.yearBuilt : "",
     architecturalStyle:
       typeof data.architecturalStyle === "string"
@@ -1724,15 +1748,14 @@ What is this building? What was it originally? What should I look at?`,
         : "",
     originalUse: typeof data.originalUse === "string" ? data.originalUse : "",
     currentUse: typeof data.currentUse === "string" ? data.currentUse : "",
-    history: typeof data.history === "string" ? data.history : "",
-    facts: Array.isArray(data.facts)
-      ? data.facts.filter((f: unknown) => typeof f === "string")
-      : [],
+    history,
+    facts,
     neighborhoodContext:
       typeof data.neighborhoodContext === "string"
         ? data.neighborhoodContext
         : "",
     uncertainty: typeof data.uncertainty === "string" ? data.uncertainty : "",
+    searchSuggestions,
   };
 
   setLLMCache(investigateCacheKey, result);

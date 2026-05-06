@@ -29,4 +29,6 @@ export interface AddressInvestigationResponse {
   neighborhoodContext?: string;
   /** Honest disclosure of what's speculative vs documented. Empty string if fully confident. */
   uncertainty?: string;
+  /** 1-2 alternative search suggestions derived from nearby OSM landmarks, populated only when the result is empty so the user has concrete alternatives to try */
+  searchSuggestions?: string[];
 }

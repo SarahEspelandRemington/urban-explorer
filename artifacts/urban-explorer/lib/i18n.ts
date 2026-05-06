@@ -223,6 +223,8 @@ export interface Strings {
     tryDifferentName: string;
     emptyResult: string;
     emptyResultTip: string;
+    searchSuggestionsPrefix: string;
+    searchSuggestionsHint: string;
   };
   login: {
     title: string;
@@ -513,6 +515,9 @@ const en: Strings = {
       "We couldn't find much about this place. Try a different name or nearby address.",
     emptyResultTip:
       "Tip: Try a nearby intersection, include the city name, or use a well-known landmark as a reference.",
+    searchSuggestionsPrefix: "Try:",
+    searchSuggestionsHint:
+      "Tap to pre-fill this suggestion in the search input",
   },
   login: {
     title: "Urban Explorer",
@@ -811,6 +816,9 @@ const es: Strings = {
       "No encontramos mucho sobre este lugar. Prueba con otro nombre o una dirección cercana.",
     emptyResultTip:
       "Consejo: Prueba con una intersección cercana, incluye el nombre de la ciudad o usa un punto de referencia conocido.",
+    searchSuggestionsPrefix: "Probar:",
+    searchSuggestionsHint:
+      "Toca para rellenar esta sugerencia en el campo de búsqueda",
   },
   login: {
     title: "Urban Explorer",
@@ -1109,6 +1117,9 @@ const fr: Strings = {
       "Nous n'avons pas trouvé grand-chose sur cet endroit. Essayez un autre nom ou une adresse voisine.",
     emptyResultTip:
       "Astuce : Essayez une intersection proche, ajoutez le nom de la ville ou utilisez un monument connu comme référence.",
+    searchSuggestionsPrefix: "Essayer :",
+    searchSuggestionsHint:
+      "Appuyez pour pré-remplir cette suggestion dans le champ de recherche",
   },
   login: {
     title: "Urban Explorer",
@@ -1405,6 +1416,9 @@ const de: Strings = {
       "Wir haben nicht viel über diesen Ort gefunden. Versuche einen anderen Namen oder eine nahegelegene Adresse.",
     emptyResultTip:
       "Tipp: Versuche eine nahe Kreuzung, füge den Stadtnamen hinzu oder verwende ein bekanntes Wahrzeichen als Referenz.",
+    searchSuggestionsPrefix: "Versuche:",
+    searchSuggestionsHint:
+      "Tippe, um diesen Vorschlag in das Suchfeld einzutragen",
   },
   login: {
     title: "Urban Explorer",
@@ -1700,6 +1714,9 @@ const it: Strings = {
       "Non abbiamo trovato molto su questo posto. Prova un altro nome o un indirizzo vicino.",
     emptyResultTip:
       "Suggerimento: Prova un incrocio vicino, includi il nome della città o usa un punto di riferimento noto.",
+    searchSuggestionsPrefix: "Prova:",
+    searchSuggestionsHint:
+      "Tocca per inserire questo suggerimento nel campo di ricerca",
   },
   login: {
     title: "Urban Explorer",
@@ -1999,6 +2016,9 @@ const pt: Strings = {
       "Não encontramos muito sobre este lugar. Tente outro nome ou um endereço próximo.",
     emptyResultTip:
       "Dica: Tente uma intersecção próxima, inclua o nome da cidade ou use um ponto de referência conhecido.",
+    searchSuggestionsPrefix: "Tente:",
+    searchSuggestionsHint:
+      "Toque para pré-preencher esta sugestão no campo de pesquisa",
   },
   login: {
     title: "Urban Explorer",
@@ -2291,6 +2311,8 @@ const nl: Strings = {
       "We hebben niet veel gevonden over deze plek. Probeer een andere naam of een nabijgelegen adres.",
     emptyResultTip:
       "Tip: Probeer een nabijgelegen kruispunt, voeg de stadsnaam toe of gebruik een bekend herkenningspunt als referentie.",
+    searchSuggestionsPrefix: "Probeer:",
+    searchSuggestionsHint: "Tik om deze suggestie in het zoekveld in te vullen",
   },
   login: {
     title: "Urban Explorer",
@@ -2584,6 +2606,8 @@ const ja: Strings = {
       "この場所についてあまり情報が見つかりませんでした。別の名前や近くの住所で試してみてください。",
     emptyResultTip:
       "ヒント：近くの交差点や市区町村名を加えてみるか、有名なランドマークを基準に検索してみてください。",
+    searchSuggestionsPrefix: "試す：",
+    searchSuggestionsHint: "タップして検索欄にこの候補を入力する",
   },
   login: {
     title: "Urban Explorer",
@@ -2869,6 +2893,8 @@ const ko: Strings = {
       "이 장소에 대한 정보를 많이 찾지 못했어요. 다른 이름이나 근처 주소로 시도해 보세요.",
     emptyResultTip:
       "팁: 근처 교차로를 입력하거나 도시 이름을 추가하거나 잘 알려진 랜드마크를 기준으로 검색해 보세요.",
+    searchSuggestionsPrefix: "시도:",
+    searchSuggestionsHint: "탭하여 이 제안을 검색 입력란에 채우기",
   },
   login: {
     title: "Urban Explorer",
@@ -3146,6 +3172,8 @@ const zh: Strings = {
     emptyResult: "我们未能找到关于此地的太多信息。请尝试其他名称或附近地址。",
     emptyResultTip:
       "提示：试试附近的路口、加上城市名称，或以知名地标作为参照。",
+    searchSuggestionsPrefix: "试试：",
+    searchSuggestionsHint: "点击将此建议填入搜索框",
   },
   login: {
     title: "Urban Explorer",

@@ -156,6 +156,20 @@ export default function InvestigateScreen() {
     }, 80);
   }, [address]);
 
+  const handleSuggestionChipPress = useCallback((suggestion: string) => {
+    setAddress(suggestion);
+    setPickedCoords(null);
+    setShowRefinementInput(true);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setTimeout(() => {
+      addressInputRef.current?.focus();
+      addressInputRef.current?.setNativeProps({
+        selection: { start: 0, end: suggestion.length },
+      });
+    }, 80);
+  }, []);
+
   const canSubmit = address.trim().length >= 3 && !investigate.isPending;
 
   const isEmptyResult = useMemo(() => {
@@ -502,6 +516,55 @@ export default function InvestigateScreen() {
                 >
                   {t.investigate.emptyResultTip}
                 </Text>
+                {result.searchSuggestions &&
+                  result.searchSuggestions.length > 0 && (
+                    <Animated.View
+                      entering={
+                        Platform.OS !== "web"
+                          ? FadeInDown.duration(300)
+                          : undefined
+                      }
+                      style={styles.searchSuggestionsRow}
+                    >
+                      {result.searchSuggestions.map((suggestion, index) => (
+                        <Pressable
+                          key={index}
+                          onPress={() => handleSuggestionChipPress(suggestion)}
+                          style={({ pressed }) => [
+                            styles.searchSuggestionChip,
+                            {
+                              backgroundColor: colors.muted,
+                              borderColor: colors.primary,
+                              opacity: pressed ? 0.75 : 1,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t.investigate.searchSuggestionsPrefix} ${suggestion}`}
+                          accessibilityHint={
+                            t.investigate.searchSuggestionsHint
+                          }
+                        >
+                          <Feather
+                            name="search"
+                            size={11}
+                            color={colors.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.searchSuggestionChipText,
+                              { color: colors.foreground },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            <Text style={{ color: colors.mutedForeground }}>
+                              {t.investigate.searchSuggestionsPrefix}{" "}
+                            </Text>
+                            {suggestion}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </Animated.View>
+                  )}
               </>
             ) : null}
 
@@ -847,5 +910,24 @@ const styles = StyleSheet.create({
   refinementButtonText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
+  },
+  searchSuggestionsRow: {
+    flexDirection: "column",
+    gap: 6,
+    marginTop: 4,
+  },
+  searchSuggestionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  searchSuggestionChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
   },
 });
