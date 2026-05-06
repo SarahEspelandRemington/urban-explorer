@@ -863,6 +863,33 @@ describe("createUpload integration", () => {
     });
   });
 
+  it("emits LIMIT_FIELD_VALUE with err.field populated by multer when a field value exceeds the limit", async () => {
+    // Multer fires LIMIT_FIELD_VALUE via busboy's 'field' event and does
+    // populate err.field with the offending field name for this code path.
+    // This differs from LIMIT_FILE_COUNT and LIMIT_FIELD_COUNT (global caps),
+    // where the busboy limit events carry no field name and err.field is not
+    // set. Here, using the global UPLOAD_FIELD_SIZE baseline (no
+    // fieldSizeOverride), we confirm multer's real behavior so the handler's
+    // "Form field 'X' value is too large" branch is reachable without any
+    // per-endpoint override.
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const oversizedValue = "x".repeat(1048576 + 1);
+    const body = buildMultipartBodyWithFields([
+      { name: "description", value: oversizedValue },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const { err } = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_VALUE");
+    expect((err as multer.MulterError).field).toBe("description");
+  });
+
   it("rejects a field whose name exceeds fieldNameSizeOverride with LIMIT_FIELD_KEY", async () => {
     const FIELD_NAME_SIZE_BYTES = 5;
     const uploadInstance = createUpload(multer.memoryStorage(), {
