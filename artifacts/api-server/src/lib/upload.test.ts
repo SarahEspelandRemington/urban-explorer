@@ -1616,6 +1616,306 @@ describe("upload error codes end-to-end via real Express route", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Multi-middleware stack: upload errors survive preceding error handlers and
+// non-multer errors reach downstream handlers untouched
+// ---------------------------------------------------------------------------
+
+describe("handleUploadError in a multi-middleware error stack", () => {
+  // A lightweight "auth error handler" that only handles errors with a
+  // specific marker, passing everything else to the next error handler.
+  // This simulates real production stacks where several domain-specific
+  // error handlers are chained before the upload handler.
+  function authErrorHandler(
+    err: unknown,
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    if (
+      err instanceof Error &&
+      (err as Error & { type?: string }).type === "auth"
+    ) {
+      res.status(401).json({ error: "Unauthorized." });
+      return;
+    }
+    next(err);
+  }
+
+  // A simple validation-error handler that only handles errors with a
+  // `validationErrors` array, passing everything else downstream.
+  function validationErrorHandler(
+    err: unknown,
+    _req: Request,
+    res: Response,
+    next: NextFunction,
+  ): void {
+    if (
+      err != null &&
+      typeof err === "object" &&
+      Array.isArray((err as Record<string, unknown>).validationErrors)
+    ) {
+      res
+        .status(422)
+        .json({ errors: (err as Record<string, unknown>).validationErrors });
+      return;
+    }
+    next(err);
+  }
+
+  // A catch-all fallback that records whatever it receives so tests can
+  // assert on it without sending a response themselves.
+  function makeFallbackHandler(): {
+    handler: (
+      err: unknown,
+      req: Request,
+      res: Response,
+      next: NextFunction,
+    ) => void;
+    captured: { err: unknown }[];
+  } {
+    const captured: { err: unknown }[] = [];
+    return {
+      handler(err, _req, res, _next) {
+        captured.push({ err });
+        res.status(500).json({ error: "fallback" });
+      },
+      captured,
+    };
+  }
+
+  it("multer LIMIT_FILE_SIZE still resolves to 413 when a preceding auth error handler is mounted first", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("photo"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Auth handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(authErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.alloc(LIMIT_BYTES + 1, "x"), "oversized.bin");
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Uploaded file in field 'photo' is too large (limit: 10 B).",
+    });
+  });
+
+  it("multer LIMIT_FILE_COUNT still resolves to 422 when both an auth and a validation handler precede handleUploadError", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.array("files", 5),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Two preceding error handlers — neither handles MulterError.
+    app.use(authErrorHandler);
+    app.use(validationErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("files", Buffer.from("hello"), "a.bin")
+      .attach("files", Buffer.from("world"), "b.bin");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many files uploaded (limit: 1).",
+    });
+  });
+
+  it("multer LIMIT_FIELD_COUNT still resolves to 422 when a preceding validation handler is mounted first", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(validationErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .field("alpha", "first")
+      .field("beta", "second");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many form fields in the request (limit: 1).",
+    });
+  });
+
+  it("multer LIMIT_UNEXPECTED_FILE still resolves to 422 when a preceding auth handler is mounted first", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("avatar"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(authErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.from("fakeimagecontent"), "pic.jpg");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Unexpected file field 'photo' in the request.",
+    });
+  });
+
+  it("auth errors are handled by the preceding auth handler and do not reach handleUploadError", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+    const { handler: fallback, captured } = makeFallbackHandler();
+
+    const app = express();
+    app.post("/upload", (_req: Request, _res: Response, next: NextFunction) => {
+      const err = new Error("not logged in") as Error & { type: string };
+      err.type = "auth";
+      next(err);
+    });
+    app.use(authErrorHandler);
+    app.use(handleUploadError);
+    app.use(fallback);
+
+    const res = await request(app).post("/upload").field("x", "y");
+
+    // Auth handler should have responded; handleUploadError should not fire.
+    expect(res.status).toBe(401);
+    expect(res.body).toEqual({ error: "Unauthorized." });
+    // Nothing should have fallen through to the fallback.
+    expect(captured).toHaveLength(0);
+  });
+
+  it("non-multer generic Error passes through handleUploadError and reaches the downstream fallback handler", async () => {
+    const { handler: fallback, captured } = makeFallbackHandler();
+
+    const genericError = new Error("database exploded");
+
+    const app = express();
+    app.post("/upload", (_req: Request, _res: Response, next: NextFunction) => {
+      next(genericError);
+    });
+    app.use(handleUploadError);
+    app.use(fallback);
+
+    const res = await request(app).post("/upload").field("x", "y");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: "fallback" });
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.err).toBe(genericError);
+  });
+
+  it("non-multer non-Error plain object passes through handleUploadError and reaches the downstream fallback handler", async () => {
+    const { handler: fallback, captured } = makeFallbackHandler();
+
+    const plainError = { message: "custom plain-object error", code: 42 };
+
+    const app = express();
+    app.post("/upload", (_req: Request, _res: Response, next: NextFunction) => {
+      next(plainError);
+    });
+    app.use(handleUploadError);
+    app.use(fallback);
+
+    const res = await request(app).post("/upload").field("x", "y");
+
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: "fallback" });
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.err).toBe(plainError);
+  });
+
+  it("non-multer error is not double-handled when handleUploadError is sandwiched between two handlers", async () => {
+    // A second catch-all mounted after handleUploadError ensures that if
+    // handleUploadError accidentally responds AND calls next(), the second
+    // handler would also fire (and we can assert it didn't).
+    const { handler: fallback, captured } = makeFallbackHandler();
+
+    const genericError = new Error("something broke");
+
+    const app = express();
+    app.post("/upload", (_req: Request, _res: Response, next: NextFunction) => {
+      next(genericError);
+    });
+    // Preceding handler does not match — passes through.
+    app.use(authErrorHandler);
+    // handleUploadError must not respond and must call next(err) exactly once.
+    app.use(handleUploadError);
+    // Only this fallback should produce the response.
+    app.use(fallback);
+
+    const res = await request(app).post("/upload").field("x", "y");
+
+    expect(res.status).toBe(500);
+    // Fallback fires exactly once — no double response.
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.err).toBe(genericError);
+  });
+
+  it("multer error is not passed to downstream fallback when handleUploadError handles it", async () => {
+    // Ensures handleUploadError does NOT call next() after responding to a
+    // multer error (i.e. it terminates the error chain, not double-handles).
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+    const { handler: fallback, captured } = makeFallbackHandler();
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("file"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+    // If handleUploadError incorrectly called next() the fallback would fire.
+    app.use(fallback);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("file", Buffer.alloc(LIMIT_BYTES + 1, "x"), "big.bin");
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Uploaded file in field 'file' is too large (limit: 10 B).",
+    });
+    // Fallback must not have been called — the error chain terminated in handleUploadError.
+    expect(captured).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // End-to-end: real Express route returns 413 with field name in body
 // ---------------------------------------------------------------------------
 
