@@ -473,22 +473,36 @@ export default function InvestigateScreen() {
             </Text>
 
             {isEmptyResult ? (
-              <View
-                style={[
-                  styles.emptyResultBox,
-                  { borderColor: colors.border, backgroundColor: colors.muted },
-                ]}
-              >
-                <Feather name="info" size={14} color={colors.mutedForeground} />
-                <Text
+              <>
+                <View
                   style={[
-                    styles.emptyResultText,
-                    { color: colors.mutedForeground },
+                    styles.emptyResultBox,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: colors.muted,
+                    },
                   ]}
                 >
-                  {t.investigate.emptyResult}
+                  <Feather
+                    name="info"
+                    size={14}
+                    color={colors.mutedForeground}
+                  />
+                  <Text
+                    style={[
+                      styles.emptyResultText,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {t.investigate.emptyResult}
+                  </Text>
+                </View>
+                <Text
+                  style={[styles.errorTip, { color: colors.mutedForeground }]}
+                >
+                  {t.investigate.emptyResultTip}
                 </Text>
-              </View>
+              </>
             ) : null}
 
             {result.buildingName ? (

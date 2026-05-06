@@ -222,6 +222,7 @@ export interface Strings {
     nearestChipDismiss: string;
     tryDifferentName: string;
     emptyResult: string;
+    emptyResultTip: string;
   };
   login: {
     title: string;
@@ -510,6 +511,8 @@ const en: Strings = {
     tryDifferentName: "Try a different name",
     emptyResult:
       "We couldn't find much about this place. Try a different name or nearby address.",
+    emptyResultTip:
+      "Tip: Try a nearby intersection, include the city name, or use a well-known landmark as a reference.",
   },
   login: {
     title: "Urban Explorer",
@@ -806,6 +809,8 @@ const es: Strings = {
     tryDifferentName: "Probar con otro nombre",
     emptyResult:
       "No encontramos mucho sobre este lugar. Prueba con otro nombre o una dirección cercana.",
+    emptyResultTip:
+      "Consejo: Prueba con una intersección cercana, incluye el nombre de la ciudad o usa un punto de referencia conocido.",
   },
   login: {
     title: "Urban Explorer",
@@ -1102,6 +1107,8 @@ const fr: Strings = {
     tryDifferentName: "Essayer un autre nom",
     emptyResult:
       "Nous n'avons pas trouvé grand-chose sur cet endroit. Essayez un autre nom ou une adresse voisine.",
+    emptyResultTip:
+      "Astuce : Essayez une intersection proche, ajoutez le nom de la ville ou utilisez un monument connu comme référence.",
   },
   login: {
     title: "Urban Explorer",
@@ -1396,6 +1403,8 @@ const de: Strings = {
     tryDifferentName: "Anderen Namen versuchen",
     emptyResult:
       "Wir haben nicht viel über diesen Ort gefunden. Versuche einen anderen Namen oder eine nahegelegene Adresse.",
+    emptyResultTip:
+      "Tipp: Versuche eine nahe Kreuzung, füge den Stadtnamen hinzu oder verwende ein bekanntes Wahrzeichen als Referenz.",
   },
   login: {
     title: "Urban Explorer",
@@ -1689,6 +1698,8 @@ const it: Strings = {
     tryDifferentName: "Prova un altro nome",
     emptyResult:
       "Non abbiamo trovato molto su questo posto. Prova un altro nome o un indirizzo vicino.",
+    emptyResultTip:
+      "Suggerimento: Prova un incrocio vicino, includi il nome della città o usa un punto di riferimento noto.",
   },
   login: {
     title: "Urban Explorer",
@@ -1986,6 +1997,8 @@ const pt: Strings = {
     tryDifferentName: "Tentar outro nome",
     emptyResult:
       "Não encontramos muito sobre este lugar. Tente outro nome ou um endereço próximo.",
+    emptyResultTip:
+      "Dica: Tente uma intersecção próxima, inclua o nome da cidade ou use um ponto de referência conhecido.",
   },
   login: {
     title: "Urban Explorer",
@@ -2276,6 +2289,8 @@ const nl: Strings = {
     tryDifferentName: "Probeer een andere naam",
     emptyResult:
       "We hebben niet veel gevonden over deze plek. Probeer een andere naam of een nabijgelegen adres.",
+    emptyResultTip:
+      "Tip: Probeer een nabijgelegen kruispunt, voeg de stadsnaam toe of gebruik een bekend herkenningspunt als referentie.",
   },
   login: {
     title: "Urban Explorer",
@@ -2567,6 +2582,8 @@ const ja: Strings = {
     tryDifferentName: "別の名前で試す",
     emptyResult:
       "この場所についてあまり情報が見つかりませんでした。別の名前や近くの住所で試してみてください。",
+    emptyResultTip:
+      "ヒント：近くの交差点や市区町村名を加えてみるか、有名なランドマークを基準に検索してみてください。",
   },
   login: {
     title: "Urban Explorer",
@@ -2850,6 +2867,8 @@ const ko: Strings = {
     tryDifferentName: "다른 이름으로 시도하기",
     emptyResult:
       "이 장소에 대한 정보를 많이 찾지 못했어요. 다른 이름이나 근처 주소로 시도해 보세요.",
+    emptyResultTip:
+      "팁: 근처 교차로를 입력하거나 도시 이름을 추가하거나 잘 알려진 랜드마크를 기준으로 검색해 보세요.",
   },
   login: {
     title: "Urban Explorer",
@@ -3125,6 +3144,8 @@ const zh: Strings = {
     nearestChipDismiss: "关闭建议",
     tryDifferentName: "尝试其他名称",
     emptyResult: "我们未能找到关于此地的太多信息。请尝试其他名称或附近地址。",
+    emptyResultTip:
+      "提示：试试附近的路口、加上城市名称，或以知名地标作为参照。",
   },
   login: {
     title: "Urban Explorer",
