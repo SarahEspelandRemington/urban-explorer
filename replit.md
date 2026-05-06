@@ -21,6 +21,7 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `UPLOAD_MAX_FILES`: (Optional) Maximum number of files per multipart upload request (positive integer, default 10).
 - `UPLOAD_MAX_FIELDS`: (Optional) Maximum number of non-file fields per multipart upload request (positive integer, default 20).
 - `UPLOAD_MAX_PARTS`: (Optional) Maximum total parts (files + fields combined) per multipart upload request (positive integer, default UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS = 30).
+- `UPLOAD_MAX_FILE_SIZE`: (Optional) Hard cap in bytes for a single uploaded file (positive integer, default derived from UPLOAD_BODY_LIMIT = 10485760 = 10 MB). Per-endpoint `fileSizeOverride` still takes precedence.
 - `UPLOAD_FIELD_SIZE`: (Optional) Maximum byte size for a non-file field value in any multipart upload request (positive integer, default 1048576 = 1 MB).
 
 ## Stack

@@ -235,6 +235,49 @@ export const UPLOAD_BODY_LIMIT = envVar(
   "10mb",
 );
 
+/**
+ * Convert a validated size string (e.g. "10mb", "512kb") to an integer byte
+ * count. Used only within config.ts to derive numeric defaults from string
+ * size vars. Throws on unrecognised input (should never happen after Zod
+ * validation).
+ */
+function sizeStringToBytes(sizeStr: string): number {
+  const match = sizeStr.trim().match(/^(\d+(?:\.\d+)?)\s*(b|kb|mb|gb)$/i);
+  if (!match) {
+    throw new Error(
+      `config.ts: cannot parse size string "${sizeStr}" — expected format like "10mb"`,
+    );
+  }
+  const multipliers: Record<string, number> = {
+    b: 1,
+    kb: 1024,
+    mb: 1024 * 1024,
+    gb: 1024 * 1024 * 1024,
+  };
+  return Math.floor(
+    parseFloat(match[1]) * (multipliers[match[2].toLowerCase()] ?? 1),
+  );
+}
+
+/**
+ * Maximum allowed size in bytes for a single uploaded file, passed to the
+ * shared multer factory in `lib/upload.ts`. This is the independently
+ * configurable numeric equivalent of UPLOAD_BODY_LIMIT, allowing operators to
+ * tighten or loosen the per-file size cap at deploy time without code changes.
+ *
+ * Per-call `fileSizeOverride` in `createUpload` still takes precedence over
+ * this value so individual endpoints can enforce a tighter limit in code.
+ *
+ * Env var : UPLOAD_MAX_FILE_SIZE
+ * Expects : positive integer (bytes)
+ * Default : derived from UPLOAD_BODY_LIMIT (10 MB = 10485760 with stock defaults)
+ */
+export const UPLOAD_MAX_FILE_SIZE = envVar(
+  "UPLOAD_MAX_FILE_SIZE",
+  z.coerce.number().int().positive(),
+  sizeStringToBytes(UPLOAD_BODY_LIMIT),
+);
+
 // ---------------------------------------------------------------------------
 // Upload (multipart/form-data) cardinality limits
 // ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@ import { handleUploadError, createUpload } from "./upload";
 
 vi.mock("../config", () => ({
   UPLOAD_BODY_LIMIT: "10mb",
+  UPLOAD_MAX_FILE_SIZE: 100,
   UPLOAD_MAX_FILES: 10,
   UPLOAD_MAX_FIELDS: 20,
   UPLOAD_MAX_PARTS: 30,
@@ -257,6 +258,37 @@ describe("createUpload integration", () => {
 
     const smallContent = Buffer.alloc(LIMIT_BYTES - 1, "x");
     const body = buildMultipartBody("small.bin", smallContent);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeUndefined();
+  });
+
+  it("rejects a file that exceeds the UPLOAD_MAX_FILE_SIZE baseline (100) without any fileSizeOverride", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const oversizedContent = Buffer.alloc(101, "x");
+    const body = buildMultipartBody("oversized.bin", oversizedContent);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FILE_SIZE");
+  });
+
+  it("accepts a file within the UPLOAD_MAX_FILE_SIZE baseline (100) without any fileSizeOverride", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const okContent = Buffer.alloc(99, "x");
+    const body = buildMultipartBody("ok.bin", okContent);
     const req = makeMultipartReq(body);
 
     const err = await runMiddleware(
