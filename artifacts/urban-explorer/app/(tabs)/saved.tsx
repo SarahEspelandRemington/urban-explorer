@@ -326,10 +326,7 @@ export default function SavedScreen() {
 
           {!userLocation && (
             <Text
-              style={[
-                styles.noLocationHint,
-                { color: colors.mutedForeground },
-              ]}
+              style={[styles.noLocationHint, { color: colors.mutedForeground }]}
             >
               {t.saved.sortNearestNoLocation}
             </Text>

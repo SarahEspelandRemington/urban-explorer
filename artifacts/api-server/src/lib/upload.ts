@@ -138,9 +138,10 @@ const MULTER_ERROR_STATUS: Record<string, number> = {
  * (e.g. an upload instance created outside this module), the global config
  * values are used as a fallback.
  *
- * For `LIMIT_FIELD_VALUE`, the `field` property on the `MulterError` (when
- * multer populates it) is included so callers immediately know which field
- * to fix, e.g. "Form field 'description' value is too large (limit: 1 MB)."
+ * For `LIMIT_FILE_SIZE` and `LIMIT_FIELD_VALUE`, the `field` property on the
+ * `MulterError` (when multer populates it) is included so callers immediately
+ * know which field to fix, e.g. "Uploaded file in field 'photo' is too large
+ * (limit: 5 MB)." or "Form field 'description' value is too large (limit: 1 MB)."
  */
 function buildMulterErrorMessage(
   err: multer.MulterError,
@@ -149,7 +150,8 @@ function buildMulterErrorMessage(
   switch (err.code) {
     case "LIMIT_FILE_SIZE": {
       const limit = activeLimits?.fileSize ?? UPLOAD_MAX_FILE_SIZE;
-      return `Uploaded file is too large (limit: ${formatBytes(limit)}).`;
+      const fieldClause = err.field ? ` in field '${err.field}'` : "";
+      return `Uploaded file${fieldClause} is too large (limit: ${formatBytes(limit)}).`;
     }
     case "LIMIT_FILE_COUNT": {
       const limit = activeLimits?.files ?? UPLOAD_MAX_FILES;

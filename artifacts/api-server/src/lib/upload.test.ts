@@ -102,6 +102,31 @@ describe("handleUploadError", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("includes the field name in LIMIT_FILE_SIZE message when MulterError.field is set", () => {
+    handleUploadError(
+      multerErrorWithField("LIMIT_FILE_SIZE", "photo"),
+      makeReq(),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Uploaded file in field 'photo' is too large (limit: 100 B).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("omits the field name in LIMIT_FILE_SIZE message when MulterError.field is not set", () => {
+    handleUploadError(multerError("LIMIT_FILE_SIZE"), makeReq(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Uploaded file is too large (limit: 100 B).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("maps LIMIT_FILE_COUNT to 422 with the configured limit in the message", () => {
     handleUploadError(multerError("LIMIT_FILE_COUNT"), makeReq(), res, next);
 
@@ -351,12 +376,17 @@ function buildMultipartBodyWithFields(
 
 /**
  * Build a minimal multipart/form-data body with a single file field.
+ * `fieldName` defaults to `"file"` when omitted.
  */
-function buildMultipartBody(filename: string, fileContent: Buffer): Buffer {
+function buildMultipartBody(
+  filename: string,
+  fileContent: Buffer,
+  fieldName = "file",
+): Buffer {
   const parts: Buffer[] = [
     Buffer.from(
       `--${BOUNDARY}\r\n` +
-        `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+        `Content-Disposition: form-data; name="${fieldName}"; filename="${filename}"\r\n` +
         `Content-Type: application/octet-stream\r\n` +
         `\r\n`,
     ),
@@ -447,7 +477,7 @@ describe("createUpload integration", () => {
 
     expect(res.status).toHaveBeenCalledWith(413);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Uploaded file is too large (limit: 10 B).",
+      error: "Uploaded file in field 'file' is too large (limit: 10 B).",
     });
   });
 
@@ -908,6 +938,37 @@ describe("createUpload integration", () => {
     );
 
     expect(err).toBeUndefined();
+  });
+
+  it("populates err.field with the file field name on LIMIT_FILE_SIZE and includes it in the error message", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const oversizedContent = Buffer.alloc(LIMIT_BYTES + 1, "x");
+    const body = buildMultipartBody("oversized.bin", oversizedContent, "photo");
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.single("photo") as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FILE_SIZE");
+    expect((err as multer.MulterError).field).toBe("photo");
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Uploaded file in field 'photo' is too large (limit: 10 B).",
+    });
   });
 
   it("populates err.field with the unexpected field name on LIMIT_UNEXPECTED_FILE and includes it in the error message", async () => {
