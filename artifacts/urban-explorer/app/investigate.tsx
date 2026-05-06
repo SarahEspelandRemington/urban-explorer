@@ -75,6 +75,9 @@ export default function InvestigateScreen() {
         selection: { start: len, end: len },
       });
     }, 100);
+    // Address is already set in state at mount; submit immediately so the
+    // user lands on the loading/result state without a redundant tap.
+    handleSubmit();
     return () => clearTimeout(timer);
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
