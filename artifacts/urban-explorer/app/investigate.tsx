@@ -89,6 +89,10 @@ export default function InvestigateScreen() {
 
   const handleChangeAddress = useCallback((text: string) => {
     setAddress(text);
+    // Auto-dismiss the suggestion chip as soon as the user types anything.
+    if (text.length > 0) {
+      setChipDismissed(true);
+    }
     // Only invalidate picked coords if the text has truly diverged from the
     // suggestion the user picked. Tolerates trailing edits like adding a unit
     // number or zip while preserving the precise coords.
@@ -189,7 +193,7 @@ export default function InvestigateScreen() {
             <Animated.View
               style={styles.chipRow}
               entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
-              exiting={Platform.OS !== "web" ? FadeOutDown.duration(250) : undefined}
+              exiting={Platform.OS !== "web" ? FadeOutDown.duration(180) : undefined}
             >
               <Pressable
                 onPress={handleChipPress}
