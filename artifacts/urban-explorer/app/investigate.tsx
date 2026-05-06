@@ -68,17 +68,9 @@ export default function InvestigateScreen() {
 
   useEffect(() => {
     if (!shouldAutoFill || !params.prefillAddress) return;
-    const len = params.prefillAddress.length;
-    const timer = setTimeout(() => {
-      addressInputRef.current?.focus();
-      addressInputRef.current?.setNativeProps({
-        selection: { start: len, end: len },
-      });
-    }, 100);
     // Address is already set in state at mount; submit immediately so the
-    // user lands on the loading/result state without a redundant tap.
+    // user lands on the loading/result state without showing the input UI.
     handleSubmit();
-    return () => clearTimeout(timer);
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -184,13 +176,17 @@ export default function InvestigateScreen() {
         </Pressable>
         <View style={styles.headerTextWrap}>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>
-            {t.investigate.headerTitle}
+            {shouldAutoFill && params.prefillAddress
+              ? params.prefillAddress
+              : t.investigate.headerTitle}
           </Text>
-          <Text
-            style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
-          >
-            {t.investigate.headerSubtitle}
-          </Text>
+          {!shouldAutoFill && (
+            <Text
+              style={[styles.headerSubtitle, { color: colors.mutedForeground }]}
+            >
+              {t.investigate.headerSubtitle}
+            </Text>
+          )}
         </View>
       </View>
 
@@ -203,114 +199,122 @@ export default function InvestigateScreen() {
         keyboardShouldPersistTaps="handled"
         bottomOffset={20}
       >
-        <View style={styles.inputBlock}>
-          <AddressInput
-            ref={addressInputRef}
-            value={address}
-            onChangeText={handleChangeAddress}
-            onSelectSuggestion={handleSelectSuggestion}
-            onSubmitEditing={handleSubmit}
-            placeholder={t.investigate.placeholder}
-            dotColor={colors.primary}
-            returnKeyType="search"
-            nearLocation={params.nearLocation ?? null}
-            testID="investigate-address-input"
-          />
+        {!shouldAutoFill && (
+          <View style={styles.inputBlock}>
+            <AddressInput
+              ref={addressInputRef}
+              value={address}
+              onChangeText={handleChangeAddress}
+              onSelectSuggestion={handleSelectSuggestion}
+              onSubmitEditing={handleSubmit}
+              placeholder={t.investigate.placeholder}
+              dotColor={colors.primary}
+              returnKeyType="search"
+              nearLocation={params.nearLocation ?? null}
+              testID="investigate-address-input"
+            />
 
-          {showChip && (
-            <Animated.View
-              style={styles.chipRow}
-              entering={
-                Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
-              }
-              exiting={
-                Platform.OS !== "web" ? FadeOutDown.duration(180) : undefined
-              }
-            >
-              <Pressable
-                onPress={handleChipPress}
-                style={[
-                  styles.prefillChip,
-                  {
-                    backgroundColor: colors.muted,
-                    borderColor: colors.border,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`${t.investigate.nearestChipPrefix} ${params.prefillAddress}`}
-                accessibilityHint={t.investigate.nearestChipDismiss}
+            {showChip && (
+              <Animated.View
+                style={styles.chipRow}
+                entering={
+                  Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
+                }
+                exiting={
+                  Platform.OS !== "web" ? FadeOutDown.duration(180) : undefined
+                }
               >
-                <Feather name="map-pin" size={12} color={colors.primary} />
-                <Text
-                  style={[styles.prefillChipText, { color: colors.foreground }]}
-                  numberOfLines={1}
-                >
-                  {t.investigate.nearestChipPrefix}{" "}
-                  <Text style={{ color: colors.primary }}>
-                    {params.prefillAddress}
-                  </Text>
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setChipDismissed(true)}
-                hitSlop={8}
-                accessibilityLabel={t.investigate.nearestChipDismiss}
-                style={[
-                  styles.chipDismiss,
-                  { backgroundColor: colors.muted, borderColor: colors.border },
-                ]}
-              >
-                <Feather name="x" size={12} color={colors.mutedForeground} />
-              </Pressable>
-            </Animated.View>
-          )}
-
-          <Pressable
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            style={({ pressed }) => [
-              styles.submitButton,
-              {
-                backgroundColor: canSubmit ? colors.primary : colors.muted,
-                opacity: pressed && canSubmit ? 0.9 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel="Investigate this address"
-          >
-            {investigate.isPending ? (
-              <ActivityIndicator color={colors.primaryForeground} />
-            ) : (
-              <>
-                <Feather
-                  name="search"
-                  size={16}
-                  color={
-                    canSubmit
-                      ? colors.primaryForeground
-                      : colors.mutedForeground
-                  }
-                />
-                <Text
+                <Pressable
+                  onPress={handleChipPress}
                   style={[
-                    styles.submitText,
+                    styles.prefillChip,
                     {
-                      color: canSubmit
-                        ? colors.primaryForeground
-                        : colors.mutedForeground,
+                      backgroundColor: colors.muted,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.investigate.nearestChipPrefix} ${params.prefillAddress}`}
+                  accessibilityHint={t.investigate.nearestChipDismiss}
+                >
+                  <Feather name="map-pin" size={12} color={colors.primary} />
+                  <Text
+                    style={[
+                      styles.prefillChipText,
+                      { color: colors.foreground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {t.investigate.nearestChipPrefix}{" "}
+                    <Text style={{ color: colors.primary }}>
+                      {params.prefillAddress}
+                    </Text>
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setChipDismissed(true)}
+                  hitSlop={8}
+                  accessibilityLabel={t.investigate.nearestChipDismiss}
+                  style={[
+                    styles.chipDismiss,
+                    {
+                      backgroundColor: colors.muted,
+                      borderColor: colors.border,
                     },
                   ]}
                 >
-                  {t.investigate.investigate}
-                </Text>
-              </>
+                  <Feather name="x" size={12} color={colors.mutedForeground} />
+                </Pressable>
+              </Animated.View>
             )}
-          </Pressable>
 
-          <Text style={[styles.hint, { color: colors.mutedForeground }]}>
-            {t.investigate.hint}
-          </Text>
-        </View>
+            <Pressable
+              onPress={handleSubmit}
+              disabled={!canSubmit}
+              style={({ pressed }) => [
+                styles.submitButton,
+                {
+                  backgroundColor: canSubmit ? colors.primary : colors.muted,
+                  opacity: pressed && canSubmit ? 0.9 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Investigate this address"
+            >
+              {investigate.isPending ? (
+                <ActivityIndicator color={colors.primaryForeground} />
+              ) : (
+                <>
+                  <Feather
+                    name="search"
+                    size={16}
+                    color={
+                      canSubmit
+                        ? colors.primaryForeground
+                        : colors.mutedForeground
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.submitText,
+                      {
+                        color: canSubmit
+                          ? colors.primaryForeground
+                          : colors.mutedForeground,
+                      },
+                    ]}
+                  >
+                    {t.investigate.investigate}
+                  </Text>
+                </>
+              )}
+            </Pressable>
+
+            <Text style={[styles.hint, { color: colors.mutedForeground }]}>
+              {t.investigate.hint}
+            </Text>
+          </View>
+        )}
 
         {errorMessage && (
           <Animated.View
