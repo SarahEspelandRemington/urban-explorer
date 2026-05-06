@@ -577,6 +577,7 @@ export default function PlaceDetailScreen() {
                                 pathname: "/investigate",
                                 params: {
                                   prefillAddress: relatedName,
+                                  autoFill: "true",
                                   ...(nearLocation ? { nearLocation } : {}),
                                 },
                               });
