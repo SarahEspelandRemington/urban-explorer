@@ -154,6 +154,27 @@ describe("handleUploadError", () => {
 const BOUNDARY = "----TestBoundary001";
 
 /**
+ * Build a multipart/form-data body with one or more plain text fields (no files).
+ */
+function buildMultipartBodyWithFields(
+  fields: Array<{ name: string; value: string }>,
+): Buffer {
+  const parts: Buffer[] = [];
+  for (const { name, value } of fields) {
+    parts.push(
+      Buffer.from(
+        `--${BOUNDARY}\r\n` +
+          `Content-Disposition: form-data; name="${name}"\r\n` +
+          `\r\n` +
+          `${value}\r\n`,
+      ),
+    );
+  }
+  parts.push(Buffer.from(`--${BOUNDARY}--\r\n`));
+  return Buffer.concat(parts);
+}
+
+/**
  * Build a minimal multipart/form-data body with a single file field.
  */
 function buildMultipartBody(filename: string, fileContent: Buffer): Buffer {
@@ -273,5 +294,46 @@ describe("createUpload integration", () => {
 
     expect(err).toBeInstanceOf(multer.MulterError);
     expect((err as multer.MulterError).code).toBe("LIMIT_FILE_COUNT");
+  });
+
+  it("rejects when non-file field count exceeds maxFields override with LIMIT_FIELD_COUNT", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 1,
+    });
+
+    const body = buildMultipartBodyWithFields([
+      { name: "alpha", value: "first" },
+      { name: "beta", value: "second" },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_COUNT");
+  });
+
+  it("rejects a field value that exceeds fieldSizeOverride with LIMIT_FIELD_VALUE", async () => {
+    const FIELD_SIZE_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldSizeOverride: FIELD_SIZE_BYTES,
+    });
+
+    const oversizedValue = "x".repeat(FIELD_SIZE_BYTES + 1);
+    const body = buildMultipartBodyWithFields([
+      { name: "description", value: oversizedValue },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_VALUE");
   });
 });
