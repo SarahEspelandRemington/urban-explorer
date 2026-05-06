@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Readable } from "stream";
 import type { IncomingMessage } from "http";
 import multer from "multer";
+import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import request from "supertest";
 import { handleUploadError, createUpload } from "./upload";
 
 vi.mock("../config", () => ({
@@ -1315,6 +1317,63 @@ describe("createUpload integration", () => {
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
       error: "Unexpected file field 'avatar' in the request.",
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// End-to-end: real Express route returns 413 with field name in body
+// ---------------------------------------------------------------------------
+
+describe("LIMIT_FIELD_VALUE end-to-end via real Express route", () => {
+  it("returns 413 with the field name in the JSON error body when a field value exceeds fieldSizeOverride", async () => {
+    const FIELD_SIZE_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldSizeOverride: FIELD_SIZE_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const oversizedValue = "x".repeat(FIELD_SIZE_BYTES + 1);
+    const res = await request(app)
+      .post("/upload")
+      .field("description", oversizedValue);
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Form field 'description' value is too large (limit: 10 B).",
+    });
+  });
+
+  it("returns 413 with the field name in the JSON error body using the global UPLOAD_FIELD_SIZE baseline", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(handleUploadError);
+
+    const oversizedValue = "x".repeat(1048576 + 1);
+    const res = await request(app)
+      .post("/upload")
+      .field("biography", oversizedValue);
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Form field 'biography' value is too large (limit: 1 MB).",
     });
   });
 });
