@@ -90,6 +90,7 @@ interface ActiveUploadLimits {
   files: number;
   fields: number;
   parts: number;
+  fieldSize: number;
 }
 
 /**
@@ -158,8 +159,10 @@ function buildMulterErrorMessage(
       const limit = activeLimits?.parts ?? UPLOAD_MAX_PARTS;
       return `Too many parts in the multipart request (limit: ${limit}).`;
     }
-    case "LIMIT_FIELD_VALUE":
-      return "Form field value is too large.";
+    case "LIMIT_FIELD_VALUE": {
+      const limit = activeLimits?.fieldSize ?? UPLOAD_FIELD_SIZE;
+      return `Form field value is too large (limit: ${formatBytes(limit)}).`;
+    }
     case "LIMIT_FIELD_KEY":
       return "Form field name is too long.";
     case "LIMIT_UNEXPECTED_FILE":
@@ -320,7 +323,13 @@ export function createUpload(
     },
   });
 
-  return wrapWithActiveLimits(instance, { fileSize, files, fields, parts });
+  return wrapWithActiveLimits(instance, {
+    fileSize,
+    files,
+    fields,
+    parts,
+    fieldSize,
+  });
 }
 
 // ---------------------------------------------------------------------------

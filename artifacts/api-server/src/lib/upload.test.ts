@@ -39,6 +39,7 @@ function makeReq(uploadLimits?: {
   files: number;
   fields: number;
   parts: number;
+  fieldSize: number;
 }) {
   const req = {} as Request;
   if (uploadLimits !== undefined) {
@@ -77,7 +78,13 @@ describe("handleUploadError", () => {
   it("maps LIMIT_FILE_SIZE using _uploadLimits fileSize override when present", () => {
     handleUploadError(
       multerError("LIMIT_FILE_SIZE"),
-      makeReq({ fileSize: 5242880, files: 10, fields: 20, parts: 30 }),
+      makeReq({
+        fileSize: 5242880,
+        files: 10,
+        fields: 20,
+        parts: 30,
+        fieldSize: 1048576,
+      }),
       res,
       next,
     );
@@ -102,7 +109,13 @@ describe("handleUploadError", () => {
   it("maps LIMIT_FILE_COUNT using _uploadLimits files override when present", () => {
     handleUploadError(
       multerError("LIMIT_FILE_COUNT"),
-      makeReq({ fileSize: 100, files: 3, fields: 20, parts: 30 }),
+      makeReq({
+        fileSize: 100,
+        files: 3,
+        fields: 20,
+        parts: 30,
+        fieldSize: 1048576,
+      }),
       res,
       next,
     );
@@ -127,7 +140,13 @@ describe("handleUploadError", () => {
   it("maps LIMIT_FIELD_COUNT using _uploadLimits fields override when present", () => {
     handleUploadError(
       multerError("LIMIT_FIELD_COUNT"),
-      makeReq({ fileSize: 100, files: 10, fields: 5, parts: 30 }),
+      makeReq({
+        fileSize: 100,
+        files: 10,
+        fields: 5,
+        parts: 30,
+        fieldSize: 1048576,
+      }),
       res,
       next,
     );
@@ -152,7 +171,13 @@ describe("handleUploadError", () => {
   it("maps LIMIT_PART_COUNT using _uploadLimits parts override when present", () => {
     handleUploadError(
       multerError("LIMIT_PART_COUNT"),
-      makeReq({ fileSize: 100, files: 10, fields: 20, parts: 7 }),
+      makeReq({
+        fileSize: 100,
+        files: 10,
+        fields: 20,
+        parts: 7,
+        fieldSize: 1048576,
+      }),
       res,
       next,
     );
@@ -179,12 +204,33 @@ describe("handleUploadError", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it("maps LIMIT_FIELD_VALUE to 413", () => {
+  it("maps LIMIT_FIELD_VALUE to 413 with the configured limit in the message", () => {
     handleUploadError(multerError("LIMIT_FIELD_VALUE"), makeReq(), res, next);
 
     expect(res.status).toHaveBeenCalledWith(413);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Form field value is too large.",
+      error: "Form field value is too large (limit: 1 MB).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("maps LIMIT_FIELD_VALUE using _uploadLimits fieldSize override when present", () => {
+    handleUploadError(
+      multerError("LIMIT_FIELD_VALUE"),
+      makeReq({
+        fileSize: 100,
+        files: 10,
+        fields: 20,
+        parts: 30,
+        fieldSize: 512,
+      }),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Form field value is too large (limit: 512 B).",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -551,6 +597,65 @@ describe("createUpload integration", () => {
 
     expect(err).toBeInstanceOf(multer.MulterError);
     expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_VALUE");
+  });
+
+  it("shows the fieldSizeOverride value in the LIMIT_FIELD_VALUE error message", async () => {
+    const FIELD_SIZE_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldSizeOverride: FIELD_SIZE_BYTES,
+    });
+
+    const oversizedValue = "x".repeat(FIELD_SIZE_BYTES + 1);
+    const body = buildMultipartBodyWithFields([
+      { name: "description", value: oversizedValue },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Form field value is too large (limit: 10 B).",
+    });
+  });
+
+  it("shows the global UPLOAD_FIELD_SIZE in the LIMIT_FIELD_VALUE error message without a fieldSizeOverride", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const oversizedValue = "x".repeat(1048576 + 1);
+    const body = buildMultipartBodyWithFields([
+      { name: "description", value: oversizedValue },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Form field value is too large (limit: 1 MB).",
+    });
   });
 
   it("rejects a field whose name exceeds fieldNameSizeOverride with LIMIT_FIELD_KEY", async () => {
