@@ -10,6 +10,7 @@ import {
   LLM_CACHE_TTL_MS,
   OSM_CACHE_TTL_MS,
   OSM_SUGGESTIONS_CACHE_MAX_SIZE,
+  OSM_SUGGESTIONS_CACHE_TTL_MS,
   WALK_FORWARD_BIAS_METERS,
   WALK_OFF_AXIS_PENALTY_DEG,
   WALK_OFF_AXIS_PENALTY_METERS,
@@ -153,7 +154,6 @@ const OSM_CACHE_DISTANCE = 200;
 // (or a nearby) empty-result address is searched again, the Overpass call is
 // skipped entirely by checking this cache first.
 const osmSuggestionsCache = new Map<string, LLMCacheEntry<OSMPlace[]>>();
-const OSM_SUGGESTIONS_CACHE_TTL = 30 * 60 * 1000;
 
 function osmSuggestionsBucketKey(lat: number, lng: number): string {
   return `${lat.toFixed(3)},${lng.toFixed(3)}`;
@@ -163,7 +163,7 @@ function getCachedOSMPlaces(lat: number, lng: number): OSMPlace[] | null {
   const key = osmSuggestionsBucketKey(lat, lng);
   const entry = osmSuggestionsCache.get(key);
   if (!entry) return null;
-  if (Date.now() - entry.timestamp > OSM_SUGGESTIONS_CACHE_TTL) {
+  if (Date.now() - entry.timestamp > OSM_SUGGESTIONS_CACHE_TTL_MS) {
     osmSuggestionsCache.delete(key);
     void deleteCacheEntry("osm", key);
     return null;
@@ -188,7 +188,7 @@ function setCachedOSMPlaces(
     data: places,
     timestamp: Date.now(),
   });
-  void persistCacheEntry("osm", key, places, OSM_SUGGESTIONS_CACHE_TTL);
+  void persistCacheEntry("osm", key, places, OSM_SUGGESTIONS_CACHE_TTL_MS);
 }
 
 interface LLMCacheEntry<T = any> {
@@ -315,7 +315,8 @@ async function warmCachesFromDb(): Promise<void> {
         if (osmSuggestionsCache.size < OSM_SUGGESTIONS_CACHE_MAX_SIZE) {
           osmSuggestionsCache.set(row.cacheKey, {
             data: row.data as OSMPlace[],
-            timestamp: Date.now() - (OSM_SUGGESTIONS_CACHE_TTL - remainingMs),
+            timestamp:
+              Date.now() - (OSM_SUGGESTIONS_CACHE_TTL_MS - remainingMs),
           });
           osmLoaded++;
         }
@@ -1221,7 +1222,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v9:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v10:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1751,7 +1752,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     return;
   }
 
-  const cacheKey = `revgeo:v9:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cacheKey = `revgeo:v11:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
   if (cached) {
     res.json(cached);
@@ -3636,7 +3637,7 @@ setInterval(
     }
 
     for (const [key, entry] of osmSuggestionsCache) {
-      if (now - entry.timestamp > OSM_SUGGESTIONS_CACHE_TTL)
+      if (now - entry.timestamp > OSM_SUGGESTIONS_CACHE_TTL_MS)
         osmSuggestionsCache.delete(key);
     }
 

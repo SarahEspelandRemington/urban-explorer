@@ -272,6 +272,23 @@ export const LLM_CACHE_MAX_SIZE = envVar(
 );
 
 /**
+ * Time-to-live for the long-lived OSM suggestions cache (osmSuggestionsCache),
+ * in milliseconds. This cache is keyed by a coarse ~100 m coordinate grid and
+ * persists entries to the DB, so its TTL is deliberately longer than the short
+ * proximity osmCache (OSM_CACHE_TTL_MS). Increase this to reduce Overpass
+ * traffic; decrease it to surface fresher OSM data.
+ *
+ * Env var : OSM_SUGGESTIONS_CACHE_TTL_MS
+ * Expects : positive integer (milliseconds)
+ * Default : 1800000 (30 minutes)
+ */
+export const OSM_SUGGESTIONS_CACHE_TTL_MS = envVar(
+  "OSM_SUGGESTIONS_CACHE_TTL_MS",
+  z.coerce.number().int().positive(),
+  30 * 60 * 1000,
+);
+
+/**
  * Maximum number of entries kept in the in-memory OSM suggestions cache
  * (osmSuggestionsCache), keyed by a coarse coordinate bucket (~100 m grid).
  *
