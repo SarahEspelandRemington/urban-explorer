@@ -1,0 +1,215 @@
+/**
+ * Centralised environment-variable configuration for the API server.
+ *
+ * Every tunable server setting is parsed and validated here with Zod at
+ * module-load time. Invalid values emit a structured warning and fall back to
+ * a safe default so a misconfiguration is caught immediately at startup rather
+ * than silently producing wrong behaviour at runtime.
+ *
+ * Import the named exports from this module instead of reading process.env
+ * directly in route/handler/lib files.
+ *
+ * Note: PORT is validated in index.ts (hard-fail on missing/invalid — the
+ * server cannot start without it). LOG_LEVEL and NODE_ENV are consumed by
+ * logger.ts at construction time (before this module loads) and do not appear
+ * here to avoid a circular import.
+ */
+
+import { z } from "zod/v4";
+import { logger } from "./lib/logger";
+
+// ---------------------------------------------------------------------------
+// Internal helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse a single environment variable with a Zod schema.
+ * - If the variable is absent or empty → return `defaultVal` silently.
+ * - If the variable is present but fails validation → log a warning and return
+ *   `defaultVal`.
+ * - Otherwise → return the parsed/coerced value.
+ */
+function envVar<T>(name: string, schema: z.ZodType<T>, defaultVal: T): T {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return defaultVal;
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    logger.warn(
+      { name, value: raw },
+      `Environment variable ${name} has an invalid value; falling back to default (${String(defaultVal)})`,
+    );
+    return defaultVal;
+  }
+  return result.data;
+}
+
+/**
+ * Parse an optional environment variable with a Zod schema.
+ * - If the variable is absent or empty → return `undefined` silently.
+ * - If the variable is present but fails validation → log a warning and return
+ *   `undefined` (treat as if unset).
+ * - Otherwise → return the parsed/coerced value.
+ */
+function envOptional<T>(name: string, schema: z.ZodType<T>): T | undefined {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return undefined;
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    logger.warn(
+      { name, value: raw },
+      `Environment variable ${name} has an invalid value; ignoring and falling back to built-in default`,
+    );
+    return undefined;
+  }
+  return result.data;
+}
+
+// ---------------------------------------------------------------------------
+// Audio cache
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum number of audio rows to keep in the database.
+ * Each row is roughly 30–200 KB of base64-encoded MP3, so 100 rows ≈ 5–20 MB.
+ * Rows are ranked by expires_at DESC so the freshest entries are preserved.
+ *
+ * Env var : AUDIO_DB_MAX_ENTRIES
+ * Expects : positive integer
+ * Default : 100
+ */
+export const AUDIO_DB_MAX_ENTRIES = envVar(
+  "AUDIO_DB_MAX_ENTRIES",
+  z.coerce.number().int().positive(),
+  100,
+);
+
+// ---------------------------------------------------------------------------
+// Photo cache
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum age (in days) for cached place photos stored in the database.
+ * Rows older than this cutoff are deleted by the scheduled cleanup job.
+ *
+ * Env var : PHOTO_CACHE_MAX_AGE_DAYS
+ * Expects : positive finite number
+ * Default : 7
+ */
+export const PHOTO_CACHE_MAX_AGE_DAYS = envVar(
+  "PHOTO_CACHE_MAX_AGE_DAYS",
+  z.coerce.number().positive().finite(),
+  7,
+);
+
+// ---------------------------------------------------------------------------
+// Walk Mode heading-bias tuning
+// ---------------------------------------------------------------------------
+
+/**
+ * Distance in metres that the Walk Mode scoring algorithm favours places
+ * that lie ahead of the user's current heading.
+ *
+ * Env var : WALK_FORWARD_BIAS_METERS
+ * Expects : finite number
+ * Default : 200
+ */
+export const WALK_FORWARD_BIAS_METERS = envVar(
+  "WALK_FORWARD_BIAS_METERS",
+  z.coerce.number().finite(),
+  200,
+);
+
+/**
+ * Angular threshold in degrees beyond which a place is considered "off-axis"
+ * relative to the user's heading and receives a distance penalty.
+ *
+ * Env var : WALK_OFF_AXIS_PENALTY_DEG
+ * Expects : finite number
+ * Default : 70
+ */
+export const WALK_OFF_AXIS_PENALTY_DEG = envVar(
+  "WALK_OFF_AXIS_PENALTY_DEG",
+  z.coerce.number().finite(),
+  70,
+);
+
+/**
+ * Extra virtual distance (in metres) added to off-axis places during Walk
+ * Mode scoring to de-prioritise them relative to on-axis candidates.
+ *
+ * Env var : WALK_OFF_AXIS_PENALTY_METERS
+ * Expects : finite number
+ * Default : 120
+ */
+export const WALK_OFF_AXIS_PENALTY_METERS = envVar(
+  "WALK_OFF_AXIS_PENALTY_METERS",
+  z.coerce.number().finite(),
+  120,
+);
+
+// ---------------------------------------------------------------------------
+// Boring building types
+// ---------------------------------------------------------------------------
+
+/**
+ * Comma-separated list of OSM building types to exclude from discovery results.
+ * When set, this takes precedence over BORING_BUILDING_TYPES_FILE and the
+ * bundled default JSON. The consuming code splits this string and builds a Set.
+ * Whitespace-only values are treated the same as absent and trigger a warning.
+ *
+ * Env var : BORING_BUILDING_TYPES
+ * Expects : non-empty, non-whitespace-only string
+ * Default : undefined (falls through to file or bundled defaults)
+ */
+export const BORING_BUILDING_TYPES_ENV = envOptional(
+  "BORING_BUILDING_TYPES",
+  z.string().trim().min(1),
+);
+
+/**
+ * Absolute or relative path to a JSON file containing an array of boring
+ * building type strings. Used when BORING_BUILDING_TYPES is not set.
+ * Whitespace-only paths are treated as absent and trigger a warning.
+ *
+ * Env var : BORING_BUILDING_TYPES_FILE
+ * Expects : non-empty, non-whitespace-only string (file path)
+ * Default : undefined (falls through to bundled defaults)
+ */
+export const BORING_BUILDING_TYPES_FILE_ENV = envOptional(
+  "BORING_BUILDING_TYPES_FILE",
+  z.string().trim().min(1),
+);
+
+// ---------------------------------------------------------------------------
+// Auth / OIDC
+// ---------------------------------------------------------------------------
+
+/**
+ * OpenID Connect issuer base URL used for OIDC discovery.
+ *
+ * Env var : ISSUER_URL
+ * Expects : valid URL string
+ * Default : "https://replit.com/oidc"
+ */
+export const ISSUER_URL = envVar(
+  "ISSUER_URL",
+  z.string().url(),
+  "https://replit.com/oidc",
+);
+
+/**
+ * Replit application ID, injected automatically by the platform.
+ * Required for OIDC client registration and end-session redirect URLs.
+ * A warning is emitted at startup when this is absent so the misconfiguration
+ * is surfaced before any OIDC request is attempted.
+ *
+ * Env var : REPL_ID
+ * Expects : non-empty string (platform-injected; should always be present)
+ */
+export const REPL_ID = envOptional("REPL_ID", z.string().trim().min(1));
+if (REPL_ID === undefined) {
+  logger.warn(
+    { name: "REPL_ID" },
+    "REPL_ID environment variable is not set; OIDC authentication will fail at runtime",
+  );
+}

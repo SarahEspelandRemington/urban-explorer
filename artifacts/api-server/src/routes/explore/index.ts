@@ -1,5 +1,13 @@
 import { Router } from "express";
 import { logger } from "../../lib/logger";
+import {
+  AUDIO_DB_MAX_ENTRIES,
+  BORING_BUILDING_TYPES_ENV,
+  BORING_BUILDING_TYPES_FILE_ENV,
+  WALK_FORWARD_BIAS_METERS,
+  WALK_OFF_AXIS_PENALTY_DEG,
+  WALK_OFF_AXIS_PENALTY_METERS,
+} from "../../config";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { PgRateLimitStore } from "../../lib/pgRateLimitStore";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -61,8 +69,8 @@ const DEFAULT_BORING_BUILDING_TYPES = [
 ];
 
 function loadBoringBuildingTypes(): Set<string> {
-  if (process.env.BORING_BUILDING_TYPES) {
-    const types = process.env.BORING_BUILDING_TYPES.split(",")
+  if (BORING_BUILDING_TYPES_ENV) {
+    const types = BORING_BUILDING_TYPES_ENV.split(",")
       .map((t) => t.trim())
       .filter(Boolean);
     logger.info(
@@ -72,8 +80,8 @@ function loadBoringBuildingTypes(): Set<string> {
     return new Set(types);
   }
 
-  const configPath = process.env.BORING_BUILDING_TYPES_FILE
-    ? resolve(process.env.BORING_BUILDING_TYPES_FILE)
+  const configPath = BORING_BUILDING_TYPES_FILE_ENV
+    ? resolve(BORING_BUILDING_TYPES_FILE_ENV)
     : resolve(
         new URL("../config/boring-building-types.json", import.meta.url)
           .pathname,
@@ -109,6 +117,7 @@ const BORING_BUILDING_TYPES = loadBoringBuildingTypes();
 // They can be tuned without a mobile rebuild by setting environment variables
 // and restarting the server. The GET /api/explore/walk-config endpoint returns
 // the active values so the client can fetch and apply them at walk-start.
+// Values are parsed and validated by the centralised config module at startup.
 
 interface WalkConfig {
   forwardBiasMeters: number;
@@ -116,40 +125,13 @@ interface WalkConfig {
   offAxisPenaltyMeters: number;
 }
 
-const WALK_CONFIG_DEFAULTS: WalkConfig = {
-  forwardBiasMeters: 200,
-  offAxisPenaltyDeg: 70,
-  offAxisPenaltyMeters: 120,
+const WALK_CONFIG: WalkConfig = {
+  forwardBiasMeters: WALK_FORWARD_BIAS_METERS,
+  offAxisPenaltyDeg: WALK_OFF_AXIS_PENALTY_DEG,
+  offAxisPenaltyMeters: WALK_OFF_AXIS_PENALTY_METERS,
 };
 
-function loadWalkConfig(): WalkConfig {
-  const forwardBiasMeters = process.env.WALK_FORWARD_BIAS_METERS
-    ? parseFloat(process.env.WALK_FORWARD_BIAS_METERS)
-    : WALK_CONFIG_DEFAULTS.forwardBiasMeters;
-  const offAxisPenaltyDeg = process.env.WALK_OFF_AXIS_PENALTY_DEG
-    ? parseFloat(process.env.WALK_OFF_AXIS_PENALTY_DEG)
-    : WALK_CONFIG_DEFAULTS.offAxisPenaltyDeg;
-  const offAxisPenaltyMeters = process.env.WALK_OFF_AXIS_PENALTY_METERS
-    ? parseFloat(process.env.WALK_OFF_AXIS_PENALTY_METERS)
-    : WALK_CONFIG_DEFAULTS.offAxisPenaltyMeters;
-
-  const cfg: WalkConfig = {
-    forwardBiasMeters: isFinite(forwardBiasMeters)
-      ? forwardBiasMeters
-      : WALK_CONFIG_DEFAULTS.forwardBiasMeters,
-    offAxisPenaltyDeg: isFinite(offAxisPenaltyDeg)
-      ? offAxisPenaltyDeg
-      : WALK_CONFIG_DEFAULTS.offAxisPenaltyDeg,
-    offAxisPenaltyMeters: isFinite(offAxisPenaltyMeters)
-      ? offAxisPenaltyMeters
-      : WALK_CONFIG_DEFAULTS.offAxisPenaltyMeters,
-  };
-
-  logger.info(cfg, "Walk Mode heading-bias config loaded");
-  return cfg;
-}
-
-const WALK_CONFIG = loadWalkConfig();
+logger.info(WALK_CONFIG, "Walk Mode heading-bias config loaded");
 
 const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
 const OSM_CACHE_TTL = 5 * 60 * 1000;
@@ -241,7 +223,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
 > = [
   ["quick", "v9"], // discover — quick mode
   ["full", "v9"], // discover — full mode
-  ["suggest", "v2"], // location suggestions
+  ["suggest", "v10"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v3"], // reverse geocode
   ["suggest404", "v5"], // address-not-found suggestions
@@ -1547,7 +1529,7 @@ router.post("/explore/suggest-locations", async (req, res) => {
   }
 
   const nearTrimmed = (nearLocation ?? "").trim().slice(0, 200);
-  const suggestCacheKey = `suggest:v2:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
+  const suggestCacheKey = `suggest:v10:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
   const cachedSuggest = getLLMCache(suggestCacheKey);
   if (cachedSuggest) {
     res.json(cachedSuggest);
@@ -2499,23 +2481,7 @@ const AUDIO_CACHE_MAX_SIZE = 50;
 // base64-encoded MP3, so 100 rows ≈ 5–20 MB. Rows are ranked by expires_at
 // DESC (most-recently-written first) so the freshest entries are preserved.
 // Configurable via the AUDIO_DB_MAX_ENTRIES environment variable (positive integer).
-const _rawAudioDbMaxEntries = process.env.AUDIO_DB_MAX_ENTRIES;
-const _parsedAudioDbMaxEntries =
-  _rawAudioDbMaxEntries !== undefined ? Number(_rawAudioDbMaxEntries) : 100;
-const AUDIO_DB_MAX_ENTRIES: number = (() => {
-  if (
-    _rawAudioDbMaxEntries !== undefined &&
-    (!Number.isInteger(_parsedAudioDbMaxEntries) ||
-      _parsedAudioDbMaxEntries <= 0)
-  ) {
-    logger.warn(
-      { value: _rawAudioDbMaxEntries },
-      "AUDIO_DB_MAX_ENTRIES is not a positive integer; falling back to 100",
-    );
-    return 100;
-  }
-  return _parsedAudioDbMaxEntries;
-})();
+// Parsed and validated by the centralised config module at startup.
 async function getAudioCache(key: string): Promise<Buffer | null> {
   const entry = audioCache.get(key);
   if (entry) {

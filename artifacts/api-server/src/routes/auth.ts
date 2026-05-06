@@ -16,6 +16,7 @@ import {
   SESSION_COOKIE,
   SESSION_TTL,
   ISSUER_URL,
+  REPL_ID,
   type SessionData,
 } from "../lib/auth";
 
@@ -196,8 +197,14 @@ router.get("/logout", async (req: Request, res: Response) => {
   const sid = getSessionId(req);
   await clearSession(res, sid);
 
+  if (!REPL_ID) {
+    req.log.error("REPL_ID is not set; cannot build end-session URL");
+    res.status(500).json({ error: "Server misconfiguration" });
+    return;
+  }
+
   const endSessionUrl = oidc.buildEndSessionUrl(config, {
-    client_id: process.env.REPL_ID!,
+    client_id: REPL_ID,
     post_logout_redirect_uri: origin,
   });
 
