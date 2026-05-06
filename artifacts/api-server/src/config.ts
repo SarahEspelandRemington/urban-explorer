@@ -439,6 +439,25 @@ export const UPLOAD_MAX_PARTS = envVar(
   }
 }
 
+{
+  const combinedLimit = UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS;
+  if (UPLOAD_MAX_PARTS < combinedLimit) {
+    const message = `UPLOAD_MAX_PARTS (${UPLOAD_MAX_PARTS}) is less than UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS (${UPLOAD_MAX_FILES} + ${UPLOAD_MAX_FIELDS} = ${combinedLimit}); mixed file-and-field requests that stay within the individual per-category limits can still be silently truncated by the combined-parts ceiling`;
+    const context = {
+      UPLOAD_MAX_PARTS,
+      UPLOAD_MAX_FILES,
+      UPLOAD_MAX_FIELDS,
+      combinedLimit,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // In-memory cache TTLs and size caps
 // ---------------------------------------------------------------------------

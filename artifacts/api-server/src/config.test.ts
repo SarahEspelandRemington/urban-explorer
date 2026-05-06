@@ -197,7 +197,12 @@ describe("config — UPLOAD_MAX_PARTS vs UPLOAD_MAX_FILES startup check", () => 
     ).mock.calls.filter(
       (args) =>
         String(args[1]).includes("UPLOAD_MAX_PARTS") &&
-        String(args[1]).includes("UPLOAD_MAX_FILES"),
+        String(args[1]).includes("UPLOAD_MAX_FILES") &&
+        !(
+          typeof args[0] === "object" &&
+          args[0] !== null &&
+          "combinedLimit" in args[0]
+        ),
     );
     expect(partsWarnCalls).toHaveLength(0);
   });
@@ -299,7 +304,12 @@ describe("config — UPLOAD_MAX_PARTS vs UPLOAD_MAX_FIELDS startup check", () =>
     ).mock.calls.filter(
       (args) =>
         String(args[1]).includes("UPLOAD_MAX_PARTS") &&
-        String(args[1]).includes("UPLOAD_MAX_FIELDS"),
+        String(args[1]).includes("UPLOAD_MAX_FIELDS") &&
+        !(
+          typeof args[0] === "object" &&
+          args[0] !== null &&
+          "combinedLimit" in args[0]
+        ),
     );
     expect(partsFieldsWarnCalls).toHaveLength(0);
   });
@@ -359,5 +369,136 @@ describe("config — UPLOAD_MAX_PARTS vs UPLOAD_MAX_FIELDS startup check", () =>
       expect.objectContaining({ UPLOAD_MAX_PARTS: 5, UPLOAD_MAX_FIELDS: 20 }),
       expect.stringContaining("UPLOAD_MAX_PARTS"),
     );
+  });
+});
+
+describe("config — UPLOAD_MAX_PARTS vs UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS combined startup check", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("emits a logger.warn when UPLOAD_MAX_PARTS is less than UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS", async () => {
+    process.env["UPLOAD_MAX_FILES"] = "10";
+    process.env["UPLOAD_MAX_FIELDS"] = "20";
+    process.env["UPLOAD_MAX_PARTS"] = "25";
+
+    const { logger } = await import("./lib/logger");
+    await import("./config");
+
+    const combinedWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      (args) =>
+        typeof args[0] === "object" &&
+        args[0] !== null &&
+        "combinedLimit" in args[0],
+    );
+    expect(combinedWarnCalls).toHaveLength(1);
+    expect(combinedWarnCalls[0][0]).toEqual(
+      expect.objectContaining({
+        UPLOAD_MAX_PARTS: 25,
+        UPLOAD_MAX_FILES: 10,
+        UPLOAD_MAX_FIELDS: 20,
+        combinedLimit: 30,
+      }),
+    );
+    expect(String(combinedWarnCalls[0][1])).toMatch(/UPLOAD_MAX_PARTS/);
+  });
+
+  it("does not emit a logger.warn when UPLOAD_MAX_PARTS equals UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS", async () => {
+    process.env["UPLOAD_MAX_FILES"] = "10";
+    process.env["UPLOAD_MAX_FIELDS"] = "20";
+    process.env["UPLOAD_MAX_PARTS"] = "30";
+
+    const { logger } = await import("./lib/logger");
+    await import("./config");
+
+    const combinedWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      (args) =>
+        typeof args[0] === "object" &&
+        args[0] !== null &&
+        "combinedLimit" in args[0],
+    );
+    expect(combinedWarnCalls).toHaveLength(0);
+  });
+
+  it("does not emit a logger.warn when UPLOAD_MAX_PARTS is greater than UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS", async () => {
+    process.env["UPLOAD_MAX_FILES"] = "10";
+    process.env["UPLOAD_MAX_FIELDS"] = "20";
+    process.env["UPLOAD_MAX_PARTS"] = "50";
+
+    const { logger } = await import("./lib/logger");
+    await import("./config");
+
+    const combinedWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      (args) =>
+        typeof args[0] === "object" &&
+        args[0] !== null &&
+        "combinedLimit" in args[0],
+    );
+    expect(combinedWarnCalls).toHaveLength(0);
+  });
+
+  it("throws when UPLOAD_STRICT_CONFIG=true and UPLOAD_MAX_PARTS is less than UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "true";
+    process.env["UPLOAD_MAX_FILES"] = "10";
+    process.env["UPLOAD_MAX_FIELDS"] = "20";
+    process.env["UPLOAD_MAX_PARTS"] = "25";
+
+    await expect(import("./config")).rejects.toThrow(
+      /\[UPLOAD_STRICT_CONFIG\].*UPLOAD_MAX_PARTS/,
+    );
+  });
+
+  it("warns but does not throw when UPLOAD_STRICT_CONFIG=false and UPLOAD_MAX_PARTS is less than combined limit", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "false";
+    process.env["UPLOAD_MAX_FILES"] = "10";
+    process.env["UPLOAD_MAX_FIELDS"] = "20";
+    process.env["UPLOAD_MAX_PARTS"] = "25";
+
+    const { logger } = await import("./lib/logger");
+    await expect(import("./config")).resolves.toBeDefined();
+
+    const combinedWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      (args) =>
+        typeof args[0] === "object" &&
+        args[0] !== null &&
+        "combinedLimit" in args[0],
+    );
+    expect(combinedWarnCalls).toHaveLength(1);
+  });
+
+  it("warns but does not throw when UPLOAD_STRICT_CONFIG is absent and UPLOAD_MAX_PARTS is less than combined limit", async () => {
+    delete process.env["UPLOAD_STRICT_CONFIG"];
+    process.env["UPLOAD_MAX_FILES"] = "10";
+    process.env["UPLOAD_MAX_FIELDS"] = "20";
+    process.env["UPLOAD_MAX_PARTS"] = "25";
+
+    const { logger } = await import("./lib/logger");
+    await expect(import("./config")).resolves.toBeDefined();
+
+    const combinedWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter(
+      (args) =>
+        typeof args[0] === "object" &&
+        args[0] !== null &&
+        "combinedLimit" in args[0],
+    );
+    expect(combinedWarnCalls).toHaveLength(1);
   });
 });
