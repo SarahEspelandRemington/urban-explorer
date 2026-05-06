@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Readable } from "stream";
+import type { IncomingMessage } from "http";
 import multer from "multer";
 import type { Request, Response, NextFunction } from "express";
-import { handleUploadError } from "./upload";
+import { handleUploadError, createUpload } from "./upload";
 
 vi.mock("../config", () => ({
   UPLOAD_BODY_LIMIT: "10mb",
@@ -142,5 +144,134 @@ describe("handleUploadError", () => {
     expect(next).toHaveBeenCalledWith(err);
     expect(res.status).not.toHaveBeenCalled();
     expect(res.json).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Integration: createUpload enforces file-size limits via real multer middleware
+// ---------------------------------------------------------------------------
+
+const BOUNDARY = "----TestBoundary001";
+
+/**
+ * Build a minimal multipart/form-data body with a single file field.
+ */
+function buildMultipartBody(filename: string, fileContent: Buffer): Buffer {
+  const parts: Buffer[] = [
+    Buffer.from(
+      `--${BOUNDARY}\r\n` +
+        `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
+        `Content-Type: application/octet-stream\r\n` +
+        `\r\n`,
+    ),
+    fileContent,
+    Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+  ];
+  return Buffer.concat(parts);
+}
+
+/**
+ * Create a mock IncomingMessage-like object multer can read from.
+ */
+function makeMultipartReq(body: Buffer): IncomingMessage {
+  const stream = new Readable({
+    read() {
+      this.push(body);
+      this.push(null);
+    },
+  }) as unknown as IncomingMessage;
+  (stream as unknown as Record<string, unknown>).headers = {
+    "content-type": `multipart/form-data; boundary=${BOUNDARY}`,
+    "content-length": String(body.length),
+  };
+  return stream;
+}
+
+/**
+ * Invoke a multer middleware function and resolve with whatever error (if any)
+ * it passes to `next`. Resolves with `undefined` when multer calls `next()`
+ * without an argument (i.e. success).
+ */
+function runMiddleware(
+  middleware: (
+    req: unknown,
+    res: unknown,
+    next: (err?: unknown) => void,
+  ) => void,
+  req: IncomingMessage,
+): Promise<unknown> {
+  return new Promise((resolve) => {
+    middleware(req, {}, (err?: unknown) => resolve(err));
+  });
+}
+
+describe("createUpload integration", () => {
+  it("rejects a file that exceeds fileSizeOverride with LIMIT_FILE_SIZE", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const oversizedContent = Buffer.alloc(LIMIT_BYTES + 1, "x");
+    const body = buildMultipartBody("oversized.bin", oversizedContent);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FILE_SIZE");
+  });
+
+  it("accepts a file that is within the fileSizeOverride limit", async () => {
+    const LIMIT_BYTES = 100;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const smallContent = Buffer.alloc(LIMIT_BYTES - 1, "x");
+    const body = buildMultipartBody("small.bin", smallContent);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.single("file") as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeUndefined();
+  });
+
+  it("rejects when file count exceeds maxFiles override", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 1,
+    });
+
+    const combinedBody = Buffer.concat([
+      Buffer.from(`--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="files"; filename="a.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("hello"),
+      Buffer.from(`\r\n--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="files"; filename="b.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("world"),
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+
+    const req = makeMultipartReq(combinedBody);
+
+    const err = await runMiddleware(
+      uploadInstance.array("files", 2) as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FILE_COUNT");
   });
 });
