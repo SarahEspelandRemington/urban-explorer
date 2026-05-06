@@ -69,6 +69,7 @@ import {
   UPLOAD_BODY_LIMIT,
   UPLOAD_MAX_FILES,
   UPLOAD_MAX_FIELDS,
+  UPLOAD_MAX_PARTS,
   UPLOAD_FIELD_NAME_SIZE,
   UPLOAD_FIELD_SIZE,
 } from "../config";
@@ -182,6 +183,13 @@ export interface CreateUploadOptions {
    */
   maxFields?: number;
   /**
+   * Maximum total number of parts (files + non-file fields combined) allowed
+   * in the request. Overrides the global UPLOAD_MAX_PARTS env var. When
+   * omitted, UPLOAD_MAX_PARTS is used. Use this to set a tighter combined cap
+   * for a specific endpoint without changing the per-category limits.
+   */
+  maxParts?: number;
+  /**
    * Maximum size in bytes for each non-file field value. Overrides the global
    * UPLOAD_FIELD_SIZE env var (default 1 MB). Use this to enforce a tighter cap
    * on text field values for a given endpoint.
@@ -215,6 +223,7 @@ export function createUpload(
     options?.fileSizeOverride ?? parseSizeToBytes(UPLOAD_BODY_LIMIT);
   const files = options?.maxFiles ?? UPLOAD_MAX_FILES;
   const fields = options?.maxFields ?? UPLOAD_MAX_FIELDS;
+  const parts = options?.maxParts ?? UPLOAD_MAX_PARTS;
   const fieldSize = options?.fieldSizeOverride ?? UPLOAD_FIELD_SIZE;
   const fieldNameSize =
     options?.fieldNameSizeOverride ?? UPLOAD_FIELD_NAME_SIZE;
@@ -224,7 +233,7 @@ export function createUpload(
       fileSize,
       fields,
       files,
-      parts: files + fields,
+      parts,
       fieldSize,
       fieldNameSize,
     },

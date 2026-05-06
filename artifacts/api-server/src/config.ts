@@ -304,6 +304,28 @@ export const UPLOAD_FIELD_SIZE = envVar(
   1048576,
 );
 
+/**
+ * Maximum total number of parts (files + non-file fields combined) allowed in
+ * a single multipart/form-data upload request, passed to the shared multer
+ * factory in `lib/upload.ts`.
+ *
+ * This gives operators a single, independent ceiling for the total multipart
+ * part count that is evaluated in addition to the per-category caps
+ * (UPLOAD_MAX_FILES and UPLOAD_MAX_FIELDS). For example, an endpoint might
+ * permit up to 10 files and 20 fields individually, but an operator can reduce
+ * UPLOAD_MAX_PARTS to 15 to cap the combined total without touching the
+ * per-category limits.
+ *
+ * Env var : UPLOAD_MAX_PARTS
+ * Expects : positive integer
+ * Default : UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS (i.e. 30 with stock defaults)
+ */
+export const UPLOAD_MAX_PARTS = envVar(
+  "UPLOAD_MAX_PARTS",
+  z.coerce.number().int().positive(),
+  UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS,
+);
+
 // ---------------------------------------------------------------------------
 // In-memory cache TTLs and size caps
 // ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@ vi.mock("../config", () => ({
   UPLOAD_BODY_LIMIT: "10mb",
   UPLOAD_MAX_FILES: 10,
   UPLOAD_MAX_FIELDS: 20,
+  UPLOAD_MAX_PARTS: 30,
   UPLOAD_FIELD_NAME_SIZE: 100,
   UPLOAD_FIELD_SIZE: 1048576,
 }));
@@ -417,6 +418,91 @@ describe("createUpload integration", () => {
     const okValue = "x".repeat(1048576 - 1);
     const body = buildMultipartBodyWithFields([
       { name: "description", value: okValue },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeUndefined();
+  });
+
+  it("rejects when total parts exceed the UPLOAD_MAX_PARTS baseline (30) without a maxParts override", async () => {
+    // Override maxFields to 50 so the field-count limit is not the binding
+    // constraint; only the UPLOAD_MAX_PARTS config value (30) should fire.
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 50,
+    });
+
+    const fields = Array.from({ length: 31 }, (_, i) => ({
+      name: `field${i}`,
+      value: "v",
+    }));
+    const body = buildMultipartBodyWithFields(fields);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_PART_COUNT");
+  });
+
+  it("accepts total parts below the UPLOAD_MAX_PARTS baseline (30) without a maxParts override", async () => {
+    // Override maxFields to 50 so the field-count limit is not the binding
+    // constraint; sending 29 fields (< 30) should succeed.
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 50,
+    });
+
+    const fields = Array.from({ length: 29 }, (_, i) => ({
+      name: `field${i}`,
+      value: "v",
+    }));
+    const body = buildMultipartBodyWithFields(fields);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeUndefined();
+  });
+
+  it("rejects when total parts exceed maxParts override with LIMIT_PART_COUNT", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxParts: 2,
+    });
+
+    const body = buildMultipartBodyWithFields([
+      { name: "alpha", value: "1" },
+      { name: "beta", value: "2" },
+      { name: "gamma", value: "3" },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const err = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_PART_COUNT");
+  });
+
+  it("accepts total parts within the maxParts override", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxParts: 3,
+    });
+
+    const body = buildMultipartBodyWithFields([
+      { name: "alpha", value: "1" },
+      { name: "beta", value: "2" },
     ]);
     const req = makeMultipartReq(body);
 
