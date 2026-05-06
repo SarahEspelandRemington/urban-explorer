@@ -14,6 +14,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
@@ -120,7 +121,10 @@ export function LocationPermission({
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.content}>
+      <Animated.View
+        style={styles.content}
+        entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
+      >
         <View
           style={[
             styles.iconCircle,
@@ -568,7 +572,7 @@ export function LocationPermission({
             )}
           </View>
         )}
-      </View>
+      </Animated.View>
     </KeyboardAvoidingView>
   );
 }

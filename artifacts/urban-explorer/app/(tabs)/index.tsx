@@ -623,7 +623,8 @@ export default function ExploreScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
+      <Animated.View
+        entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
         style={[
           styles.header,
           {
@@ -818,7 +819,7 @@ export default function ExploreScreen() {
             </Pressable>
           </View>
         </View>
-      </View>
+      </Animated.View>
 
       {(hasCoords || locationLoading) && (
         <Animated.View
