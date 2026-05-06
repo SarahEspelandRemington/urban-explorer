@@ -278,6 +278,20 @@ export const UPLOAD_MAX_FILE_SIZE = envVar(
   sizeStringToBytes(UPLOAD_BODY_LIMIT),
 );
 
+{
+  const uploadBodyLimitBytes = sizeStringToBytes(UPLOAD_BODY_LIMIT);
+  if (UPLOAD_MAX_FILE_SIZE > uploadBodyLimitBytes) {
+    logger.warn(
+      {
+        UPLOAD_MAX_FILE_SIZE,
+        UPLOAD_BODY_LIMIT,
+        UPLOAD_BODY_LIMIT_bytes: uploadBodyLimitBytes,
+      },
+      `UPLOAD_MAX_FILE_SIZE (${UPLOAD_MAX_FILE_SIZE} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${uploadBodyLimitBytes} bytes); the multer per-file cap is looser than UPLOAD_BODY_LIMIT implies`,
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Upload (multipart/form-data) cardinality limits
 // ---------------------------------------------------------------------------
