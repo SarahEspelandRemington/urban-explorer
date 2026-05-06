@@ -149,6 +149,45 @@ const osmCache = new Map<string, { places: OSMPlace[]; timestamp: number }>();
 const OSM_CACHE_TTL = 5 * 60 * 1000;
 const OSM_CACHE_DISTANCE = 200;
 
+// Separate cache for nearby OSM places, keyed by a coarse coordinate bucket
+// (~100m grid via 3 decimal places). Stores the full OSMPlace[] so callers
+// can both rebuild osmContext for the LLM prompt AND derive search suggestions
+// without hitting Overpass again.
+//
+// TTL is intentionally longer than both the short OSM cache (5 min) and the
+// LLM cache (15 min) because OSM landmark names are stable. The primary use
+// is in the investigate endpoint: if the LLM cache expires and the same
+// (or a nearby) empty-result address is searched again, the Overpass call is
+// skipped entirely by checking this cache first.
+const osmSuggestionsCache = new Map<string, LLMCacheEntry<OSMPlace[]>>();
+const OSM_SUGGESTIONS_CACHE_TTL = 30 * 60 * 1000;
+
+function osmSuggestionsBucketKey(lat: number, lng: number): string {
+  return `${lat.toFixed(3)},${lng.toFixed(3)}`;
+}
+
+function getCachedOSMPlaces(lat: number, lng: number): OSMPlace[] | null {
+  const key = osmSuggestionsBucketKey(lat, lng);
+  const entry = osmSuggestionsCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > OSM_SUGGESTIONS_CACHE_TTL) {
+    osmSuggestionsCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCachedOSMPlaces(
+  lat: number,
+  lng: number,
+  places: OSMPlace[],
+): void {
+  osmSuggestionsCache.set(osmSuggestionsBucketKey(lat, lng), {
+    data: places,
+    timestamp: Date.now(),
+  });
+}
+
 interface LLMCacheEntry<T = any> {
   data: T;
   timestamp: number;
@@ -1608,7 +1647,7 @@ router.post("/explore/investigate-address", async (req, res) => {
 
   // Cache key: normalized address + coord bucket. Investigations are deterministic
   // per-building so a longer TTL is fine; share the LLM cache.
-  const investigateCacheKey = `investigate:v3:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const investigateCacheKey = `investigate:v6:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
   const cached = getLLMCache(investigateCacheKey);
   if (cached) {
     res.json(cached);
@@ -1618,24 +1657,48 @@ router.post("/explore/investigate-address", async (req, res) => {
   // Pull a small ring of nearby OSM landmarks for neighborhood context.
   // Keep the radius tight (120m) so the AI doesn't drift to famous landmarks
   // a few blocks away — the whole point is to focus on THIS building.
-  // Also retained after the LLM call to derive search suggestions on empty results.
+  //
+  // Before calling Overpass, check the coordinate-bucket suggestions cache
+  // (osmSuggestionsCache, 30-min TTL). A prior investigate request at the same
+  // location will have already populated it, so if the LLM cache expires and
+  // the same empty-result address is searched again we can skip the Overpass
+  // call entirely and reuse the cached OSMPlace[] for both osmContext and
+  // suggestion derivation.
   let osmContext = "";
-  let nearbyOSMPlaces: OSMPlace[] = [];
-  try {
-    nearbyOSMPlaces = await fetchNearbyOSMPlaces(lat, lng, 120);
-    if (nearbyOSMPlaces.length > 0) {
-      osmContext = nearbyOSMPlaces
-        .slice(0, 8)
-        .map((p) => {
-          const dist = Math.round(haversineDistance(lat, lng, p.lat, p.lon));
-          const built =
-            p.tags["start_date"] || p.tags["construction_date"] || "";
-          return `- ${p.name} (${p.type}${built ? `, built ${built}` : ""}, ${dist}m away)`;
-        })
-        .join("\n");
+  // Distinguish cache miss (null) from a cached empty array so we don't issue
+  // a fresh Overpass call when a previous probe for this coordinate bucket
+  // already confirmed there are no nearby OSM landmarks.
+  const cachedOSMPlaces = getCachedOSMPlaces(lat, lng);
+  let nearbyOSMPlaces: OSMPlace[];
+  if (cachedOSMPlaces !== null) {
+    // Cache hit — use stored places (may be an empty array for landmark-free areas).
+    nearbyOSMPlaces = cachedOSMPlaces;
+  } else {
+    // Cache miss — query Overpass. Only persist the result when the fetch
+    // succeeds (including a genuine empty result) so transient Overpass errors
+    // don't negative-cache the bucket for 30 minutes and suppress suggestions
+    // during upstream outages.
+    nearbyOSMPlaces = [];
+    let osmFetchSucceeded = false;
+    try {
+      nearbyOSMPlaces = await fetchNearbyOSMPlaces(lat, lng, 120);
+      osmFetchSucceeded = true;
+    } catch {
+      // Non-fatal — proceed without OSM context.
     }
-  } catch {
-    // Non-fatal — proceed without OSM context.
+    if (osmFetchSucceeded) {
+      setCachedOSMPlaces(lat, lng, nearbyOSMPlaces);
+    }
+  }
+  if (nearbyOSMPlaces.length > 0) {
+    osmContext = nearbyOSMPlaces
+      .slice(0, 8)
+      .map((p) => {
+        const dist = Math.round(haversineDistance(lat, lng, p.lat, p.lon));
+        const built = p.tags["start_date"] || p.tags["construction_date"] || "";
+        return `- ${p.name} (${p.type}${built ? `, built ${built}` : ""}, ${dist}m away)`;
+      })
+      .join("\n");
   }
 
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
@@ -1723,6 +1786,9 @@ What is this building? What was it originally? What should I look at?`,
   // Derive 1-2 search suggestions from nearby OSM places when the result is
   // empty — i.e. the LLM couldn't find meaningful information about the address.
   // Suggestions are the closest named landmarks the user could search for instead.
+  //
+  // nearbyOSMPlaces is already populated from either the suggestions cache or a
+  // fresh Overpass fetch (see above), so no further cache lookup is needed here.
   const isEmptyResult = !buildingName && !history && facts.length === 0;
   let searchSuggestions: string[] = [];
   if (isEmptyResult && nearbyOSMPlaces.length > 0) {
@@ -3258,6 +3324,11 @@ setInterval(
 
     for (const [key, entry] of osmCache) {
       if (now - entry.timestamp > OSM_CACHE_TTL) osmCache.delete(key);
+    }
+
+    for (const [key, entry] of osmSuggestionsCache) {
+      if (now - entry.timestamp > OSM_SUGGESTIONS_CACHE_TTL)
+        osmSuggestionsCache.delete(key);
     }
 
     for (const [key, entry] of audioCache) {
