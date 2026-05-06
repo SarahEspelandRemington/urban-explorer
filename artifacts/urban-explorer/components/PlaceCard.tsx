@@ -162,7 +162,7 @@ export const PlaceCard = React.memo(function PlaceCard({
       badgeOpacity.value = 0;
     }
     prevIsTopPick.current = isTopPick;
-  }, [isTopPick]);
+  }, [isTopPick, badgeOpacity, badgeScale]);
 
   const badgeAnimStyle = useAnimatedStyle(() => ({
     transform: [{ scale: badgeScale.value }],

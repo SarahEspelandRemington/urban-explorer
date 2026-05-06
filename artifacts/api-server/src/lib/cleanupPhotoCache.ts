@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { placePhotos } from "@workspace/db";
-import { lt, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { logger } from "./logger";
 
 const rawMaxAgeDays = Number(process.env["PHOTO_CACHE_MAX_AGE_DAYS"] ?? "7");

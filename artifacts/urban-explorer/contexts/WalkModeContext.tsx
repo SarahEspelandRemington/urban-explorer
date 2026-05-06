@@ -851,7 +851,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // narration finishes and the movement gate clears.
       prefetchNextRef.current?.();
     },
-    [enqueueNarration, fetchNarrationPayload, handlePrefetchEvent],
+    [enqueueNarration, fetchNarrationPayload, getStalePrefetchPool, handlePrefetchEvent],
   );
 
   /**
@@ -1098,7 +1098,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // reliable "tick" in that state.
       maybeNarrateRef.current?.({ latitude, longitude });
     },
-    [fetchNearbyPlaces],
+    [applyDensity, fetchNearbyPlaces],
   );
 
   // Encapsulates the cooldown / speaking / pick / enqueue gating so it can run
@@ -1442,7 +1442,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         isStartingRef.current = false;
       }
     },
-    [handleLocationUpdate],
+    [handleLocationUpdate, localeRef],
   );
 
   const stopWalk = useCallback(() => {

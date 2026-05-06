@@ -958,7 +958,7 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const { latitude, longitude, radius, mode, accuracy, includeBuildingTypes } =
+  const { latitude, longitude, radius, mode, includeBuildingTypes } =
     parsed.data;
   const isQuick = mode === "quick";
   const requestedRadius = radius ?? (isQuick ? 500 : 300);
@@ -984,7 +984,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v5:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v6:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1059,7 +1059,6 @@ router.post("/explore/discover", async (req, res) => {
     placeCount = "5-7";
     maxTokens = 1800;
   }
-  const factCount = 2;
   const modelName = "gpt-4.1-mini";
 
   // Two-step discovery for full mode: brainstorm freely, then format.

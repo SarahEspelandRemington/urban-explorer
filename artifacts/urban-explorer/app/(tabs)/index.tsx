@@ -82,30 +82,6 @@ function haversineMeters(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const OSM_CATEGORY_LABELS: Record<string, string> = {
-  arts_centre: "Arts Center",
-  place_of_worship: "Place of Worship",
-  fast_food: "Fast Food",
-  fire_station: "Fire Station",
-  town_hall: "Town Hall",
-  water_tower: "Water Tower",
-  community_centre: "Community Center",
-  social_facility: "Social Facility",
-  parking_space: "Parking",
-  parking_entrance: "Parking",
-  bus_station: "Bus Station",
-  railway_station: "Train Station",
-  subway_entrance: "Subway",
-  toilets: "Public Restroom",
-  waste_basket: "Waste Bin",
-  bicycle_parking: "Bike Parking",
-  fuel: "Gas Station",
-  car_wash: "Car Wash",
-  charging_station: "Charging Station",
-  ice_cream: "Ice Cream",
-  food_court: "Food Court",
-};
-
 type ViewMode = "list" | "map";
 
 export default function ExploreScreen() {

@@ -68,8 +68,6 @@ export default function SavedScreen() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastSaved, setToastSaved] = useState(true);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const swipeOffsets = useRef<Record<string, number>>({});
-
   const {
     showWarning: showRatingPaceWarning,
     recordRating,
