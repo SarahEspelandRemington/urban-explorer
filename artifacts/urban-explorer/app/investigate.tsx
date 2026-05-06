@@ -158,6 +158,15 @@ export default function InvestigateScreen() {
 
   const canSubmit = address.trim().length >= 3 && !investigate.isPending;
 
+  const isEmptyResult = useMemo(() => {
+    if (!result || investigate.isPending) return false;
+    return (
+      !result.buildingName &&
+      !result.history &&
+      !(result.facts && result.facts.length > 0)
+    );
+  }, [result, investigate.isPending]);
+
   const errorMessage = useMemo(() => {
     if (!error) return null;
     if (error.status === 404) {
@@ -397,6 +406,38 @@ export default function InvestigateScreen() {
               />
             ) : null}
           </View>
+        )}
+
+        {isEmptyResult && !showRefinementInput && shouldAutoFill && (
+          <Animated.View
+            entering={
+              Platform.OS !== "web" ? FadeInDown.duration(250) : undefined
+            }
+          >
+            <Pressable
+              onPress={handleTryDifferentName}
+              style={({ pressed }) => [
+                styles.refinementButton,
+                {
+                  backgroundColor: colors.muted,
+                  borderColor: colors.border,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t.investigate.tryDifferentName}
+            >
+              <Feather name="edit-2" size={14} color={colors.primary} />
+              <Text
+                style={[
+                  styles.refinementButtonText,
+                  { color: colors.foreground },
+                ]}
+              >
+                {t.investigate.tryDifferentName}
+              </Text>
+            </Pressable>
+          </Animated.View>
         )}
 
         {result && !investigate.isPending && (
