@@ -192,8 +192,12 @@ export default function InvestigateScreen() {
           {showChip && (
             <Animated.View
               style={styles.chipRow}
-              entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
-              exiting={Platform.OS !== "web" ? FadeOutDown.duration(180) : undefined}
+              entering={
+                Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
+              }
+              exiting={
+                Platform.OS !== "web" ? FadeOutDown.duration(180) : undefined
+              }
             >
               <Pressable
                 onPress={handleChipPress}

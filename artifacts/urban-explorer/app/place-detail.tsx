@@ -1,5 +1,6 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
@@ -527,7 +528,7 @@ export default function PlaceDetailScreen() {
                       return (
                         <Pressable
                           key={i}
-                          onPress={() => {
+                          onPress={async () => {
                             if (Platform.OS !== "web")
                               Haptics.impactAsync(
                                 Haptics.ImpactFeedbackStyle.Light,
@@ -546,16 +547,37 @@ export default function PlaceDetailScreen() {
                                 },
                               });
                             } else {
+                              // Build nearLocation using narrowest available context:
+                              // GPS position > current place address > place name
+                              let nearLocation: string | undefined =
+                                params.address || params.name || undefined;
+                              try {
+                                const pos =
+                                  await Location.getLastKnownPositionAsync({});
+                                if (pos) {
+                                  const geo =
+                                    await Location.reverseGeocodeAsync({
+                                      latitude: pos.coords.latitude,
+                                      longitude: pos.coords.longitude,
+                                    });
+                                  const g = geo[0];
+                                  if (g) {
+                                    const area =
+                                      g.district ||
+                                      g.subregion ||
+                                      g.city ||
+                                      g.region;
+                                    if (area) nearLocation = area;
+                                  }
+                                }
+                              } catch {
+                                // fall through to address/name fallback
+                              }
                               router.push({
                                 pathname: "/investigate",
                                 params: {
                                   prefillAddress: relatedName,
-                                  ...(params.address || params.name
-                                    ? {
-                                        nearLocation:
-                                          params.address || params.name,
-                                      }
-                                    : {}),
+                                  ...(nearLocation ? { nearLocation } : {}),
                                 },
                               });
                             }
