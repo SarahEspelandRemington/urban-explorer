@@ -17,6 +17,7 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `AI_INTEGRATIONS_OPENAI_API_KEY` (provisioned by Replit OpenAI integration)
 - `SESSION_SECRET`: A long random string (e.g., `openssl rand -hex 32`).
 - `EXPO_PUBLIC_SENTRY_DSN`: (Optional) Sentry DSN for crash reporting.
+- `AUDIO_DB_MAX_ENTRIES`: (Optional) Maximum audio rows kept in the database (positive integer, default 100). Missing values default silently to 100; present-but-invalid values log a warning and fall back to 100.
 
 ## Stack
 

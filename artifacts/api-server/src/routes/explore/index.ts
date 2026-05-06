@@ -1767,7 +1767,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     return;
   }
 
-  const cacheKey = `revgeo:v7:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cacheKey = `revgeo:v8:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
   if (cached) {
     res.json(cached);
@@ -2498,7 +2498,24 @@ const AUDIO_CACHE_MAX_SIZE = 50;
 // Maximum number of audio rows to keep in the DB. Each row is 30–200 KB of
 // base64-encoded MP3, so 100 rows ≈ 5–20 MB. Rows are ranked by expires_at
 // DESC (most-recently-written first) so the freshest entries are preserved.
-const AUDIO_DB_MAX_ENTRIES = Number(process.env.AUDIO_DB_MAX_ENTRIES ?? 100);
+// Configurable via the AUDIO_DB_MAX_ENTRIES environment variable (positive integer).
+const _rawAudioDbMaxEntries = process.env.AUDIO_DB_MAX_ENTRIES;
+const _parsedAudioDbMaxEntries =
+  _rawAudioDbMaxEntries !== undefined ? Number(_rawAudioDbMaxEntries) : 100;
+const AUDIO_DB_MAX_ENTRIES: number = (() => {
+  if (
+    _rawAudioDbMaxEntries !== undefined &&
+    (!Number.isInteger(_parsedAudioDbMaxEntries) ||
+      _parsedAudioDbMaxEntries <= 0)
+  ) {
+    logger.warn(
+      { value: _rawAudioDbMaxEntries },
+      "AUDIO_DB_MAX_ENTRIES is not a positive integer; falling back to 100",
+    );
+    return 100;
+  }
+  return _parsedAudioDbMaxEntries;
+})();
 async function getAudioCache(key: string): Promise<Buffer | null> {
   const entry = audioCache.get(key);
   if (entry) {
