@@ -753,7 +753,7 @@ export default function ExploreScreen() {
                   onPress={handleDiscover}
                   disabled={discoverMutation.isPending || locationLoading}
                   style={({ pressed }) => [
-                    styles.labeledHeaderBtn,
+                    styles.iconHeaderBtn,
                     {
                       backgroundColor: colors.primary,
                       opacity: pressed ? 0.85 : 1,
@@ -775,14 +775,6 @@ export default function ExploreScreen() {
                       color={colors.primaryForeground}
                     />
                   )}
-                  <Text
-                    style={[
-                      styles.labeledHeaderBtnText,
-                      { color: colors.primaryForeground },
-                    ]}
-                  >
-                    Discover
-                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -799,7 +791,7 @@ export default function ExploreScreen() {
                     });
                   }}
                   style={({ pressed }) => [
-                    styles.labeledHeaderBtn,
+                    styles.iconHeaderBtn,
                     {
                       backgroundColor: colors.muted,
                       opacity: pressed ? 0.85 : 1,
@@ -813,14 +805,6 @@ export default function ExploreScreen() {
                     size={17}
                     color={colors.foreground}
                   />
-                  <Text
-                    style={[
-                      styles.labeledHeaderBtnText,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    Investigate
-                  </Text>
                 </Pressable>
                 <Pressable
                   onPress={() => {
@@ -828,7 +812,7 @@ export default function ExploreScreen() {
                     setShowLocationSearch(true);
                   }}
                   style={({ pressed }) => [
-                    styles.labeledHeaderBtn,
+                    styles.iconHeaderBtn,
                     {
                       backgroundColor: colors.muted,
                       opacity: pressed ? 0.85 : 1,
@@ -838,14 +822,6 @@ export default function ExploreScreen() {
                   accessibilityLabel="Search by location"
                 >
                   <Feather name="search" size={18} color={colors.foreground} />
-                  <Text
-                    style={[
-                      styles.labeledHeaderBtnText,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    Search
-                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -1400,6 +1376,13 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: 0.3,
+  },
+  iconHeaderBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 36,
+    height: 36,
+    borderRadius: 10,
   },
   greeting: {
     fontSize: 10,
