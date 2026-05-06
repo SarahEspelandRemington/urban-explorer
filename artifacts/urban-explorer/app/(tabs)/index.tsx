@@ -671,7 +671,7 @@ export default function ExploreScreen() {
                   { backgroundColor: colors.muted, opacity: pressed ? 0.8 : 1 },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Walk notification language"
+                accessibilityLabel={t.languageModal.title}
               >
                 <Feather
                   name="globe"

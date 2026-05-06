@@ -572,7 +572,7 @@ export default function WalkPlanScreen() {
                   },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel={t.walkPlan.findRoute}
+                accessibilityLabel={t.walkPlan.changeRoute}
               >
                 <Feather
                   name="refresh-cw"

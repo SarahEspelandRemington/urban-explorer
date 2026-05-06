@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Modal,
   Platform,
@@ -46,11 +47,24 @@ export default function WalkModeScreen() {
   }, []);
 
   const handleStop = () => {
-    if (Platform.OS !== "web")
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    walk.stopWalk();
-    router.dismissAll?.();
-    router.replace("/(tabs)/walk");
+    Alert.alert(
+      t.walkMode.confirmEndTitle,
+      t.walkMode.confirmEndMessage,
+      [
+        { text: t.walkMode.confirmEndCancel, style: "cancel" },
+        {
+          text: t.walkMode.confirmEndOk,
+          style: "destructive",
+          onPress: () => {
+            if (Platform.OS !== "web")
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            walk.stopWalk();
+            router.dismissAll?.();
+            router.replace("/(tabs)/walk");
+          },
+        },
+      ],
+    );
   };
 
   const setDensity = (d: WalkDensity) => {
@@ -234,6 +248,7 @@ export default function WalkModeScreen() {
               style={styles.modalGroups}
               showsVerticalScrollIndicator={false}
             >
+              {__DEV__ && (
               <Pressable
                 onPress={() => togglePrefetchStats(!walk.showPrefetchStats)}
                 style={[styles.groupRow, { borderBottomColor: colors.border }]}
@@ -270,6 +285,7 @@ export default function WalkModeScreen() {
                   }
                 />
               </Pressable>
+            )}
               {BUILDING_TYPE_GROUPS.map((group) => {
                 const key = group.key as BuildingGroupKey;
                 const enabled = walk.enabledBuildingGroups.has(key);

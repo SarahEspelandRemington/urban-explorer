@@ -338,7 +338,7 @@ export default function InvestigateScreen() {
                 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Investigate this address"
+              accessibilityLabel={t.investigate.investigate}
             >
               {investigate.isPending ? (
                 <ActivityIndicator color={colors.primaryForeground} />

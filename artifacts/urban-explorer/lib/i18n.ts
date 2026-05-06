@@ -83,6 +83,7 @@ export interface Strings {
     noteModalPlaceholder: string;
     noteModalSave: string;
     noteModalDone: string;
+    sortNearestNoLocation: string;
   };
   walkMode: {
     end: string;
@@ -117,6 +118,10 @@ export interface Strings {
     resumeAccessibility: string;
     pauseAccessibility: string;
     skipAccessibility: string;
+    confirmEndTitle: string;
+    confirmEndMessage: string;
+    confirmEndOk: string;
+    confirmEndCancel: string;
   };
   walkPlan: {
     title: string;
@@ -133,6 +138,7 @@ export interface Strings {
     geocodeError: string;
     previewLabel: string;
     emptyRouteNote: string;
+    changeRoute: string;
   };
   placeDetail: {
     quickFacts: string;
@@ -236,6 +242,8 @@ export interface Strings {
     welcomeTitle: string;
     welcomeBody: string;
     welcomeDismiss: string;
+    subtitle: string;
+    editMessages: string;
   };
   notFound: {
     stackTitle: string;
@@ -349,6 +357,7 @@ const en: Strings = {
       "e.g. visited on a rainy Tuesday, loved the architecture…",
     noteModalSave: "Save note",
     noteModalDone: "Done",
+    sortNearestNoLocation: "Allow location access to sort by distance",
   },
   walkMode: {
     end: "End",
@@ -384,6 +393,10 @@ const en: Strings = {
     resumeAccessibility: "Resume",
     pauseAccessibility: "Pause",
     skipAccessibility: "Skip",
+    confirmEndTitle: "End this walk?",
+    confirmEndMessage: "Your walk history will be saved, but the session will end.",
+    confirmEndOk: "End Walk",
+    confirmEndCancel: "Keep Walking",
   },
   walkPlan: {
     title: "Plan a Walk",
@@ -401,6 +414,7 @@ const en: Strings = {
     previewLabel: "Along your route",
     emptyRouteNote:
       "No stops were pre-loaded — GPS discovery will find stories as you walk.",
+    changeRoute: "Change route",
   },
   placeDetail: {
     quickFacts: "Quick Facts",
@@ -531,6 +545,8 @@ const en: Strings = {
     welcomeBody:
       "Tap Start Walking to hear stories about places you pass, or Plan a Route to pre-load a path.",
     welcomeDismiss: "Got it",
+    subtitle: "Explore the city with live audio stories",
+    editMessages: "Loading messages",
   },
   notFound: {
     stackTitle: "Oops!",
@@ -645,6 +661,7 @@ const es: Strings = {
       "p. ej. visité un martes lluvioso, me encantó la arquitectura…",
     noteModalSave: "Guardar nota",
     noteModalDone: "Listo",
+    sortNearestNoLocation: "Permite el acceso a la ubicación para ordenar por distancia",
   },
   walkMode: {
     end: "Fin",
@@ -682,6 +699,10 @@ const es: Strings = {
     resumeAccessibility: "Reanudar",
     pauseAccessibility: "Pausar",
     skipAccessibility: "Saltar",
+    confirmEndTitle: "¿Terminar el paseo?",
+    confirmEndMessage: "Tu historial se guardará, pero la sesión terminará.",
+    confirmEndOk: "Terminar paseo",
+    confirmEndCancel: "Seguir caminando",
   },
   walkPlan: {
     title: "Planificar un paseo",
@@ -699,6 +720,7 @@ const es: Strings = {
     previewLabel: "A lo largo de tu ruta",
     emptyRouteNote:
       "No se precargaron paradas — el GPS encontrará historias mientras caminas.",
+    changeRoute: "Cambiar ruta",
   },
   placeDetail: {
     quickFacts: "Datos rápidos",
@@ -832,6 +854,8 @@ const es: Strings = {
     welcomeBody:
       "Toca Empezar a caminar para oír historias sobre los lugares que pasas, o Planificar una ruta para precargarla.",
     welcomeDismiss: "Entendido",
+    subtitle: "Explora la ciudad con relatos de audio en directo",
+    editMessages: "Mensajes de carga",
   },
   notFound: {
     stackTitle: "¡Vaya!",
@@ -947,6 +971,7 @@ const fr: Strings = {
       "ex. visité un mardi pluvieux, j'ai adoré l'architecture…",
     noteModalSave: "Enregistrer la note",
     noteModalDone: "Terminé",
+    sortNearestNoLocation: "Autorisez la localisation pour trier par distance",
   },
   walkMode: {
     end: "Fin",
@@ -983,6 +1008,10 @@ const fr: Strings = {
     resumeAccessibility: "Reprendre",
     pauseAccessibility: "Pause",
     skipAccessibility: "Passer",
+    confirmEndTitle: "Terminer la balade ?",
+    confirmEndMessage: "Votre historique sera sauvegardé, mais la session prendra fin.",
+    confirmEndOk: "Terminer",
+    confirmEndCancel: "Continuer",
   },
   walkPlan: {
     title: "Planifier une balade",
@@ -1001,6 +1030,7 @@ const fr: Strings = {
     previewLabel: "Sur votre parcours",
     emptyRouteNote:
       "Aucun arrêt pré-chargé — le GPS trouvera des histoires pendant votre marche.",
+    changeRoute: "Changer d'itinéraire",
   },
   placeDetail: {
     quickFacts: "Faits rapides",
@@ -1133,6 +1163,8 @@ const fr: Strings = {
     welcomeBody:
       "Touchez Commencer à marcher pour entendre des récits sur les lieux que vous croisez, ou Planifier un itinéraire pour le précharger.",
     welcomeDismiss: "Compris",
+    subtitle: "Explorez la ville avec des histoires audio en direct",
+    editMessages: "Messages de chargement",
   },
   notFound: {
     stackTitle: "Oups !",
@@ -1245,6 +1277,7 @@ const de: Strings = {
       "z. B. an einem regnerischen Dienstag besucht, tolle Architektur…",
     noteModalSave: "Notiz speichern",
     noteModalDone: "Fertig",
+    sortNearestNoLocation: "Standortzugriff erlauben, um nach Entfernung zu sortieren",
   },
   walkMode: {
     end: "Ende",
@@ -1282,6 +1315,10 @@ const de: Strings = {
     resumeAccessibility: "Fortsetzen",
     pauseAccessibility: "Pause",
     skipAccessibility: "Überspringen",
+    confirmEndTitle: "Lauf beenden?",
+    confirmEndMessage: "Dein Lauf-Verlauf wird gespeichert, aber die Sitzung endet.",
+    confirmEndOk: "Beenden",
+    confirmEndCancel: "Weiterlaufen",
   },
   walkPlan: {
     title: "Spaziergang planen",
@@ -1299,6 +1336,7 @@ const de: Strings = {
     previewLabel: "Entlang Ihrer Route",
     emptyRouteNote:
       "Keine Haltestellen vorgeladen — GPS findet Geschichten während Sie laufen.",
+    changeRoute: "Route ändern",
   },
   placeDetail: {
     quickFacts: "Kurzfakten",
@@ -1432,6 +1470,8 @@ const de: Strings = {
     welcomeBody:
       "Tippe auf Loslaufen, um Geschichten zu Orten an deiner Route zu hören, oder auf Route planen, um sie vorab zu laden.",
     welcomeDismiss: "Verstanden",
+    subtitle: "Entdecke die Stadt mit live Audio-Geschichten",
+    editMessages: "Lademeldungen",
   },
   notFound: {
     stackTitle: "Hoppla!",
@@ -1546,6 +1586,7 @@ const it: Strings = {
       "es. visitato un martedì piovoso, architettura fantastica…",
     noteModalSave: "Salva nota",
     noteModalDone: "Fine",
+    sortNearestNoLocation: "Consenti l'accesso alla posizione per ordinare per distanza",
   },
   walkMode: {
     end: "Fine",
@@ -1581,6 +1622,10 @@ const it: Strings = {
     resumeAccessibility: "Riprendi",
     pauseAccessibility: "Pausa",
     skipAccessibility: "Salta",
+    confirmEndTitle: "Terminare la camminata?",
+    confirmEndMessage: "La cronologia verrà salvata, ma la sessione terminerà.",
+    confirmEndOk: "Termina",
+    confirmEndCancel: "Continua",
   },
   walkPlan: {
     title: "Pianifica una passeggiata",
@@ -1599,6 +1644,7 @@ const it: Strings = {
     previewLabel: "Lungo il tuo percorso",
     emptyRouteNote:
       "Nessuna tappa precaricata — il GPS troverà storie durante la passeggiata.",
+    changeRoute: "Cambia percorso",
   },
   placeDetail: {
     quickFacts: "Fatti rapidi",
@@ -1730,6 +1776,8 @@ const it: Strings = {
     welcomeBody:
       "Tocca Inizia a camminare per ascoltare storie sui luoghi che incontri, o Pianifica un percorso per precaricarlo.",
     welcomeDismiss: "Ho capito",
+    subtitle: "Esplora la città con storie audio dal vivo",
+    editMessages: "Messaggi di caricamento",
   },
   notFound: {
     stackTitle: "Ops!",
@@ -1844,6 +1892,7 @@ const pt: Strings = {
       "ex. visitei numa terça chuvosa, adorei a arquitetura…",
     noteModalSave: "Salvar nota",
     noteModalDone: "Concluído",
+    sortNearestNoLocation: "Permita o acesso à localização para ordenar por distância",
   },
   walkMode: {
     end: "Fim",
@@ -1880,6 +1929,10 @@ const pt: Strings = {
     resumeAccessibility: "Retomar",
     pauseAccessibility: "Pausar",
     skipAccessibility: "Pular",
+    confirmEndTitle: "Terminar a caminhada?",
+    confirmEndMessage: "Seu histórico será salvo, mas a sessão será encerrada.",
+    confirmEndOk: "Terminar",
+    confirmEndCancel: "Continuar",
   },
   walkPlan: {
     title: "Planejar passeio",
@@ -1899,6 +1952,7 @@ const pt: Strings = {
     previewLabel: "Ao longo da sua rota",
     emptyRouteNote:
       "Nenhuma parada pré-carregada — o GPS encontrará histórias enquanto você caminha.",
+    changeRoute: "Mudar rota",
   },
   placeDetail: {
     quickFacts: "Fatos rápidos",
@@ -2032,6 +2086,8 @@ const pt: Strings = {
     welcomeBody:
       "Toque em Começar a caminhar para ouvir histórias sobre lugares que passa, ou em Planejar rota para pré-carregar um caminho.",
     welcomeDismiss: "Entendi",
+    subtitle: "Explore a cidade com histórias de áudio ao vivo",
+    editMessages: "Mensagens de carregamento",
   },
   notFound: {
     stackTitle: "Ops!",
@@ -2145,6 +2201,7 @@ const nl: Strings = {
       "bijv. bezocht op een regenachtige dinsdag, dol op de architectuur…",
     noteModalSave: "Notitie opslaan",
     noteModalDone: "Klaar",
+    sortNearestNoLocation: "Geef locatietoegang om op afstand te sorteren",
   },
   walkMode: {
     end: "Stop",
@@ -2179,6 +2236,10 @@ const nl: Strings = {
     resumeAccessibility: "Hervatten",
     pauseAccessibility: "Pauzeren",
     skipAccessibility: "Overslaan",
+    confirmEndTitle: "Wandeling beëindigen?",
+    confirmEndMessage: "Je wandelgeschiedenis wordt opgeslagen, maar de sessie eindigt.",
+    confirmEndOk: "Beëindigen",
+    confirmEndCancel: "Doorgaan",
   },
   walkPlan: {
     title: "Wandeling plannen",
@@ -2196,6 +2257,7 @@ const nl: Strings = {
     previewLabel: "Langs uw route",
     emptyRouteNote:
       "Geen stops voorgeladen — GPS vindt verhalen terwijl u loopt.",
+    changeRoute: "Route wijzigen",
   },
   placeDetail: {
     quickFacts: "Korte feiten",
@@ -2326,6 +2388,8 @@ const nl: Strings = {
     welcomeBody:
       "Tik op Begin met wandelen om verhalen te horen over plekken die je passeert, of op Plan een route om er een vooraf te laden.",
     welcomeDismiss: "Begrepen",
+    subtitle: "Verken de stad met live audioverhaaltjes",
+    editMessages: "Laadberichten",
   },
   notFound: {
     stackTitle: "Oeps!",
@@ -2439,6 +2503,7 @@ const ja: Strings = {
     noteModalPlaceholder: "例：雨の火曜日に訪問、建築が素晴らしかった…",
     noteModalSave: "メモを保存",
     noteModalDone: "完了",
+    sortNearestNoLocation: "距離順に並べるには位置情報を許可してください",
   },
   walkMode: {
     end: "終了",
@@ -2474,6 +2539,10 @@ const ja: Strings = {
     resumeAccessibility: "再開",
     pauseAccessibility: "一時停止",
     skipAccessibility: "スキップ",
+    confirmEndTitle: "ウォークを終了しますか？",
+    confirmEndMessage: "ウォーク履歴は保存されますが、セッションは終了します。",
+    confirmEndOk: "終了",
+    confirmEndCancel: "続ける",
   },
   walkPlan: {
     title: "ウォーク計画",
@@ -2491,6 +2560,7 @@ const ja: Strings = {
     previewLabel: "ルート沿い",
     emptyRouteNote:
       "ストップは事前に読み込まれませんでした — 歩きながらGPSが物語を見つけます。",
+    changeRoute: "ルートを変更",
   },
   placeDetail: {
     quickFacts: "簡単な事実",
@@ -2621,6 +2691,8 @@ const ja: Strings = {
     welcomeBody:
       "「歩きはじめる」を押すと通り過ぎる場所の物語が流れます。事前に経路を読み込むには「ルートを計画」を押してください。",
     welcomeDismiss: "わかりました",
+    subtitle: "ライブ音声ストーリーで街を探索",
+    editMessages: "読み込みメッセージ",
   },
   notFound: {
     stackTitle: "おっと！",
@@ -2731,6 +2803,7 @@ const ko: Strings = {
     noteModalPlaceholder: "예: 비 오는 화요일에 방문, 건축이 멋졌어요…",
     noteModalSave: "메모 저장",
     noteModalDone: "완료",
+    sortNearestNoLocation: "거리순 정렬을 위해 위치 접근을 허용하세요",
   },
   walkMode: {
     end: "종료",
@@ -2765,6 +2838,10 @@ const ko: Strings = {
     resumeAccessibility: "다시 재생",
     pauseAccessibility: "일시정지",
     skipAccessibility: "건너뛰기",
+    confirmEndTitle: "워크를 종료할까요?",
+    confirmEndMessage: "워크 기록은 저장되지만 세션이 종료됩니다.",
+    confirmEndOk: "종료",
+    confirmEndCancel: "계속 걷기",
   },
   walkPlan: {
     title: "걷기 계획",
@@ -2782,6 +2859,7 @@ const ko: Strings = {
     previewLabel: "경로를 따라",
     emptyRouteNote:
       "정류장이 사전 로드되지 않았습니다 — GPS가 걸으면서 이야기를 찾습니다.",
+    changeRoute: "경로 변경",
   },
   placeDetail: {
     quickFacts: "간단한 사실",
@@ -2908,6 +2986,8 @@ const ko: Strings = {
     welcomeBody:
       "걷기 시작을 누르면 지나치는 장소의 이야기를 들을 수 있어요. 경로를 미리 받으려면 경로 계획을 눌러보세요.",
     welcomeDismiss: "확인",
+    subtitle: "라이브 오디오 스토리로 도시를 탐험하세요",
+    editMessages: "로딩 메시지",
   },
   notFound: {
     stackTitle: "이런!",
@@ -3016,6 +3096,7 @@ const zh: Strings = {
     noteModalPlaceholder: "如：在一个雨天星期二到访，喜欢这里的建筑…",
     noteModalSave: "保存备注",
     noteModalDone: "完成",
+    sortNearestNoLocation: "请允许位置访问以按距离排序",
   },
   walkMode: {
     end: "结束",
@@ -3050,6 +3131,10 @@ const zh: Strings = {
     resumeAccessibility: "继续",
     pauseAccessibility: "暂停",
     skipAccessibility: "跳过",
+    confirmEndTitle: "结束漫步？",
+    confirmEndMessage: "漫步记录将被保存，但本次会话将结束。",
+    confirmEndOk: "结束",
+    confirmEndCancel: "继续漫步",
   },
   walkPlan: {
     title: "规划步行",
@@ -3066,6 +3151,7 @@ const zh: Strings = {
     geocodeError: "无法找到该地址。请更具体地输入。",
     previewLabel: "沿途",
     emptyRouteNote: "未预加载站点 — GPS将在您步行时发现故事。",
+    changeRoute: "更改路线",
   },
   placeDetail: {
     quickFacts: "速览",
@@ -3186,6 +3272,8 @@ const zh: Strings = {
     welcomeBody:
       "点击「开始漫步」聆听沿途地点的故事,或点击「规划路线」预先加载路径。",
     welcomeDismiss: "知道了",
+    subtitle: "通过实时音频故事探索城市",
+    editMessages: "加载消息",
   },
   notFound: {
     stackTitle: "哎呀！",

@@ -283,7 +283,7 @@ export default function WalkScreen() {
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Edit loading messages"
+            accessibilityLabel={t.walk.editMessages}
           >
             <Feather
               name="message-square"
@@ -296,12 +296,12 @@ export default function WalkScreen() {
                 { color: colors.mutedForeground },
               ]}
             >
-              Messages
+              {t.walk.editMessages}
             </Text>
           </Pressable>
         </View>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Explore the city with live audio stories
+          {t.walk.subtitle}
         </Text>
       </View>
 
@@ -476,7 +476,7 @@ export default function WalkScreen() {
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Plan a Route"
+          accessibilityLabel={t.walkPlan.title}
           accessibilityHint="Plan a walking route and pre-load stories"
         >
           <View style={[styles.actionIcon, { backgroundColor: colors.muted }]}>
@@ -488,7 +488,7 @@ export default function WalkScreen() {
           </View>
           <View style={styles.actionText}>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>
-              Plan a Route
+              {t.walkPlan.title}
             </Text>
             <Text
               style={[

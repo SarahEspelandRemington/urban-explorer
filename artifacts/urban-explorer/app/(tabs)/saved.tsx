@@ -324,6 +324,17 @@ export default function SavedScreen() {
             </Text>
           </Pressable>
 
+          {!userLocation && (
+            <Text
+              style={[
+                styles.noLocationHint,
+                { color: colors.mutedForeground },
+              ]}
+            >
+              {t.saved.sortNearestNoLocation}
+            </Text>
+          )}
+
           {/* Separator */}
           <View
             style={[styles.chipSeparator, { backgroundColor: colors.border }]}
@@ -741,6 +752,11 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 1,
     marginHorizontal: 2,
+  },
+  noLocationHint: {
+    fontSize: 11,
+    marginLeft: 4,
+    alignSelf: "center",
   },
   mapContainer: {
     height: 200,

@@ -157,7 +157,6 @@ export default function PlaceDetailScreen() {
       setToastSaved(true);
       setToastVisible(false);
       setTimeout(() => setToastVisible(true), 10);
-      setNoteModalVisible(true);
     }
   };
 
