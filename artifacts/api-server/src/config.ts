@@ -426,6 +426,19 @@ export const UPLOAD_MAX_PARTS = envVar(
   }
 }
 
+{
+  if (UPLOAD_MAX_PARTS < UPLOAD_MAX_FIELDS) {
+    const message = `UPLOAD_MAX_PARTS (${UPLOAD_MAX_PARTS}) is less than UPLOAD_MAX_FIELDS (${UPLOAD_MAX_FIELDS}); the total-parts ceiling is tighter than the per-category field ceiling, which will silently cut off field-only multipart requests that would otherwise be within the field limit`;
+    const context = { UPLOAD_MAX_PARTS, UPLOAD_MAX_FIELDS };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // In-memory cache TTLs and size caps
 // ---------------------------------------------------------------------------
