@@ -360,7 +360,7 @@ export default function InvestigateScreen() {
                 {errorMessage}
               </Text>
             </Animated.View>
-            {shouldAutoFill && !showRefinementInput && (
+            {!showRefinementInput && (
               <Animated.View
                 entering={
                   Platform.OS !== "web" ? FadeInDown.duration(250) : undefined
