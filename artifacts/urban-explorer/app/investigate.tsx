@@ -408,7 +408,7 @@ export default function InvestigateScreen() {
           </View>
         )}
 
-        {isEmptyResult && !showRefinementInput && shouldAutoFill && (
+        {isEmptyResult && !showRefinementInput && (
           <Animated.View
             entering={
               Platform.OS !== "web" ? FadeInDown.duration(250) : undefined
