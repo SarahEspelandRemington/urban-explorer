@@ -56,6 +56,12 @@ function multerError(code: string): multer.MulterError {
   return new multer.MulterError(code as multer.MulterError["code"]);
 }
 
+function multerErrorWithField(code: string, field: string): multer.MulterError {
+  const err = new multer.MulterError(code as multer.MulterError["code"]);
+  err.field = field;
+  return err;
+}
+
 describe("handleUploadError", () => {
   let res: Response;
   let next: NextFunction;
@@ -231,6 +237,31 @@ describe("handleUploadError", () => {
     expect(res.status).toHaveBeenCalledWith(413);
     expect(res.json).toHaveBeenCalledWith({
       error: "Form field value is too large (limit: 512 B).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("includes the field name in LIMIT_FIELD_VALUE message when MulterError.field is set", () => {
+    handleUploadError(
+      multerErrorWithField("LIMIT_FIELD_VALUE", "description"),
+      makeReq(),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Form field 'description' value is too large (limit: 1 MB).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("omits the field name in LIMIT_FIELD_VALUE message when MulterError.field is not set", () => {
+    handleUploadError(multerError("LIMIT_FIELD_VALUE"), makeReq(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Form field value is too large (limit: 1 MB).",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -626,7 +657,7 @@ describe("createUpload integration", () => {
 
     expect(res.status).toHaveBeenCalledWith(413);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Form field value is too large (limit: 10 B).",
+      error: "Form field 'description' value is too large (limit: 10 B).",
     });
   });
 
@@ -654,7 +685,39 @@ describe("createUpload integration", () => {
 
     expect(res.status).toHaveBeenCalledWith(413);
     expect(res.json).toHaveBeenCalledWith({
-      error: "Form field value is too large (limit: 1 MB).",
+      error: "Form field 'description' value is too large (limit: 1 MB).",
+    });
+  });
+
+  it("includes the field name in the LIMIT_FIELD_VALUE error message when fieldSizeOverride is set", async () => {
+    const FIELD_SIZE_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldSizeOverride: FIELD_SIZE_BYTES,
+    });
+
+    const oversizedValue = "x".repeat(FIELD_SIZE_BYTES + 1);
+    const body = buildMultipartBodyWithFields([
+      { name: "description", value: oversizedValue },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).field).toBe("description");
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Form field 'description' value is too large (limit: 10 B).",
     });
   });
 

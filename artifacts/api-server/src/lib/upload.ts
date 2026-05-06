@@ -129,7 +129,7 @@ const MULTER_ERROR_STATUS: Record<string, number> = {
 };
 
 /**
- * Build the user-facing error message for a multer error code.
+ * Build the user-facing error message for a multer error.
  *
  * For limit-count codes (`LIMIT_FILE_COUNT`, `LIMIT_FIELD_COUNT`,
  * `LIMIT_PART_COUNT`) the active limit value is embedded in the message.
@@ -137,12 +137,16 @@ const MULTER_ERROR_STATUS: Record<string, number> = {
  * {@link createUpload} and reflects per-endpoint overrides. When it is absent
  * (e.g. an upload instance created outside this module), the global config
  * values are used as a fallback.
+ *
+ * For `LIMIT_FIELD_VALUE`, the `field` property on the `MulterError` (when
+ * multer populates it) is included so callers immediately know which field
+ * to fix, e.g. "Form field 'description' value is too large (limit: 1 MB)."
  */
 function buildMulterErrorMessage(
-  code: string,
+  err: multer.MulterError,
   activeLimits: ActiveUploadLimits | undefined,
 ): string {
-  switch (code) {
+  switch (err.code) {
     case "LIMIT_FILE_SIZE": {
       const limit = activeLimits?.fileSize ?? UPLOAD_MAX_FILE_SIZE;
       return `Uploaded file is too large (limit: ${formatBytes(limit)}).`;
@@ -161,7 +165,8 @@ function buildMulterErrorMessage(
     }
     case "LIMIT_FIELD_VALUE": {
       const limit = activeLimits?.fieldSize ?? UPLOAD_FIELD_SIZE;
-      return `Form field value is too large (limit: ${formatBytes(limit)}).`;
+      const fieldClause = err.field ? ` '${err.field}'` : "";
+      return `Form field${fieldClause} value is too large (limit: ${formatBytes(limit)}).`;
     }
     case "LIMIT_FIELD_KEY":
       return "Form field name is too long.";
@@ -194,7 +199,7 @@ export function handleUploadError(
   if (err instanceof multer.MulterError) {
     const status = MULTER_ERROR_STATUS[err.code] ?? 400;
     const activeLimits = (req as RequestWithUploadLimits)._uploadLimits;
-    const message = buildMulterErrorMessage(err.code, activeLimits);
+    const message = buildMulterErrorMessage(err, activeLimits);
     res.status(status).json({ error: message });
     return;
   }
