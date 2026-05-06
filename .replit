@@ -83,7 +83,7 @@ isValidation = true
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm run spec-sync"
+args = "pnpm run typecheck"
 
 [[workflows.workflow]]
 name = "conflict-markers"
