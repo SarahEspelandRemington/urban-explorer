@@ -548,7 +548,15 @@ export default function PlaceDetailScreen() {
                             } else {
                               router.push({
                                 pathname: "/investigate",
-                                params: { prefillAddress: relatedName },
+                                params: {
+                                  prefillAddress: relatedName,
+                                  ...(params.address || params.name
+                                    ? {
+                                        nearLocation:
+                                          params.address || params.name,
+                                      }
+                                    : {}),
+                                },
                               });
                             }
                           }}
