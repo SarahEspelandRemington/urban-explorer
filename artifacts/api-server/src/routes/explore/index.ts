@@ -241,7 +241,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
 > = [
   ["quick", "v9"], // discover — quick mode
   ["full", "v9"], // discover — full mode
-  ["suggest", "v1"], // location suggestions
+  ["suggest", "v2"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v3"], // reverse geocode
   ["suggest404", "v5"], // address-not-found suggestions
@@ -374,6 +374,31 @@ async function cleanupExpiredCacheEntries(): Promise<void> {
     await db.delete(apiCache).where(lt(apiCache.expiresAt, new Date()));
   } catch (err) {
     logger.warn({ err }, "Failed to clean up expired cache entries");
+  }
+  await evictExcessAudioDbEntries();
+}
+
+async function evictExcessAudioDbEntries(): Promise<void> {
+  try {
+    const result = await db.execute(
+      sql`DELETE FROM ${apiCache}
+          WHERE ${apiCache.namespace} = ${"audio"}
+          AND ${apiCache.cacheKey} NOT IN (
+            SELECT cache_key FROM ${apiCache}
+            WHERE namespace = ${"audio"}
+            ORDER BY expires_at DESC
+            LIMIT ${AUDIO_DB_MAX_ENTRIES}
+          )`,
+    );
+    const deleted = result.rowCount ?? 0;
+    if (deleted > 0) {
+      logger.info(
+        { deleted, maxEntries: AUDIO_DB_MAX_ENTRIES },
+        "Evicted excess audio DB cache entries",
+      );
+    }
+  } catch (err) {
+    logger.warn({ err }, "Failed to evict excess audio cache entries from DB");
   }
 }
 
@@ -1522,7 +1547,7 @@ router.post("/explore/suggest-locations", async (req, res) => {
   }
 
   const nearTrimmed = (nearLocation ?? "").trim().slice(0, 200);
-  const suggestCacheKey = `suggest:v1:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
+  const suggestCacheKey = `suggest:v2:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
   const cachedSuggest = getLLMCache(suggestCacheKey);
   if (cachedSuggest) {
     res.json(cachedSuggest);
@@ -2470,6 +2495,10 @@ interface AudioCacheEntry {
 const audioCache = new Map<string, AudioCacheEntry>();
 const AUDIO_CACHE_TTL = 30 * 60 * 1000; // 30 min — TTS is expensive, cache longer
 const AUDIO_CACHE_MAX_SIZE = 50;
+// Maximum number of audio rows to keep in the DB. Each row is 30–200 KB of
+// base64-encoded MP3, so 100 rows ≈ 5–20 MB. Rows are ranked by expires_at
+// DESC (most-recently-written first) so the freshest entries are preserved.
+const AUDIO_DB_MAX_ENTRIES = Number(process.env.AUDIO_DB_MAX_ENTRIES ?? 100);
 async function getAudioCache(key: string): Promise<Buffer | null> {
   const entry = audioCache.get(key);
   if (entry) {
@@ -2521,12 +2550,14 @@ function setAudioCache(key: string, bytes: Buffer): void {
   }
   audioCache.set(key, { bytes, timestamp: Date.now() });
   // Persist to DB so audio survives server restarts for the full TTL window.
+  // After persisting, evict rows beyond the cap so large audio blobs don't
+  // accumulate unboundedly in the database.
   void persistCacheEntry(
     "audio",
     key,
     { bytes: bytes.toString("base64") },
     AUDIO_CACHE_TTL,
-  );
+  ).then(() => evictExcessAudioDbEntries());
 }
 
 // POST /explore/walk-narration-audio — returns natural-voice MP3 audio for a place.
