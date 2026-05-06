@@ -208,6 +208,34 @@ export const REQUEST_BODY_LIMIT = envVar(
 );
 
 // ---------------------------------------------------------------------------
+// Upload (multipart/form-data) size limit
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum allowed size for a single uploaded file, passed to the shared
+ * multer factory in `lib/upload.ts`. Uses Express / bytes notation (e.g.
+ * "5mb", "10mb"). The value is independent from REQUEST_BODY_LIMIT so that
+ * upload endpoints can have a larger (or smaller) cap without relaxing the
+ * general JSON body limit.
+ *
+ * Any route that handles multipart/form-data MUST use the multer instance
+ * exported from `lib/upload.ts` — do NOT create a bare, unconfigured multer
+ * instance.
+ *
+ * Env var : UPLOAD_BODY_LIMIT
+ * Expects : string matching ^\d+(?:\.\d+)?\s*(?:b|kb|mb|gb)$ (case-insensitive)
+ * Default : "10mb"
+ */
+export const UPLOAD_BODY_LIMIT = envVar(
+  "UPLOAD_BODY_LIMIT",
+  z.string().regex(/^\d+(?:\.\d+)?\s*(?:b|kb|mb|gb)$/i, {
+    message:
+      'Must be a size string such as "5mb" or "10mb" (number + b/kb/mb/gb)',
+  }),
+  "10mb",
+);
+
+// ---------------------------------------------------------------------------
 // In-memory cache TTLs and size caps
 // ---------------------------------------------------------------------------
 

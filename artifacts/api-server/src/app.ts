@@ -43,12 +43,10 @@ app.use(
 app.use(cors({ credentials: true, origin: true }));
 app.use(cookieParser());
 // REQUEST_BODY_LIMIT applies only to JSON and URL-encoded bodies parsed here.
-// It does NOT cover multipart/form-data (e.g. file uploads via multer or
-// busboy). Any future endpoint that accepts multipart/form-data MUST set its
-// own size cap — either by reading REQUEST_BODY_LIMIT from config.ts and
-// passing it to multer({ limits: { fileSize: ... } }), or by introducing a
-// dedicated env var (e.g. UPLOAD_BODY_LIMIT) validated in config.ts. Failing
-// to do so would leave multipart endpoints unprotected by this limit.
+// It does NOT cover multipart/form-data payloads. Any route that handles
+// file uploads MUST use the pre-configured `upload` instance from
+// `lib/upload.ts`, which reads UPLOAD_BODY_LIMIT (default 10 MB) and applies
+// explicit file-size and field-count caps to every multipart request.
 app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
 app.use(authMiddleware);
