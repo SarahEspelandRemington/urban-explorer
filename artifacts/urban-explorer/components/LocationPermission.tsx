@@ -134,16 +134,30 @@ export function LocationPermission({
         >
           <Feather name="map-pin" size={36} color={colors.primary} />
         </View>
-        <Text style={[styles.title, { color: colors.foreground }]}>
+        <Animated.Text
+          key={showSearch ? "title-search" : "title-enable"}
+          style={[styles.title, { color: colors.foreground }]}
+          entering={
+            Platform.OS !== "web" ? FadeInDown.duration(200) : undefined
+          }
+          exiting={Platform.OS !== "web" ? FadeOutUp.duration(160) : undefined}
+        >
           {showSearch
             ? t.locationPermission.titleSearch
             : t.locationPermission.titleEnable}
-        </Text>
-        <Text style={[styles.description, { color: colors.mutedForeground }]}>
+        </Animated.Text>
+        <Animated.Text
+          key={showSearch ? "desc-search" : "desc-enable"}
+          style={[styles.description, { color: colors.mutedForeground }]}
+          entering={
+            Platform.OS !== "web" ? FadeInDown.duration(200) : undefined
+          }
+          exiting={Platform.OS !== "web" ? FadeOutUp.duration(160) : undefined}
+        >
           {showSearch
             ? t.locationPermission.descriptionSearch
             : t.locationPermission.descriptionEnable}
-        </Text>
+        </Animated.Text>
 
         {showSearch ? (
           <Animated.View
