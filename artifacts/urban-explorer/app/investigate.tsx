@@ -186,7 +186,11 @@ export default function InvestigateScreen() {
           />
 
           {showChip && (
-            <View style={styles.chipRow}>
+            <Animated.View
+              style={styles.chipRow}
+              entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
+              exiting={Platform.OS !== "web" ? FadeOutDown.duration(250) : undefined}
+            >
               <Pressable
                 onPress={handleChipPress}
                 style={[
@@ -222,7 +226,7 @@ export default function InvestigateScreen() {
               >
                 <Feather name="x" size={12} color={colors.mutedForeground} />
               </Pressable>
-            </View>
+            </Animated.View>
           )}
 
           <Pressable
