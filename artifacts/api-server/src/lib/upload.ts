@@ -88,26 +88,55 @@ function parseSizeToBytes(sizeStr: string): number {
 // ---------------------------------------------------------------------------
 
 /**
+ * Options accepted by {@link createUpload}.
+ */
+export interface CreateUploadOptions {
+  /**
+   * Per-file size cap in bytes. Overrides the global UPLOAD_BODY_LIMIT env var.
+   * When omitted, UPLOAD_BODY_LIMIT is used.
+   */
+  fileSizeOverride?: number;
+  /**
+   * Maximum number of files allowed in the request. Overrides the global
+   * UPLOAD_MAX_FILES env var. When omitted, UPLOAD_MAX_FILES is used.
+   * Use this to enforce the tightest sensible limit for a given endpoint
+   * (e.g. `maxFiles: 1` for a single-photo upload) without touching env vars.
+   */
+  maxFiles?: number;
+  /**
+   * Maximum number of non-file fields allowed in the request. Overrides the
+   * global UPLOAD_MAX_FIELDS env var. When omitted, UPLOAD_MAX_FIELDS is used.
+   */
+  maxFields?: number;
+}
+
+/**
  * Create a new multer instance with the given storage engine and the
- * UPLOAD_BODY_LIMIT cap applied. Use this when you need disk storage or
- * a custom per-endpoint file-size limit.
+ * UPLOAD_BODY_LIMIT cap applied. Use this when you need disk storage or a
+ * custom per-endpoint file-size, file-count, or field-count limit.
+ *
+ * Per-call overrides in `options` take precedence over the corresponding
+ * global config values (`UPLOAD_BODY_LIMIT`, `UPLOAD_MAX_FILES`,
+ * `UPLOAD_MAX_FIELDS`).
  *
  * @param storage - Multer storage engine (defaults to memoryStorage).
- * @param fileSizeOverride - Optional per-file size cap in bytes. Defaults to
- *   the value of UPLOAD_BODY_LIMIT.
+ * @param options - Optional per-call limit overrides.
  */
 export function createUpload(
   storage: multer.StorageEngine = multer.memoryStorage(),
-  fileSizeOverride?: number,
+  options?: CreateUploadOptions,
 ): multer.Multer {
-  const fileSize = fileSizeOverride ?? parseSizeToBytes(UPLOAD_BODY_LIMIT);
+  const fileSize =
+    options?.fileSizeOverride ?? parseSizeToBytes(UPLOAD_BODY_LIMIT);
+  const files = options?.maxFiles ?? UPLOAD_MAX_FILES;
+  const fields = options?.maxFields ?? UPLOAD_MAX_FIELDS;
   return multer({
     storage,
     limits: {
       fileSize,
-      fields: UPLOAD_MAX_FIELDS,
-      files: UPLOAD_MAX_FILES,
-      parts: UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS,
+      fields,
+      files,
+      parts: files + fields,
     },
   });
 }
