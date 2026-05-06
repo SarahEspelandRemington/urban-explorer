@@ -218,6 +218,32 @@ describe("handleUploadError", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("includes the field name in LIMIT_FIELD_COUNT message when err.field is set", () => {
+    handleUploadError(
+      multerErrorWithField("LIMIT_FIELD_COUNT", "metadata"),
+      makeReq(),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error:
+        "Too many form fields in the request (field: 'metadata', limit: 20).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("omits the field name in LIMIT_FIELD_COUNT message when err.field is not set", () => {
+    handleUploadError(multerError("LIMIT_FIELD_COUNT"), makeReq(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many form fields in the request (limit: 20).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("maps LIMIT_PART_COUNT to 400 with the configured limit in the message", () => {
     handleUploadError(multerError("LIMIT_PART_COUNT"), makeReq(), res, next);
 
@@ -670,6 +696,48 @@ describe("createUpload integration", () => {
     );
 
     expect(err).toBeInstanceOf(multer.MulterError);
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many form fields in the request (limit: 1).",
+    });
+  });
+
+  it("emits LIMIT_FIELD_COUNT without err.field when the fields limit fires and produces the generic message", async () => {
+    // Multer fires LIMIT_FIELD_COUNT via busboy's 'fieldsLimit' event (global
+    // non-file fields cap). That event does not carry a field name, so
+    // err.field is not set on the resulting MulterError. The handler therefore
+    // falls back to the generic "Too many form fields in the request" message
+    // for this path.
+    //
+    // The with-field message format ("Too many form fields in the request
+    // (field: 'X', limit: N).") is exercised by the unit tests above and would
+    // apply if err.field were populated by a custom middleware or a future
+    // multer version.
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 1,
+    });
+
+    const body = buildMultipartBodyWithFields([
+      { name: "alpha", value: "first" },
+      { name: "beta", value: "second" },
+    ]);
+    const req = makeMultipartReq(body);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.none() as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FIELD_COUNT");
+    expect((err as multer.MulterError).field).toBeUndefined();
 
     const res = {
       status: vi.fn().mockReturnThis(),

@@ -179,6 +179,9 @@ function buildMulterErrorMessage(
     }
     case "LIMIT_FIELD_COUNT": {
       const limit = activeLimits?.fields ?? UPLOAD_MAX_FIELDS;
+      if (err.field) {
+        return `Too many form fields in the request (field: '${err.field}', limit: ${limit}).`;
+      }
       return `Too many form fields in the request (limit: ${limit}).`;
     }
     case "LIMIT_PART_COUNT": {
