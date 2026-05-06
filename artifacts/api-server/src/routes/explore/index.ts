@@ -230,6 +230,29 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 // responses are never served to users of the updated prompt.
 // Start at v1 for a new key; bump to v2, v3, etc. after each material change.
 // The timeline key is already at v2 after its prompt update (Task #270).
+//
+// LLM_CACHE_CURRENT_VERSIONS is the authoritative list of every (prefix, version)
+// pair that is currently live. On startup, any DB rows whose cache_key begins with
+// a known prefix but carries a different version segment are deleted so they can
+// never be warmed back into memory.  When you bump a version here, also bump it in
+// the cache key assignment below.
+const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
+  [prefix: string, currentVersion: string]
+> = [
+  ["quick", "v9"], // discover — quick mode
+  ["full", "v9"], // discover — full mode
+  ["suggest", "v1"], // location suggestions
+  ["geocode", "v3"], // geocode
+  ["revgeo", "v3"], // reverse geocode
+  ["suggest404", "v5"], // address-not-found suggestions
+  ["investigate", "v6"], // address investigation
+  ["detail", "v6"], // place detail
+  ["timeline", "v2"], // place timeline
+  ["narration", "v2"], // walk narration (short + deep)
+  ["deep-narration", "v2"], // deep walk narration
+  ["places-route", "v4"], // places along route
+];
+
 function getLLMCache<T>(key: string): T | null {
   const entry = llmCache.get(key);
   if (!entry) return null;
@@ -339,7 +362,45 @@ async function cleanupExpiredCacheEntries(): Promise<void> {
   }
 }
 
-void warmCachesFromDb();
+// Delete DB rows whose cache_key matches a known prefix but carries an old
+// version segment.  This runs once at startup, before warmCachesFromDb, so
+// stale rows are never loaded into the in-memory caches.
+async function cleanupStaleCacheVersions(): Promise<void> {
+  let totalDeleted = 0;
+
+  for (const [prefix, currentVersion] of LLM_CACHE_CURRENT_VERSIONS) {
+    try {
+      const result = await db.execute(
+        sql`DELETE FROM ${apiCache}
+            WHERE ${apiCache.namespace} = ${"llm"}
+            AND ${apiCache.cacheKey} LIKE ${prefix + ":%"}
+            AND ${apiCache.cacheKey} NOT LIKE ${prefix + ":" + currentVersion + ":%"}`,
+      );
+      const count = result.rowCount ?? 0;
+      if (count > 0) {
+        totalDeleted += count;
+        logger.info(
+          { prefix, currentVersion, count },
+          "Deleted stale LLM cache entries for old prompt version",
+        );
+      }
+    } catch (err) {
+      logger.warn(
+        { err, prefix, currentVersion },
+        "Failed to delete stale LLM cache entries for prefix",
+      );
+    }
+  }
+
+  if (totalDeleted > 0) {
+    logger.info(
+      { totalDeleted },
+      "Startup stale cache version cleanup complete",
+    );
+  }
+}
+
+void cleanupStaleCacheVersions().then(() => warmCachesFromDb());
 setInterval(() => void cleanupExpiredCacheEntries(), 5 * 60 * 1000);
 
 function getOSMCacheKey(
@@ -1666,7 +1727,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     return;
   }
 
-  const cacheKey = `revgeo:v1:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cacheKey = `revgeo:v3:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
   if (cached) {
     res.json(cached);
@@ -3053,7 +3114,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v1:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v4:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     res.json(cached);
