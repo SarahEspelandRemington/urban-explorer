@@ -158,6 +158,35 @@ describe("handleUploadError", () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it("includes field name in LIMIT_FILE_COUNT message when err.field is set (wrapper-converted per-field overflow)", () => {
+    // Simulates the state after wrapWithActiveLimits converts a declared-field
+    // LIMIT_UNEXPECTED_FILE to LIMIT_FILE_COUNT with err.field preserved.
+    handleUploadError(
+      multerErrorWithField("LIMIT_FILE_COUNT", "attachments"),
+      makeReq(),
+      res,
+      next,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many files in field 'attachments' (limit: 10).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("omits the field name in LIMIT_FILE_COUNT message when err.field is not set (global files cap path)", () => {
+    // Multer's global files cap fires LIMIT_FILE_COUNT without err.field;
+    // the handler falls back to the generic "Too many files uploaded" message.
+    handleUploadError(multerError("LIMIT_FILE_COUNT"), makeReq(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many files uploaded (limit: 10).",
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("maps LIMIT_FIELD_COUNT to 422 with the configured limit in the message", () => {
     handleUploadError(multerError("LIMIT_FIELD_COUNT"), makeReq(), res, next);
 
@@ -1003,6 +1032,194 @@ describe("createUpload integration", () => {
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
       error: "Unexpected file field 'photo' in the request.",
+    });
+  });
+
+  it("emits LIMIT_FILE_COUNT without err.field when the global files limit fires and produces the generic message", async () => {
+    // Multer fires LIMIT_FILE_COUNT via busboy's 'filesLimit' event (global
+    // files cap). That event does not carry a field name, so err.field is not
+    // set on the resulting MulterError. The handler therefore falls back to the
+    // generic "Too many files uploaded" message for this path.
+    //
+    // The with-field message format ("Too many files in field 'X'...") is
+    // exercised by the unit tests above and would apply if err.field were
+    // populated by a custom middleware or a future multer version.
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 1,
+    });
+
+    const twoFiles = Buffer.concat([
+      Buffer.from(`--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="attachments"; filename="a.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("hello"),
+      Buffer.from(`\r\n--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="attachments"; filename="b.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("world"),
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+    const req = makeMultipartReq(twoFiles);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.array("attachments", 5) as Parameters<
+        typeof runMiddleware
+      >[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FILE_COUNT");
+    expect((err as multer.MulterError).field).toBeUndefined();
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many files uploaded (limit: 1).",
+    });
+  });
+
+  it("converts a per-field count overflow to LIMIT_FILE_COUNT with field name via upload.fields", async () => {
+    // upload.fields([{ name, maxCount }]) exceeding maxCount fires
+    // LIMIT_UNEXPECTED_FILE internally. The wrapWithActiveLimits wrapper
+    // detects that the field was declared, converts the error to
+    // LIMIT_FILE_COUNT with err.field set, and handleUploadError emits the
+    // clear "Too many files in field 'X' (limit: N)." message.
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 10,
+    });
+
+    const twoFilesInAttachments = Buffer.concat([
+      Buffer.from(`--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="attachments"; filename="a.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("hello"),
+      Buffer.from(`\r\n--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="attachments"; filename="b.bin"\r\n` +
+          `Content-Type: application/octet-stream\r\n\r\n`,
+      ),
+      Buffer.from("world"),
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+    const req = makeMultipartReq(twoFilesInAttachments);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.fields([
+        { name: "attachments", maxCount: 1 },
+      ]) as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FILE_COUNT");
+    expect((err as multer.MulterError).field).toBe("attachments");
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many files in field 'attachments' (limit: 1).",
+    });
+  });
+
+  it("converts a per-field count overflow to LIMIT_FILE_COUNT with field name via upload.array", async () => {
+    // upload.array(fieldname, maxCount) exceeding maxCount fires
+    // LIMIT_UNEXPECTED_FILE internally. Same conversion as fields().
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 10,
+    });
+
+    const twoFilesInPhotos = Buffer.concat([
+      Buffer.from(`--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="photos"; filename="a.jpg"\r\n` +
+          `Content-Type: image/jpeg\r\n\r\n`,
+      ),
+      Buffer.from("fakeimage1"),
+      Buffer.from(`\r\n--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="photos"; filename="b.jpg"\r\n` +
+          `Content-Type: image/jpeg\r\n\r\n`,
+      ),
+      Buffer.from("fakeimage2"),
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+    const req = makeMultipartReq(twoFilesInPhotos);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.array("photos", 1) as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_FILE_COUNT");
+    expect((err as multer.MulterError).field).toBe("photos");
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Too many files in field 'photos' (limit: 1).",
+    });
+  });
+
+  it("leaves a truly unexpected file field as LIMIT_UNEXPECTED_FILE when using upload.fields", async () => {
+    // A field that was NOT declared in upload.fields([...]) should still
+    // produce the "Unexpected file field" message — the conversion only
+    // applies to declared fields that exceed their per-field maxCount.
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const bodyWithUndeclaredField = Buffer.concat([
+      Buffer.from(`--${BOUNDARY}\r\n`),
+      Buffer.from(
+        `Content-Disposition: form-data; name="avatar"; filename="pic.jpg"\r\n` +
+          `Content-Type: image/jpeg\r\n\r\n`,
+      ),
+      Buffer.from("fakeimagecontent"),
+      Buffer.from(`\r\n--${BOUNDARY}--\r\n`),
+    ]);
+    const req = makeMultipartReq(bodyWithUndeclaredField);
+
+    const { err, req: annotatedReq } = await runMiddleware(
+      uploadInstance.fields([
+        { name: "attachments", maxCount: 3 },
+      ]) as Parameters<typeof runMiddleware>[0],
+      req,
+    );
+
+    expect(err).toBeInstanceOf(multer.MulterError);
+    expect((err as multer.MulterError).code).toBe("LIMIT_UNEXPECTED_FILE");
+    expect((err as multer.MulterError).field).toBe("avatar");
+
+    const res = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
+    } as unknown as Response;
+    handleUploadError(err, annotatedReq as unknown as Request, res, vi.fn());
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Unexpected file field 'avatar' in the request.",
     });
   });
 });

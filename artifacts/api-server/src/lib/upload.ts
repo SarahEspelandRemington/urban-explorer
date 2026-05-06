@@ -91,6 +91,14 @@ interface ActiveUploadLimits {
   fields: number;
   parts: number;
   fieldSize: number;
+  /**
+   * Per-field file-count limits declared via `single()`, `array()`, or
+   * `fields()`. When a `LIMIT_FILE_COUNT` error carries a field name (because
+   * the wrapper converted it from a per-field `LIMIT_UNEXPECTED_FILE`), this
+   * map is used to embed the per-field ceiling in the error message rather
+   * than the global `files` cap.
+   */
+  perFieldFileCounts?: Record<string, number>;
 }
 
 /**
@@ -138,10 +146,16 @@ const MULTER_ERROR_STATUS: Record<string, number> = {
  * (e.g. an upload instance created outside this module), the global config
  * values are used as a fallback.
  *
- * For `LIMIT_FILE_SIZE` and `LIMIT_FIELD_VALUE`, the `field` property on the
- * `MulterError` (when multer populates it) is included so callers immediately
- * know which field to fix, e.g. "Uploaded file in field 'photo' is too large
- * (limit: 5 MB)." or "Form field 'description' value is too large (limit: 1 MB)."
+ * For `LIMIT_FILE_SIZE`, `LIMIT_FILE_COUNT`, and `LIMIT_FIELD_VALUE`, the
+ * `field` property on the `MulterError` (when present) is included so callers
+ * immediately know which field to fix, e.g. "Uploaded file in field 'photo' is
+ * too large (limit: 5 MB).", "Too many files in field 'attachments' (limit: 3).",
+ * or "Form field 'description' value is too large (limit: 1 MB)."
+ *
+ * `LIMIT_FILE_COUNT` errors that carry a field name were converted from a
+ * per-field `LIMIT_UNEXPECTED_FILE` by {@link wrapWithActiveLimits}. In that
+ * case `activeLimits.perFieldFileCounts` holds the declared per-field ceiling
+ * and is used in preference to the global `files` cap.
  */
 function buildMulterErrorMessage(
   err: multer.MulterError,
@@ -154,6 +168,12 @@ function buildMulterErrorMessage(
       return `Uploaded file${fieldClause} is too large (limit: ${formatBytes(limit)}).`;
     }
     case "LIMIT_FILE_COUNT": {
+      if (err.field) {
+        const perFieldLimit =
+          err.field && activeLimits?.perFieldFileCounts?.[err.field];
+        const limit = perFieldLimit ?? activeLimits?.files ?? UPLOAD_MAX_FILES;
+        return `Too many files in field '${err.field}' (limit: ${limit}).`;
+      }
       const limit = activeLimits?.files ?? UPLOAD_MAX_FILES;
       return `Too many files uploaded (limit: ${limit}).`;
     }
@@ -190,6 +210,13 @@ function buildMulterErrorMessage(
  * active per-endpoint limit is embedded in the message. The value is read from
  * `req._uploadLimits` (attached by the wrappers returned by
  * {@link createUpload}) and falls back to the global config when not present.
+ *
+ * **Behavior contract note**: when a request uses `single()`, `array()`, or
+ * `fields()`, per-field count overflows that multer emits as
+ * `LIMIT_UNEXPECTED_FILE` are converted to `LIMIT_FILE_COUNT` with `err.field`
+ * set by {@link wrapWithActiveLimits} before this handler is invoked. Code
+ * that keys on multer error codes should treat `LIMIT_FILE_COUNT` with a field
+ * as the canonical per-field count signal rather than `LIMIT_UNEXPECTED_FILE`.
  *
  * This middleware is mounted in `app.ts` so that every upload route benefits
  * automatically. Mount it before the global catch-all error handler.
@@ -257,37 +284,83 @@ export interface CreateUploadOptions {
 }
 
 /**
- * Wrap a single multer `RequestHandler` so that it attaches the active upload
- * limits to `req._uploadLimits` before delegating to the real handler.
- * `handleUploadError` reads these limits to build accurate error messages.
- */
-function withActiveLimits(
-  handler: RequestHandler,
-  limits: ActiveUploadLimits,
-): RequestHandler {
-  return (req, res, next) => {
-    (req as RequestWithUploadLimits)._uploadLimits = limits;
-    handler(req, res, next);
-  };
-}
-
-/**
  * Wrap an entire multer instance so that every middleware method it exposes
  * (`single`, `array`, `fields`, `none`, `any`) annotates the request with the
  * active upload limits before processing. This makes `handleUploadError` able
  * to reflect per-endpoint overrides in its error messages.
+ *
+ * For `single`, `array`, and `fields`, multer fires `LIMIT_UNEXPECTED_FILE`
+ * when a *declared* file field exceeds its per-field `maxCount` (because the
+ * per-field budget reaches zero before the global `files` cap fires). That
+ * code is misleading — the field is expected, just over-count. This wrapper
+ * intercepts those errors and converts them to `LIMIT_FILE_COUNT` with
+ * `err.field` set, so `handleUploadError` can emit the clear message
+ * "Too many files in field 'X' (limit: N)." instead.
+ *
+ * Errors on fields that were not declared (truly unexpected) are left as
+ * `LIMIT_UNEXPECTED_FILE` and pass through unchanged.
  */
 function wrapWithActiveLimits(
   instance: multer.Multer,
   limits: ActiveUploadLimits,
 ): multer.Multer {
+  /**
+   * Build a request handler that:
+   * 1. Annotates `req._uploadLimits` (including per-field counts when known).
+   * 2. Converts `LIMIT_UNEXPECTED_FILE` on a declared field to
+   *    `LIMIT_FILE_COUNT` with the field name preserved.
+   */
+  function makeHandler(
+    handler: RequestHandler,
+    declaredFieldCounts?: Record<string, number>,
+  ): RequestHandler {
+    const effectiveLimits: ActiveUploadLimits =
+      declaredFieldCounts != null
+        ? { ...limits, perFieldFileCounts: declaredFieldCounts }
+        : limits;
+
+    return (req, res, next) => {
+      (req as RequestWithUploadLimits)._uploadLimits = effectiveLimits;
+      handler(req, res, (err?: unknown) => {
+        if (
+          declaredFieldCounts != null &&
+          err instanceof multer.MulterError &&
+          err.code === "LIMIT_UNEXPECTED_FILE" &&
+          err.field != null &&
+          Object.prototype.hasOwnProperty.call(declaredFieldCounts, err.field)
+        ) {
+          const converted = new multer.MulterError("LIMIT_FILE_COUNT");
+          converted.field = err.field;
+          return next(converted);
+        }
+        next(err);
+      });
+    };
+  }
+
   return {
-    single: (fieldname) => withActiveLimits(instance.single(fieldname), limits),
+    single: (fieldname) =>
+      makeHandler(instance.single(fieldname), { [fieldname]: 1 }),
     array: (fieldname, maxCount) =>
-      withActiveLimits(instance.array(fieldname, maxCount), limits),
-    fields: (fields) => withActiveLimits(instance.fields(fields), limits),
-    none: () => withActiveLimits(instance.none(), limits),
-    any: () => withActiveLimits(instance.any(), limits),
+      makeHandler(
+        instance.array(fieldname, maxCount),
+        typeof maxCount === "number" ? { [fieldname]: maxCount } : undefined,
+      ),
+    fields: (fields) => {
+      const declaredFieldCounts = Object.fromEntries(
+        fields
+          .filter((f) => typeof f.maxCount === "number")
+          .map((f) => [f.name, f.maxCount as number]),
+      );
+      return makeHandler(
+        instance.fields(fields),
+        Object.keys(declaredFieldCounts).length > 0
+          ? declaredFieldCounts
+          : undefined,
+      );
+    },
+    none: () => makeHandler(instance.none()),
+    any: () => makeHandler(instance.any()),
   } as multer.Multer;
 }
 
