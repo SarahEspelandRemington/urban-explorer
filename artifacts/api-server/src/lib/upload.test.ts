@@ -1740,6 +1740,33 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     });
   });
 
+  it("multer LIMIT_FILE_COUNT still resolves to 422 when a preceding validation handler is mounted first", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.array("files", 5),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(validationErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("files", Buffer.from("hello"), "a.bin")
+      .attach("files", Buffer.from("world"), "b.bin");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many files uploaded (limit: 1).",
+    });
+  });
+
   it("multer LIMIT_FIELD_COUNT still resolves to 422 when a preceding validation handler is mounted first", async () => {
     const uploadInstance = createUpload(multer.memoryStorage(), {
       maxFields: 1,
@@ -1808,6 +1835,30 @@ describe("handleUploadError in a multi-middleware error stack", () => {
       },
     );
     app.use(authErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.from("fakeimagecontent"), "pic.jpg");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Unexpected file field 'photo' in the request.",
+    });
+  });
+
+  it("multer LIMIT_UNEXPECTED_FILE still resolves to 422 when a preceding validation handler is mounted first", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("avatar"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    app.use(validationErrorHandler);
     app.use(handleUploadError);
 
     const res = await request(app)
