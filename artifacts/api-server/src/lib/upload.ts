@@ -460,6 +460,24 @@ export function createUpload(
   const fieldNameSize =
     options?.fieldNameSizeOverride ?? UPLOAD_FIELD_NAME_SIZE;
 
+  if (options?.fieldNameSizeOverride !== undefined) {
+    const bodyLimitBytes = bodyLimitToBytes(UPLOAD_BODY_LIMIT);
+    if (options.fieldNameSizeOverride > bodyLimitBytes) {
+      const message = `createUpload fieldNameSizeOverride (${options.fieldNameSizeOverride} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${bodyLimitBytes} bytes); the per-endpoint field-name-size cap is looser than the body limit implies, so oversized field names cannot be fully received`;
+      const context = {
+        fieldNameSizeOverride: options.fieldNameSizeOverride,
+        UPLOAD_BODY_LIMIT,
+        UPLOAD_BODY_LIMIT_bytes: bodyLimitBytes,
+      };
+      if (UPLOAD_STRICT_CONFIG) {
+        throw new Error(
+          `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+        );
+      }
+      logger.warn(context, message);
+    }
+  }
+
   const instance = multer({
     storage,
     limits: {
