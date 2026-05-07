@@ -4795,7 +4795,7 @@ describe("createUpload — maxFields below UPLOAD_MAX_FIELDS check", () => {
     expect(loggerMock.warn).not.toHaveBeenCalled();
   });
 
-  it("does not warn when maxFields exceeds UPLOAD_MAX_FIELDS", async () => {
+  it("logs a warning when maxFields exceeds UPLOAD_MAX_FIELDS and strict mode is off", async () => {
     const loggerMock = {
       warn: vi.fn(),
       info: vi.fn(),
@@ -4817,7 +4817,64 @@ describe("createUpload — maxFields below UPLOAD_MAX_FIELDS check", () => {
     const { createUpload: cu } = await import("./upload");
     cu(multer.memoryStorage(), { maxFields: 50 });
 
-    expect(loggerMock.warn).not.toHaveBeenCalled();
+    expect(loggerMock.warn).toHaveBeenCalledOnce();
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxFields: 50,
+        UPLOAD_MAX_FIELDS: 20,
+      }),
+      expect.stringContaining("UPLOAD_MAX_FIELDS"),
+    );
+  });
+
+  it("does not throw when maxFields exceeds UPLOAD_MAX_FIELDS and strict mode is off", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() => cu(multer.memoryStorage(), { maxFields: 50 })).not.toThrow();
+  });
+
+  it("throws when maxFields exceeds UPLOAD_MAX_FIELDS and UPLOAD_STRICT_CONFIG is true", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: true,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() => cu(multer.memoryStorage(), { maxFields: 50 })).toThrow(
+      /\[UPLOAD_STRICT_CONFIG\].*UPLOAD_MAX_FIELDS/,
+    );
   });
 
   it("logs a warning when maxFields is below UPLOAD_MAX_FIELDS and strict mode is off", async () => {
@@ -4938,7 +4995,7 @@ describe("createUpload — maxParts below UPLOAD_MAX_PARTS check", () => {
     expect(loggerMock.warn).not.toHaveBeenCalled();
   });
 
-  it("does not warn when maxParts exceeds UPLOAD_MAX_PARTS", async () => {
+  it("logs a warning when maxParts exceeds UPLOAD_MAX_PARTS and strict mode is off", async () => {
     const loggerMock = {
       warn: vi.fn(),
       info: vi.fn(),
@@ -4960,7 +5017,64 @@ describe("createUpload — maxParts below UPLOAD_MAX_PARTS check", () => {
     const { createUpload: cu } = await import("./upload");
     cu(multer.memoryStorage(), { maxParts: 60 });
 
-    expect(loggerMock.warn).not.toHaveBeenCalled();
+    expect(loggerMock.warn).toHaveBeenCalledOnce();
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        maxParts: 60,
+        UPLOAD_MAX_PARTS: 30,
+      }),
+      expect.stringContaining("UPLOAD_MAX_PARTS"),
+    );
+  });
+
+  it("does not throw when maxParts exceeds UPLOAD_MAX_PARTS and strict mode is off", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() => cu(multer.memoryStorage(), { maxParts: 60 })).not.toThrow();
+  });
+
+  it("throws when maxParts exceeds UPLOAD_MAX_PARTS and UPLOAD_STRICT_CONFIG is true", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: true,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() => cu(multer.memoryStorage(), { maxParts: 60 })).toThrow(
+      /\[UPLOAD_STRICT_CONFIG\].*UPLOAD_MAX_PARTS/,
+    );
   });
 
   it("logs a warning when maxParts is below UPLOAD_MAX_PARTS and strict mode is off", async () => {

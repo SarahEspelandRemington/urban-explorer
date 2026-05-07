@@ -483,10 +483,41 @@ export function createUpload(
     logger.warn(context, message);
   }
 
+  if (
+    options?.maxFields !== undefined &&
+    options.maxFields > UPLOAD_MAX_FIELDS
+  ) {
+    const message = `createUpload maxFields (${options.maxFields}) exceeds UPLOAD_MAX_FIELDS (${UPLOAD_MAX_FIELDS}); the per-endpoint field-count cap is looser than the global baseline, so other endpoints may enforce a tighter limit than this one`;
+    const context = {
+      maxFields: options.maxFields,
+      UPLOAD_MAX_FIELDS,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+
   const parts = options?.maxParts ?? UPLOAD_MAX_PARTS;
 
   if (options?.maxParts !== undefined && options.maxParts < UPLOAD_MAX_PARTS) {
     const message = `createUpload maxParts (${options.maxParts}) is below UPLOAD_MAX_PARTS (${UPLOAD_MAX_PARTS}); this endpoint enforces a stricter cap than the global baseline, which may surprise callers that expect the documented baseline limit`;
+    const context = {
+      maxParts: options.maxParts,
+      UPLOAD_MAX_PARTS,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+
+  if (options?.maxParts !== undefined && options.maxParts > UPLOAD_MAX_PARTS) {
+    const message = `createUpload maxParts (${options.maxParts}) exceeds UPLOAD_MAX_PARTS (${UPLOAD_MAX_PARTS}); the per-endpoint part-count cap is looser than the global baseline, so other endpoints may enforce a tighter limit than this one`;
     const context = {
       maxParts: options.maxParts,
       UPLOAD_MAX_PARTS,
