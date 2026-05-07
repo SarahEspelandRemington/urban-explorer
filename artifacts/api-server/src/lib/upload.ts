@@ -449,6 +449,21 @@ export function createUpload(
   }
 
   const files = options?.maxFiles ?? UPLOAD_MAX_FILES;
+
+  if (options?.maxFiles !== undefined && options.maxFiles < UPLOAD_MAX_FILES) {
+    const message = `createUpload maxFiles (${options.maxFiles}) is below UPLOAD_MAX_FILES (${UPLOAD_MAX_FILES}); this endpoint enforces a stricter cap than the global baseline, which may surprise callers that expect the documented baseline limit`;
+    const context = {
+      maxFiles: options.maxFiles,
+      UPLOAD_MAX_FILES,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+
   const fields = options?.maxFields ?? UPLOAD_MAX_FIELDS;
   const parts = options?.maxParts ?? UPLOAD_MAX_PARTS;
   const fieldSize = options?.fieldSizeOverride ?? UPLOAD_FIELD_SIZE;
