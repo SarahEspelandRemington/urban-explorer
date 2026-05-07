@@ -3530,7 +3530,9 @@ describe("createUpload — fieldNameSizeOverride vs UPLOAD_BODY_LIMIT check", ()
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 10485761,
-      UPLOAD_FIELD_SIZE: 1048576,
+      // Set UPLOAD_FIELD_SIZE >= fieldNameSizeOverride so only the body-limit
+      // guard is under test here, not the new cross-property guard.
+      UPLOAD_FIELD_SIZE: 10485761,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -3555,7 +3557,9 @@ describe("createUpload — fieldNameSizeOverride vs UPLOAD_BODY_LIMIT check", ()
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 10485761,
-      UPLOAD_FIELD_SIZE: 1048576,
+      // Set UPLOAD_FIELD_SIZE >= fieldNameSizeOverride so only the body-limit
+      // guard is under test here, not the new cross-property guard.
+      UPLOAD_FIELD_SIZE: 10485761,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -3605,7 +3609,9 @@ describe("createUpload — fieldNameSizeOverride vs UPLOAD_BODY_LIMIT check", ()
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 10485761,
-      UPLOAD_FIELD_SIZE: 1048576,
+      // Set UPLOAD_FIELD_SIZE >= fieldNameSizeOverride so only the body-limit
+      // guard fires here (and not the new cross-property guard too).
+      UPLOAD_FIELD_SIZE: 10485761,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -3690,7 +3696,9 @@ describe("createUpload — fieldNameSizeOverride vs UPLOAD_BODY_LIMIT check", ()
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 10485761,
-      UPLOAD_FIELD_SIZE: 1048576,
+      // Set UPLOAD_FIELD_SIZE >= fieldNameSizeOverride so only the body-limit
+      // guard is under test here, not the new cross-property guard.
+      UPLOAD_FIELD_SIZE: 10485761,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -4162,7 +4170,7 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
     expect(loggerMock.warn).not.toHaveBeenCalled();
   });
 
-  it("does not warn when only fieldNameSizeOverride is provided (no fieldSizeOverride to compare against)", async () => {
+  it("does not warn when only fieldNameSizeOverride is provided and it is within the UPLOAD_FIELD_SIZE baseline", async () => {
     const loggerMock = {
       warn: vi.fn(),
       info: vi.fn(),
@@ -4184,7 +4192,10 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
     const { createUpload: cu } = await import("./upload");
     cu(multer.memoryStorage(), { fieldNameSizeOverride: 50 });
 
-    expect(loggerMock.warn).not.toHaveBeenCalled();
+    expect(loggerMock.warn).not.toHaveBeenCalledWith(
+      expect.objectContaining({ fieldNameSizeOverride: expect.anything() }),
+      expect.stringContaining("field value it belongs to"),
+    );
   });
 
   it("does not warn when only fieldSizeOverride is provided (no fieldNameSizeOverride to compare against)", async () => {
@@ -4332,5 +4343,93 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
       }),
     ).not.toThrow();
     expect(loggerMock.warn).not.toHaveBeenCalled();
+  });
+
+  // Mixed scenario: only fieldNameSizeOverride is provided (fieldSizeOverride absent,
+  // so the effective field size is the UPLOAD_FIELD_SIZE baseline).
+
+  it("does not warn when only fieldNameSizeOverride is provided and it equals the UPLOAD_FIELD_SIZE baseline", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+    cu(multer.memoryStorage(), { fieldNameSizeOverride: 1048576 });
+
+    expect(loggerMock.warn).not.toHaveBeenCalledWith(
+      expect.objectContaining({ fieldNameSizeOverride: expect.anything() }),
+      expect.stringContaining("field value it belongs to"),
+    );
+  });
+
+  it("logs a warning when only fieldNameSizeOverride is provided and it exceeds the UPLOAD_FIELD_SIZE baseline and strict mode is off", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+    cu(multer.memoryStorage(), { fieldNameSizeOverride: 2000000 });
+
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fieldNameSizeOverride: 2000000,
+        UPLOAD_FIELD_SIZE: 1048576,
+      }),
+      expect.stringContaining("fieldNameSizeOverride"),
+    );
+  });
+
+  it("throws when only fieldNameSizeOverride is provided, it exceeds the UPLOAD_FIELD_SIZE baseline, and UPLOAD_STRICT_CONFIG is true", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: true,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() =>
+      cu(multer.memoryStorage(), { fieldNameSizeOverride: 2000000 }),
+    ).toThrow(/\[UPLOAD_STRICT_CONFIG\].*fieldNameSizeOverride/);
   });
 });

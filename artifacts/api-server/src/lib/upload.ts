@@ -471,22 +471,29 @@ export function createUpload(
     }
   }
 
-  if (
-    options?.fieldNameSizeOverride !== undefined &&
-    options?.fieldSizeOverride !== undefined &&
-    options.fieldNameSizeOverride > options.fieldSizeOverride
-  ) {
-    const message = `createUpload fieldNameSizeOverride (${options.fieldNameSizeOverride} bytes) exceeds fieldSizeOverride (${options.fieldSizeOverride} bytes); a field name cannot be longer than the field value it belongs to`;
-    const context = {
-      fieldNameSizeOverride: options.fieldNameSizeOverride,
-      fieldSizeOverride: options.fieldSizeOverride,
-    };
-    if (UPLOAD_STRICT_CONFIG) {
-      throw new Error(
-        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
-      );
+  if (options?.fieldNameSizeOverride !== undefined) {
+    const effectiveFieldSize = options.fieldSizeOverride ?? UPLOAD_FIELD_SIZE;
+    if (options.fieldNameSizeOverride > effectiveFieldSize) {
+      const isBaseline = options.fieldSizeOverride === undefined;
+      const message = isBaseline
+        ? `createUpload fieldNameSizeOverride (${options.fieldNameSizeOverride} bytes) exceeds UPLOAD_FIELD_SIZE baseline (${effectiveFieldSize} bytes); a field name cannot be longer than the field value it belongs to`
+        : `createUpload fieldNameSizeOverride (${options.fieldNameSizeOverride} bytes) exceeds fieldSizeOverride (${options.fieldSizeOverride} bytes); a field name cannot be longer than the field value it belongs to`;
+      const context = isBaseline
+        ? {
+            fieldNameSizeOverride: options.fieldNameSizeOverride,
+            UPLOAD_FIELD_SIZE: effectiveFieldSize,
+          }
+        : {
+            fieldNameSizeOverride: options.fieldNameSizeOverride,
+            fieldSizeOverride: options.fieldSizeOverride,
+          };
+      if (UPLOAD_STRICT_CONFIG) {
+        throw new Error(
+          `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+        );
+      }
+      logger.warn(context, message);
     }
-    logger.warn(context, message);
   }
 
   const fieldNameSize =
