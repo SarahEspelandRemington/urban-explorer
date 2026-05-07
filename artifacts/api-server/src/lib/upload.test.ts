@@ -2581,6 +2581,120 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     });
   });
 
+  it("multer LIMIT_FILE_SIZE still resolves to 413 when both an auth and a rate-limit handler precede handleUploadError", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("photo"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Two preceding error handlers — neither handles MulterError.
+    app.use(authErrorHandler);
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.alloc(LIMIT_BYTES + 1, "x"), "oversized.bin");
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Uploaded file in field 'photo' is too large (limit: 10 B).",
+    });
+  });
+
+  it("multer LIMIT_FILE_COUNT still resolves to 422 when both an auth and a rate-limit handler precede handleUploadError", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFiles: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.array("files", 5),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Two preceding error handlers — neither handles MulterError.
+    app.use(authErrorHandler);
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("files", Buffer.from("hello"), "a.bin")
+      .attach("files", Buffer.from("world"), "b.bin");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many files uploaded (limit: 1).",
+    });
+  });
+
+  it("multer LIMIT_FIELD_COUNT still resolves to 422 when both an auth and a rate-limit handler precede handleUploadError", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+
+    // Two preceding error handlers — neither handles MulterError.
+    app.use(authErrorHandler);
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .field("alpha", "first")
+      .field("beta", "second");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many form fields in the request (limit: 1).",
+    });
+  });
+
+  it("multer LIMIT_UNEXPECTED_FILE still resolves to 422 when both an auth and a rate-limit handler precede handleUploadError", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage());
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("avatar"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Two preceding error handlers — neither handles MulterError.
+    app.use(authErrorHandler);
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.from("fakeimagecontent"), "pic.jpg");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Unexpected file field 'photo' in the request.",
+    });
+  });
+
   it("multer LIMIT_PART_COUNT still resolves to 400 when both an auth and a rate-limit handler precede handleUploadError", async () => {
     const uploadInstance = createUpload(multer.memoryStorage(), {
       maxParts: 2,
