@@ -73,7 +73,10 @@ import {
   UPLOAD_MAX_PARTS,
   UPLOAD_FIELD_NAME_SIZE,
   UPLOAD_FIELD_SIZE,
+  UPLOAD_BODY_LIMIT,
+  UPLOAD_STRICT_CONFIG,
 } from "../config";
+import { logger } from "./logger";
 
 // ---------------------------------------------------------------------------
 // Active-limits annotation
@@ -241,6 +244,29 @@ export function handleUploadError(
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a validated UPLOAD_BODY_LIMIT string (e.g. "10mb", "512kb") to an
+ * integer byte count. Mirrors the private `sizeStringToBytes` in config.ts.
+ * Returns 0 for unrecognised input (should never happen after Zod validation).
+ */
+function bodyLimitToBytes(sizeStr: string): number {
+  const match = sizeStr.trim().match(/^(\d+(?:\.\d+)?)\s*(b|kb|mb|gb)$/i);
+  if (!match) return 0;
+  const multipliers: Record<string, number> = {
+    b: 1,
+    kb: 1024,
+    mb: 1024 * 1024,
+    gb: 1024 * 1024 * 1024,
+  };
+  return Math.floor(
+    parseFloat(match[1]) * (multipliers[match[2].toLowerCase()] ?? 1),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Factory
 // ---------------------------------------------------------------------------
 
@@ -389,6 +415,25 @@ export function createUpload(
   options?: CreateUploadOptions,
 ): multer.Multer {
   const fileSize = options?.fileSizeOverride ?? UPLOAD_MAX_FILE_SIZE;
+
+  if (options?.fileSizeOverride !== undefined) {
+    const bodyLimitBytes = bodyLimitToBytes(UPLOAD_BODY_LIMIT);
+    if (options.fileSizeOverride > bodyLimitBytes) {
+      const message = `createUpload fileSizeOverride (${options.fileSizeOverride} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${bodyLimitBytes} bytes); the per-endpoint file-size cap is looser than the body limit implies, so oversized files cannot be fully received`;
+      const context = {
+        fileSizeOverride: options.fileSizeOverride,
+        UPLOAD_BODY_LIMIT,
+        UPLOAD_BODY_LIMIT_bytes: bodyLimitBytes,
+      };
+      if (UPLOAD_STRICT_CONFIG) {
+        throw new Error(
+          `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+        );
+      }
+      logger.warn(context, message);
+    }
+  }
+
   const files = options?.maxFiles ?? UPLOAD_MAX_FILES;
   const fields = options?.maxFields ?? UPLOAD_MAX_FIELDS;
   const parts = options?.maxParts ?? UPLOAD_MAX_PARTS;
