@@ -1711,6 +1711,34 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     });
   });
 
+  it("multer LIMIT_FILE_SIZE still resolves to 413 when a preceding validation handler is mounted first", async () => {
+    const LIMIT_BYTES = 10;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fileSizeOverride: LIMIT_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.single("photo"),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Validation handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(validationErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .attach("photo", Buffer.alloc(LIMIT_BYTES + 1, "x"), "oversized.bin");
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Uploaded file in field 'photo' is too large (limit: 10 B).",
+    });
+  });
+
   it("multer LIMIT_FILE_COUNT still resolves to 422 when both an auth and a validation handler precede handleUploadError", async () => {
     const uploadInstance = createUpload(multer.memoryStorage(), {
       maxFiles: 1,
@@ -2164,6 +2192,35 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     );
     // Rate-limit handler fires first — it does not recognise MulterError and calls next(err).
     app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const oversizedValue = "x".repeat(FIELD_SIZE_BYTES + 1);
+    const res = await request(app)
+      .post("/upload")
+      .field("description", oversizedValue);
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Form field 'description' value is too large (limit: 5 B).",
+    });
+  });
+
+  it("multer LIMIT_FIELD_VALUE still resolves to 413 when a preceding validation handler is mounted first", async () => {
+    const FIELD_SIZE_BYTES = 5;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldSizeOverride: FIELD_SIZE_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Validation handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(validationErrorHandler);
     app.use(handleUploadError);
 
     const oversizedValue = "x".repeat(FIELD_SIZE_BYTES + 1);
