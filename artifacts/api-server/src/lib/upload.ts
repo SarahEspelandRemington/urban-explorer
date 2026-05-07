@@ -471,6 +471,24 @@ export function createUpload(
     }
   }
 
+  if (
+    options?.fieldNameSizeOverride !== undefined &&
+    options?.fieldSizeOverride !== undefined &&
+    options.fieldNameSizeOverride > options.fieldSizeOverride
+  ) {
+    const message = `createUpload fieldNameSizeOverride (${options.fieldNameSizeOverride} bytes) exceeds fieldSizeOverride (${options.fieldSizeOverride} bytes); a field name cannot be longer than the field value it belongs to`;
+    const context = {
+      fieldNameSizeOverride: options.fieldNameSizeOverride,
+      fieldSizeOverride: options.fieldSizeOverride,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+
   const fieldNameSize =
     options?.fieldNameSizeOverride ?? UPLOAD_FIELD_NAME_SIZE;
 

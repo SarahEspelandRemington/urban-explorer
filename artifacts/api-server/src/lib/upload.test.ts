@@ -4095,3 +4095,242 @@ describe("createUpload — fieldNameSizeOverride vs UPLOAD_FIELD_NAME_SIZE check
     expect(loggerMock.warn).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-property guard
+// ---------------------------------------------------------------------------
+
+describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-property check", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  it("does not warn when both are provided and fieldNameSizeOverride equals fieldSizeOverride", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+    cu(multer.memoryStorage(), {
+      fieldNameSizeOverride: 100,
+      fieldSizeOverride: 100,
+    });
+
+    expect(loggerMock.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when both are provided and fieldNameSizeOverride is below fieldSizeOverride", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+    cu(multer.memoryStorage(), {
+      fieldNameSizeOverride: 100,
+      fieldSizeOverride: 500,
+    });
+
+    expect(loggerMock.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when only fieldNameSizeOverride is provided (no fieldSizeOverride to compare against)", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+    cu(multer.memoryStorage(), { fieldNameSizeOverride: 50 });
+
+    expect(loggerMock.warn).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when only fieldSizeOverride is provided (no fieldNameSizeOverride to compare against)", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+    cu(multer.memoryStorage(), { fieldSizeOverride: 10 });
+
+    expect(loggerMock.warn).not.toHaveBeenCalled();
+  });
+
+  it("logs a warning when both are provided and fieldNameSizeOverride exceeds fieldSizeOverride and strict mode is off", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+    cu(multer.memoryStorage(), {
+      fieldNameSizeOverride: 500,
+      fieldSizeOverride: 200,
+    });
+
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fieldNameSizeOverride: 500,
+        fieldSizeOverride: 200,
+      }),
+      expect.stringContaining("fieldNameSizeOverride"),
+    );
+  });
+
+  it("does not throw when both are provided and fieldNameSizeOverride exceeds fieldSizeOverride and strict mode is off", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() =>
+      cu(multer.memoryStorage(), {
+        fieldNameSizeOverride: 500,
+        fieldSizeOverride: 200,
+      }),
+    ).not.toThrow();
+  });
+
+  it("throws when both are provided and fieldNameSizeOverride exceeds fieldSizeOverride and UPLOAD_STRICT_CONFIG is true", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: true,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() =>
+      cu(multer.memoryStorage(), {
+        fieldNameSizeOverride: 500,
+        fieldSizeOverride: 200,
+      }),
+    ).toThrow(/\[UPLOAD_STRICT_CONFIG\].*fieldNameSizeOverride/);
+  });
+
+  it("does not throw when both are provided, fieldNameSizeOverride equals fieldSizeOverride, and UPLOAD_STRICT_CONFIG is true", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: true,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() =>
+      cu(multer.memoryStorage(), {
+        fieldNameSizeOverride: 100,
+        fieldSizeOverride: 100,
+      }),
+    ).not.toThrow();
+    expect(loggerMock.warn).not.toHaveBeenCalled();
+  });
+});
