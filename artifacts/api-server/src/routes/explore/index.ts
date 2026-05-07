@@ -227,7 +227,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["full", "v10"], // discover — full mode
   ["suggest", "v10"], // location suggestions
   ["geocode", "v3"], // geocode
-  ["revgeo", "v9"], // reverse geocode
+  ["revgeo", "v12"], // reverse geocode
   ["suggest404", "v5"], // address-not-found suggestions
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
@@ -1752,7 +1752,7 @@ router.post("/explore/reverse-geocode", async (req, res) => {
     return;
   }
 
-  const cacheKey = `revgeo:v11:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+  const cacheKey = `revgeo:v12:${latitude.toFixed(5)},${longitude.toFixed(5)}`;
   const cached = getLLMCache(cacheKey);
   if (cached) {
     res.json(cached);
