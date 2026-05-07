@@ -299,7 +299,7 @@ const en: Strings = {
   },
   tabs: { explore: "Explore", saved: "Saved", walk: "Walk" },
   explore: {
-    discover: "Discover",
+    discover: "Explore",
     readyToExplore: "Ready to explore",
     locating: "Locating…",
     improvingGps: "Improving GPS accuracy…",
@@ -602,7 +602,7 @@ const es: Strings = {
   },
   tabs: { explore: "Explorar", saved: "Guardados", walk: "Caminar" },
   explore: {
-    discover: "Descubrir",
+    discover: "Explorar",
     readyToExplore: "Listo para explorar",
     locating: "Ubicando…",
     improvingGps: "Mejorando la precisión del GPS…",
@@ -913,7 +913,7 @@ const fr: Strings = {
   },
   tabs: { explore: "Explorer", saved: "Enregistrés", walk: "Marcher" },
   explore: {
-    discover: "Découvrir",
+    discover: "Explorer",
     readyToExplore: "Prêt à explorer",
     locating: "Localisation…",
     improvingGps: "Amélioration de la précision GPS…",
@@ -1532,7 +1532,7 @@ const it: Strings = {
   },
   tabs: { explore: "Esplora", saved: "Salvati", walk: "Camminare" },
   explore: {
-    discover: "Scopri",
+    discover: "Esplora",
     readyToExplore: "Pronto a esplorare",
     locating: "Localizzazione…",
     improvingGps: "Miglioramento precisione GPS…",
@@ -1840,7 +1840,7 @@ const pt: Strings = {
   },
   tabs: { explore: "Explorar", saved: "Salvos", walk: "Caminhar" },
   explore: {
-    discover: "Descobrir",
+    discover: "Explorar",
     readyToExplore: "Pronto para explorar",
     locating: "Localizando…",
     improvingGps: "Melhorando a precisão do GPS…",
@@ -2150,7 +2150,7 @@ const nl: Strings = {
   },
   tabs: { explore: "Verkennen", saved: "Opgeslagen", walk: "Wandelen" },
   explore: {
-    discover: "Ontdek",
+    discover: "Verkennen",
     readyToExplore: "Klaar om te verkennen",
     locating: "Locatie zoeken…",
     improvingGps: "GPS-nauwkeurigheid verbeteren…",
@@ -2453,7 +2453,7 @@ const ja: Strings = {
   },
   tabs: { explore: "探索", saved: "保存済み", walk: "ウォーク" },
   explore: {
-    discover: "発見",
+    discover: "探索",
     readyToExplore: "探索の準備ができました",
     locating: "位置情報を取得中…",
     improvingGps: "GPS精度を向上中…",
@@ -2755,7 +2755,7 @@ const ko: Strings = {
   },
   tabs: { explore: "탐험", saved: "저장됨", walk: "걷기" },
   explore: {
-    discover: "발견",
+    discover: "탐험",
     readyToExplore: "탐험할 준비가 되었어요",
     locating: "위치 확인 중…",
     improvingGps: "GPS 정확도 향상 중…",
@@ -3050,7 +3050,7 @@ const zh: Strings = {
   },
   tabs: { explore: "探索", saved: "已保存", walk: "步行" },
   explore: {
-    discover: "发现",
+    discover: "探索",
     readyToExplore: "准备好探索了",
     locating: "定位中…",
     improvingGps: "正在提升 GPS 精度…",

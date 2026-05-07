@@ -758,7 +758,7 @@ export default function ExploreScreen() {
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Discover nearby places"
+                  accessibilityLabel="Explore nearby places"
                 >
                   {discoverMutation.isPending ? (
                     <ActivityIndicator
@@ -797,11 +797,7 @@ export default function ExploreScreen() {
                   accessibilityRole="button"
                   accessibilityLabel="Investigate a building by address"
                 >
-                  <Feather
-                    name="book-open"
-                    size={17}
-                    color={colors.foreground}
-                  />
+                  <Feather name="map-pin" size={17} color={colors.foreground} />
                 </Pressable>
                 <Pressable
                   onPress={() => {

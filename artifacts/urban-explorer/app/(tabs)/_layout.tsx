@@ -14,15 +14,15 @@ function NativeTabLayout() {
   const t = useT();
   return (
     <NativeTabs>
+      <NativeTabs.Trigger name="index">
+        <Icon sf={{ default: "safari", selected: "safari.fill" }} />
+        <Label>{t.tabs.explore}</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="walk">
         <Icon
           sf={{ default: "figure.walk", selected: "figure.walk.circle.fill" }}
         />
         <Label>{t.tabs.walk}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "safari", selected: "safari.fill" }} />
-        <Label>{t.tabs.explore}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="saved">
         <Icon sf={{ default: "bookmark", selected: "bookmark.fill" }} />
@@ -42,7 +42,7 @@ function ClassicTabLayout() {
 
   return (
     <Tabs
-      initialRouteName="walk"
+      initialRouteName="index"
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.mutedForeground,
@@ -73,18 +73,6 @@ function ClassicTabLayout() {
       }}
     >
       <Tabs.Screen
-        name="walk"
-        options={{
-          title: t.tabs.walk,
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="figure.walk" tintColor={color} size={24} />
-            ) : (
-              <MaterialCommunityIcons name="walk" size={24} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
         name="index"
         options={{
           title: t.tabs.explore,
@@ -93,6 +81,18 @@ function ClassicTabLayout() {
               <SymbolView name="safari" tintColor={color} size={24} />
             ) : (
               <Feather name="compass" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="walk"
+        options={{
+          title: t.tabs.walk,
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="figure.walk" tintColor={color} size={24} />
+            ) : (
+              <MaterialCommunityIcons name="walk" size={24} color={color} />
             ),
         }}
       />
