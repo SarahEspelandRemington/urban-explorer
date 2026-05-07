@@ -409,6 +409,24 @@ export const UPLOAD_FIELD_SIZE = envVar(
   1048576,
 );
 
+{
+  const uploadBodyLimitBytes = sizeStringToBytes(UPLOAD_BODY_LIMIT);
+  if (UPLOAD_FIELD_SIZE > uploadBodyLimitBytes) {
+    const message = `UPLOAD_FIELD_SIZE (${UPLOAD_FIELD_SIZE} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${uploadBodyLimitBytes} bytes); a field value larger than the body limit can never be transmitted, so this configuration is inconsistent`;
+    const context = {
+      UPLOAD_FIELD_SIZE,
+      UPLOAD_BODY_LIMIT,
+      UPLOAD_BODY_LIMIT_bytes: uploadBodyLimitBytes,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+}
+
 /**
  * Maximum total number of parts (files + non-file fields combined) allowed in
  * a single multipart/form-data upload request, passed to the shared multer
