@@ -283,6 +283,36 @@ function angularDiff(a: number, b: number): number {
   return d > 180 ? 360 - d : d;
 }
 
+/**
+ * Compute the median of a set of compass bearings (0–360°), handling the
+ * 0°/360° wrap correctly by translating all values relative to the first
+ * sample before sorting. Returns 0 for an empty array.
+ */
+function circularMedian(angles: number[]): number {
+  if (angles.length === 0) return 0;
+  if (angles.length === 1) return angles[0];
+  const ref = angles[0];
+  const relative = angles
+    .map((a) => ((a - ref + 540) % 360) - 180)
+    .sort((a, b) => a - b);
+  const mid = Math.floor(relative.length / 2);
+  const median =
+    relative.length % 2 === 0
+      ? (relative[mid - 1] + relative[mid]) / 2
+      : relative[mid];
+  return (ref + median + 360) % 360;
+}
+
+// Rolling-buffer size for compass and velocity heading smoothing.
+const HEADING_BUFFER_SIZE = 5;
+// Maximum angular change between consecutive velocity-derived bearings that is
+// accepted into the buffer. Larger jumps are treated as GPS noise and ignored.
+const VELOCITY_HEADING_CONSISTENCY_DEG = 60;
+// Places arriving from the discover API that are more than this many degrees
+// off the user's current heading are deferred — they won't enter the queue
+// until a later fetch when the user has turned toward them.
+const DISCOVERY_HEADING_FILTER_DEG = 100;
+
 // Metres to project the discover-fetch centre ahead of the user's current
 // position in their direction of travel. This front-loads the Overpass result
 // set with places the user is approaching, so candidates are in the queue
@@ -375,8 +405,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   } | null>(null);
   // Device compass heading from the magnetometer, when available.
   const deviceHeadingRef = useRef<number | null>(null);
+  // Rolling buffer of recent compass readings for median smoothing.
+  const compassHeadingBufferRef = useRef<number[]>([]);
   // Velocity-derived heading, as a fallback when the compass isn't available.
   const velocityHeadingRef = useRef<number | null>(null);
+  // Rolling buffer of recent velocity-derived bearings for median smoothing.
+  const velocityHeadingBufferRef = useRef<number[]>([]);
   const fetchingRef = useRef(false);
   const narratedIdsRef = useRef<Map<string, number>>(new Map());
   const placesRef = useRef<WalkPlace[]>([]);
@@ -669,7 +703,40 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // than memoryRadius from the user's current location. Without the
             // eviction the queue grows unbounded over a long walk, slowing
             // pickNext and piling stale markers across the whole neighborhood.
-            const incoming = data.places as WalkPlace[];
+            const allIncoming = data.places as WalkPlace[];
+            // Forward filter: only accept newly discovered places that are
+            // within DISCOVERY_HEADING_FILTER_DEG (±100°) of the user's
+            // current heading. Places behind or far to the side are skipped on
+            // this fetch — they'll be picked up naturally once the user turns
+            // toward them. Existing queue entries are not retroactively evicted.
+            // When heading is unknown the filter is skipped entirely.
+            const currentHeading =
+              deviceHeadingRef.current ?? velocityHeadingRef.current;
+            const incoming =
+              currentHeading !== null
+                ? allIncoming.filter((p) => {
+                    const bearing = bearingDeg(
+                      latitude,
+                      longitude,
+                      p.latitude,
+                      p.longitude,
+                    );
+                    return (
+                      angularDiff(currentHeading, bearing) <=
+                      DISCOVERY_HEADING_FILTER_DEG
+                    );
+                  })
+                : allIncoming;
+            if (__DEV__ && currentHeading !== null) {
+              const filtered = allIncoming.length - incoming.length;
+              if (filtered > 0) {
+                addWalkBreadcrumb("discovery_heading_filter", {
+                  accepted: incoming.length,
+                  filtered,
+                  heading: Math.round(currentHeading),
+                });
+              }
+            }
             const map = new Map<string, WalkPlace>();
             for (const p of placesRef.current) map.set(p.id, p);
             for (const p of incoming) map.set(p.id, p);
@@ -1031,13 +1098,30 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           paceSamplesRef.current.push({ ts: now, meters: dist });
         }
         // Compute heading from velocity: only trust if moved enough recently.
-        if (dist >= 8 && now - prev.ts < 30_000) {
-          velocityHeadingRef.current = bearingDeg(
+        // Threshold raised to 12 m (from 8 m) to reduce heading flips from
+        // brief GPS drift. A consistency gate rejects new bearings that differ
+        // from the last accepted velocity heading by more than
+        // VELOCITY_HEADING_CONSISTENCY_DEG (60°), filtering out single-fix
+        // noise without discarding genuine sharp turns (which accumulate
+        // across multiple fixes and pass the gate on the next consistent tick).
+        if (dist >= 12 && now - prev.ts < 30_000) {
+          const newBearing = bearingDeg(
             prev.latitude,
             prev.longitude,
             latitude,
             longitude,
           );
+          const lastVelocityHeading = velocityHeadingRef.current;
+          const isConsistent =
+            lastVelocityHeading === null ||
+            angularDiff(newBearing, lastVelocityHeading) <=
+              VELOCITY_HEADING_CONSISTENCY_DEG;
+          if (isConsistent) {
+            const buf = velocityHeadingBufferRef.current;
+            buf.push(newBearing);
+            if (buf.length > HEADING_BUFFER_SIZE) buf.shift();
+            velocityHeadingRef.current = circularMedian(buf);
+          }
         }
       }
       prevLocationRef.current = { latitude, longitude, ts: now };
@@ -1439,7 +1523,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
                 : typeof h.magHeading === "number" && h.magHeading >= 0
                   ? h.magHeading
                   : null;
-            if (candidate !== null) deviceHeadingRef.current = candidate;
+            if (candidate !== null) {
+              // Smooth compass readings through a rolling median buffer to
+              // reduce noise from metal buildings and electrical interference.
+              const buf = compassHeadingBufferRef.current;
+              buf.push(candidate);
+              if (buf.length > HEADING_BUFFER_SIZE) buf.shift();
+              deviceHeadingRef.current = circularMedian(buf);
+            }
           });
           headingWatchRef.current = headingSub;
         } catch {}
