@@ -125,12 +125,12 @@ export const WALK_FORWARD_BIAS_METERS = envVar(
  *
  * Env var : WALK_OFF_AXIS_PENALTY_DEG
  * Expects : finite number
- * Default : 70
+ * Default : 45
  */
 export const WALK_OFF_AXIS_PENALTY_DEG = envVar(
   "WALK_OFF_AXIS_PENALTY_DEG",
   z.coerce.number().finite(),
-  70,
+  45,
 );
 
 /**
@@ -139,12 +139,12 @@ export const WALK_OFF_AXIS_PENALTY_DEG = envVar(
  *
  * Env var : WALK_OFF_AXIS_PENALTY_METERS
  * Expects : finite number
- * Default : 120
+ * Default : 180
  */
 export const WALK_OFF_AXIS_PENALTY_METERS = envVar(
   "WALK_OFF_AXIS_PENALTY_METERS",
   z.coerce.number().finite(),
-  120,
+  180,
 );
 
 // ---------------------------------------------------------------------------

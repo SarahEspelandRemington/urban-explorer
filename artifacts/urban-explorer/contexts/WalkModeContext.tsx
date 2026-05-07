@@ -212,21 +212,24 @@ const DENSITY_CONFIG: Record<
     minMetersBetweenPicks: 120,
     corridorMeters: 150,
     forwardBiasMeters: 200,
-    offAxisPenaltyDeg: 70,
-    offAxisPenaltyMeters: 120,
+    offAxisPenaltyDeg: 45,
+    offAxisPenaltyMeters: 180,
   },
   dense: {
     refetchMeters: 60,
     cooldownMs: 25 * 1000,
     netScoreFloor: -2,
-    maxQueueDistance: 220,
+    // Reduced from 220 m: in dense urban grids a 180 m cap keeps narration
+    // focused on the current block and the next, preventing the app from
+    // jumping to places several blocks away when closer ones exist.
+    maxQueueDistance: 180,
     discoverRadius: 250,
     memoryRadius: 1000,
     minMetersBetweenPicks: 40,
     corridorMeters: 70,
     forwardBiasMeters: 200,
-    offAxisPenaltyDeg: 70,
-    offAxisPenaltyMeters: 120,
+    offAxisPenaltyDeg: 45,
+    offAxisPenaltyMeters: 180,
   },
 };
 
@@ -913,7 +916,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         //   a place 200 m ahead scores 200−200=0 vs 80 m perpendicular scoring 80.
         //
         //   offAxisPenaltyDeg / offAxisPenaltyMeters — additional flat penalty for
-        //   places more than ~70° off-heading, making them a genuine last resort
+        //   places more than ~45° off-heading, making them a genuine last resort
         //   without hard-excluding them (queue never goes empty in bad GPS).
         if (heading !== null) {
           const overrides = walkConfigOverridesRef.current;
