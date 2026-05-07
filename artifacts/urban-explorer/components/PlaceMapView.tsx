@@ -361,7 +361,10 @@ export function PlaceMapView({
           >
             <Feather name="search" size={14} color={colors.primaryForeground} />
             <Text
-              style={[styles.searchButtonText, { color: colors.primaryForeground }]}
+              style={[
+                styles.searchButtonText,
+                { color: colors.primaryForeground },
+              ]}
             >
               Search this area
             </Text>
