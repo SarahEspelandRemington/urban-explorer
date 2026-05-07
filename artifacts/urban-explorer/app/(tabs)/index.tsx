@@ -458,9 +458,6 @@ export default function ExploreScreen() {
 
   const handleMapRegionDiscover = useCallback(
     (lat: number, lng: number) => {
-      // Invalidate any pending auto-discover so its slow result can't
-      // overwrite the map after the user has already panned away.
-      discoverRequestRef.current++;
       const requestId = ++mapRegionRequestRef.current;
       setMapLoading(true);
       mapDiscoverMutation.mutate(

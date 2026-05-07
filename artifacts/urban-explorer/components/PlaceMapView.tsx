@@ -1,8 +1,18 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import MapView, {
   Callout,
   Marker,
@@ -82,6 +92,21 @@ export function PlaceMapView({
   const mapRef = useRef<MapView>(null);
   const lastFetchCenter = useRef({ lat: userLatitude, lng: userLongitude });
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // When the user pans 150m+ from the last search, we show a "Search this area"
+  // button instead of auto-firing. pendingCenter stores where they panned to.
+  const [pendingCenter, setPendingCenter] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  // Clear the pending button once loading begins (either from this button or
+  // from an external trigger), so the button doesn't linger during the fetch.
+  useEffect(() => {
+    if (isLoadingMore) {
+      setPendingCenter(null);
+    }
+  }, [isLoadingMore]);
 
   // Geocoded coordinates keyed by place id. Pins start at the AI-provided
   // lat/lng and silently snap to the geocoded position once it resolves.
@@ -166,16 +191,24 @@ export function PlaceMapView({
         );
 
         if (dist > PAN_DISTANCE_THRESHOLD) {
-          lastFetchCenter.current = {
-            lat: region.latitude,
-            lng: region.longitude,
-          };
-          onMapRegionDiscover(region.latitude, region.longitude);
+          // Show the "Search this area" button rather than auto-firing.
+          setPendingCenter({ lat: region.latitude, lng: region.longitude });
         }
-      }, 800);
+      }, 600);
     },
     [onMapRegionDiscover],
   );
+
+  const handleSearchThisArea = useCallback(() => {
+    if (!pendingCenter || !onMapRegionDiscover) return;
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    // Advance the fetch-center now so a subsequent pan measures from here.
+    lastFetchCenter.current = pendingCenter;
+    setPendingCenter(null);
+    onMapRegionDiscover(pendingCenter.lat, pendingCenter.lng);
+  }, [pendingCenter, onMapRegionDiscover]);
 
   const initialRegion = {
     latitude: userLatitude,
@@ -289,7 +322,7 @@ export function PlaceMapView({
       {isLoadingMore && (
         <View
           style={[
-            styles.loadingBadge,
+            styles.topBadge,
             {
               backgroundColor: colors.card,
               borderColor: colors.border,
@@ -299,11 +332,41 @@ export function PlaceMapView({
         >
           <ActivityIndicator size="small" color={colors.primary} />
           <Text
-            style={[styles.loadingBadgeText, { color: colors.mutedForeground }]}
+            style={[styles.topBadgeText, { color: colors.mutedForeground }]}
           >
-            Finding places...
+            Finding places…
           </Text>
         </View>
+      )}
+
+      {!isLoadingMore && pendingCenter && (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+          style={styles.searchButtonWrapper}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            onPress={handleSearchThisArea}
+            style={({ pressed }) => [
+              styles.searchButton,
+              {
+                backgroundColor: colors.primary,
+                opacity: pressed ? 0.85 : 1,
+                transform: [{ scale: pressed ? 0.97 : 1 }],
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Search this area"
+          >
+            <Feather name="search" size={14} color={colors.primaryForeground} />
+            <Text
+              style={[styles.searchButtonText, { color: colors.primaryForeground }]}
+            >
+              Search this area
+            </Text>
+          </Pressable>
+        </Animated.View>
       )}
     </View>
   );
@@ -316,7 +379,7 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  loadingBadge: {
+  topBadge: {
     position: "absolute",
     top: 12,
     alignSelf: "center",
@@ -334,9 +397,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
-  loadingBadgeText: {
+  topBadgeText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
+  },
+  searchButtonWrapper: {
+    position: "absolute",
+    top: 12,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 10,
+  },
+  searchButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    borderRadius: 24,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+  },
+  searchButtonText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.1,
   },
   calloutContainer: {
     width: 260,
