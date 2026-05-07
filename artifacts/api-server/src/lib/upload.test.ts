@@ -2263,6 +2263,35 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     });
   });
 
+  it("multer LIMIT_FIELD_KEY still resolves to 400 when a preceding validation handler is mounted first", async () => {
+    const FIELD_NAME_SIZE_BYTES = 5;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldNameSizeOverride: FIELD_NAME_SIZE_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Validation handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(validationErrorHandler);
+    app.use(handleUploadError);
+
+    const tooLongFieldName = "toolongname";
+    const res = await request(app)
+      .post("/upload")
+      .field(tooLongFieldName, "value");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Form field name is too long.",
+    });
+  });
+
   it("multer LIMIT_FIELD_VALUE still resolves to 413 when both an auth and a rate-limit handler precede handleUploadError", async () => {
     const FIELD_SIZE_BYTES = 5;
     const uploadInstance = createUpload(multer.memoryStorage(), {
