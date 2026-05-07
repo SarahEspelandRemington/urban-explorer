@@ -372,6 +372,113 @@ describe("config — UPLOAD_MAX_PARTS vs UPLOAD_MAX_FIELDS startup check", () =>
   });
 });
 
+describe("config — UPLOAD_FIELD_NAME_SIZE vs UPLOAD_BODY_LIMIT startup check", () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+    vi.resetModules();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it("does not emit a logger.warn when UPLOAD_FIELD_NAME_SIZE is within UPLOAD_BODY_LIMIT bytes", async () => {
+    process.env["UPLOAD_BODY_LIMIT"] = "10mb";
+    process.env["UPLOAD_FIELD_NAME_SIZE"] = "100";
+
+    const { logger } = await import("./lib/logger");
+    await import("./config");
+
+    const fieldNameWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter((args) =>
+      String(args[1]).includes("UPLOAD_FIELD_NAME_SIZE"),
+    );
+    expect(fieldNameWarnCalls).toHaveLength(0);
+  });
+
+  it("does not emit a logger.warn when UPLOAD_FIELD_NAME_SIZE equals UPLOAD_BODY_LIMIT bytes", async () => {
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_FIELD_NAME_SIZE"] = String(1024 * 1024);
+
+    const { logger } = await import("./lib/logger");
+    await import("./config");
+
+    const fieldNameWarnCalls = (
+      logger.warn as ReturnType<typeof vi.fn>
+    ).mock.calls.filter((args) =>
+      String(args[1]).includes("UPLOAD_FIELD_NAME_SIZE"),
+    );
+    expect(fieldNameWarnCalls).toHaveLength(0);
+  });
+
+  it("emits a logger.warn when UPLOAD_FIELD_NAME_SIZE exceeds UPLOAD_BODY_LIMIT bytes", async () => {
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_FIELD_NAME_SIZE"] = String(1024 * 1024 + 1);
+
+    const { logger } = await import("./lib/logger");
+    await import("./config");
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        UPLOAD_FIELD_NAME_SIZE: 1024 * 1024 + 1,
+        UPLOAD_BODY_LIMIT: "1mb",
+        UPLOAD_BODY_LIMIT_bytes: 1024 * 1024,
+      }),
+      expect.stringContaining("UPLOAD_FIELD_NAME_SIZE"),
+    );
+  });
+
+  it("warns but does not throw when UPLOAD_STRICT_CONFIG=false and UPLOAD_FIELD_NAME_SIZE exceeds UPLOAD_BODY_LIMIT", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "false";
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_FIELD_NAME_SIZE"] = String(1024 * 1024 + 1);
+
+    const { logger } = await import("./lib/logger");
+    await expect(import("./config")).resolves.toBeDefined();
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ UPLOAD_FIELD_NAME_SIZE: 1024 * 1024 + 1 }),
+      expect.stringContaining("UPLOAD_FIELD_NAME_SIZE"),
+    );
+  });
+
+  it("warns but does not throw when UPLOAD_STRICT_CONFIG is absent and UPLOAD_FIELD_NAME_SIZE exceeds UPLOAD_BODY_LIMIT", async () => {
+    delete process.env["UPLOAD_STRICT_CONFIG"];
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_FIELD_NAME_SIZE"] = String(1024 * 1024 + 1);
+
+    const { logger } = await import("./lib/logger");
+    await expect(import("./config")).resolves.toBeDefined();
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ UPLOAD_FIELD_NAME_SIZE: 1024 * 1024 + 1 }),
+      expect.stringContaining("UPLOAD_FIELD_NAME_SIZE"),
+    );
+  });
+
+  it("throws when UPLOAD_STRICT_CONFIG=true and UPLOAD_FIELD_NAME_SIZE exceeds UPLOAD_BODY_LIMIT", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "true";
+    process.env["UPLOAD_BODY_LIMIT"] = "1mb";
+    process.env["UPLOAD_FIELD_NAME_SIZE"] = String(1024 * 1024 + 1);
+
+    await expect(import("./config")).rejects.toThrow(
+      /\[UPLOAD_STRICT_CONFIG\].*UPLOAD_FIELD_NAME_SIZE/,
+    );
+  });
+
+  it("does not throw when UPLOAD_STRICT_CONFIG=true and UPLOAD_FIELD_NAME_SIZE is within UPLOAD_BODY_LIMIT", async () => {
+    process.env["UPLOAD_STRICT_CONFIG"] = "true";
+    process.env["UPLOAD_BODY_LIMIT"] = "10mb";
+    process.env["UPLOAD_FIELD_NAME_SIZE"] = "100";
+
+    await expect(import("./config")).resolves.toBeDefined();
+  });
+});
+
 describe("config — UPLOAD_MAX_PARTS vs UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS combined startup check", () => {
   const originalEnv = process.env;
 

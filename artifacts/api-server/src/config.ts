@@ -374,6 +374,24 @@ export const UPLOAD_FIELD_NAME_SIZE = envVar(
   100,
 );
 
+{
+  const uploadBodyLimitBytes = sizeStringToBytes(UPLOAD_BODY_LIMIT);
+  if (UPLOAD_FIELD_NAME_SIZE > uploadBodyLimitBytes) {
+    const message = `UPLOAD_FIELD_NAME_SIZE (${UPLOAD_FIELD_NAME_SIZE} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${uploadBodyLimitBytes} bytes); a field name larger than the body limit can never be transmitted, so this configuration is inconsistent`;
+    const context = {
+      UPLOAD_FIELD_NAME_SIZE,
+      UPLOAD_BODY_LIMIT,
+      UPLOAD_BODY_LIMIT_bytes: uploadBodyLimitBytes,
+    };
+    if (UPLOAD_STRICT_CONFIG) {
+      throw new Error(
+        `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+      );
+    }
+    logger.warn(context, message);
+  }
+}
+
 /**
  * Maximum byte length allowed for a non-file field *value* in any multipart
  * upload request, passed to the shared multer factory in `lib/upload.ts`.
