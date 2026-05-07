@@ -2039,6 +2039,64 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     });
   });
 
+  it("multer LIMIT_FIELD_VALUE still resolves to 413 when a preceding rate-limit error handler is mounted first", async () => {
+    const FIELD_SIZE_BYTES = 5;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldSizeOverride: FIELD_SIZE_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Rate-limit handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const oversizedValue = "x".repeat(FIELD_SIZE_BYTES + 1);
+    const res = await request(app)
+      .post("/upload")
+      .field("description", oversizedValue);
+
+    expect(res.status).toBe(413);
+    expect(res.body).toEqual({
+      error: "Form field 'description' value is too large (limit: 5 B).",
+    });
+  });
+
+  it("multer LIMIT_FIELD_KEY still resolves to 400 when a preceding rate-limit error handler is mounted first", async () => {
+    const FIELD_NAME_SIZE_BYTES = 5;
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      fieldNameSizeOverride: FIELD_NAME_SIZE_BYTES,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Rate-limit handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(rateLimitErrorHandler);
+    app.use(handleUploadError);
+
+    const tooLongFieldName = "toolongname";
+    const res = await request(app)
+      .post("/upload")
+      .field(tooLongFieldName, "value");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Form field name is too long.",
+    });
+  });
+
   it("a rate-limit error produces 429 and does not reach handleUploadError", async () => {
     const { handler: fallback, captured } = makeFallbackHandler();
 
