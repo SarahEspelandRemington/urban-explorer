@@ -1767,6 +1767,35 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     });
   });
 
+  it("multer LIMIT_FIELD_COUNT still resolves to 422 when both an auth and a validation handler precede handleUploadError", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxFields: 1,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Two preceding error handlers — neither handles MulterError.
+    app.use(authErrorHandler);
+    app.use(validationErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .field("alpha", "first")
+      .field("beta", "second");
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual({
+      error: "Too many form fields in the request (limit: 1).",
+    });
+  });
+
   it("multer LIMIT_UNEXPECTED_FILE still resolves to 422 when a preceding auth handler is mounted first", async () => {
     const uploadInstance = createUpload(multer.memoryStorage());
 
