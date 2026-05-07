@@ -2043,6 +2043,35 @@ describe("handleUploadError in a multi-middleware error stack", () => {
     });
   });
 
+  it("multer LIMIT_PART_COUNT still resolves to 400 when a preceding validation handler is mounted first", async () => {
+    const uploadInstance = createUpload(multer.memoryStorage(), {
+      maxParts: 2,
+    });
+
+    const app = express();
+    app.post(
+      "/upload",
+      uploadInstance.none(),
+      (_req: Request, res: Response) => {
+        res.status(200).json({ ok: true });
+      },
+    );
+    // Validation handler fires first — it does not recognise MulterError and calls next(err).
+    app.use(validationErrorHandler);
+    app.use(handleUploadError);
+
+    const res = await request(app)
+      .post("/upload")
+      .field("alpha", "1")
+      .field("beta", "2")
+      .field("gamma", "3");
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Too many parts in the multipart request (limit: 2).",
+    });
+  });
+
   it("multer LIMIT_UNEXPECTED_FILE still resolves to 422 when a preceding rate-limit error handler is mounted first", async () => {
     const uploadInstance = createUpload(multer.memoryStorage());
 
