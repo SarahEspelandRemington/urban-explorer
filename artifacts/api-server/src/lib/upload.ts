@@ -490,6 +490,20 @@ export function createUpload(
       }
       logger.warn(context, message);
     }
+
+    if (options.fieldNameSizeOverride > UPLOAD_FIELD_NAME_SIZE) {
+      const message = `createUpload fieldNameSizeOverride (${options.fieldNameSizeOverride} bytes) exceeds UPLOAD_FIELD_NAME_SIZE (${UPLOAD_FIELD_NAME_SIZE} bytes); the per-endpoint field-name-size cap is looser than the global baseline, so other endpoints may enforce a tighter limit than this one`;
+      const context = {
+        fieldNameSizeOverride: options.fieldNameSizeOverride,
+        UPLOAD_FIELD_NAME_SIZE,
+      };
+      if (UPLOAD_STRICT_CONFIG) {
+        throw new Error(
+          `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+        );
+      }
+      logger.warn(context, message);
+    }
   }
 
   const instance = multer({
