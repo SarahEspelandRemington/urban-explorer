@@ -455,6 +455,20 @@ export function createUpload(
       }
       logger.warn(context, message);
     }
+
+    if (options.fieldSizeOverride > UPLOAD_FIELD_SIZE) {
+      const message = `createUpload fieldSizeOverride (${options.fieldSizeOverride} bytes) exceeds UPLOAD_FIELD_SIZE (${UPLOAD_FIELD_SIZE} bytes); the per-endpoint field-size cap is looser than the global baseline, so other endpoints may enforce a tighter limit than this one`;
+      const context = {
+        fieldSizeOverride: options.fieldSizeOverride,
+        UPLOAD_FIELD_SIZE,
+      };
+      if (UPLOAD_STRICT_CONFIG) {
+        throw new Error(
+          `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+        );
+      }
+      logger.warn(context, message);
+    }
   }
 
   const fieldNameSize =
