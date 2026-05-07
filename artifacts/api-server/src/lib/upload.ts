@@ -438,6 +438,25 @@ export function createUpload(
   const fields = options?.maxFields ?? UPLOAD_MAX_FIELDS;
   const parts = options?.maxParts ?? UPLOAD_MAX_PARTS;
   const fieldSize = options?.fieldSizeOverride ?? UPLOAD_FIELD_SIZE;
+
+  if (options?.fieldSizeOverride !== undefined) {
+    const bodyLimitBytes = bodyLimitToBytes(UPLOAD_BODY_LIMIT);
+    if (options.fieldSizeOverride > bodyLimitBytes) {
+      const message = `createUpload fieldSizeOverride (${options.fieldSizeOverride} bytes) exceeds UPLOAD_BODY_LIMIT ("${UPLOAD_BODY_LIMIT}" = ${bodyLimitBytes} bytes); the per-endpoint field-size cap is looser than the body limit implies, so oversized field values cannot be fully received`;
+      const context = {
+        fieldSizeOverride: options.fieldSizeOverride,
+        UPLOAD_BODY_LIMIT,
+        UPLOAD_BODY_LIMIT_bytes: bodyLimitBytes,
+      };
+      if (UPLOAD_STRICT_CONFIG) {
+        throw new Error(
+          `[UPLOAD_STRICT_CONFIG] Upload configuration mismatch — ${message}`,
+        );
+      }
+      logger.warn(context, message);
+    }
+  }
+
   const fieldNameSize =
     options?.fieldNameSizeOverride ?? UPLOAD_FIELD_NAME_SIZE;
 
