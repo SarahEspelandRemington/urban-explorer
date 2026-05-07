@@ -3332,7 +3332,7 @@ describe("createUpload — fieldSizeOverride vs UPLOAD_BODY_LIMIT check", () => 
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 10485761,
+      UPLOAD_FIELD_SIZE: 5 * 1024 * 1024,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -3357,7 +3357,7 @@ describe("createUpload — fieldSizeOverride vs UPLOAD_BODY_LIMIT check", () => 
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 10485761,
+      UPLOAD_FIELD_SIZE: 10485760,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -3492,7 +3492,7 @@ describe("createUpload — fieldSizeOverride vs UPLOAD_BODY_LIMIT check", () => 
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 10485761,
+      UPLOAD_FIELD_SIZE: 5 * 1024 * 1024,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -3745,7 +3745,7 @@ describe("createUpload — fieldSizeOverride vs UPLOAD_FIELD_SIZE check", () => 
     expect(loggerMock.warn).not.toHaveBeenCalled();
   });
 
-  it("does not warn when fieldSizeOverride is below UPLOAD_FIELD_SIZE", async () => {
+  it("logs a warning when fieldSizeOverride is below UPLOAD_FIELD_SIZE and strict mode is off", async () => {
     const loggerMock = {
       warn: vi.fn(),
       info: vi.fn(),
@@ -3767,7 +3767,66 @@ describe("createUpload — fieldSizeOverride vs UPLOAD_FIELD_SIZE check", () => 
     const { createUpload: cu } = await import("./upload");
     cu(multer.memoryStorage(), { fieldSizeOverride: 512 * 1024 });
 
-    expect(loggerMock.warn).not.toHaveBeenCalled();
+    expect(loggerMock.warn).toHaveBeenCalledOnce();
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fieldSizeOverride: 512 * 1024,
+        UPLOAD_FIELD_SIZE: 1048576,
+      }),
+      expect.stringContaining("UPLOAD_FIELD_SIZE"),
+    );
+  });
+
+  it("does not throw when fieldSizeOverride is below UPLOAD_FIELD_SIZE and strict mode is off", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: false,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() =>
+      cu(multer.memoryStorage(), { fieldSizeOverride: 512 * 1024 }),
+    ).not.toThrow();
+  });
+
+  it("throws when fieldSizeOverride is below UPLOAD_FIELD_SIZE and UPLOAD_STRICT_CONFIG is true", async () => {
+    const loggerMock = {
+      warn: vi.fn(),
+      info: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+    };
+    vi.doMock("./logger", () => ({ logger: loggerMock }));
+    vi.doMock("../config", () => ({
+      UPLOAD_BODY_LIMIT: "10mb",
+      UPLOAD_STRICT_CONFIG: true,
+      UPLOAD_MAX_FILE_SIZE: 10485760,
+      UPLOAD_MAX_FILES: 10,
+      UPLOAD_MAX_FIELDS: 20,
+      UPLOAD_MAX_PARTS: 30,
+      UPLOAD_FIELD_NAME_SIZE: 100,
+      UPLOAD_FIELD_SIZE: 1048576,
+    }));
+
+    const { createUpload: cu } = await import("./upload");
+
+    expect(() =>
+      cu(multer.memoryStorage(), { fieldSizeOverride: 512 * 1024 }),
+    ).toThrow(/\[UPLOAD_STRICT_CONFIG\].*UPLOAD_FIELD_SIZE/);
   });
 
   it("does not warn when no fieldSizeOverride is provided", async () => {
@@ -4130,7 +4189,7 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 1048576,
+      UPLOAD_FIELD_SIZE: 100,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -4158,7 +4217,7 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 1048576,
+      UPLOAD_FIELD_SIZE: 500,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -4213,8 +4272,8 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
       UPLOAD_MAX_FILES: 10,
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
-      UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 1048576,
+      UPLOAD_FIELD_NAME_SIZE: 10,
+      UPLOAD_FIELD_SIZE: 10,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -4302,7 +4361,7 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 1048576,
+      UPLOAD_FIELD_SIZE: 200,
     }));
 
     const { createUpload: cu } = await import("./upload");
@@ -4331,7 +4390,7 @@ describe("createUpload — fieldNameSizeOverride vs fieldSizeOverride cross-prop
       UPLOAD_MAX_FIELDS: 20,
       UPLOAD_MAX_PARTS: 30,
       UPLOAD_FIELD_NAME_SIZE: 100,
-      UPLOAD_FIELD_SIZE: 1048576,
+      UPLOAD_FIELD_SIZE: 100,
     }));
 
     const { createUpload: cu } = await import("./upload");
