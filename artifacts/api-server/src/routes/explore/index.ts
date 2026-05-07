@@ -223,8 +223,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v9"], // discover — quick mode
-  ["full", "v9"], // discover — full mode
+  ["quick", "v10"], // discover — quick mode
+  ["full", "v10"], // discover — full mode
   ["suggest", "v10"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v9"], // reverse geocode
