@@ -685,7 +685,7 @@ export default function ExploreScreen() {
                 {t.explore.discover}
               </Text>
               <View style={styles.headerActions}>
-                {showContent && (
+                {places.length > 0 && (
                   <View
                     style={[
                       styles.toggleContainer,
@@ -943,13 +943,13 @@ export default function ExploreScreen() {
             </Animated.View>
           )}
 
-          {showContent && viewMode === "map" ? (
+          {viewMode === "map" && places.length > 0 ? (
             <PlaceMapView
               places={allMapPlaces}
               userLatitude={effectiveLatitude}
               userLongitude={effectiveLongitude}
               onMapRegionDiscover={handleMapRegionDiscover}
-              isLoadingMore={mapLoading}
+              isLoadingMore={mapLoading || discoverMutation.isPending}
             />
           ) : (
             <FlatList
