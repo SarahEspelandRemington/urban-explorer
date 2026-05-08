@@ -223,9 +223,9 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v10"], // discover — quick mode
-  ["full", "v10"], // discover — full mode
-  ["suggest", "v10"], // location suggestions
+  ["quick", "v11"], // discover — quick mode
+  ["full", "v11"], // discover — full mode
+  ["suggest", "v11"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
   ["suggest404", "v5"], // address-not-found suggestions
@@ -1223,7 +1223,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v10:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v11:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1533,7 +1533,7 @@ router.post("/explore/suggest-locations", async (req, res) => {
   }
 
   const nearTrimmed = (nearLocation ?? "").trim().slice(0, 200);
-  const suggestCacheKey = `suggest:v10:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
+  const suggestCacheKey = `suggest:v11:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
   const cachedSuggest = getLLMCache(suggestCacheKey);
   if (cachedSuggest) {
     res.json(cachedSuggest);
