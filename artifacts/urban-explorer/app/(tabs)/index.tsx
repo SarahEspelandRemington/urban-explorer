@@ -166,7 +166,7 @@ export default function ExploreScreen() {
 
   useEffect(() => {
     if (discoverMutation.isPending) {
-      const timer = setTimeout(() => setShowStillLoading(true), 10_000);
+      const timer = setTimeout(() => setShowStillLoading(true), 3_000);
       return () => clearTimeout(timer);
     } else {
       setShowStillLoading(false);

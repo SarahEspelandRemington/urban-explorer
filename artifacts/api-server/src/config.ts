@@ -520,12 +520,12 @@ export const OSM_CACHE_TTL_MS = envVar(
  *
  * Env var : LLM_CACHE_TTL_MS
  * Expects : positive integer (milliseconds)
- * Default : 900000 (15 minutes)
+ * Default : 3600000 (60 minutes)
  */
 export const LLM_CACHE_TTL_MS = envVar(
   "LLM_CACHE_TTL_MS",
   z.coerce.number().int().positive(),
-  15 * 60 * 1000,
+  60 * 60 * 1000,
 );
 
 /**

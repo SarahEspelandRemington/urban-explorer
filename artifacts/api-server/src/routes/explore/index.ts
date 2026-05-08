@@ -1213,16 +1213,17 @@ router.post("/explore/discover", async (req, res) => {
     [...BORING_BUILDING_TYPES].filter((t: string) => !userIncludes.has(t)),
   );
 
-  // ±55m cache grid (toFixed(3) ≈ 111m per unit → 0.5 unit = ~55m).
-  // This means any two queries within ~55m of each other share the same
-  // cache entry, which is correct — the historical places on the same block
-  // are the same regardless of exactly where you stood.
+  // ±100m cache grid: snap to the nearest 0.002° step (≈222m per step →
+  // ±111m from the grid centre). Any two queries within ~100m of the same
+  // grid point share the same cache entry — the historical places on the
+  // same block are the same regardless of exactly where you stood.
   // When the user has unlocked specific building types we append a sorted
   // suffix so their preference gets its own LLM-cache slot.
+  const snapGrid = (v: number) => (Math.round(v * 500) / 500).toFixed(3);
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v10:${searchRadius}:${latitude.toFixed(3)},${longitude.toFixed(3)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v10:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1318,7 +1319,7 @@ router.post("/explore/discover", async (req, res) => {
       try {
         const brainstormResponse = await openai.chat.completions.create(
           {
-            model: "gpt-4.1-mini",
+            model: "gpt-4.1-nano",
             max_completion_tokens: 900,
             messages: [
               {
