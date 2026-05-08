@@ -120,6 +120,7 @@ export default function ExploreScreen() {
   const [mapPlaces, setMapPlaces] = useState<DiscoveredPlace[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
   const mapPlacesRef = useRef<DiscoveredPlace[]>([]);
+  const mapPendingCenterRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [places, setPlaces] = useState<DiscoveredPlace[]>([]);
   const [areaName, setAreaName] = useState<string>("");
@@ -502,6 +503,13 @@ export default function ExploreScreen() {
     [mapDiscoverMutation],
   );
 
+  const handlePendingCenterChange = useCallback(
+    (c: { lat: number; lng: number } | null) => {
+      mapPendingCenterRef.current = c;
+    },
+    [],
+  );
+
   const handleDiscover = useCallback(async () => {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -852,7 +860,15 @@ export default function ExploreScreen() {
                       setSearchRadius(r);
                       if (Platform.OS !== "web")
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      if (manualCoords) {
+                      const pendingCenter = mapPendingCenterRef.current;
+                      if (pendingCenter) {
+                        discoverAt(
+                          pendingCenter.lat,
+                          pendingCenter.lng,
+                          null,
+                          r,
+                        );
+                      } else if (manualCoords) {
                         discoverAt(
                           manualCoords.latitude,
                           manualCoords.longitude,
@@ -945,6 +961,7 @@ export default function ExploreScreen() {
               userLatitude={effectiveLatitude}
               userLongitude={effectiveLongitude}
               onMapRegionDiscover={handleMapRegionDiscover}
+              onPendingCenterChange={handlePendingCenterChange}
               isLoadingMore={mapLoading || discoverMutation.isPending}
             />
           ) : (

@@ -58,6 +58,7 @@ interface PlaceMapViewProps {
   userLatitude: number;
   userLongitude: number;
   onMapRegionDiscover?: (lat: number, lng: number) => void;
+  onPendingCenterChange?: (center: { lat: number; lng: number } | null) => void;
   isLoadingMore?: boolean;
 }
 
@@ -85,6 +86,7 @@ export function PlaceMapView({
   userLatitude,
   userLongitude,
   onMapRegionDiscover,
+  onPendingCenterChange,
   isLoadingMore,
 }: PlaceMapViewProps) {
   const colors = useColors();
@@ -107,6 +109,13 @@ export function PlaceMapView({
       setPendingCenter(null);
     }
   }, [isLoadingMore]);
+
+  // Notify parent whenever the pending center changes so it can use the
+  // map's current pan position when the user switches range without first
+  // tapping "Search this area".
+  useEffect(() => {
+    onPendingCenterChange?.(pendingCenter);
+  }, [pendingCenter, onPendingCenterChange]);
 
   // Geocoded coordinates keyed by place id. Pins start at the AI-provided
   // lat/lng and silently snap to the geocoded position once it resolves.
