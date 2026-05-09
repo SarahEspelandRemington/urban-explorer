@@ -1,5 +1,11 @@
 name: CI
 
+# NOTE: "Post PR comment" steps use GITHUB_TOKEN to write PR comments.
+# GITHUB_TOKEN for PRs from forks is read-only and cannot post comments, so
+# those steps are guarded with `github.event.pull_request.head.repo.fork == false`
+# to skip gracefully for fork contributors. The job still fails with the correct
+# exit code so the PR status check remains accurate.
+
 on:
   push:
   pull_request:
@@ -99,7 +105,7 @@ jobs:
           }
 
       - name: Post PR comment on format failure
-        if: steps.format.outcome == 'failure' && github.event_name == 'pull_request'
+        if: steps.format.outcome == 'failure' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
         uses: actions/github-script@v7
         with:
           script: |
@@ -221,7 +227,7 @@ jobs:
           }
 
       - name: Post PR comment on lint failure
-        if: steps.lint.outcome == 'failure' && github.event_name == 'pull_request'
+        if: steps.lint.outcome == 'failure' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
         uses: actions/github-script@v7
         env:
           LINT_OUTPUT: ${{ steps.lint.outputs.lint_output }}
@@ -413,7 +419,7 @@ jobs:
           }
 
       - name: Post PR comment on typecheck failure
-        if: steps.typecheck.outcome == 'failure' && github.event_name == 'pull_request'
+        if: steps.typecheck.outcome == 'failure' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
         uses: actions/github-script@v7
         env:
           TC_OUTPUT: ${{ steps.typecheck.outputs.tc_output }}
