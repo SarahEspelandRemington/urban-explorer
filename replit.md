@@ -1,5 +1,7 @@
 # Urban Explorer
 
+[![CI](https://github.com/SarahEspelandRemington/urban-explorer/actions/workflows/ci.yml/badge.svg)](https://github.com/SarahEspelandRemington/urban-explorer/actions/workflows/ci.yml)
+
 A mobile app that surfaces AI-generated historical and factual information about buildings and spaces based on the user's GPS location.
 
 ## Run & Operate
