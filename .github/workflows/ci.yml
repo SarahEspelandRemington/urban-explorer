@@ -23,7 +23,17 @@ jobs:
 
       - name: Check formatting (Prettier)
         run: |
-          pnpm run format:check || (
+          pnpm run format:check || {
+            echo "## ❌ Formatting check failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "One or more files are not formatted with Prettier." >> "$GITHUB_STEP_SUMMARY"
+            echo "Run the following command locally to fix:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "pnpm run format && git commit -a --amend --no-edit" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Then push again." >> "$GITHUB_STEP_SUMMARY"
             echo ""
             echo "❌ Formatting issues detected. Run the following command locally to fix:"
             echo ""
@@ -31,7 +41,7 @@ jobs:
             echo ""
             echo "Then push again."
             exit 1
-          )
+          }
 
   lint:
     name: Lint (ESLint)
@@ -51,7 +61,26 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Lint (ESLint)
-        run: pnpm run lint
+        run: |
+          lint_output=$(pnpm run lint 2>&1) && echo "$lint_output" || {
+            echo "$lint_output"
+            echo "## ❌ Lint failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "ESLint reported errors. Fix them locally with:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "pnpm run lint" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "<details><summary>Full lint output</summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$lint_output" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
 
   typecheck:
     name: Typecheck (TypeScript)
@@ -129,4 +158,23 @@ jobs:
             tsbuildinfo-root-${{ runner.os }}-
 
       - name: Typecheck (TypeScript)
-        run: pnpm run typecheck
+        run: |
+          tc_output=$(pnpm run typecheck 2>&1) && echo "$tc_output" || {
+            echo "$tc_output"
+            echo "## ❌ Typecheck failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "TypeScript reported type errors. Fix them locally with:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "pnpm run typecheck" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "<details><summary>Full typecheck output</summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$tc_output" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
