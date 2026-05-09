@@ -143,7 +143,7 @@ function RootLayout() {
                 <DiscoveryProvider>
                   <WalkModeProvider>
                     <HeadingProvider>
-                      <GestureHandlerRootView>
+                      <GestureHandlerRootView style={{ flex: 1 }}>
                         <KeyboardProvider>
                           <RootLayoutNav />
                           <HeadingBanner />

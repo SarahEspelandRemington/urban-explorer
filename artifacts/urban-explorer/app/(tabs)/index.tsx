@@ -1493,6 +1493,7 @@ const styles = StyleSheet.create({
   },
 
   emptyContainer: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 100,
