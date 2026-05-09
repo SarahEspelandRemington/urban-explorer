@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, execFileSync } = require("child_process");
 const { Readable } = require("stream");
 const { pipeline } = require("stream/promises");
 
@@ -129,6 +129,24 @@ function getExpoPublicReplId() {
   return process.env.REPL_ID || process.env.EXPO_PUBLIC_REPL_ID;
 }
 
+function formatExpoEnvDts() {
+  const envDtsPath = path.join(projectRoot, "expo-env.d.ts");
+  if (!fs.existsSync(envDtsPath)) {
+    return;
+  }
+  try {
+    execFileSync("pnpm", ["exec", "prettier", "--write", envDtsPath], {
+      stdio: "ignore",
+      cwd: projectRoot,
+    });
+  } catch (err) {
+    console.warn(
+      "[build] prettier formatting of expo-env.d.ts failed:",
+      err.message ?? String(err),
+    );
+  }
+}
+
 async function startMetro(expoPublicDomain, expoPublicReplId) {
   const isRunning = await checkMetroHealth();
   if (isRunning) {
@@ -178,6 +196,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     const healthy = await checkMetroHealth();
     if (healthy) {
       console.log("Metro ready");
+      formatExpoEnvDts();
       return;
     }
   }

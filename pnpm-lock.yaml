@@ -164,10 +164,6 @@ overrides:
 
 importers:
   .:
-    dependencies:
-      "@replit/connectors-sdk":
-        specifier: ^0.4.0
-        version: 0.4.0
     devDependencies:
       "@eslint/js":
         specifier: ^10.0.1
@@ -416,6 +412,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      prettier:
+        specifier: ^3.8.1
+        version: 3.8.1
       react:
         specifier: "catalog:"
         version: 19.1.0
@@ -3294,12 +3293,6 @@ packages:
     resolution:
       {
         integrity: sha512-1tJHg4KKRJuQ1/EvJxatrMef3NZXEPzwUIUZ3n1yJ2t7Q97siwRtbynRpQG9/69ebbtiZ8W3ScOZF/OmhvM4Rg==,
-      }
-
-  "@replit/connectors-sdk@0.4.0":
-    resolution:
-      {
-        integrity: sha512-wRuktfdoBsM19NJUi24xzCkQ+idglmU4Cq2ZWvTAnNUVGdcMmn3rLN1F1/MNZCc2HdG+awcGa81XMLpZXZujUg==,
       }
 
   "@replit/vite-plugin-cartographer@0.5.1":
@@ -13715,8 +13708,6 @@ snapshots:
   "@react-navigation/routers@7.5.3":
     dependencies:
       nanoid: 3.3.11
-
-  "@replit/connectors-sdk@0.4.0": {}
 
   "@replit/vite-plugin-cartographer@0.5.1":
     dependencies:
