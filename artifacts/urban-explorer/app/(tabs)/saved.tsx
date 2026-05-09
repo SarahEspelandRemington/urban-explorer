@@ -288,10 +288,7 @@ export default function SavedScreen() {
           <Pressable
             onPress={() => {
               if (!userLocation) {
-                Alert.alert(
-                  t.saved.sortNearest,
-                  t.saved.sortNearestNoLocation,
-                );
+                Alert.alert(t.saved.sortNearest, t.saved.sortNearestNoLocation);
                 return;
               }
               setSortMode("nearest");

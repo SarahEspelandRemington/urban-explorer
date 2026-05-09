@@ -35,6 +35,7 @@ function MessageSection({
   resetAccessibilityLabel,
   resetConfirmTitle,
   resetConfirmMessage,
+  cancelLabel,
   addMessageLabel,
   addMessageAccessibilityLabel,
   deleteMessageLabel,
@@ -52,6 +53,7 @@ function MessageSection({
   resetAccessibilityLabel: string;
   resetConfirmTitle: string;
   resetConfirmMessage: string;
+  cancelLabel: string;
   addMessageLabel: string;
   addMessageAccessibilityLabel: string;
   deleteMessageLabel: string;
@@ -74,7 +76,7 @@ function MessageSection({
         <Pressable
           onPress={() => {
             Alert.alert(resetConfirmTitle, resetConfirmMessage, [
-              { text: "Cancel", style: "cancel" },
+              { text: cancelLabel, style: "cancel" },
               { text: resetLabel, style: "destructive", onPress: onReset },
             ]);
           }}
@@ -300,6 +302,7 @@ export default function SettingsMessagesScreen() {
           resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
           resetConfirmTitle={t.settingsMessages.resetConfirmTitle}
           resetConfirmMessage={t.settingsMessages.resetConfirmMessage}
+          cancelLabel={t.common.cancel}
           addMessageLabel={t.settingsMessages.addMessage}
           addMessageAccessibilityLabel={
             t.settingsMessages.addMessageAccessibility
@@ -321,6 +324,7 @@ export default function SettingsMessagesScreen() {
           resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
           resetConfirmTitle={t.settingsMessages.resetConfirmTitle}
           resetConfirmMessage={t.settingsMessages.resetConfirmMessage}
+          cancelLabel={t.common.cancel}
           addMessageLabel={t.settingsMessages.addMessage}
           addMessageAccessibilityLabel={
             t.settingsMessages.addMessageAccessibility

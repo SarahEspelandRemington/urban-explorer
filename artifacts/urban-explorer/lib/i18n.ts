@@ -24,6 +24,7 @@ export interface Strings {
     retry: string;
     ok: string;
     close: string;
+    cancel: string;
     or: string;
     somethingWrong: string;
   };
@@ -297,6 +298,7 @@ const en: Strings = {
     retry: "Retry",
     ok: "OK",
     close: "Close",
+    cancel: "Cancel",
     or: "or",
     somethingWrong: "Something went wrong. Please try again.",
   },
@@ -578,7 +580,8 @@ const en: Strings = {
     reset: "Reset",
     resetAccessibility: "Reset to defaults",
     resetConfirmTitle: "Reset to defaults?",
-    resetConfirmMessage: "This will restore all default messages. This cannot be undone.",
+    resetConfirmMessage:
+      "This will restore all default messages. This cannot be undone.",
     addMessage: "Add Message",
     addMessageAccessibility: "Add a new message",
     messagePlaceholder: "Enter a message...",
@@ -603,6 +606,7 @@ const es: Strings = {
     retry: "Reintentar",
     ok: "OK",
     close: "Cerrar",
+    cancel: "Cancelar",
     or: "o",
     somethingWrong: "Algo salió mal. Inténtalo de nuevo.",
   },
@@ -892,7 +896,8 @@ const es: Strings = {
     reset: "Restablecer",
     resetAccessibility: "Restablecer a predeterminados",
     resetConfirmTitle: "¿Restablecer predeterminados?",
-    resetConfirmMessage: "Se restaurarán todos los mensajes predeterminados. No se puede deshacer.",
+    resetConfirmMessage:
+      "Se restaurarán todos los mensajes predeterminados. No se puede deshacer.",
     addMessage: "Agregar mensaje",
     addMessageAccessibility: "Agregar nuevo mensaje",
     messagePlaceholder: "Escribe un mensaje...",
@@ -918,6 +923,7 @@ const fr: Strings = {
     retry: "Réessayer",
     ok: "OK",
     close: "Fermer",
+    cancel: "Annuler",
     or: "ou",
     somethingWrong: "Une erreur est survenue. Veuillez réessayer.",
   },
@@ -1206,7 +1212,8 @@ const fr: Strings = {
     reset: "Réinitialiser",
     resetAccessibility: "Réinitialiser les valeurs par défaut",
     resetConfirmTitle: "Réinitialiser ?",
-    resetConfirmMessage: "Les messages par défaut seront restaurés. Cette action est irréversible.",
+    resetConfirmMessage:
+      "Les messages par défaut seront restaurés. Cette action est irréversible.",
     addMessage: "Ajouter un message",
     addMessageAccessibility: "Ajouter un nouveau message",
     messagePlaceholder: "Saisir un message...",
@@ -1231,6 +1238,7 @@ const de: Strings = {
     retry: "Erneut versuchen",
     ok: "OK",
     close: "Schließen",
+    cancel: "Abbrechen",
     or: "oder",
     somethingWrong: "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
   },
@@ -1519,7 +1527,8 @@ const de: Strings = {
     reset: "Zurücksetzen",
     resetAccessibility: "Auf Standard zurücksetzen",
     resetConfirmTitle: "Zurücksetzen?",
-    resetConfirmMessage: "Alle Standardnachrichten werden wiederhergestellt. Dies kann nicht rückgängig gemacht werden.",
+    resetConfirmMessage:
+      "Alle Standardnachrichten werden wiederhergestellt. Dies kann nicht rückgängig gemacht werden.",
     addMessage: "Nachricht hinzufügen",
     addMessageAccessibility: "Neue Nachricht hinzufügen",
     messagePlaceholder: "Nachricht eingeben...",
@@ -1545,6 +1554,7 @@ const it: Strings = {
     retry: "Riprova",
     ok: "OK",
     close: "Chiudi",
+    cancel: "Annulla",
     or: "o",
     somethingWrong: "Qualcosa è andato storto. Riprova.",
   },
@@ -1829,7 +1839,8 @@ const it: Strings = {
     reset: "Ripristina",
     resetAccessibility: "Ripristina impostazioni predefinite",
     resetConfirmTitle: "Ripristinare?",
-    resetConfirmMessage: "I messaggi predefiniti verranno ripristinati. Non è possibile annullare.",
+    resetConfirmMessage:
+      "I messaggi predefiniti verranno ripristinati. Non è possibile annullare.",
     addMessage: "Aggiungi messaggio",
     addMessageAccessibility: "Aggiungi un nuovo messaggio",
     messagePlaceholder: "Inserisci un messaggio...",
@@ -1856,6 +1867,7 @@ const pt: Strings = {
     retry: "Tentar de novo",
     ok: "OK",
     close: "Fechar",
+    cancel: "Cancelar",
     or: "ou",
     somethingWrong: "Algo deu errado. Tente novamente.",
   },
@@ -2143,7 +2155,8 @@ const pt: Strings = {
     reset: "Redefinir",
     resetAccessibility: "Redefinir para padrões",
     resetConfirmTitle: "Redefinir?",
-    resetConfirmMessage: "As mensagens padrão serão restauradas. Isso não pode ser desfeito.",
+    resetConfirmMessage:
+      "As mensagens padrão serão restauradas. Isso não pode ser desfeito.",
     addMessage: "Adicionar mensagem",
     addMessageAccessibility: "Adicionar nova mensagem",
     messagePlaceholder: "Insira uma mensagem...",
@@ -2169,6 +2182,7 @@ const nl: Strings = {
     retry: "Opnieuw",
     ok: "OK",
     close: "Sluiten",
+    cancel: "Annuleren",
     or: "of",
     somethingWrong: "Er ging iets mis. Probeer het opnieuw.",
   },
@@ -2450,7 +2464,8 @@ const nl: Strings = {
     reset: "Herstellen",
     resetAccessibility: "Herstellen naar standaard",
     resetConfirmTitle: "Herstellen?",
-    resetConfirmMessage: "De standaardberichten worden hersteld. Dit kan niet ongedaan worden gemaakt.",
+    resetConfirmMessage:
+      "De standaardberichten worden hersteld. Dit kan niet ongedaan worden gemaakt.",
     addMessage: "Bericht toevoegen",
     addMessageAccessibility: "Nieuw bericht toevoegen",
     messagePlaceholder: "Voer een bericht in...",
@@ -2476,6 +2491,7 @@ const ja: Strings = {
     retry: "再試行",
     ok: "OK",
     close: "閉じる",
+    cancel: "キャンセル",
     or: "または",
     somethingWrong: "問題が発生しました。もう一度お試しください。",
   },
@@ -2756,7 +2772,8 @@ const ja: Strings = {
     reset: "リセット",
     resetAccessibility: "デフォルトにリセット",
     resetConfirmTitle: "リセットしますか？",
-    resetConfirmMessage: "すべてのデフォルトメッセージに戻ります。この操作は取り消せません。",
+    resetConfirmMessage:
+      "すべてのデフォルトメッセージに戻ります。この操作は取り消せません。",
     addMessage: "メッセージを追加",
     addMessageAccessibility: "新しいメッセージを追加",
     messagePlaceholder: "メッセージを入力...",
@@ -2781,6 +2798,7 @@ const ko: Strings = {
     retry: "다시 시도",
     ok: "확인",
     close: "닫기",
+    cancel: "취소",
     or: "또는",
     somethingWrong: "문제가 발생했습니다. 다시 시도해 주세요.",
   },
@@ -3080,6 +3098,7 @@ const zh: Strings = {
     retry: "重试",
     ok: "确定",
     close: "关闭",
+    cancel: "取消",
     or: "或",
     somethingWrong: "出了点问题，请再试一次。",
   },
