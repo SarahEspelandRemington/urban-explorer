@@ -2012,7 +2012,7 @@ describe("handleUploadError in a multi-middleware error stack", () => {
   });
 
   it("auth errors are handled by the preceding auth handler and do not reach handleUploadError", async () => {
-    const uploadInstance = createUpload(multer.memoryStorage());
+    const _uploadInstance = createUpload(multer.memoryStorage());
     const { handler: fallback, captured } = makeFallbackHandler();
 
     const app = express();

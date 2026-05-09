@@ -313,6 +313,7 @@ describe("useNarration — skip() bumps generation and drains the queue for the 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -381,6 +382,7 @@ describe("useNarration — audio watchdog is cancelled by teardownActive()", () 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -454,6 +456,7 @@ describe("useNarration — pause/resume suspend and resume the audio watchdog", 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -578,6 +581,7 @@ describe("useNarration — audio watchdog FIRES after 60s and unblocks the queue
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -698,6 +702,7 @@ describe("useNarration — playback-side silent skips emit trackNarrationFallbac
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -864,6 +869,7 @@ describe("useNarration — text-path silent skips emit trackNarrationFallback", 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -1035,6 +1041,7 @@ describe("useNarration — trackNarrationPlayed fires once per actually-started 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 

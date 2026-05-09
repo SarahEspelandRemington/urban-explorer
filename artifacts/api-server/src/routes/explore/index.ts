@@ -8,6 +8,7 @@ import {
   BORING_BUILDING_TYPES_FILE_ENV,
   LLM_CACHE_MAX_SIZE,
   LLM_CACHE_TTL_MS,
+  OSM_CACHE_MAX_SIZE,
   OSM_CACHE_TTL_MS,
   OSM_SUGGESTIONS_CACHE_MAX_SIZE,
   OSM_SUGGESTIONS_CACHE_TTL_MS,
@@ -529,6 +530,10 @@ out center body 40;
     }
 
     const finalResults = results.slice(0, 40);
+    if (osmCache.size >= OSM_CACHE_MAX_SIZE) {
+      const oldest = osmCache.keys().next().value;
+      if (oldest) osmCache.delete(oldest);
+    }
     osmCache.set(`${lat},${lng}`, {
       places: finalResults,
       timestamp: Date.now(),
@@ -993,7 +998,10 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
  * Negative results (null) are also persisted so repeated missing-photo lookups
  * skip the network entirely after the first attempt.
  */
-async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
+async function fetchWikipediaPhoto(
+  placeName: string,
+  externalSignal?: AbortSignal,
+): Promise<string | null> {
   const cacheKey = placeName.toLowerCase().trim();
 
   // --- L1: in-process cache ---
@@ -1035,13 +1043,16 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
   // --- Live fetch from Wikipedia ---
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 3000);
+  const fetchSignal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
 
   let photoUrl: string | null = null;
   try {
     const encoded = encodeURIComponent(placeName.replace(/ /g, "_"));
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
     const resp = await fetch(url, {
-      signal: controller.signal,
+      signal: fetchSignal,
       headers: {
         "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
         Accept: "application/json",
@@ -1088,18 +1099,21 @@ async function fetchPhotosForPlaces(places: any[]): Promise<void> {
   // (see /explore/discover above) automatically backfills any places that
   // returned without artwork on the next request for the same area.
   const WALL_TIMEOUT_MS = 1500;
+  const shared = new AbortController();
+  const wallTimer = setTimeout(() => shared.abort(), WALL_TIMEOUT_MS);
   try {
-    await Promise.race([
-      Promise.all(
-        places.map(async (p) => {
-          const url = await fetchWikipediaPhoto(p.name);
-          if (url) p.photoUrl = url;
-        }),
-      ),
-      new Promise<void>((resolve) => setTimeout(resolve, WALL_TIMEOUT_MS)),
-    ]);
+    await Promise.all(
+      places.map(async (p) => {
+        if (shared.signal.aborted) return;
+        const url = await fetchWikipediaPhoto(p.name, shared.signal);
+        if (url) p.photoUrl = url;
+      }),
+    );
   } catch {
     // Photo fetch is best-effort — never break discovery.
+  } finally {
+    clearTimeout(wallTimer);
+    shared.abort();
   }
 }
 
@@ -1223,7 +1237,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v11:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v13:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1485,10 +1499,6 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     setLLMCache(discoverCacheKey, data);
   }
 
-  if (Array.isArray(data.places) && data.places.length > 0) {
-    const ratingsMap = await fetchRatingsMap(data.places);
-    applyRatingSortWithMap(data.places, ratingsMap);
-  }
   res.json(data);
 
   // Background: run Nominatim verification and silently update the cache so the
@@ -1533,7 +1543,7 @@ router.post("/explore/suggest-locations", async (req, res) => {
   }
 
   const nearTrimmed = (nearLocation ?? "").trim().slice(0, 200);
-  const suggestCacheKey = `suggest:v11:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
+  const suggestCacheKey = `suggest:v12:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
   const cachedSuggest = getLLMCache(suggestCacheKey);
   if (cachedSuggest) {
     res.json(cachedSuggest);
@@ -1911,7 +1921,7 @@ router.post("/explore/investigate-address", async (req, res) => {
 
   // Cache key: normalized address + coord bucket. Investigations are deterministic
   // per-building so a longer TTL is fine; share the LLM cache.
-  const investigateCacheKey = `investigate:v6:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const investigateCacheKey = `investigate:v7:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
   const cached = getLLMCache(investigateCacheKey);
   if (cached) {
     res.json(cached);
@@ -3466,7 +3476,7 @@ const ratePlaceDeviceLimiter = rateLimit({
   },
   keyGenerator: (req) => {
     const deviceId = req.headers["x-device-id"] as string;
-    return `device:${deviceId.trim()}`;
+    return `device:${deviceId.trim().slice(0, 128)}`;
   },
   validate: { keyGeneratorIpFallback: false },
   store: new PgRateLimitStore(),

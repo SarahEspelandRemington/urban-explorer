@@ -559,6 +559,21 @@ export const LLM_CACHE_MAX_SIZE = envVar(
 );
 
 /**
+ * Maximum number of entries kept in the short proximity OSM cache (osmCache).
+ * When the cap is reached, the oldest entry is evicted before inserting a new
+ * one. Each entry holds an array of OSMPlace objects (a few KB at most).
+ *
+ * Env var : OSM_CACHE_MAX_SIZE
+ * Expects : positive integer
+ * Default : 200
+ */
+export const OSM_CACHE_MAX_SIZE = envVar(
+  "OSM_CACHE_MAX_SIZE",
+  z.coerce.number().int().positive(),
+  200,
+);
+
+/**
  * Time-to-live for the long-lived OSM suggestions cache (osmSuggestionsCache),
  * in milliseconds. This cache is keyed by a coarse ~100 m coordinate grid and
  * persists entries to the DB, so its TTL is deliberately longer than the short

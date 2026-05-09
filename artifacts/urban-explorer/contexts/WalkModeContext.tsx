@@ -684,6 +684,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           })
           .catch(() => {});
 
+        const discoverAbort = new AbortController();
+        const discoverTimeout = setTimeout(() => discoverAbort.abort(), 15_000);
         const res = await fetch(`${API_BASE}/api/explore/discover`, {
           method: "POST",
           headers: {
@@ -691,7 +693,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             ...(await authHeaders()),
           },
           body: JSON.stringify(body),
+          signal: discoverAbort.signal,
         });
+        clearTimeout(discoverTimeout);
         if (res.ok) {
           const data = await res.json();
           // Guard: if stopWalk was called while the fetch was in-flight, discard

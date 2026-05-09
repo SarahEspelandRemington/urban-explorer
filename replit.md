@@ -22,6 +22,7 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `SESSION_SECRET`: A long random string (e.g., `openssl rand -hex 32`).
 - `EXPO_PUBLIC_SENTRY_DSN`: (Optional) Sentry DSN for crash reporting.
 - `AUDIO_DB_MAX_ENTRIES`: (Optional) Maximum audio rows kept in the database (positive integer, default 100). Missing values default silently to 100; present-but-invalid values log a warning and fall back to 100.
+- `OSM_CACHE_MAX_SIZE`: (Optional) Maximum entries in the short-lived proximity OSM cache (positive integer, default 200). Oldest entry is evicted LRU-style when the cap is reached.
 - `UPLOAD_MAX_FILES`: (Optional) Maximum number of files per multipart upload request (positive integer, default 10).
 - `UPLOAD_MAX_FIELDS`: (Optional) Maximum number of non-file fields per multipart upload request (positive integer, default 20).
 - `UPLOAD_MAX_PARTS`: (Optional) Maximum total parts (files + fields combined) per multipart upload request (positive integer, default UPLOAD_MAX_FILES + UPLOAD_MAX_FIELDS = 30).
