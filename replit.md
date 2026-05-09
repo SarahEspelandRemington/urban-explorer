@@ -76,6 +76,64 @@ A mobile app that surfaces AI-generated historical and factual information about
 - **Accessibility**: Designed for WCAG AA compliance with appropriate roles, labels, and touch targets.
 - **Crash Reporting & Monitoring**: Integrated Sentry for robust crash reporting, with custom dashboards and anomaly-detection alerts for narration prefetch hit rates and audio fallback rates.
 
+## New account setup
+
+Follow these steps in order when importing this project into a fresh Replit
+account. The `post-merge.sh` script (`pnpm install` + `db push`) runs
+automatically after every task merge and covers steps 3 and 5.
+
+**Step 1 — Import from GitHub**
+Create a new Replit and import from
+`https://github.com/SarahEspelandRemington/urban-explorer`. Replit will clone
+the repo and install dependencies automatically.
+
+**Step 2 — Connect the OpenAI integration**
+Open the Integrations panel in Replit and connect the **OpenAI** integration.
+This automatically provisions `AI_INTEGRATIONS_OPENAI_BASE_URL` and
+`AI_INTEGRATIONS_OPENAI_API_KEY`. The API server will not start without these.
+
+**Step 3 — Add `SESSION_SECRET`**
+Go to Replit Secrets and add:
+
+```
+SESSION_SECRET=<output of: openssl rand -hex 32>
+```
+
+The server starts but all session-based features silently break without this.
+
+**Step 4 — Set GitHub Actions variable**
+In the GitHub repo Settings → Variables → Actions, set:
+
+```
+MAX_NEW_WARNINGS=<copy value from original repo>
+```
+
+This controls the CI warning gate. CI will fail on every PR until it is set.
+
+**Step 5 — Push the database schema**
+The PostgreSQL database is provisioned automatically by Replit. Run:
+
+```bash
+pnpm --filter db push
+```
+
+This is idempotent and safe to re-run. `post-merge.sh` does this automatically
+after each task merge.
+
+**Step 6 — Start the workflows**
+Start the `artifacts/api-server: API Server` and
+`artifacts/urban-explorer: expo` workflows from the Replit workflow panel. The
+Expo workflow serves the mobile app preview; the API workflow serves `/api/*`.
+
+**Optional — Sentry**
+Add `EXPO_PUBLIC_SENTRY_DSN` to Replit Secrets if you want crash reporting.
+Leave it unset to run without Sentry — the app handles the missing DSN
+gracefully.
+
+**Optional — EAS / field testing**
+See `artifacts/urban-explorer/docs/field-testing.md` for instructions on
+building a custom dev client for real-device field testing.
+
 ## User preferences
 
 - _Populate as you build_
