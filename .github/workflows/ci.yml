@@ -192,8 +192,8 @@ jobs:
     needs: install
     outputs:
       lint_output: ${{ steps.lint.outputs.lint_output }}
-      warning_count: ${{ steps.lint.outputs.warning_count }}
-      error_count: ${{ steps.lint.outputs.error_count }}
+      lint_warning_count: ${{ steps.lint.outputs.lint_warning_count }}
+      lint_error_count: ${{ steps.lint.outputs.lint_error_count }}
     steps:
       - uses: actions/checkout@v4
 
@@ -238,8 +238,8 @@ jobs:
           lint_error_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]error[[:space:]]' || true)
           lint_warning_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]warning[[:space:]]' || true)
 
-          echo "warning_count=${lint_warning_count}" >> "$GITHUB_OUTPUT"
-          echo "error_count=${lint_error_count}" >> "$GITHUB_OUTPUT"
+          echo "lint_warning_count=${lint_warning_count}" >> "$GITHUB_OUTPUT"
+          echo "lint_error_count=${lint_error_count}" >> "$GITHUB_OUTPUT"
 
           # Write a JSON artifact so warning trends can be compared across runs.
           printf '{"errors":%d,"warnings":%d,"sha":"%s","ref":"%s"}\n' \
@@ -560,6 +560,8 @@ jobs:
           LINT_RESULT: ${{ needs.lint.result }}
           TC_RESULT: ${{ needs.typecheck.result }}
           LINT_OUTPUT: ${{ needs.lint.outputs.lint_output }}
+          LINT_ERROR_COUNT: ${{ needs.lint.outputs.lint_error_count }}
+          LINT_WARNING_COUNT: ${{ needs.lint.outputs.lint_warning_count }}
           TC_OUTPUT: ${{ needs.typecheck.outputs.tc_output }}
           TC_ERROR_COUNT: ${{ needs.typecheck.outputs.tc_error_count }}
           TC_WARNING_COUNT: ${{ needs.typecheck.outputs.tc_warning_count }}
@@ -571,6 +573,8 @@ jobs:
             const lintResult = process.env.LINT_RESULT;
             const tcResult = process.env.TC_RESULT;
             const lintOutput = process.env.LINT_OUTPUT || '';
+            const lintErrorCount = parseInt(process.env.LINT_ERROR_COUNT || '0', 10);
+            const lintWarningCount = parseInt(process.env.LINT_WARNING_COUNT || '0', 10);
             const tcOutput = process.env.TC_OUTPUT || '';
             const tcErrorCount = parseInt(process.env.TC_ERROR_COUNT || '0', 10);
             const tcWarningCount = parseInt(process.env.TC_WARNING_COUNT || '0', 10);
@@ -615,10 +619,11 @@ jobs:
             }
 
             if (lintResult === 'failure') {
+              const lintCountLine = `**${lintErrorCount} error(s), ${lintWarningCount} warning(s)**`;
               const lintSection = [
                 '### \u274c Lint (ESLint)',
                 '',
-                'ESLint reported errors. Fix them locally with:',
+                `${lintCountLine} — fix them locally with:`,
                 '',
                 '```sh',
                 'pnpm run lint',
@@ -745,8 +750,8 @@ jobs:
       - name: Post warning trend comment
         uses: actions/github-script@v7
         env:
-          HEAD_WARNINGS: ${{ needs.lint.outputs.warning_count }}
-          HEAD_ERRORS: ${{ needs.lint.outputs.error_count }}
+          HEAD_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
+          HEAD_ERRORS: ${{ needs.lint.outputs.lint_error_count }}
           BASE_WARNINGS: ${{ steps.base-counts.outputs.base_warnings }}
           BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
         with:
