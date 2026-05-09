@@ -11,6 +11,12 @@ export const modules: ModuleMap = {
     import("../components/mockups/color-exploration/MossOlive.tsx"),
   "./components/mockups/color-exploration/SlateBlue.tsx": () =>
     import("../components/mockups/color-exploration/SlateBlue.tsx"),
+  "./components/mockups/header-redesign/LabeledActions.tsx": () =>
+    import("../components/mockups/header-redesign/LabeledActions.tsx"),
+  "./components/mockups/header-redesign/SimplifiedBar.tsx": () =>
+    import("../components/mockups/header-redesign/SimplifiedBar.tsx"),
+  "./components/mockups/header-redesign/WalkFirst.tsx": () =>
+    import("../components/mockups/header-redesign/WalkFirst.tsx"),
   "./components/mockups/style-directions/CoolSignal.tsx": () =>
     import("../components/mockups/style-directions/CoolSignal.tsx"),
   "./components/mockups/style-directions/CuriousNight.tsx": () =>
@@ -23,10 +29,4 @@ export const modules: ModuleMap = {
     import("../components/mockups/style-directions/UrbanGlow.tsx"),
   "./components/mockups/style-directions/WarmEmber.tsx": () =>
     import("../components/mockups/style-directions/WarmEmber.tsx"),
-  "./components/mockups/header-redesign/LabeledActions.tsx": () =>
-    import("../components/mockups/header-redesign/LabeledActions.tsx"),
-  "./components/mockups/header-redesign/SimplifiedBar.tsx": () =>
-    import("../components/mockups/header-redesign/SimplifiedBar.tsx"),
-  "./components/mockups/header-redesign/WalkFirst.tsx": () =>
-    import("../components/mockups/header-redesign/WalkFirst.tsx"),
 };
