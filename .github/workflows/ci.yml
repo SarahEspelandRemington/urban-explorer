@@ -138,15 +138,50 @@ jobs:
             echo '```' >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "Then push again." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+
+            # Collect unformatted files
+            mapfile -t BAD_FILES < <(pnpm prettier --list-different . 2>/dev/null)
+
+            # Build a combined unified diff for all unformatted files
+            DIFF_OUTPUT=""
+            for file in "${BAD_FILES[@]}"; do
+              FILE_DIFF=$(diff -u "$file" <(pnpm prettier --stdin-filepath "$file" < "$file" 2>/dev/null) || true)
+              if [ -n "$FILE_DIFF" ]; then
+                DIFF_OUTPUT+="$FILE_DIFF"$'\n'
+              fi
+            done
+
+            # Truncate diff if it exceeds 100 lines
+            DIFF_LINE_COUNT=$(echo "$DIFF_OUTPUT" | wc -l)
+            TRUNCATED=false
+            if [ "$DIFF_LINE_COUNT" -gt 100 ]; then
+              DIFF_OUTPUT=$(echo "$DIFF_OUTPUT" | head -n 100)
+              TRUNCATED=true
+            fi
+
+            # Write collapsible diff block to step summary
+            echo "<details>" >> "$GITHUB_STEP_SUMMARY"
+            echo "<summary>📄 Diff — click to expand</summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```diff' >> "$GITHUB_STEP_SUMMARY"
+            echo "$DIFF_OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            if [ "$TRUNCATED" = true ]; then
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              echo "_Diff truncated at 100 lines. Run \`pnpm run format\` locally to see the full output._" >> "$GITHUB_STEP_SUMMARY"
+            fi
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+
             echo ""
             echo "❌ Formatting issues detected. Run the following command locally to fix:"
             echo ""
             echo "    pnpm run format && git commit -a --amend --no-edit"
             echo ""
             echo "Then push again."
-            while IFS= read -r file; do
+            for file in "${BAD_FILES[@]}"; do
               echo "::error file=${file}::File is not formatted with Prettier"
-            done < <(pnpm prettier --list-different . 2>/dev/null)
+            done
             exit 1
           }
 
