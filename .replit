@@ -44,6 +44,10 @@ args = "spec-sync"
 task = "workflow.run"
 args = "format"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "ci"
+
 [[workflows.workflow]]
 name = "privacy-tests"
 author = "agent"
@@ -118,6 +122,17 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "pnpm run format:check"
+
+[workflows.workflow.metadata]
+isValidation = true
+
+[[workflows.workflow]]
+name = "ci"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run ci"
 
 [workflows.workflow.metadata]
 isValidation = true

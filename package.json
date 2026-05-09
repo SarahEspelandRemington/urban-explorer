@@ -14,6 +14,7 @@
     "check:prompt-manifest": "pnpm --filter @workspace/scripts run check:prompt-manifest",
     "update:prompt-manifest": "pnpm --filter @workspace/scripts run update:prompt-manifest",
     "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs",
+    "ci": "pnpm run format:check && pnpm run lint && pnpm run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"
