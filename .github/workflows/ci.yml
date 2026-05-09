@@ -598,11 +598,11 @@ jobs:
   record-warn-history:
     name: Record warning history
     runs-on: ubuntu-latest
-    needs: [lint, typecheck]
-    # Informational only — runs even when lint/typecheck fail so we always
-    # capture the counts and write the job summary. Skipped for fork PRs (no
-    # write token). continue-on-error keeps transient GitHub API failures from
-    # blocking the PR.
+    needs: [lint, typecheck, format]
+    # Informational only — runs even when lint/typecheck/format fail so we
+    # always capture the counts and write the job summary. Skipped for fork
+    # PRs (no write token). continue-on-error keeps transient GitHub API
+    # failures from blocking the PR.
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false))
     continue-on-error: true
     steps:
@@ -641,19 +641,22 @@ jobs:
         env:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
           TC_WARNINGS: ${{ needs.typecheck.outputs.tc_warning_count }}
+          FORMAT_WARNINGS: ${{ needs.format.outputs.format_warning_count }}
         run: |
           # Use null (JSON null) when a job was skipped/cancelled so we don't
           # silently record 0 and distort the trend sparkline downward.
           lint_w="${LINT_WARNINGS}"
           tc_w="${TC_WARNINGS}"
-          [ -z "$lint_w" ] && lint_json="null" || lint_json="$lint_w"
-          [ -z "$tc_w" ]   && tc_json="null"   || tc_json="$tc_w"
+          format_w="${FORMAT_WARNINGS}"
+          [ -z "$lint_w" ]   && lint_json="null"   || lint_json="$lint_w"
+          [ -z "$tc_w" ]     && tc_json="null"     || tc_json="$tc_w"
+          [ -z "$format_w" ] && format_json="null" || format_json="$format_w"
           sha="${GITHUB_SHA}"
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           history=$(cat /tmp/warn-history/warn-history.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history/warn-history.json
@@ -678,32 +681,37 @@ jobs:
           last5=$(jq '.[-5:]' "$history_file")
 
           {
-            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ |"
-            echo "|-----|------|---------|-------|"
+            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format ⚠️ |"
+            echo "|-----|------|---------|-------|-----------|"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Emit one table row per entry. Null counts (skipped/cancelled jobs)
           # are rendered as "—" rather than 0 to avoid misleading the reader.
+          # Old entries without a "format" field default to 0 for backward compat.
           echo "$last5" | jq -r '
             .[] |
             (.ts | split("T")[0] | split("-") as [$y, $m, $d] |
               ({"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun",
                 "07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"}[$m])
               + " " + ($d | ltrimstr("0"))) as $date |
-            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) |"
+            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
           # Build sparkline strings. Null entries (skipped/cancelled jobs) are
           # omitted from the sparkline so they don't pull the trend toward zero.
+          # Format entries without the field (old history) default to 0.
           lint_vals=$(echo "$last5" | jq -r '[.[].lint | select(. != null)] | map(tostring) | join(" → ")')
           tc_vals=$(echo "$last5"   | jq -r '[.[].tc   | select(. != null)] | map(tostring) | join(" → ")')
+          format_vals=$(echo "$last5" | jq -r '[.[].format // 0] | map(tostring) | join(" → ")')
 
           lint_last=$(echo "$last5" | jq '.[-1].lint')
           lint_prev=$(echo "$last5" | jq '.[-2].lint')
           tc_last=$(echo "$last5"   | jq '.[-1].tc')
           tc_prev=$(echo "$last5"   | jq '.[-2].tc')
+          format_last=$(echo "$last5" | jq '.[-1].format // 0')
+          format_prev=$(echo "$last5" | jq '.[-2].format // 0')
 
           lint_arrow=""
           if [ "$lint_last" != "null" ] && [ "$lint_prev" != "null" ]; then
@@ -719,8 +727,13 @@ jobs:
             fi
           fi
 
+          format_arrow=""
+          if   [ "$format_last" -gt "$format_prev" ]; then format_arrow=" ↑"
+          elif [ "$format_last" -lt "$format_prev" ]; then format_arrow=" ↓"
+          fi
+
           {
-            echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`"
+            echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -734,7 +747,7 @@ jobs:
   record-warn-history-base:
     name: Record base branch warning history
     runs-on: ubuntu-latest
-    needs: [lint, typecheck]
+    needs: [lint, typecheck, format]
     # Records a rolling warn-history-base artifact on every push (base branch
     # merges). Skipped for pull_request events — those are tracked by
     # record-warn-history instead.
@@ -775,19 +788,22 @@ jobs:
         env:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
           TC_WARNINGS: ${{ needs.typecheck.outputs.tc_warning_count }}
+          FORMAT_WARNINGS: ${{ needs.format.outputs.format_warning_count }}
         run: |
           # Use null (JSON null) when a job was skipped/cancelled so we don't
           # silently record 0 and distort the trend sparkline downward.
           lint_w="${LINT_WARNINGS}"
           tc_w="${TC_WARNINGS}"
-          [ -z "$lint_w" ] && lint_json="null" || lint_json="$lint_w"
-          [ -z "$tc_w" ]   && tc_json="null"   || tc_json="$tc_w"
+          format_w="${FORMAT_WARNINGS}"
+          [ -z "$lint_w" ]   && lint_json="null"   || lint_json="$lint_w"
+          [ -z "$tc_w" ]     && tc_json="null"     || tc_json="$tc_w"
+          [ -z "$format_w" ] && format_json="null" || format_json="$format_w"
           sha="${GITHUB_SHA}"
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           history=$(cat /tmp/warn-history-base/warn-history-base.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history-base/warn-history-base.json
@@ -922,6 +938,7 @@ jobs:
             // Build a compact trend section showing the last 5 pushes on this
             // branch as a Markdown table plus a text sparkline for each check.
             // Returns an empty array when there is not enough history to be useful.
+            // Old entries without a "format" field are treated as 0.
             function buildTrendSection(hist) {
               if (hist.length < 2) return [];
               const last5 = hist.slice(-5);
@@ -950,22 +967,28 @@ jobs:
                   : `\`${entry.shortSha}\``;
                 const lintCell = entry.lint === null ? '—' : entry.lint;
                 const tcCell = entry.tc === null ? '—' : entry.tc;
-                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} |`;
+                // Old entries without format field (undefined) default to 0;
+                // null means the format job was skipped/cancelled.
+                const formatCount = entry.format === undefined ? 0 : (entry.format === null ? '—' : entry.format);
+                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} |`;
               });
 
               const lintLine = sparkline(last5.map((e) => e.lint));
               const tcLine = sparkline(last5.map((e) => e.tc));
+              // Old entries without a format field (undefined) are treated as 0;
+              // null (skipped job) is kept as null so the sparkline filters it out.
+              const formatLine = sparkline(last5.map((e) => e.format === undefined ? 0 : e.format));
               const n = last5.length;
 
               return [
                 '',
                 `<details><summary>📈 Warning trend (last ${n} push${n !== 1 ? 'es' : ''} on this branch)</summary>`,
                 '',
-                '| SHA | Date | Lint ⚠️ | TS ⚠️ |',
-                '|-----|------|---------|-------|',
+                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format ⚠️ |',
+                '|-----|------|---------|-------|-----------|',
                 ...rows,
                 '',
-                `Lint: \`${lintLine}\`  ·  TS: \`${tcLine}\``,
+                `Lint: \`${lintLine}\`  ·  TS: \`${tcLine}\`  ·  Format: \`${formatLine}\``,
                 '',
                 '</details>',
               ];
@@ -1257,17 +1280,19 @@ jobs:
             }
 
             // Build a compact history table (last 5 merges, oldest → newest).
+            // Old entries without a "format" field are treated as 0.
             function buildHistoryTable(entries, branch) {
               if (entries.length === 0) return [];
               const header = [
                 `<details><summary><strong>\`${branch}\` recent history</strong> (last ${entries.length} merge${entries.length === 1 ? '' : 's'})</summary>`,
                 '',
-                '| Commit | Date | Lint warnings | TS warnings |',
-                '|---|---|---|---|',
+                '| Commit | Date | Lint warnings | TS warnings | Format warnings |',
+                '|---|---|---|---|---|',
               ];
               const rows = entries.map(e => {
                 const date = e.ts ? e.ts.slice(0, 10) : '—';
-                return `| \`${e.shortSha || e.sha.slice(0, 7)}\` | ${date} | ${e.lint} | ${e.tc} |`;
+                const formatCount = e.format ?? 0;
+                return `| \`${e.shortSha || e.sha.slice(0, 7)}\` | ${date} | ${e.lint} | ${e.tc} | ${formatCount} |`;
               });
               return [...header, ...rows, '', '</details>'];
             }
