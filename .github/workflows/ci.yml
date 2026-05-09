@@ -190,11 +190,18 @@ jobs:
             # error lines are indented and contain the word "error".
             lint_file_list=$(printf '%s\n' "$lint_output" | awk '
               /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
-              /[[:space:]]error[[:space:]]/ { count[current_file]++ }
+              /[[:space:]]error[[:space:]]/ {
+                count[current_file]++
+                if (!first_msg[current_file]) {
+                  msg = ""
+                  for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
+                  first_msg[current_file] = msg
+                }
+              }
               END {
                 for (f in count)
                   if (f != "" && count[f] > 0)
-                    printf "- `%s` — %d error(s)\n", f, count[f]
+                    printf "- `%s` — %d error(s): %s\n", f, count[f], first_msg[f]
               }
             ' | sort)
             lint_file_count=$(printf '%s\n' "$lint_file_list" | grep -c '^-' || true)
@@ -332,11 +339,18 @@ jobs:
                 f = $0
                 sub(/\(.*/, "", f)
                 gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
-                if (f != "") count[f]++
+                if (f != "") {
+                  count[f]++
+                  if (!first_msg[f]) {
+                    msg = $0
+                    sub(/.*: error /, "", msg)
+                    first_msg[f] = msg
+                  }
+                }
               }
               END {
                 for (f in count)
-                  printf "- `%s` — %d error(s)\n", f, count[f]
+                  printf "- `%s` — %d error(s): %s\n", f, count[f], first_msg[f]
               }
             ' | sort)
             tc_file_count=$(printf '%s\n' "$tc_file_list" | grep -c '^-' || true)
