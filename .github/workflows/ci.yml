@@ -223,9 +223,10 @@ jobs:
           lint_output=$(pnpm run lint 2>&1) && echo "$lint_output" || {
             echo "$lint_output"
 
-            # Emit a GitHub Actions ::error annotation for every ESLint error so
-            # GitHub highlights the offending line directly in the PR diff view.
-            # ESLint default output: file header at col 0, then indented "line:col  error  msg  rule"
+            # Emit GitHub Actions ::error / ::warning annotations for every ESLint
+            # diagnostic so GitHub highlights the offending line directly in the PR
+            # diff view. ESLint default output: file header at col 0, then indented
+            # "line:col  error|warning  msg  rule"
             printf '%s\n' "$lint_output" | awk '
               /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
               /[[:space:]]error[[:space:]]/ {
@@ -234,6 +235,13 @@ jobs:
                 msg = ""
                 for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
                 printf "::error file=%s,line=%s,col=%s::%s\n", current_file, line_num, col_num, msg
+              }
+              /[[:space:]]warning[[:space:]]/ {
+                split($1, loc, ":")
+                line_num = loc[1]; col_num = loc[2]
+                msg = ""
+                for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
+                printf "::warning file=%s,line=%s,col=%s::%s\n", current_file, line_num, col_num, msg
               }
             '
 
