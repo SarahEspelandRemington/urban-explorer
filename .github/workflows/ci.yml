@@ -439,8 +439,25 @@ jobs:
       - name: Typecheck (TypeScript)
         id: typecheck
         run: |
-          tc_output=$(pnpm run typecheck 2>&1) && echo "$tc_output" || {
-            echo "$tc_output"
+          set +e
+          tc_output=$(pnpm run typecheck 2>&1)
+          tc_exit=$?
+          set -e
+          echo "$tc_output"
+
+          # Always count diagnostics so trend data is available even on a clean run.
+          tc_error_count=$(printf '%s\n' "$tc_output" | grep -c ': error TS' || true)
+          tc_warning_count=$(printf '%s\n' "$tc_output" | grep -c ': warning TS' || true)
+          echo "tc_error_count=${tc_error_count}" >> "$GITHUB_OUTPUT"
+          echo "tc_warning_count=${tc_warning_count}" >> "$GITHUB_OUTPUT"
+
+          # Write a JSON artifact so warning trends can be compared across runs.
+          printf '{"errors":%d,"warnings":%d,"sha":"%s","ref":"%s"}\n' \
+            "$tc_error_count" "$tc_warning_count" \
+            "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            > tc-counts.json
+
+          if [ $tc_exit -ne 0 ]; then
 
             # Emit GitHub Actions ::error / ::warning annotations for every tsc
             # diagnostic so GitHub highlights the offending line directly in the
@@ -514,8 +531,6 @@ jobs:
               }
             ' | sort)
             tc_file_count=$(printf '%s\n' "$tc_file_list" | grep -c '^-' || true)
-            tc_error_count=$(printf '%s\n' "$tc_output" | grep -c ': error TS' || true)
-            tc_warning_count=$(printf '%s\n' "$tc_output" | grep -c ': warning TS' || true)
 
             echo "## ❌ Typecheck failed" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -542,10 +557,16 @@ jobs:
             echo "tc_output<<ENDOFOUTPUT" >> "$GITHUB_OUTPUT"
             echo "$truncated" >> "$GITHUB_OUTPUT"
             echo "ENDOFOUTPUT" >> "$GITHUB_OUTPUT"
-            echo "tc_error_count=${tc_error_count}" >> "$GITHUB_OUTPUT"
-            echo "tc_warning_count=${tc_warning_count}" >> "$GITHUB_OUTPUT"
             exit 1
-          }
+          fi
+
+      - name: Upload typecheck counts artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tc-counts
+          path: tc-counts.json
+          retention-days: 90
 
   report:
     name: Post CI summary comment
@@ -553,6 +574,56 @@ jobs:
     needs: [format, lint, typecheck]
     if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
     steps:
+      - name: Download previous-push warning counts
+        id: prev-counts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head_ref="${{ github.head_ref }}"
+          current_run_id="${{ github.run_id }}"
+
+          # Find the most recent CI run on this PR's head branch that is not
+          # the current run. Any completion status is acceptable — we just want
+          # the most recent set of counts to compute a delta.
+          prev_run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --branch "$head_ref" \
+            --workflow "ci.yml" \
+            --limit 10 \
+            --json databaseId \
+            --jq "[.[] | select(.databaseId != ${current_run_id})] | .[0].databaseId" \
+            2>/dev/null || true)
+
+          if [ -z "$prev_run_id" ] || [ "$prev_run_id" = "null" ]; then
+            echo "No previous run found for branch '${head_ref}'. Skipping delta."
+            echo "prev_lint_warnings=" >> "$GITHUB_OUTPUT"
+            echo "prev_tc_warnings=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mkdir -p /tmp/prev-counts/lint /tmp/prev-counts/tc
+
+          if gh run download "$prev_run_id" \
+              --repo "${{ github.repository }}" \
+              --name lint-counts \
+              --dir /tmp/prev-counts/lint 2>/dev/null; then
+            prev_lint=$(jq -r '.warnings' /tmp/prev-counts/lint/lint-counts.json 2>/dev/null || echo "")
+          else
+            prev_lint=""
+          fi
+
+          if gh run download "$prev_run_id" \
+              --repo "${{ github.repository }}" \
+              --name tc-counts \
+              --dir /tmp/prev-counts/tc 2>/dev/null; then
+            prev_tc=$(jq -r '.warnings' /tmp/prev-counts/tc/tc-counts.json 2>/dev/null || echo "")
+          else
+            prev_tc=""
+          fi
+
+          echo "prev_lint_warnings=${prev_lint}" >> "$GITHUB_OUTPUT"
+          echo "prev_tc_warnings=${prev_tc}" >> "$GITHUB_OUTPUT"
+
       - name: Post or update unified CI comment
         uses: actions/github-script@v7
         env:
@@ -565,6 +636,8 @@ jobs:
           TC_OUTPUT: ${{ needs.typecheck.outputs.tc_output }}
           TC_ERROR_COUNT: ${{ needs.typecheck.outputs.tc_error_count }}
           TC_WARNING_COUNT: ${{ needs.typecheck.outputs.tc_warning_count }}
+          PREV_LINT_WARNINGS: ${{ steps.prev-counts.outputs.prev_lint_warnings }}
+          PREV_TC_WARNINGS: ${{ steps.prev-counts.outputs.prev_tc_warnings }}
         with:
           script: |
             const marker = '<!-- CI-BOT -->';
@@ -578,6 +651,23 @@ jobs:
             const tcOutput = process.env.TC_OUTPUT || '';
             const tcErrorCount = parseInt(process.env.TC_ERROR_COUNT || '0', 10);
             const tcWarningCount = parseInt(process.env.TC_WARNING_COUNT || '0', 10);
+
+            // Build per-check delta lines for the comment when previous counts
+            // are available. Returns null when there is no prior data.
+            function deltaLine(current, prevRaw, label) {
+              const prev = parseInt(prevRaw || '', 10);
+              if (!prevRaw || isNaN(prev)) return null;
+              const delta = current - prev;
+              const n = Math.abs(delta);
+              const noun = `${label} warning${n !== 1 ? 's' : ''}`;
+              if (delta > 0) return `⬆️ +${delta} ${noun} since last push`;
+              if (delta < 0) return `⬇️ −${n} ${noun} since last push`;
+              return `➡️ ${noun} unchanged since last push`;
+            }
+
+            const lintDelta = deltaLine(lintWarningCount, process.env.PREV_LINT_WARNINGS, 'lint');
+            const tcDelta = deltaLine(tcWarningCount, process.env.PREV_TC_WARNINGS, 'typecheck');
+            const deltaLines = [lintDelta, tcDelta].filter(Boolean);
 
             const failed = [formatResult, lintResult, tcResult].some(
               (r) => r === 'failure',
@@ -611,9 +701,13 @@ jobs:
                 }
                 warningLines.push('', '</details>');
               }
+              const deltaSection = deltaLines.length > 0
+                ? ['', ...deltaLines]
+                : [];
               const successBody = [
                 marker,
                 '## ✅ All checks passed',
+                ...deltaSection,
                 ...warningLines,
               ].join('\n');
               if (existing) {
@@ -710,10 +804,13 @@ jobs:
               .filter(Boolean)
               .join(', ');
 
+            const failureDeltaSection = deltaLines.length > 0
+              ? ['', ...deltaLines, '']
+              : [''];
             const body = [
               marker,
               `## \u274c CI failed \u2014 ${failedNames}`,
-              '',
+              ...failureDeltaSection,
               sections.join('\n\n---\n\n'),
             ].join('\n');
 
