@@ -350,6 +350,8 @@ jobs:
     needs: install
     outputs:
       tc_output: ${{ steps.typecheck.outputs.tc_output }}
+      tc_error_count: ${{ steps.typecheck.outputs.tc_error_count }}
+      tc_warning_count: ${{ steps.typecheck.outputs.tc_warning_count }}
     steps:
       - uses: actions/checkout@v4
 
@@ -540,6 +542,8 @@ jobs:
             echo "tc_output<<ENDOFOUTPUT" >> "$GITHUB_OUTPUT"
             echo "$truncated" >> "$GITHUB_OUTPUT"
             echo "ENDOFOUTPUT" >> "$GITHUB_OUTPUT"
+            echo "tc_error_count=${tc_error_count}" >> "$GITHUB_OUTPUT"
+            echo "tc_warning_count=${tc_warning_count}" >> "$GITHUB_OUTPUT"
             exit 1
           }
 
@@ -557,6 +561,8 @@ jobs:
           TC_RESULT: ${{ needs.typecheck.result }}
           LINT_OUTPUT: ${{ needs.lint.outputs.lint_output }}
           TC_OUTPUT: ${{ needs.typecheck.outputs.tc_output }}
+          TC_ERROR_COUNT: ${{ needs.typecheck.outputs.tc_error_count }}
+          TC_WARNING_COUNT: ${{ needs.typecheck.outputs.tc_warning_count }}
         with:
           script: |
             const marker = '<!-- CI-BOT -->';
@@ -566,6 +572,8 @@ jobs:
             const tcResult = process.env.TC_RESULT;
             const lintOutput = process.env.LINT_OUTPUT || '';
             const tcOutput = process.env.TC_OUTPUT || '';
+            const tcErrorCount = parseInt(process.env.TC_ERROR_COUNT || '0', 10);
+            const tcWarningCount = parseInt(process.env.TC_WARNING_COUNT || '0', 10);
 
             const failed = [formatResult, lintResult, tcResult].some(
               (r) => r === 'failure',
@@ -632,10 +640,11 @@ jobs:
             }
 
             if (tcResult === 'failure') {
+              const tcCountLine = `**${tcErrorCount} error(s), ${tcWarningCount} warning(s)**`;
               const tcSection = [
                 '### \u274c Typecheck (TypeScript)',
                 '',
-                'TypeScript reported type errors. Fix them locally with:',
+                `${tcCountLine} — fix them locally with:`,
                 '',
                 '```sh',
                 'pnpm run typecheck',
