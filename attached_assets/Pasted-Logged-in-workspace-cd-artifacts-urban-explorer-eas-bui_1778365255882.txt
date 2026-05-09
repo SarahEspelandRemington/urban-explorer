@@ -1,0 +1,14 @@
+Logged in
+~/workspace$ cd artifacts/urban-explorer && eas build:configure
+
+Unable to resolve a valid config plugin for @sentry/react-native/expo.
+• No "app.plugin.js" file found in @sentry/react-native/expo: config plugins are typically exported from an "app.plugin.js" file in the package root.
+• main export of @sentry/react-native/expo does not appear to be a config plugin: the following error was thrown when importing /home/runner/workspace/node_modules/.pnpm/@sentry+react-native@6.22.0_expo@54.0.33_react-native@0.81.5_@babel+core@7.29.0_@types+_c5db48ecf6c5c875d22e6ce2324a2c05/node_modules/@sentry/react-native/expo.js: Cannot find module '@expo/config-plugins'
+Require stack:
+- /home/runner/workspace/node_modules/.pnpm/@sentry+react-native@6.22.0_expo@54.0.33_react-native@0.81.5_@babel+core@7.29.0_@types+_c5db48ecf6c5c875d22e6ce2324a2c05/node_modules/@sentry/react-native/plugin/build/withSentryAndroidGradlePlugin.js
+- /home/runner/workspace/node_modules/.pnpm/@sentry+react-native@6.22.0_expo@54.0.33_react-native@0.81.5_@babel+core@7.29.0_@types+_c5db48ecf6c5c875d22e6ce2324a2c05/node_modules/@sentry/react-native/plugin/build/withSentry.js
+- /home/runner/workspace/node_modules/.pnpm/@sentry+react-native@6.22.0_expo@54.0.33_react-native@0.81.5_@babel+core@7.29.0_@types+_c5db48ecf6c5c875d22e6ce2324a2c05/node_modules/@sentry/react-native/plugin/build/index.js
+- /home/runner/workspace/node_modules/.pnpm/@sentry+react-native@6.22.0_expo@54.0.33_react-native@0.81.5_@babel+core@7.29.0_@types+_c5db48ecf6c5c875d22e6ce2324a2c05/node_modules/@sentry/react-native/expo.js
+- /home/runner/workspace/.config/npm/node_global/lib/node_modules/eas-cli/node_modules/@expo/config-plugins/build/utils/plugin-resolver.js
+- /home/runner/workspace/.config/npm/node_global/lib/node_modules/eas-cli/node_modules/@expo/config-plugins/build/plugins/withStaticPlugin.js
+- /home/runner/workspace/.config/npm/node_global/lib/node_modules/eas-cli/node_modules/@expo/config-plugins/build/plugins/withPlugins.js
