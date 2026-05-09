@@ -41,6 +41,11 @@ export interface DiscoverRequest {
   mode?: DiscoverRequestMode;
   /** Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in. */
   includeBuildingTypes?: string[];
+  /**
+   * Optional human-readable address or neighbourhood context for the current location (e.g. 'South St & 2nd Ave, Old City, Philadelphia'). Sourced from the device reverse-geocode cache — never blocks the request. Injected into the brainstorm step to improve obscure-history recall.
+   * @maxLength 200
+   */
+  addressHint?: string;
 }
 
 /**

@@ -25,6 +25,8 @@ export const discoverPlacesBodyRadiusMax = 1000;
 export const discoverPlacesBodyAccuracyMin = 0;
 export const discoverPlacesBodyAccuracyMax = 10000;
 
+export const discoverPlacesBodyAddressHintMax = 200;
+
 export const DiscoverPlacesBody = zod.object({
   latitude: zod.number().describe("Current latitude"),
   longitude: zod.number().describe("Current longitude"),
@@ -55,6 +57,13 @@ export const DiscoverPlacesBody = zod.object({
     .optional()
     .describe(
       "Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in.",
+    ),
+  addressHint: zod
+    .string()
+    .max(discoverPlacesBodyAddressHintMax)
+    .optional()
+    .describe(
+      "Optional human-readable address or neighbourhood context for the current location (e.g. 'South St & 2nd Ave, Old City, Philadelphia'). Sourced from the device reverse-geocode cache — never blocks the request. Injected into the brainstorm step to improve obscure-history recall.",
     ),
 });
 

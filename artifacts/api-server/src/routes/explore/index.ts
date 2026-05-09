@@ -465,11 +465,15 @@ async function fetchNearbyOSMPlaces(
 (
   nwr["historic"](around:${r},${lat},${lng});
   nwr["heritage"](around:${r},${lat},${lng});
+  nwr["ruins"](around:${r},${lat},${lng});
   nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](around:${r},${lat},${lng});
   nwr["name"]["building"](around:${r},${lat},${lng});
   nwr["name"]["amenity"~"^(place_of_worship|library|theatre|cinema|arts_centre|pub|bar|bank|post_office|police|fire_station|school|college|university|marketplace|townhall|courthouse|prison|hospital|community_centre|social_facility)$"](around:${r},${lat},${lng});
   nwr["name"]["man_made"~"^(water_tower|chimney|bridge|lighthouse|monument|tower|pier|reservoir_covered|storage_tank|gasometer)$"](around:${r},${lat},${lng});
   nwr["name"]["landuse"~"^(religious|cemetery|industrial|railway)$"](around:${r},${lat},${lng});
+  nwr["name"]["railway"~"^(station|halt|tram_stop|subway_entrance|disused_station)$"](around:${r},${lat},${lng});
+  nwr["name"]["disused:amenity"](around:${r},${lat},${lng});
+  nwr["name"]["demolished:building"](around:${r},${lat},${lng});
   nwr["memorial"](around:${r},${lat},${lng});
 );
 out center body 40;
@@ -593,7 +597,7 @@ function formatOSMContext(
     return `  ${i + 1}. "${name}" [${sanitizeOSMText(p.type, 30)}] at ${p.lat.toFixed(5)},${p.lon.toFixed(5)} — ${dist}m away${extra}`;
   });
 
-  return `\n\nREAL PLACES FROM MAP DATA (OpenStreetMap) near these coordinates:\n${lines.join("\n")}\n\nIMPORTANT: You MUST use these real places as your primary source. For each place from the map data, use the EXACT name and coordinates provided — do not rename them or move them. Add your historical knowledge to these verified locations. You may also include 1-2 additional places you know about that are not in the map data, but mark those with confidence "medium" or "low". Places from the map data should be confidence "high" since their existence is verified.`;
+  return `\n\nREAL PLACES FROM MAP DATA (OpenStreetMap) near these coordinates:\n${lines.join("\n")}\n\nIMPORTANT: Use OSM entries as verified anchors — exact name and coordinates must be preserved. Add your historical knowledge on top. Up to half your returned places may come from your own knowledge (demolished buildings, former uses, buried infrastructure, organisations that no longer exist) if OSM doesn't fill the quota — mark those confidence "medium" or "low". Do not force an OSM entry that has no interesting story. Places confirmed by OSM data should be confidence "high".`;
 }
 
 function haversineDistance(
@@ -1210,8 +1214,14 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const { latitude, longitude, radius, mode, includeBuildingTypes } =
-    parsed.data;
+  const {
+    latitude,
+    longitude,
+    radius,
+    mode,
+    includeBuildingTypes,
+    addressHint,
+  } = parsed.data;
   const isQuick = mode === "quick";
   const requestedRadius = radius ?? (isQuick ? 500 : 300);
   const searchRadius = Math.max(50, Math.min(1000, requestedRadius));
@@ -1237,7 +1247,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v13:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v15:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1324,7 +1334,7 @@ router.post("/explore/discover", async (req, res) => {
   const brainstormPromise: Promise<string> = (async () => {
     if (isQuick) return "";
     try {
-      const BRAINSTORM_TIMEOUT_MS = 9000;
+      const BRAINSTORM_TIMEOUT_MS = 13000;
       const brainstormAbort = new AbortController();
       const brainstormTimer = setTimeout(
         () => brainstormAbort.abort(),
@@ -1333,17 +1343,17 @@ router.post("/explore/discover", async (req, res) => {
       try {
         const brainstormResponse = await openai.chat.completions.create(
           {
-            model: "gpt-4.1-nano",
-            max_completion_tokens: 900,
+            model: "gpt-4.1-mini",
+            max_completion_tokens: 1400,
             messages: [
               {
                 role: "system",
                 content:
-                  "You are a hyper-local urban historian with encyclopedic knowledge of streets, buildings, and blocks. When given GPS coordinates, brainstorm freely — without worrying about format — everything you know about the immediate surroundings: historical occupants, architectural details, former uses, local figures, infrastructure oddities, buried waterways, ghost signs, community organizations, scandals, events, transitions. Include obscure and surprising facts. Name names and dates when you know them. This is an internal brainstorm; quality and specificity matter more than completeness.\n\nCRITICAL: Never invent street names. If you are unsure of an exact address, refer to the nearest known intersection or cross-streets instead. A place anchored to a real intersection is always better than one with a fabricated street name.",
+                  "You are a hyper-local urban historian with encyclopedic knowledge of streets, buildings, and blocks. When given GPS coordinates, brainstorm freely — without worrying about format — everything you know about the immediate surroundings: historical occupants, architectural details, former uses, local figures, infrastructure oddities, buried waterways, ghost signs, community organizations, scandals, events, transitions. Include obscure and surprising facts. Name names and dates when you know them. This is an internal brainstorm; quality and specificity matter more than completeness.\n\nWork through the area in ERAS — name at least one specific building, person, or event per era where you can: (1) pre-1900 — original land use, early industry, immigrant communities, street-grid changes; (2) 1900–1940 — tenement era, industrial peak, Prohibition speakeasies, Great Migration, labor organizing, political machines; (3) 1940–1970 — urban renewal demolitions, ethnic succession, postwar boom or decline, highway construction, redlining effects; (4) 1970–present — disinvestment, community organizing, gentrification waves, notable demolitions or salvage.\n\nCRITICAL: Never invent street names. If you are unsure of an exact address, refer to the nearest known intersection or cross-streets instead. A place anchored to a real intersection is always better than one with a fabricated street name.",
               },
               {
                 role: "user",
-                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?`,
+                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude}${addressHint ? ` (${addressHint})` : ""} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?`,
               },
             ],
           },
@@ -1381,7 +1391,9 @@ Given GPS coordinates, identify real places within roughly ${radiusFeet} feet ($
 
 PRIORITIZE (in order): specific buildings and their hidden histories; architectural details passersby miss (ghost signs, terra cotta, unusual ironwork, cornerstones); former uses (speakeasies, union halls, boarding houses, vaudeville theaters, immigrant social clubs); local stories with names and dates; odd infrastructure (hitching posts, trolley tracks, sealed subway entrances, vault sidewalks, buried waterways); community power — ethnic mutual aid societies, gang territories, labor organizing halls, political machine clubhouses, named figures who shaped a specific block. Multi-era buildings whose use-transitions reveal social history are especially valuable.
 
-AVOID: famous tourist landmarks (Statue of Liberty, Empire State Building as a skyscraper, Times Square as spectacle); generic descriptions ("rich history," "many changes over the years"); neighborhood-wide claims without a specific anchor. Every place must anchor to one building, corner, wall, or doorway.
+AVOID: famous tourist landmarks (Statue of Liberty, Empire State Building as a skyscraper, Times Square as spectacle); anything that would appear as the primary subject of a travel blog, Yelp top-10, or Wikipedia disambiguation page — favour what lives in footnotes, local newspaper archives, and academic dissertations; generic descriptions ("rich history," "many changes over the years"); neighbourhood-wide claims without a specific anchor. Every place must anchor to one building, corner, wall, or doorway.
+
+TARGET: a place the user could walk past 100 times without knowing its significance. If it would headline any popular tourist guide, choose something more obscure.
 
 SPECIFICITY RULES — every fact must include at least one: specific year/decade, person's name, verifiable detail, or concrete event. BAD: "This building has a rich history." GOOD: "The Italianate cornice was added in 1887 when dry-goods merchant Samuel Hewitt converted the ground floor from a livery stable." Social history needs an address: BAD: "The Westies controlled Hell's Kitchen." GOOD: "596 10th Ave was the Westies' base — Jimmy Coonan ran the crew from this corner through the late 1970s."
 
