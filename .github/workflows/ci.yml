@@ -33,5 +33,16 @@ jobs:
             exit 1
           )
 
+      - name: Restore TypeScript build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/*/dist
+            lib/*/*.tsbuildinfo
+            tsconfig.tsbuildinfo
+          key: tsbuildinfo-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json', 'lib/*/tsconfig.json', 'lib/*/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-${{ runner.os }}-
+
       - name: Run CI checks (lint + typecheck)
         run: pnpm run lint && pnpm run typecheck
