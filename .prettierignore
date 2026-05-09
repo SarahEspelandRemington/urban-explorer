@@ -1,0 +1,3 @@
+# Auto-generated files — excluded from Prettier formatting checks
+artifacts/urban-explorer/expo-env.d.ts
+artifacts/mockup-sandbox/src/.generated/mockup-components.ts
