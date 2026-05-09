@@ -178,7 +178,7 @@ export default function WalkModeScreen() {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setSettingsVisible(true);
             }}
-            hitSlop={12}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t.walkMode.buildingFiltersAccessibility}
             style={({ pressed }) => [
@@ -205,6 +205,19 @@ export default function WalkModeScreen() {
                   : colors.mutedForeground
               }
             />
+            <Text
+              style={[
+                styles.filterBtnLabel,
+                {
+                  color:
+                    walk.enabledBuildingGroups.size > 0
+                      ? colors.primary
+                      : colors.mutedForeground,
+                },
+              ]}
+            >
+              {t.walkMode.filterBtn}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -718,12 +731,17 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   settingsBtn: {
-    width: 32,
-    height: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+  },
+  filterBtnLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
   modalBackdrop: {
     flex: 1,

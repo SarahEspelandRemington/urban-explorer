@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -32,6 +33,8 @@ function MessageSection({
   onReset,
   resetLabel,
   resetAccessibilityLabel,
+  resetConfirmTitle,
+  resetConfirmMessage,
   addMessageLabel,
   addMessageAccessibilityLabel,
   deleteMessageLabel,
@@ -47,6 +50,8 @@ function MessageSection({
   onReset: () => void;
   resetLabel: string;
   resetAccessibilityLabel: string;
+  resetConfirmTitle: string;
+  resetConfirmMessage: string;
   addMessageLabel: string;
   addMessageAccessibilityLabel: string;
   deleteMessageLabel: string;
@@ -67,7 +72,12 @@ function MessageSection({
           </Text>
         </View>
         <Pressable
-          onPress={onReset}
+          onPress={() => {
+            Alert.alert(resetConfirmTitle, resetConfirmMessage, [
+              { text: "Cancel", style: "cancel" },
+              { text: resetLabel, style: "destructive", onPress: onReset },
+            ]);
+          }}
           style={({ pressed }) => [
             styles.resetBtn,
             { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
@@ -288,6 +298,8 @@ export default function SettingsMessagesScreen() {
           onReset={resetDiscovery}
           resetLabel={t.settingsMessages.reset}
           resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
+          resetConfirmTitle={t.settingsMessages.resetConfirmTitle}
+          resetConfirmMessage={t.settingsMessages.resetConfirmMessage}
           addMessageLabel={t.settingsMessages.addMessage}
           addMessageAccessibilityLabel={
             t.settingsMessages.addMessageAccessibility
@@ -307,6 +319,8 @@ export default function SettingsMessagesScreen() {
           onReset={resetDetail}
           resetLabel={t.settingsMessages.reset}
           resetAccessibilityLabel={t.settingsMessages.resetAccessibility}
+          resetConfirmTitle={t.settingsMessages.resetConfirmTitle}
+          resetConfirmMessage={t.settingsMessages.resetConfirmMessage}
           addMessageLabel={t.settingsMessages.addMessage}
           addMessageAccessibilityLabel={
             t.settingsMessages.addMessageAccessibility

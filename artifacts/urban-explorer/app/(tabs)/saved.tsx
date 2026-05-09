@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Alert,
   Animated as RNAnimated,
   FlatList,
   Platform,
@@ -285,7 +286,16 @@ export default function SavedScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => setSortMode("nearest")}
+            onPress={() => {
+              if (!userLocation) {
+                Alert.alert(
+                  t.saved.sortNearest,
+                  t.saved.sortNearestNoLocation,
+                );
+                return;
+              }
+              setSortMode("nearest");
+            }}
             style={[
               styles.chip,
               {
@@ -293,12 +303,11 @@ export default function SavedScreen() {
                   sortMode === "nearest" ? colors.primary : colors.muted,
                 borderColor:
                   sortMode === "nearest" ? colors.primary : colors.border,
-                opacity: !userLocation ? 0.45 : 1,
+                opacity: !userLocation ? 0.5 : 1,
               },
             ]}
             accessibilityRole="button"
             accessibilityState={{ selected: sortMode === "nearest" }}
-            disabled={!userLocation}
           >
             <Feather
               name="navigation"
@@ -322,15 +331,15 @@ export default function SavedScreen() {
             >
               {t.saved.sortNearest}
             </Text>
+            {!userLocation && (
+              <Feather
+                name="info"
+                size={10}
+                color={colors.mutedForeground}
+                style={{ marginLeft: 1, opacity: 0.7 }}
+              />
+            )}
           </Pressable>
-
-          {!userLocation && (
-            <Text
-              style={[styles.noLocationHint, { color: colors.mutedForeground }]}
-            >
-              {t.saved.sortNearestNoLocation}
-            </Text>
-          )}
 
           {/* Separator */}
           <View

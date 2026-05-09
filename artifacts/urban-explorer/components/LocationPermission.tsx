@@ -379,136 +379,8 @@ export function LocationPermission({
               Platform.OS !== "web" ? FadeOutUp.duration(180) : undefined
             }
           >
-            {denied ? (
-              Platform.OS !== "web" ? (
-                <Pressable
-                  onPress={() => {
-                    try {
-                      Linking.openSettings();
-                    } catch {}
-                  }}
-                  style={({ pressed }) => [
-                    styles.button,
-                    {
-                      backgroundColor: colors.primary,
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open device settings to enable location"
-                >
-                  <Feather
-                    name="settings"
-                    size={18}
-                    color={colors.primaryForeground}
-                  />
-                  <Text
-                    style={[
-                      styles.buttonText,
-                      { color: colors.primaryForeground },
-                    ]}
-                  >
-                    {t.locationPermission.openSettings}
-                  </Text>
-                </Pressable>
-              ) : (
-                <Text
-                  style={[styles.deniedText, { color: colors.mutedForeground }]}
-                >
-                  {t.locationPermission.deniedWeb}
-                </Text>
-              )
-            ) : (
-              <Pressable
-                onPress={requestPermission}
-                style={({ pressed }) => [
-                  styles.button,
-                  {
-                    backgroundColor: colors.primary,
-                    opacity: pressed ? 0.85 : 1,
-                  },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Allow location access"
-                accessibilityHint="Grants the app permission to use your GPS location"
-              >
-                <Feather
-                  name="navigation"
-                  size={18}
-                  color={colors.primaryForeground}
-                />
-                <Text
-                  style={[
-                    styles.buttonText,
-                    { color: colors.primaryForeground },
-                  ]}
-                >
-                  {t.locationPermission.allow}
-                </Text>
-              </Pressable>
-            )}
-
-            <View style={styles.dividerRow}>
-              <View
-                style={[styles.dividerLine, { backgroundColor: colors.border }]}
-              />
-              <Text
-                style={[styles.dividerText, { color: colors.mutedForeground }]}
-              >
-                {t.common.or}
-              </Text>
-              <View
-                style={[styles.dividerLine, { backgroundColor: colors.border }]}
-              />
-            </View>
-
-            <Pressable
-              onPress={() => setShowSearch(true)}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                {
-                  borderColor: colors.primary,
-                  backgroundColor: "transparent",
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Search by location"
-              accessibilityHint="Enter a city or address to explore manually"
-            >
-              <Feather name="search" size={18} color={colors.primary} />
-              <Text
-                style={[styles.secondaryButtonText, { color: colors.primary }]}
-              >
-                {t.locationPermission.searchByLocation}
-              </Text>
-            </Pressable>
-
             {onWalkMode && (
               <>
-                <View style={styles.dividerRow}>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.dividerText,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {t.common.or}
-                  </Text>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
-                </View>
-
                 <Pressable
                   onPress={() => {
                     unlockWebSpeech();
@@ -549,7 +421,137 @@ export function LocationPermission({
                     </Text>
                   </View>
                 </Pressable>
+
+                <View style={styles.dividerRow}>
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.dividerText,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {t.common.or}
+                  </Text>
+                  <View
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
+                  />
+                </View>
               </>
+            )}
+
+            <Pressable
+              onPress={() => setShowSearch(true)}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                {
+                  borderColor: colors.primary,
+                  backgroundColor: "transparent",
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Search by location"
+              accessibilityHint="Enter a city or address to explore manually"
+            >
+              <Feather name="search" size={18} color={colors.primary} />
+              <Text
+                style={[styles.secondaryButtonText, { color: colors.primary }]}
+              >
+                {t.locationPermission.searchByLocation}
+              </Text>
+            </Pressable>
+
+            <View style={styles.dividerRow}>
+              <View
+                style={[styles.dividerLine, { backgroundColor: colors.border }]}
+              />
+              <Text
+                style={[styles.dividerText, { color: colors.mutedForeground }]}
+              >
+                {t.common.or}
+              </Text>
+              <View
+                style={[styles.dividerLine, { backgroundColor: colors.border }]}
+              />
+            </View>
+
+            {denied ? (
+              Platform.OS !== "web" ? (
+                <Pressable
+                  onPress={() => {
+                    try {
+                      Linking.openSettings();
+                    } catch {}
+                  }}
+                  style={({ pressed }) => [
+                    styles.secondaryButton,
+                    {
+                      borderColor: colors.border,
+                      backgroundColor: "transparent",
+                      opacity: pressed ? 0.85 : 1,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open device settings to enable location"
+                >
+                  <Feather
+                    name="settings"
+                    size={18}
+                    color={colors.foreground}
+                  />
+                  <Text
+                    style={[
+                      styles.secondaryButtonText,
+                      { color: colors.foreground },
+                    ]}
+                  >
+                    {t.locationPermission.openSettings}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Text
+                  style={[styles.deniedText, { color: colors.mutedForeground }]}
+                >
+                  {t.locationPermission.deniedWeb}
+                </Text>
+              )
+            ) : (
+              <Pressable
+                onPress={requestPermission}
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  {
+                    borderColor: colors.border,
+                    backgroundColor: "transparent",
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Allow location access"
+                accessibilityHint="Grants the app permission to use your GPS location"
+              >
+                <Feather
+                  name="navigation"
+                  size={18}
+                  color={colors.foreground}
+                />
+                <Text
+                  style={[
+                    styles.secondaryButtonText,
+                    { color: colors.foreground },
+                  ]}
+                >
+                  {t.locationPermission.allow}
+                </Text>
+              </Pressable>
             )}
 
             {onWalkPlan && (

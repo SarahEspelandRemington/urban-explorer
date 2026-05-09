@@ -122,6 +122,7 @@ export interface Strings {
     confirmEndMessage: string;
     confirmEndOk: string;
     confirmEndCancel: string;
+    filterBtn: string;
   };
   walkPlan: {
     title: string;
@@ -270,6 +271,8 @@ export interface Strings {
     headerSubtitle: string;
     reset: string;
     resetAccessibility: string;
+    resetConfirmTitle: string;
+    resetConfirmMessage: string;
     addMessage: string;
     addMessageAccessibility: string;
     messagePlaceholder: string;
@@ -398,12 +401,13 @@ const en: Strings = {
       "Your walk history will be saved, but the session will end.",
     confirmEndOk: "End Walk",
     confirmEndCancel: "Keep Walking",
+    filterBtn: "Filters",
   },
   walkPlan: {
     title: "Plan a Walk",
     subtitle: "Enter start and end to pre-load stories along your route",
-    startPlaceholder: "Starting point",
-    endPlaceholder: "Destination",
+    startPlaceholder: "e.g. Central Park, New York",
+    endPlaceholder: "e.g. Times Square, New York",
     findRoute: "Find Route",
     startWalk: "Start Walk",
     searching: "Finding route…",
@@ -507,7 +511,7 @@ const en: Strings = {
     headerSubtitle: "Curious about a specific building? Ask the historian.",
     placeholder: "e.g., 538 W 38th St, New York, NY",
     investigate: "Investigate",
-    hint: "Best for older or non-landmark buildings you've noticed in person — the AI will reason from the architecture and neighborhood when records are sparse.",
+    hint: "Works for any building — the more obscure, the better.",
     notFoundError:
       "Couldn't find that address. Try including a city or zip (e.g., '538 W 38th St, New York, NY').",
     notFoundErrorTip:
@@ -536,7 +540,7 @@ const en: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "Audio walking tours of the city around you.",
+    tagline: "Discover history, explore places, hear their stories.",
     subtitle:
       "Discover the hidden history around you. Log in or create a free account to start exploring.",
     cta: "Log in / Sign up",
@@ -547,7 +551,7 @@ const en: Strings = {
       "Tap Start Walking to hear stories about places you pass, or Plan a Route to pre-load a path.",
     welcomeDismiss: "Got it",
     subtitle: "Explore the city with live audio stories",
-    editMessages: "Loading messages",
+    editMessages: "Edit messages",
   },
   notFound: {
     stackTitle: "Oops!",
@@ -573,6 +577,8 @@ const en: Strings = {
     headerSubtitle: "Shown while the AI is thinking",
     reset: "Reset",
     resetAccessibility: "Reset to defaults",
+    resetConfirmTitle: "Reset to defaults?",
+    resetConfirmMessage: "This will restore all default messages. This cannot be undone.",
     addMessage: "Add Message",
     addMessageAccessibility: "Add a new message",
     messagePlaceholder: "Enter a message...",
@@ -705,12 +711,13 @@ const es: Strings = {
     confirmEndMessage: "Tu historial se guardará, pero la sesión terminará.",
     confirmEndOk: "Terminar paseo",
     confirmEndCancel: "Seguir caminando",
+    filterBtn: "Filtros",
   },
   walkPlan: {
     title: "Planificar un paseo",
     subtitle: "Ingresa inicio y destino para precargar historias en tu ruta",
-    startPlaceholder: "Punto de partida",
-    endPlaceholder: "Destino",
+    startPlaceholder: "ej. Parque Central, Nueva York",
+    endPlaceholder: "ej. Times Square, Nueva York",
     findRoute: "Encontrar ruta",
     startWalk: "Iniciar paseo",
     searching: "Buscando ruta…",
@@ -816,7 +823,7 @@ const es: Strings = {
       "¿Curioso por un edificio en particular? Pregunta al historiador.",
     placeholder: "p. ej., 538 W 38th St, New York, NY",
     investigate: "Investigar",
-    hint: "Ideal para edificios antiguos o no famosos que hayas visto en persona — la IA razonará a partir de la arquitectura y el barrio cuando los registros sean escasos.",
+    hint: "Funciona con cualquier edificio — cuanto más desconocido, mejor.",
     notFoundError:
       "No encontramos esa dirección. Intenta incluir una ciudad o código postal.",
     notFoundErrorTip:
@@ -847,7 +854,7 @@ const es: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "Audioguías a pie por la ciudad que te rodea.",
+    tagline: "Descubre historia, explora lugares, escucha sus historias.",
     subtitle:
       "Descubre la historia oculta a tu alrededor. Inicia sesión o crea una cuenta gratis para empezar.",
     cta: "Iniciar sesión / Registrarse",
@@ -858,7 +865,7 @@ const es: Strings = {
       "Toca Empezar a caminar para oír historias sobre los lugares que pasas, o Planificar una ruta para precargarla.",
     welcomeDismiss: "Entendido",
     subtitle: "Explora la ciudad con relatos de audio en directo",
-    editMessages: "Mensajes de carga",
+    editMessages: "Editar mensajes",
   },
   notFound: {
     stackTitle: "¡Vaya!",
@@ -884,6 +891,8 @@ const es: Strings = {
     headerSubtitle: "Se muestran mientras la IA procesa",
     reset: "Restablecer",
     resetAccessibility: "Restablecer a predeterminados",
+    resetConfirmTitle: "¿Restablecer predeterminados?",
+    resetConfirmMessage: "Se restaurarán todos los mensajes predeterminados. No se puede deshacer.",
     addMessage: "Agregar mensaje",
     addMessageAccessibility: "Agregar nuevo mensaje",
     messagePlaceholder: "Escribe un mensaje...",
@@ -1016,13 +1025,14 @@ const fr: Strings = {
       "Votre historique sera sauvegardé, mais la session prendra fin.",
     confirmEndOk: "Terminer",
     confirmEndCancel: "Continuer",
+    filterBtn: "Filtres",
   },
   walkPlan: {
     title: "Planifier une balade",
     subtitle:
       "Entrez départ et destination pour charger les histoires à l'avance",
-    startPlaceholder: "Point de départ",
-    endPlaceholder: "Destination",
+    startPlaceholder: "ex. Parc Central, New York",
+    endPlaceholder: "ex. Times Square, New York",
     findRoute: "Trouver l'itinéraire",
     startWalk: "Démarrer la balade",
     searching: "Recherche de l'itinéraire…",
@@ -1128,7 +1138,7 @@ const fr: Strings = {
     headerSubtitle: "Curieux d'un bâtiment précis ? Demandez à l'historien.",
     placeholder: "ex., 538 W 38th St, New York, NY",
     investigate: "Enquêter",
-    hint: "Idéal pour les bâtiments anciens ou non emblématiques que vous avez remarqués — l'IA raisonne à partir de l'architecture et du quartier quand les archives sont rares.",
+    hint: "Fonctionne pour n'importe quel bâtiment — plus il est méconnu, mieux c'est.",
     notFoundError:
       "Adresse introuvable. Essayez d'inclure une ville ou un code postal.",
     notFoundErrorTip:
@@ -1158,7 +1168,7 @@ const fr: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "Visites audio à pied de la ville qui vous entoure.",
+    tagline: "Découvrez l'histoire, explorez les lieux, écoutez leurs récits.",
     subtitle:
       "Découvrez l'histoire cachée autour de vous. Connectez-vous ou créez un compte gratuit pour commencer.",
     cta: "Se connecter / S'inscrire",
@@ -1169,7 +1179,7 @@ const fr: Strings = {
       "Touchez Commencer à marcher pour entendre des récits sur les lieux que vous croisez, ou Planifier un itinéraire pour le précharger.",
     welcomeDismiss: "Compris",
     subtitle: "Explorez la ville avec des histoires audio en direct",
-    editMessages: "Messages de chargement",
+    editMessages: "Modifier les messages",
   },
   notFound: {
     stackTitle: "Oups !",
@@ -1195,6 +1205,8 @@ const fr: Strings = {
     headerSubtitle: "Affichés pendant que l'IA réfléchit",
     reset: "Réinitialiser",
     resetAccessibility: "Réinitialiser les valeurs par défaut",
+    resetConfirmTitle: "Réinitialiser ?",
+    resetConfirmMessage: "Les messages par défaut seront restaurés. Cette action est irréversible.",
     addMessage: "Ajouter un message",
     addMessageAccessibility: "Ajouter un nouveau message",
     messagePlaceholder: "Saisir un message...",
@@ -1326,12 +1338,13 @@ const de: Strings = {
       "Dein Lauf-Verlauf wird gespeichert, aber die Sitzung endet.",
     confirmEndOk: "Beenden",
     confirmEndCancel: "Weiterlaufen",
+    filterBtn: "Filter",
   },
   walkPlan: {
     title: "Spaziergang planen",
     subtitle: "Start und Ziel eingeben, um Geschichten vorher zu laden",
-    startPlaceholder: "Startpunkt",
-    endPlaceholder: "Ziel",
+    startPlaceholder: "z.B. Central Park, New York",
+    endPlaceholder: "z.B. Times Square, New York",
     findRoute: "Route finden",
     startWalk: "Spaziergang starten",
     searching: "Route suchen…",
@@ -1438,7 +1451,7 @@ const de: Strings = {
       "Neugierig auf ein bestimmtes Gebäude? Frag den Historiker.",
     placeholder: "z. B. 538 W 38th St, New York, NY",
     investigate: "Untersuchen",
-    hint: "Am besten für ältere oder unbekannte Gebäude, die du gesehen hast — die KI schließt aus Architektur und Umgebung, wenn Quellen knapp sind.",
+    hint: "Funktioniert für jedes Gebäude — je unbekannter, desto besser.",
     notFoundError:
       "Adresse nicht gefunden. Versuche es mit Stadt oder Postleitzahl.",
     notFoundErrorTip:
@@ -1468,7 +1481,7 @@ const de: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "Audio-Stadtspaziergänge durch deine Umgebung.",
+    tagline: "Entdecke Geschichte, erkunde Orte, höre ihre Geschichten.",
     subtitle:
       "Entdecke die verborgene Geschichte um dich herum. Melde dich an oder erstelle ein kostenloses Konto.",
     cta: "Anmelden / Registrieren",
@@ -1479,7 +1492,7 @@ const de: Strings = {
       "Tippe auf Loslaufen, um Geschichten zu Orten an deiner Route zu hören, oder auf Route planen, um sie vorab zu laden.",
     welcomeDismiss: "Verstanden",
     subtitle: "Entdecke die Stadt mit live Audio-Geschichten",
-    editMessages: "Lademeldungen",
+    editMessages: "Nachrichten bearbeiten",
   },
   notFound: {
     stackTitle: "Hoppla!",
@@ -1505,6 +1518,8 @@ const de: Strings = {
     headerSubtitle: "Angezeigt während die KI lädt",
     reset: "Zurücksetzen",
     resetAccessibility: "Auf Standard zurücksetzen",
+    resetConfirmTitle: "Zurücksetzen?",
+    resetConfirmMessage: "Alle Standardnachrichten werden wiederhergestellt. Dies kann nicht rückgängig gemacht werden.",
     addMessage: "Nachricht hinzufügen",
     addMessageAccessibility: "Neue Nachricht hinzufügen",
     messagePlaceholder: "Nachricht eingeben...",
@@ -1635,13 +1650,14 @@ const it: Strings = {
     confirmEndMessage: "La cronologia verrà salvata, ma la sessione terminerà.",
     confirmEndOk: "Termina",
     confirmEndCancel: "Continua",
+    filterBtn: "Filtri",
   },
   walkPlan: {
     title: "Pianifica una passeggiata",
     subtitle:
       "Inserisci partenza e destinazione per caricare le storie in anticipo",
-    startPlaceholder: "Punto di partenza",
-    endPlaceholder: "Destinazione",
+    startPlaceholder: "es. Central Park, New York",
+    endPlaceholder: "es. Times Square, New York",
     findRoute: "Trova percorso",
     startWalk: "Inizia passeggiata",
     searching: "Ricerca percorso…",
@@ -1746,7 +1762,7 @@ const it: Strings = {
     headerSubtitle: "Curioso di un edificio? Chiedi allo storico.",
     placeholder: "es., 538 W 38th St, New York, NY",
     investigate: "Indaga",
-    hint: "Ideale per edifici vecchi o non famosi che hai notato — l'IA ragiona sull'architettura e il quartiere quando le fonti sono scarse.",
+    hint: "Funziona per qualsiasi edificio — più è oscuro, meglio è.",
     notFoundError:
       "Indirizzo non trovato. Prova a includere città o codice postale.",
     notFoundErrorTip:
@@ -1775,7 +1791,7 @@ const it: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "Visite audio a piedi della città intorno a te.",
+    tagline: "Scopri la storia, esplora i luoghi, ascolta le loro storie.",
     subtitle:
       "Scopri la storia nascosta intorno a te. Accedi o crea un account gratuito per iniziare.",
     cta: "Accedi / Registrati",
@@ -1786,7 +1802,7 @@ const it: Strings = {
       "Tocca Inizia a camminare per ascoltare storie sui luoghi che incontri, o Pianifica un percorso per precaricarlo.",
     welcomeDismiss: "Ho capito",
     subtitle: "Esplora la città con storie audio dal vivo",
-    editMessages: "Messaggi di caricamento",
+    editMessages: "Modifica messaggi",
   },
   notFound: {
     stackTitle: "Ops!",
@@ -1812,6 +1828,8 @@ const it: Strings = {
     headerSubtitle: "Mostrati mentre l'IA elabora",
     reset: "Ripristina",
     resetAccessibility: "Ripristina impostazioni predefinite",
+    resetConfirmTitle: "Ripristinare?",
+    resetConfirmMessage: "I messaggi predefiniti verranno ripristinati. Non è possibile annullare.",
     addMessage: "Aggiungi messaggio",
     addMessageAccessibility: "Aggiungi un nuovo messaggio",
     messagePlaceholder: "Inserisci un messaggio...",
@@ -1943,12 +1961,13 @@ const pt: Strings = {
     confirmEndMessage: "Seu histórico será salvo, mas a sessão será encerrada.",
     confirmEndOk: "Terminar",
     confirmEndCancel: "Continuar",
+    filterBtn: "Filtros",
   },
   walkPlan: {
     title: "Planejar passeio",
     subtitle: "Insira início e destino para carregar histórias na rota",
-    startPlaceholder: "Ponto de partida",
-    endPlaceholder: "Destino",
+    startPlaceholder: "ex. Central Park, Nova York",
+    endPlaceholder: "ex. Times Square, Nova York",
     findRoute: "Encontrar rota",
     startWalk: "Iniciar passeio",
     searching: "Buscando rota…",
@@ -2056,7 +2075,7 @@ const pt: Strings = {
       "Curioso sobre um prédio específico? Pergunte ao historiador.",
     placeholder: "ex., 538 W 38th St, New York, NY",
     investigate: "Investigar",
-    hint: "Ideal para prédios antigos ou não famosos que você notou — a IA raciocina pela arquitetura e o bairro quando faltam registros.",
+    hint: "Funciona para qualquer edifício — quanto mais obscuro, melhor.",
     notFoundError: "Endereço não encontrado. Tente incluir cidade ou CEP.",
     notFoundErrorTip:
       "Tente um endereço de rua ou nome de bairro, incluindo a cidade ou o CEP.",
@@ -2086,7 +2105,7 @@ const pt: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "Tours a pé com áudio pela cidade ao seu redor.",
+    tagline: "Descubra história, explore lugares, ouça suas histórias.",
     subtitle:
       "Descubra a história escondida ao seu redor. Entre ou crie uma conta grátis para começar.",
     cta: "Entrar / Cadastrar",
@@ -2097,7 +2116,7 @@ const pt: Strings = {
       "Toque em Começar a caminhar para ouvir histórias sobre lugares que passa, ou em Planejar rota para pré-carregar um caminho.",
     welcomeDismiss: "Entendi",
     subtitle: "Explore a cidade com histórias de áudio ao vivo",
-    editMessages: "Mensagens de carregamento",
+    editMessages: "Editar mensagens",
   },
   notFound: {
     stackTitle: "Ops!",
@@ -2123,6 +2142,8 @@ const pt: Strings = {
     headerSubtitle: "Exibidas enquanto a IA processa",
     reset: "Redefinir",
     resetAccessibility: "Redefinir para padrões",
+    resetConfirmTitle: "Redefinir?",
+    resetConfirmMessage: "As mensagens padrão serão restauradas. Isso não pode ser desfeito.",
     addMessage: "Adicionar mensagem",
     addMessageAccessibility: "Adicionar nova mensagem",
     messagePlaceholder: "Insira uma mensagem...",
@@ -2251,12 +2272,13 @@ const nl: Strings = {
       "Je wandelgeschiedenis wordt opgeslagen, maar de sessie eindigt.",
     confirmEndOk: "Beëindigen",
     confirmEndCancel: "Doorgaan",
+    filterBtn: "Filters",
   },
   walkPlan: {
     title: "Wandeling plannen",
     subtitle: "Voer start en bestemming in om verhalen vooraf te laden",
-    startPlaceholder: "Vertrekpunt",
-    endPlaceholder: "Bestemming",
+    startPlaceholder: "bijv. Central Park, New York",
+    endPlaceholder: "bijv. Times Square, New York",
     findRoute: "Route zoeken",
     startWalk: "Wandeling starten",
     searching: "Route zoeken…",
@@ -2362,7 +2384,7 @@ const nl: Strings = {
     headerSubtitle: "Nieuwsgierig naar een gebouw? Vraag het de historicus.",
     placeholder: "bijv., 538 W 38th St, New York, NY",
     investigate: "Onderzoek",
-    hint: "Ideaal voor oudere of onbekende gebouwen die je hebt opgemerkt — de AI redeneert vanuit architectuur en buurt als bronnen schaars zijn.",
+    hint: "Werkt voor elk gebouw — hoe obscuurder, hoe beter.",
     notFoundError: "Adres niet gevonden. Voeg een stad of postcode toe.",
     notFoundErrorTip:
       "Probeer een straatadres of wijknaam, inclusief stad of postcode.",
@@ -2390,7 +2412,7 @@ const nl: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "Audiowandelingen door de stad om je heen.",
+    tagline: "Ontdek geschiedenis, verken plekken, hoor hun verhalen.",
     subtitle:
       "Ontdek de verborgen geschiedenis om je heen. Log in of maak een gratis account om te beginnen.",
     cta: "Inloggen / Registreren",
@@ -2401,7 +2423,7 @@ const nl: Strings = {
       "Tik op Begin met wandelen om verhalen te horen over plekken die je passeert, of op Plan een route om er een vooraf te laden.",
     welcomeDismiss: "Begrepen",
     subtitle: "Verken de stad met live audioverhaaltjes",
-    editMessages: "Laadberichten",
+    editMessages: "Berichten bewerken",
   },
   notFound: {
     stackTitle: "Oeps!",
@@ -2427,6 +2449,8 @@ const nl: Strings = {
     headerSubtitle: "Getoond terwijl de AI nadenkt",
     reset: "Herstellen",
     resetAccessibility: "Herstellen naar standaard",
+    resetConfirmTitle: "Herstellen?",
+    resetConfirmMessage: "De standaardberichten worden hersteld. Dit kan niet ongedaan worden gemaakt.",
     addMessage: "Bericht toevoegen",
     addMessageAccessibility: "Nieuw bericht toevoegen",
     messagePlaceholder: "Voer een bericht in...",
@@ -2555,12 +2579,13 @@ const ja: Strings = {
     confirmEndMessage: "ウォーク履歴は保存されますが、セッションは終了します。",
     confirmEndOk: "終了",
     confirmEndCancel: "続ける",
+    filterBtn: "フィルター",
   },
   walkPlan: {
     title: "ウォーク計画",
     subtitle: "出発地と目的地を入力してルートのストーリーを事前に読み込む",
-    startPlaceholder: "出発地",
-    endPlaceholder: "目的地",
+    startPlaceholder: "例: セントラルパーク, ニューヨーク",
+    endPlaceholder: "例: タイムズスクエア, ニューヨーク",
     findRoute: "ルートを探す",
     startWalk: "ウォーク開始",
     searching: "ルートを検索中…",
@@ -2665,7 +2690,7 @@ const ja: Strings = {
     headerSubtitle: "気になる建物がありますか？歴史家に聞いてみましょう。",
     placeholder: "例：538 W 38th St, New York, NY",
     investigate: "調査する",
-    hint: "実際に見かけた古い建物や知られていない建物に最適 — 記録が少ない時は、AIが建築や周辺から推測します。",
+    hint: "どんな建物でも使えます — 知られていないほど、より面白い。",
     notFoundError:
       "その住所が見つかりません。市区町村や郵便番号を含めてみてください。",
     notFoundErrorTip:
@@ -2693,7 +2718,7 @@ const ja: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "あなたの街を歩きながら聴く音声ツアー。",
+    tagline: "歴史を発見し、場所を探索し、物語を聴こう。",
     subtitle:
       "あなたの周りに隠れた歴史を発見しましょう。ログインまたは無料登録して始めてください。",
     cta: "ログイン / 新規登録",
@@ -2704,7 +2729,7 @@ const ja: Strings = {
       "「歩きはじめる」を押すと通り過ぎる場所の物語が流れます。事前に経路を読み込むには「ルートを計画」を押してください。",
     welcomeDismiss: "わかりました",
     subtitle: "ライブ音声ストーリーで街を探索",
-    editMessages: "読み込みメッセージ",
+    editMessages: "メッセージを編集",
   },
   notFound: {
     stackTitle: "おっと！",
@@ -2730,6 +2755,8 @@ const ja: Strings = {
     headerSubtitle: "AIが処理中に表示",
     reset: "リセット",
     resetAccessibility: "デフォルトにリセット",
+    resetConfirmTitle: "リセットしますか？",
+    resetConfirmMessage: "すべてのデフォルトメッセージに戻ります。この操作は取り消せません。",
     addMessage: "メッセージを追加",
     addMessageAccessibility: "新しいメッセージを追加",
     messagePlaceholder: "メッセージを入力...",
@@ -2854,12 +2881,13 @@ const ko: Strings = {
     confirmEndMessage: "워크 기록은 저장되지만 세션이 종료됩니다.",
     confirmEndOk: "종료",
     confirmEndCancel: "계속 걷기",
+    filterBtn: "필터",
   },
   walkPlan: {
     title: "걷기 계획",
     subtitle: "출발지와 목적지를 입력하여 경로의 이야기를 미리 불러오기",
-    startPlaceholder: "출발지",
-    endPlaceholder: "목적지",
+    startPlaceholder: "예: 센트럴 파크, 뉴욕",
+    endPlaceholder: "예: 타임스 스퀘어, 뉴욕",
     findRoute: "경로 찾기",
     startWalk: "걷기 시작",
     searching: "경로 검색 중…",
@@ -2961,7 +2989,7 @@ const ko: Strings = {
     headerSubtitle: "특정 건물이 궁금한가요? 역사가에게 물어보세요.",
     placeholder: "예: 538 W 38th St, New York, NY",
     investigate: "조사하기",
-    hint: "실제로 본 오래되거나 잘 알려지지 않은 건물에 가장 적합해요 — 자료가 부족할 때 AI가 건축과 동네를 통해 추론합니다.",
+    hint: "어떤 건물이든 사용할 수 있어요 — 알려지지 않을수록 더 흥미롭습니다.",
     notFoundError: "주소를 찾지 못했어요. 도시나 우편번호를 포함해 보세요.",
     notFoundErrorTip:
       "도로명 주소나 동네 이름을 도시 또는 우편번호와 함께 입력해 보세요.",
@@ -2989,7 +3017,7 @@ const ko: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "주변 도시를 걷며 듣는 오디오 투어.",
+    tagline: "역사를 발견하고, 장소를 탐험하고, 이야기를 들어보세요.",
     subtitle:
       "주변에 숨겨진 역사를 발견하세요. 로그인하거나 무료 계정을 만들어 시작하세요.",
     cta: "로그인 / 회원가입",
@@ -3000,7 +3028,7 @@ const ko: Strings = {
       "걷기 시작을 누르면 지나치는 장소의 이야기를 들을 수 있어요. 경로를 미리 받으려면 경로 계획을 눌러보세요.",
     welcomeDismiss: "확인",
     subtitle: "라이브 오디오 스토리로 도시를 탐험하세요",
-    editMessages: "로딩 메시지",
+    editMessages: "메시지 편집",
   },
   notFound: {
     stackTitle: "이런!",
@@ -3026,6 +3054,8 @@ const ko: Strings = {
     headerSubtitle: "AI가 처리하는 동안 표시",
     reset: "초기화",
     resetAccessibility: "기본값으로 초기화",
+    resetConfirmTitle: "초기화하시겠습니까?",
+    resetConfirmMessage: "모든 기본 메시지로 복원됩니다. 되돌릴 수 없습니다.",
     addMessage: "메시지 추가",
     addMessageAccessibility: "새 메시지 추가",
     messagePlaceholder: "메시지를 입력하세요...",
@@ -3148,12 +3178,13 @@ const zh: Strings = {
     confirmEndMessage: "漫步记录将被保存，但本次会话将结束。",
     confirmEndOk: "结束",
     confirmEndCancel: "继续漫步",
+    filterBtn: "筛选",
   },
   walkPlan: {
     title: "规划步行",
     subtitle: "输入起点和终点，提前加载沿途故事",
-    startPlaceholder: "出发地",
-    endPlaceholder: "目的地",
+    startPlaceholder: "例如: 中央公园, 纽约",
+    endPlaceholder: "例如: 时代广场, 纽约",
     findRoute: "查找路线",
     startWalk: "开始步行",
     searching: "正在查找路线…",
@@ -3251,7 +3282,7 @@ const zh: Strings = {
     headerSubtitle: "对某个建筑感兴趣？请教历史学家。",
     placeholder: "如：538 W 38th St, New York, NY",
     investigate: "开始调查",
-    hint: "最适合你亲眼见过的老建筑或非地标 — 资料稀缺时，AI 会从建筑风格和街区背景推断。",
+    hint: "适用于任何建筑 — 越冷僻越有趣。",
     notFoundError: "没找到该地址。请尝试加上城市或邮编。",
     notFoundErrorTip: "试试街道地址或社区名称，并附上城市或邮政编码。",
     busyError: "我们有点忙 — 请稍候再试。",
@@ -3276,7 +3307,7 @@ const zh: Strings = {
   },
   login: {
     title: "Urban Explorer",
-    tagline: "在你身边的城市里漫步,边走边听。",
+    tagline: "发现历史，探索地点，聆听它们的故事。",
     subtitle: "发现你身边隐藏的历史。登录或免费注册以开始。",
     cta: "登录 / 注册",
   },
@@ -3286,7 +3317,7 @@ const zh: Strings = {
       "点击「开始漫步」聆听沿途地点的故事,或点击「规划路线」预先加载路径。",
     welcomeDismiss: "知道了",
     subtitle: "通过实时音频故事探索城市",
-    editMessages: "加载消息",
+    editMessages: "编辑消息",
   },
   notFound: {
     stackTitle: "哎呀！",
@@ -3312,6 +3343,8 @@ const zh: Strings = {
     headerSubtitle: "AI 思考时显示",
     reset: "重置",
     resetAccessibility: "重置为默认值",
+    resetConfirmTitle: "重置为默认值？",
+    resetConfirmMessage: "将恢复所有默认消息，此操作无法撤销。",
     addMessage: "添加消息",
     addMessageAccessibility: "添加新消息",
     messagePlaceholder: "输入消息...",
