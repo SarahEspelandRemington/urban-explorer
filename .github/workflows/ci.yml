@@ -185,23 +185,41 @@ jobs:
           lint_output=$(pnpm run lint 2>&1) && echo "$lint_output" || {
             echo "$lint_output"
 
+            # Emit a GitHub Actions ::error annotation for every ESLint error so
+            # GitHub highlights the offending line directly in the PR diff view.
+            # ESLint default output: file header at col 0, then indented "line:col  error  msg  rule"
+            printf '%s\n' "$lint_output" | awk '
+              /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
+              /[[:space:]]error[[:space:]]/ {
+                split($1, loc, ":")
+                line_num = loc[1]; col_num = loc[2]
+                msg = ""
+                for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
+                printf "::error file=%s,line=%s,col=%s::%s\n", current_file, line_num, col_num, msg
+              }
+            '
+
             # Build a per-file error summary from ESLint's default output.
             # File header lines start at column 0 and contain a source extension;
             # error lines are indented and contain the word "error".
+            # Summary rows include the first-error line number: file.ts:42 — N error(s): msg
             lint_file_list=$(printf '%s\n' "$lint_output" | awk '
               /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
               /[[:space:]]error[[:space:]]/ {
+                split($1, loc, ":")
+                line_num = loc[1]
                 count[current_file]++
                 if (!first_msg[current_file]) {
                   msg = ""
                   for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
                   first_msg[current_file] = msg
+                  first_line[current_file] = line_num
                 }
               }
               END {
                 for (f in count)
                   if (f != "" && count[f] > 0)
-                    printf "- `%s` — %d error(s): %s\n", f, count[f], first_msg[f]
+                    printf "- `%s:%s` — %d error(s): %s\n", f, first_line[f], count[f], first_msg[f]
               }
             ' | sort)
             lint_file_count=$(printf '%s\n' "$lint_file_list" | grep -c '^-' || true)
@@ -331,26 +349,45 @@ jobs:
           tc_output=$(pnpm run typecheck 2>&1) && echo "$tc_output" || {
             echo "$tc_output"
 
+            # Emit a GitHub Actions ::error annotation for every tsc error so
+            # GitHub highlights the offending line directly in the PR diff view.
+            # tsc error lines: path/to/file.ts(line,col): error TSxxxx: message
+            printf '%s\n' "$tc_output" | awk '
+              /: error TS/ {
+                f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+                loc = $0; sub(/^[^(]*\(/, "", loc); sub(/\):.*/, "", loc)
+                split(loc, pos, ",")
+                line_num = pos[1]; col_num = pos[2]
+                msg = $0; sub(/.*: error TS[0-9]+: /, "", msg)
+                if (f != "")
+                  printf "::error file=%s,line=%s,col=%s::%s\n", f, line_num, col_num, msg
+              }
+            '
+
             # Build a per-file error summary from tsc output.
             # tsc error lines have the form: path/to/file.ts(line,col): error TSxxxx: …
+            # Summary rows include the first-error line number: file.ts:42 — N error(s): msg
             tc_file_list=$(printf '%s\n' "$tc_output" | awk '
               /: error TS/ {
-                # Extract the file path: everything before the first "("
                 f = $0
                 sub(/\(.*/, "", f)
                 gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+                loc = $0; sub(/^[^(]*\(/, "", loc); sub(/\):.*/, "", loc)
+                split(loc, pos, ",")
+                line_num = pos[1]
                 if (f != "") {
                   count[f]++
                   if (!first_msg[f]) {
                     msg = $0
                     sub(/.*: error /, "", msg)
                     first_msg[f] = msg
+                    first_line[f] = line_num
                   }
                 }
               }
               END {
                 for (f in count)
-                  printf "- `%s` — %d error(s): %s\n", f, count[f], first_msg[f]
+                  printf "- `%s:%s` — %d error(s): %s\n", f, first_line[f], count[f], first_msg[f]
               }
             ' | sort)
             tc_file_count=$(printf '%s\n' "$tc_file_list" | grep -c '^-' || true)
