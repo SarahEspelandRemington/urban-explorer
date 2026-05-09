@@ -144,6 +144,9 @@ jobs:
             echo "    pnpm run format && git commit -a --amend --no-edit"
             echo ""
             echo "Then push again."
+            while IFS= read -r file; do
+              echo "::error file=${file}::File is not formatted with Prettier"
+            done < <(pnpm prettier --list-different . 2>/dev/null)
             exit 1
           }
 
