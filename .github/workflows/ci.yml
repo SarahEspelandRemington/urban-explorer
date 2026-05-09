@@ -591,12 +591,44 @@ jobs:
             const existing = comments.find((c) => c.body && c.body.includes(marker));
 
             if (!failed) {
-              // All checks passed — delete any previous failure comment.
+              // All checks passed — post (or update) a success comment so
+              // warning counts stay visible to reviewers even on green builds.
+              const hasWarnings = lintWarningCount > 0 || tcWarningCount > 0;
+              const warningLines = [];
+              if (hasWarnings) {
+                warningLines.push(
+                  '',
+                  '<details><summary>⚠️ Warning counts</summary>',
+                  '',
+                  '| Check | Warnings |',
+                  '|-------|----------|',
+                );
+                if (lintWarningCount > 0) {
+                  warningLines.push(`| Lint (ESLint) | ${lintWarningCount} |`);
+                }
+                if (tcWarningCount > 0) {
+                  warningLines.push(`| Typecheck (TypeScript) | ${tcWarningCount} |`);
+                }
+                warningLines.push('', '</details>');
+              }
+              const successBody = [
+                marker,
+                '## ✅ All checks passed',
+                ...warningLines,
+              ].join('\n');
               if (existing) {
-                await github.rest.issues.deleteComment({
+                await github.rest.issues.updateComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   comment_id: existing.id,
+                  body: successBody,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.issue.number,
+                  body: successBody,
                 });
               }
               return;
