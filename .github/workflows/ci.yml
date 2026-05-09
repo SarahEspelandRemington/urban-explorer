@@ -13,6 +13,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  actions: read
 
 jobs:
   install:
@@ -191,6 +192,8 @@ jobs:
     needs: install
     outputs:
       lint_output: ${{ steps.lint.outputs.lint_output }}
+      warning_count: ${{ steps.lint.outputs.warning_count }}
+      error_count: ${{ steps.lint.outputs.error_count }}
     steps:
       - uses: actions/checkout@v4
 
@@ -220,9 +223,31 @@ jobs:
       - name: Lint (ESLint)
         id: lint
         run: |
-          lint_output=$(pnpm run lint 2>&1) && echo "$lint_output" || {
-            echo "$lint_output"
+          # Temporarily disable errexit so a non-zero exit from ESLint doesn't
+          # short-circuit the script before we can capture the exit code and
+          # counts. We restore it immediately after the subshell completes.
+          set +e
+          lint_output=$(pnpm run lint 2>&1)
+          lint_exit=$?
+          set -e
+          echo "$lint_output"
 
+          # Always count errors and warnings so trend data is available even on a
+          # clean run. These are written to GITHUB_OUTPUT and to lint-counts.json
+          # for cross-run comparison.
+          lint_error_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]error[[:space:]]' || true)
+          lint_warning_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]warning[[:space:]]' || true)
+
+          echo "warning_count=${lint_warning_count}" >> "$GITHUB_OUTPUT"
+          echo "error_count=${lint_error_count}" >> "$GITHUB_OUTPUT"
+
+          # Write a JSON artifact so warning trends can be compared across runs.
+          printf '{"errors":%d,"warnings":%d,"sha":"%s","ref":"%s"}\n' \
+            "$lint_error_count" "$lint_warning_count" \
+            "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            > lint-counts.json
+
+          if [ $lint_exit -ne 0 ]; then
             # Emit GitHub Actions ::error / ::warning annotations for every ESLint
             # diagnostic so GitHub highlights the offending line directly in the PR
             # diff view. ESLint default output: file header at col 0, then indented
@@ -282,8 +307,6 @@ jobs:
               }
             ' | sort)
             lint_file_count=$(printf '%s\n' "$lint_file_list" | grep -c '^-' || true)
-            lint_error_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]error[[:space:]]' || true)
-            lint_warning_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]warning[[:space:]]' || true)
 
             echo "## ❌ Lint failed" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -311,7 +334,15 @@ jobs:
             echo "$truncated" >> "$GITHUB_OUTPUT"
             echo "ENDOFOUTPUT" >> "$GITHUB_OUTPUT"
             exit 1
-          }
+          fi
+
+      - name: Upload lint counts artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-counts
+          path: lint-counts.json
+          retention-days: 90
 
   typecheck:
     name: Typecheck (TypeScript)
@@ -655,6 +686,143 @@ jobs:
                 body,
               });
             }
+
+  warn-trend:
+    name: Warning trend (PR)
+    runs-on: ubuntu-latest
+    needs: lint
+    # Informational only — runs even when lint fails so we can still track counts.
+    # Skipped for push events and fork PRs (no write token).
+    # continue-on-error keeps transient GitHub API failures from blocking the PR.
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    continue-on-error: true
+    steps:
+      - name: Download base-branch lint counts
+        id: base-counts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base_branch="${{ github.event.pull_request.base.ref }}"
+
+          # Find the most recent successful CI run on the base branch and
+          # download its lint-counts artifact. Failures here are non-fatal.
+          run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --branch "$base_branch" \
+            --workflow "ci.yml" \
+            --status success \
+            --limit 5 \
+            --json databaseId \
+            --jq '.[0].databaseId' 2>/dev/null || true)
+
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No successful base-branch CI run found for '${base_branch}'. Skipping comparison."
+            echo "base_warnings=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mkdir -p /tmp/base-counts
+          if gh run download "$run_id" \
+              --repo "${{ github.repository }}" \
+              --name lint-counts \
+              --dir /tmp/base-counts 2>/dev/null; then
+            base_warnings=$(jq -r '.warnings' /tmp/base-counts/lint-counts.json 2>/dev/null || echo "")
+            echo "base_warnings=${base_warnings}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Could not download lint-counts artifact from run ${run_id}."
+            echo "base_warnings=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post warning trend comment
+        uses: actions/github-script@v7
+        env:
+          HEAD_WARNINGS: ${{ needs.lint.outputs.warning_count }}
+          HEAD_ERRORS: ${{ needs.lint.outputs.error_count }}
+          BASE_WARNINGS: ${{ steps.base-counts.outputs.base_warnings }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        with:
+          script: |
+            const marker = '<!-- CI-WARN-TREND -->';
+            const headWarnings = parseInt(process.env.HEAD_WARNINGS || '0', 10);
+            const baseWarningsRaw = process.env.BASE_WARNINGS;
+            const baseBranch = process.env.BASE_BRANCH;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+
+            // Guard: require a non-empty, numeric base count before doing math.
+            const baseWarnings = parseInt(baseWarningsRaw || '', 10);
+            if (!baseWarningsRaw || isNaN(baseWarnings)) {
+              // No base data yet — clean up any stale comment and exit.
+              if (existing) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                });
+              }
+              core.info(`No base warning count available for "${baseBranch}" — skipping trend comment.`);
+              return;
+            }
+
+            const delta = headWarnings - baseWarnings;
+
+            if (delta <= 0) {
+              // Warnings unchanged or improved — remove any previous trend comment.
+              if (existing) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                });
+              }
+              const msg = delta < 0
+                ? `ESLint warnings decreased by ${-delta} (${baseWarnings} → ${headWarnings}). 🎉`
+                : `ESLint warning count unchanged (${headWarnings} warnings).`;
+              core.info(msg);
+              return;
+            }
+
+            // Warnings increased — post or update an informational comment.
+            const body = [
+              marker,
+              `## ⚠️ ESLint warnings increased`,
+              '',
+              `| | Warnings |`,
+              `|---|---|`,
+              `| Base (\`${baseBranch}\`) | ${baseWarnings} |`,
+              `| This PR | ${headWarnings} |`,
+              `| **Change** | **+${delta}** |`,
+              '',
+              'New warnings were introduced. This is **informational only** — the build is not blocked.',
+              'Consider fixing the new warnings before merging to keep the codebase healthy.',
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+            // Also surface a workflow-level warning annotation.
+            core.warning(
+              `ESLint warnings increased by ${delta} (base: ${baseWarnings}, head: ${headWarnings}). ` +
+              `Review new warnings before merging.`
+            );
 
   build:
     name: Build
