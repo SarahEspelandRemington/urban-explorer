@@ -642,14 +642,18 @@ jobs:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
           TC_WARNINGS: ${{ needs.typecheck.outputs.tc_warning_count }}
         run: |
-          lint_w="${LINT_WARNINGS:-0}"
-          tc_w="${TC_WARNINGS:-0}"
+          # Use null (JSON null) when a job was skipped/cancelled so we don't
+          # silently record 0 and distort the trend sparkline downward.
+          lint_w="${LINT_WARNINGS}"
+          tc_w="${TC_WARNINGS}"
+          [ -z "$lint_w" ] && lint_json="null" || lint_json="$lint_w"
+          [ -z "$tc_w" ]   && tc_json="null"   || tc_json="$tc_w"
           sha="${GITHUB_SHA}"
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           history=$(cat /tmp/warn-history/warn-history.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_w},\"tc\":${tc_w}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history/warn-history.json
@@ -678,21 +682,23 @@ jobs:
             echo "|-----|------|---------|-------|"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # Emit one table row per entry.
+          # Emit one table row per entry. Null counts (skipped/cancelled jobs)
+          # are rendered as "—" rather than 0 to avoid misleading the reader.
           echo "$last5" | jq -r '
             .[] |
             (.ts | split("T")[0] | split("-") as [$y, $m, $d] |
               ({"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun",
                 "07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"}[$m])
               + " " + ($d | ltrimstr("0"))) as $date |
-            "| `\(.shortSha)` | \($date) | \(.lint) | \(.tc) |"
+            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
 
-          # Build sparkline strings.
-          lint_vals=$(echo "$last5" | jq -r '[.[].lint] | map(tostring) | join(" → ")')
-          tc_vals=$(echo "$last5"   | jq -r '[.[].tc]   | map(tostring) | join(" → ")')
+          # Build sparkline strings. Null entries (skipped/cancelled jobs) are
+          # omitted from the sparkline so they don't pull the trend toward zero.
+          lint_vals=$(echo "$last5" | jq -r '[.[].lint | select(. != null)] | map(tostring) | join(" → ")')
+          tc_vals=$(echo "$last5"   | jq -r '[.[].tc   | select(. != null)] | map(tostring) | join(" → ")')
 
           lint_last=$(echo "$last5" | jq '.[-1].lint')
           lint_prev=$(echo "$last5" | jq '.[-2].lint')
@@ -700,13 +706,17 @@ jobs:
           tc_prev=$(echo "$last5"   | jq '.[-2].tc')
 
           lint_arrow=""
-          if   [ "$lint_last" -gt "$lint_prev" ]; then lint_arrow=" ↑"
-          elif [ "$lint_last" -lt "$lint_prev" ]; then lint_arrow=" ↓"
+          if [ "$lint_last" != "null" ] && [ "$lint_prev" != "null" ]; then
+            if   [ "$lint_last" -gt "$lint_prev" ]; then lint_arrow=" ↑"
+            elif [ "$lint_last" -lt "$lint_prev" ]; then lint_arrow=" ↓"
+            fi
           fi
 
           tc_arrow=""
-          if   [ "$tc_last" -gt "$tc_prev" ]; then tc_arrow=" ↑"
-          elif [ "$tc_last" -lt "$tc_prev" ]; then tc_arrow=" ↓"
+          if [ "$tc_last" != "null" ] && [ "$tc_prev" != "null" ]; then
+            if   [ "$tc_last" -gt "$tc_prev" ]; then tc_arrow=" ↑"
+            elif [ "$tc_last" -lt "$tc_prev" ]; then tc_arrow=" ↓"
+            fi
           fi
 
           {
@@ -766,14 +776,18 @@ jobs:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
           TC_WARNINGS: ${{ needs.typecheck.outputs.tc_warning_count }}
         run: |
-          lint_w="${LINT_WARNINGS:-0}"
-          tc_w="${TC_WARNINGS:-0}"
+          # Use null (JSON null) when a job was skipped/cancelled so we don't
+          # silently record 0 and distort the trend sparkline downward.
+          lint_w="${LINT_WARNINGS}"
+          tc_w="${TC_WARNINGS}"
+          [ -z "$lint_w" ] && lint_json="null" || lint_json="$lint_w"
+          [ -z "$tc_w" ]   && tc_json="null"   || tc_json="$tc_w"
           sha="${GITHUB_SHA}"
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           history=$(cat /tmp/warn-history-base/warn-history-base.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_w},\"tc\":${tc_w}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history-base/warn-history-base.json
@@ -913,11 +927,17 @@ jobs:
               const last5 = hist.slice(-5);
               const currentSha = context.sha;
 
+              // Null values come from skipped/cancelled jobs. Omit them from the
+              // sparkline so they don't pull the trend toward zero; compare only
+              // the last two non-null values for the direction arrow.
               function sparkline(values) {
-                const last = values[values.length - 1];
-                const prev = values[values.length - 2];
+                const nonNull = values.filter((v) => v !== null);
+                if (nonNull.length === 0) return '—';
+                if (nonNull.length === 1) return String(nonNull[0]);
+                const last = nonNull[nonNull.length - 1];
+                const prev = nonNull[nonNull.length - 2];
                 const arrow = last > prev ? ' ↑' : last < prev ? ' ↓' : '';
-                return values.map(String).join(' → ') + arrow;
+                return nonNull.map(String).join(' → ') + arrow;
               }
 
               const rows = last5.map((entry) => {
@@ -928,7 +948,9 @@ jobs:
                 const shaLabel = isCurrent
                   ? `\`${entry.shortSha}\` *(now)*`
                   : `\`${entry.shortSha}\``;
-                return `| ${shaLabel} | ${date} | ${entry.lint} | ${entry.tc} |`;
+                const lintCell = entry.lint === null ? '—' : entry.lint;
+                const tcCell = entry.tc === null ? '—' : entry.tc;
+                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} |`;
               });
 
               const lintLine = sparkline(last5.map((e) => e.lint));
