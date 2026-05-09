@@ -23,7 +23,7 @@ the definition in naturally.
 Good: "EAS (Expo's cloud build service — the thing that compiles your app into
 an installable file) will take about 10 minutes."
 
-Bad: "EAS will take about 10 minutes." *(undefined acronym)*
+Bad: "EAS will take about 10 minutes." _(undefined acronym)_
 
 **Explain what a command does, not just what it is.** When giving shell
 commands, describe what each piece does in everyday terms — like explaining
@@ -55,6 +55,7 @@ know what you would do.
 ## What the user already knows
 
 Through our sessions, the user has become comfortable with:
+
 - The general idea of a monorepo (one project folder containing multiple apps)
 - The difference between the mobile app (Expo/React Native) and the API server
 - That CI checks run automatically and need to stay green
