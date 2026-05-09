@@ -5,8 +5,8 @@ on:
   pull_request:
 
 jobs:
-  format:
-    name: Format (Prettier)
+  install:
+    name: Install dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,8 +18,58 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            artifacts/api-server/node_modules
+            artifacts/mockup-sandbox/node_modules
+            artifacts/urban-explorer/node_modules
+            lib/api-client-react/node_modules
+            lib/api-zod/node_modules
+            lib/api-spec/node_modules
+            lib/db/node_modules
+            lib/integrations-openai-ai-server/node_modules
+            lib/integrations/openai_ai_integrations/node_modules
+            scripts/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
       - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: pnpm install --frozen-lockfile
+
+  format:
+    name: Format (Prettier)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            artifacts/api-server/node_modules
+            artifacts/mockup-sandbox/node_modules
+            artifacts/urban-explorer/node_modules
+            lib/api-client-react/node_modules
+            lib/api-zod/node_modules
+            lib/api-spec/node_modules
+            lib/db/node_modules
+            lib/integrations-openai-ai-server/node_modules
+            lib/integrations/openai_ai_integrations/node_modules
+            scripts/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Check formatting (Prettier)
         run: |
@@ -57,8 +107,22 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            artifacts/api-server/node_modules
+            artifacts/mockup-sandbox/node_modules
+            artifacts/urban-explorer/node_modules
+            lib/api-client-react/node_modules
+            lib/api-zod/node_modules
+            lib/api-spec/node_modules
+            lib/db/node_modules
+            lib/integrations-openai-ai-server/node_modules
+            lib/integrations/openai_ai_integrations/node_modules
+            scripts/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Lint (ESLint)
         run: |
@@ -118,8 +182,22 @@ jobs:
           node-version: 24
           cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            artifacts/api-server/node_modules
+            artifacts/mockup-sandbox/node_modules
+            artifacts/urban-explorer/node_modules
+            lib/api-client-react/node_modules
+            lib/api-zod/node_modules
+            lib/api-spec/node_modules
+            lib/db/node_modules
+            lib/integrations-openai-ai-server/node_modules
+            lib/integrations/openai_ai_integrations/node_modules
+            scripts/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Restore TypeScript build cache (db)
         uses: actions/cache@v4
