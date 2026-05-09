@@ -33,16 +33,63 @@ jobs:
             exit 1
           )
 
-      - name: Restore TypeScript build cache
+      - name: Restore TypeScript build cache (db)
         uses: actions/cache@v4
         with:
           path: |
-            lib/*/dist
-            lib/*/*.tsbuildinfo
-            tsconfig.tsbuildinfo
-          key: tsbuildinfo-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json', 'lib/*/tsconfig.json', 'lib/*/src/**/*.ts') }}
+            lib/db/dist
+            lib/db/*.tsbuildinfo
+          key: tsbuildinfo-db-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/db/tsconfig.json', 'lib/db/src/**/*.ts') }}
           restore-keys: |
-            tsbuildinfo-${{ runner.os }}-
+            tsbuildinfo-db-${{ runner.os }}-
+
+      - name: Restore codegen cache (api-spec)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/api-zod/src/generated
+            lib/api-client-react/src/generated
+          key: codegen-api-spec-${{ runner.os }}-${{ hashFiles('lib/api-spec/openapi.yaml', 'lib/api-spec/orval.config.ts') }}
+          restore-keys: |
+            codegen-api-spec-${{ runner.os }}-
+
+      - name: Restore TypeScript build cache (api-zod)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/api-zod/dist
+            lib/api-zod/*.tsbuildinfo
+          key: tsbuildinfo-api-zod-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/api-zod/tsconfig.json', 'lib/api-zod/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-api-zod-${{ runner.os }}-
+
+      - name: Restore TypeScript build cache (api-client-react)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/api-client-react/dist
+            lib/api-client-react/*.tsbuildinfo
+          key: tsbuildinfo-api-client-react-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/api-client-react/tsconfig.json', 'lib/api-client-react/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-api-client-react-${{ runner.os }}-
+
+      - name: Restore TypeScript build cache (integrations-openai-ai-server)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/integrations-openai-ai-server/dist
+            lib/integrations-openai-ai-server/*.tsbuildinfo
+          key: tsbuildinfo-integrations-openai-ai-server-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/integrations-openai-ai-server/tsconfig.json', 'lib/integrations-openai-ai-server/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-integrations-openai-ai-server-${{ runner.os }}-
+
+      - name: Restore TypeScript solution build cache (root)
+        uses: actions/cache@v4
+        with:
+          path: tsconfig.tsbuildinfo
+          key: tsbuildinfo-root-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json') }}
+          restore-keys: |
+            tsbuildinfo-root-${{ runner.os }}-
 
       - name: Lint (ESLint)
         run: pnpm run lint
