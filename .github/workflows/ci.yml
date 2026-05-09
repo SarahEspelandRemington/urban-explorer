@@ -941,8 +941,11 @@ jobs:
               `| This PR | ${headWarnings} |`,
               `| **Change** | **+${delta}** |`,
               '',
-              'New warnings were introduced. This is **informational only** — the build is not blocked.',
-              'Consider fixing the new warnings before merging to keep the codebase healthy.',
+              'New lint warnings were introduced. The **Warning regression gate** (`warn-gate`) may block',
+              'this PR depending on the `MAX_NEW_WARNINGS` threshold configured for this repository.',
+              '',
+              'To resolve: fix the warnings, or add the `ci: allow-warning-increase` label to bypass',
+              'the gate for intentional exceptions.',
             ].join('\n');
 
             if (existing) {
@@ -966,6 +969,145 @@ jobs:
               `ESLint warnings increased by ${delta} (base: ${baseWarnings}, head: ${headWarnings}). ` +
               `Review new warnings before merging.`
             );
+
+  warn-gate:
+    name: Warning regression gate (PR)
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    # Runs on every PR push so new warnings are caught before merge.
+    # Skipped for push events and fork PRs (no write token for label reads).
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    steps:
+      - name: Download base-branch warning counts
+        id: base-counts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base_branch="${{ github.event.pull_request.base.ref }}"
+
+          # Find the most recent successful CI run on the base branch.
+          run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --branch "$base_branch" \
+            --workflow "ci.yml" \
+            --status success \
+            --limit 5 \
+            --json databaseId \
+            --jq '.[0].databaseId' 2>/dev/null || true)
+
+          base_lint=""
+          base_tc=""
+
+          if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+            mkdir -p /tmp/base-counts/lint /tmp/base-counts/tc
+
+            if gh run download "$run_id" \
+                --repo "${{ github.repository }}" \
+                --name lint-counts \
+                --dir /tmp/base-counts/lint 2>/dev/null; then
+              base_lint=$(jq -r '.warnings' /tmp/base-counts/lint/lint-counts.json 2>/dev/null || echo "")
+            fi
+
+            if gh run download "$run_id" \
+                --repo "${{ github.repository }}" \
+                --name tc-counts \
+                --dir /tmp/base-counts/tc 2>/dev/null; then
+              base_tc=$(jq -r '.warnings' /tmp/base-counts/tc/tc-counts.json 2>/dev/null || echo "")
+            fi
+          else
+            echo "No successful base-branch CI run found for '${base_branch}'. Skipping gate."
+          fi
+
+          echo "base_lint=${base_lint}" >> "$GITHUB_OUTPUT"
+          echo "base_tc=${base_tc}" >> "$GITHUB_OUTPUT"
+
+      - name: Enforce warning regression gate
+        uses: actions/github-script@v7
+        env:
+          HEAD_LINT: ${{ needs.lint.outputs.lint_warning_count }}
+          HEAD_TC: ${{ needs.typecheck.outputs.tc_warning_count }}
+          BASE_LINT: ${{ steps.base-counts.outputs.base_lint }}
+          BASE_TC: ${{ steps.base-counts.outputs.base_tc }}
+          MAX_NEW_WARNINGS: ${{ vars.MAX_NEW_WARNINGS }}
+          BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+        with:
+          script: |
+            // Threshold: repo variable MAX_NEW_WARNINGS, default 0.
+            // Set it to a positive integer to allow a grace margin (e.g. 2 per PR).
+            const threshold = parseInt(process.env.MAX_NEW_WARNINGS || '0', 10);
+            const effectiveThreshold = isNaN(threshold) ? 0 : threshold;
+
+            const headLint = parseInt(process.env.HEAD_LINT || '0', 10);
+            const headTc   = parseInt(process.env.HEAD_TC   || '0', 10);
+            const baseLintRaw = process.env.BASE_LINT;
+            const baseTcRaw   = process.env.BASE_TC;
+            const baseBranch  = process.env.BASE_BRANCH;
+
+            // Check for bypass label — allows intentional warning introductions.
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            const bypassed = pr.labels.some(l => l.name === 'ci: allow-warning-increase');
+            if (bypassed) {
+              core.warning(
+                'Warning regression gate bypassed via "ci: allow-warning-increase" label. ' +
+                'Remove the label once the warnings are addressed.'
+              );
+              return;
+            }
+
+            // No base data yet (first run on this base branch) — cannot gate; skip gracefully.
+            if (!baseLintRaw && !baseTcRaw) {
+              core.info(`No base warning counts found for "${baseBranch}" — skipping gate.`);
+              return;
+            }
+
+            const violations = [];
+
+            if (baseLintRaw) {
+              const baseLint = parseInt(baseLintRaw, 10);
+              if (!isNaN(baseLint)) {
+                const delta = headLint - baseLint;
+                if (delta > effectiveThreshold) {
+                  violations.push(
+                    `Lint: +${delta} warning(s) vs ${baseBranch} (${baseLint} → ${headLint}); ` +
+                    `threshold is ${effectiveThreshold}`
+                  );
+                } else {
+                  core.info(`Lint gate passed: delta=${delta}, threshold=${effectiveThreshold}.`);
+                }
+              }
+            }
+
+            if (baseTcRaw) {
+              const baseTc = parseInt(baseTcRaw, 10);
+              if (!isNaN(baseTc)) {
+                const delta = headTc - baseTc;
+                if (delta > effectiveThreshold) {
+                  violations.push(
+                    `Typecheck: +${delta} warning(s) vs ${baseBranch} (${baseTc} → ${headTc}); ` +
+                    `threshold is ${effectiveThreshold}`
+                  );
+                } else {
+                  core.info(`Typecheck gate passed: delta=${delta}, threshold=${effectiveThreshold}.`);
+                }
+              }
+            }
+
+            if (violations.length > 0) {
+              const lines = [
+                `⛔ Warning regression gate failed (MAX_NEW_WARNINGS=${effectiveThreshold}):`,
+                ...violations.map(v => `  • ${v}`),
+                '',
+                'Options:',
+                '  1. Fix the new warnings before merging.',
+                `  2. Add the "ci: allow-warning-increase" label to bypass this gate for intentional exceptions.`,
+                `  3. Raise the MAX_NEW_WARNINGS repository variable if a higher tolerance is acceptable.`,
+              ];
+              core.setFailed(lines.join('\n'));
+            }
 
   build:
     name: Build
