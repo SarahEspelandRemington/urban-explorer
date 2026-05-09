@@ -26,7 +26,33 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+
+      - name: Get pnpm store path
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      # Layer 1 — stable packages (root devtools + libs).
+      # Keyed on stable manifests only so changes confined to artifacts don't
+      # bust this entry.  restore-keys falls back to any previous stable entry.
+      - name: Restore pnpm store — stable layer (root devtools + libs)
+        id: pnpm-cache-stable
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-store-stable-${{ runner.os }}-${{ hashFiles('package.json', 'pnpm-workspace.yaml', 'lib/**/package.json', 'scripts/package.json') }}
+          restore-keys: |
+            pnpm-store-stable-${{ runner.os }}-
+
+      # Layer 2 — full resolved lockfile.  On exact hit pnpm installs nothing;
+      # on miss it downloads only packages absent from the stable layer above.
+      - name: Restore pnpm store — full lockfile
+        id: pnpm-cache-full
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: pnpm-store-full-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-full-${{ runner.os }}-
 
       - name: Cache node_modules
         id: cache-node-modules
@@ -50,6 +76,24 @@ jobs:
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: pnpm install --frozen-lockfile
 
+      # Save the stable-layer cache only when it was not a hit, so we don't
+      # upload an unchanged snapshot on every run.
+      - name: Save pnpm store — stable layer
+        if: steps.pnpm-cache-stable.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ steps.pnpm-cache-stable.outputs.cache-primary-key }}
+
+      # Save the full-lockfile cache only on a miss, avoiding duplicate uploads
+      # when the lockfile hasn't changed since the last run.
+      - name: Save pnpm store — full lockfile
+        if: steps.pnpm-cache-full.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ steps.pnpm-cache-full.outputs.cache-primary-key }}
+
   format:
     name: Format (Prettier)
     runs-on: ubuntu-latest
@@ -62,7 +106,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
 
       - name: Restore node_modules
         uses: actions/cache@v4
@@ -158,7 +201,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
 
       - name: Restore node_modules
         uses: actions/cache@v4
@@ -289,7 +331,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
 
       - name: Restore node_modules
         uses: actions/cache@v4
