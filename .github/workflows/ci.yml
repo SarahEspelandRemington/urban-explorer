@@ -64,8 +64,30 @@ jobs:
         run: |
           lint_output=$(pnpm run lint 2>&1) && echo "$lint_output" || {
             echo "$lint_output"
+
+            # Build a per-file error summary from ESLint's default output.
+            # File header lines start at column 0 and contain a source extension;
+            # error lines are indented and contain the word "error".
+            lint_file_list=$(printf '%s\n' "$lint_output" | awk '
+              /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
+              /[[:space:]]error[[:space:]]/ { count[current_file]++ }
+              END {
+                for (f in count)
+                  if (f != "" && count[f] > 0)
+                    printf "- `%s` — %d error(s)\n", f, count[f]
+              }
+            ' | sort)
+            lint_file_count=$(printf '%s\n' "$lint_file_list" | grep -c '^-' || true)
+            lint_error_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]error[[:space:]]' || true)
+
             echo "## ❌ Lint failed" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "$lint_file_list" ]; then
+              echo "**${lint_error_count} error(s) in ${lint_file_count} file(s):**" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              printf '%s\n' "$lint_file_list" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            fi
             echo "ESLint reported errors. Fix them locally with:" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -161,8 +183,33 @@ jobs:
         run: |
           tc_output=$(pnpm run typecheck 2>&1) && echo "$tc_output" || {
             echo "$tc_output"
+
+            # Build a per-file error summary from tsc output.
+            # tsc error lines have the form: path/to/file.ts(line,col): error TSxxxx: …
+            tc_file_list=$(printf '%s\n' "$tc_output" | awk '
+              /: error TS/ {
+                # Extract the file path: everything before the first "("
+                f = $0
+                sub(/\(.*/, "", f)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+                if (f != "") count[f]++
+              }
+              END {
+                for (f in count)
+                  printf "- `%s` — %d error(s)\n", f, count[f]
+              }
+            ' | sort)
+            tc_file_count=$(printf '%s\n' "$tc_file_list" | grep -c '^-' || true)
+            tc_error_count=$(printf '%s\n' "$tc_output" | grep -c ': error TS' || true)
+
             echo "## ❌ Typecheck failed" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
+            if [ -n "$tc_file_list" ]; then
+              echo "**${tc_error_count} error(s) in ${tc_file_count} file(s):**" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              printf '%s\n' "$tc_file_list" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            fi
             echo "TypeScript reported type errors. Fix them locally with:" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo '```' >> "$GITHUB_STEP_SUMMARY"
