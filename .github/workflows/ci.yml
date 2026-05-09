@@ -409,9 +409,10 @@ jobs:
           tc_output=$(pnpm run typecheck 2>&1) && echo "$tc_output" || {
             echo "$tc_output"
 
-            # Emit a GitHub Actions ::error annotation for every tsc error so
-            # GitHub highlights the offending line directly in the PR diff view.
-            # tsc error lines: path/to/file.ts(line,col): error TSxxxx: message
+            # Emit GitHub Actions ::error / ::warning annotations for every tsc
+            # diagnostic so GitHub highlights the offending line directly in the
+            # PR diff view.
+            # tsc diagnostic lines: path/to/file.ts(line,col): error|warning TSxxxx: message
             printf '%s\n' "$tc_output" | awk '
               /: error TS/ {
                 f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
@@ -422,11 +423,20 @@ jobs:
                 if (f != "")
                   printf "::error file=%s,line=%s,col=%s::%s\n", f, line_num, col_num, msg
               }
+              /: warning TS/ {
+                f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+                loc = $0; sub(/^[^(]*\(/, "", loc); sub(/\):.*/, "", loc)
+                split(loc, pos, ",")
+                line_num = pos[1]; col_num = pos[2]
+                msg = $0; sub(/.*: warning TS[0-9]+: /, "", msg)
+                if (f != "")
+                  printf "::warning file=%s,line=%s,col=%s::%s\n", f, line_num, col_num, msg
+              }
             '
 
-            # Build a per-file error summary from tsc output.
-            # tsc error lines have the form: path/to/file.ts(line,col): error TSxxxx: …
-            # Summary rows include the first-error line number: file.ts:42 — N error(s): msg
+            # Build a per-file error/warning summary from tsc output.
+            # tsc diagnostic lines: path/to/file.ts(line,col): error|warning TSxxxx: …
+            # Summary rows include the first-diagnostic line number: file.ts:42 — N error(s), M warning(s): msg
             tc_file_list=$(printf '%s\n' "$tc_output" | awk '
               /: error TS/ {
                 f = $0
@@ -436,7 +446,7 @@ jobs:
                 split(loc, pos, ",")
                 line_num = pos[1]
                 if (f != "") {
-                  count[f]++
+                  ecount[f]++
                   if (!first_msg[f]) {
                     msg = $0
                     sub(/.*: error /, "", msg)
@@ -445,18 +455,39 @@ jobs:
                   }
                 }
               }
+              /: warning TS/ {
+                f = $0
+                sub(/\(.*/, "", f)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+                loc = $0; sub(/^[^(]*\(/, "", loc); sub(/\):.*/, "", loc)
+                split(loc, pos, ",")
+                line_num = pos[1]
+                if (f != "") {
+                  wcount[f]++
+                  if (!first_msg[f]) {
+                    msg = $0
+                    sub(/.*: warning /, "", msg)
+                    first_msg[f] = msg
+                    first_line[f] = line_num
+                  }
+                }
+              }
               END {
-                for (f in count)
-                  printf "- `%s:%s` — %d error(s): %s\n", f, first_line[f], count[f], first_msg[f]
+                for (f in ecount) seen[f] = 1
+                for (f in wcount) seen[f] = 1
+                for (f in seen)
+                  if (f != "")
+                    printf "- `%s:%s` — %d error(s), %d warning(s): %s\n", f, first_line[f], ecount[f]+0, wcount[f]+0, first_msg[f]
               }
             ' | sort)
             tc_file_count=$(printf '%s\n' "$tc_file_list" | grep -c '^-' || true)
             tc_error_count=$(printf '%s\n' "$tc_output" | grep -c ': error TS' || true)
+            tc_warning_count=$(printf '%s\n' "$tc_output" | grep -c ': warning TS' || true)
 
             echo "## ❌ Typecheck failed" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             if [ -n "$tc_file_list" ]; then
-              echo "**${tc_error_count} error(s) in ${tc_file_count} file(s):**" >> "$GITHUB_STEP_SUMMARY"
+              echo "**${tc_error_count} error(s), ${tc_warning_count} warning(s) across ${tc_file_count} file(s):**" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
               printf '%s\n' "$tc_file_list" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
