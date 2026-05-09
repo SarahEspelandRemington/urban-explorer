@@ -7,6 +7,8 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `pnpm run typecheck`: Type-check all packages.
 - `pnpm run build`: Type-check and build all packages.
 - `pnpm run lint`: Run ESLint for `urban-explorer` and `api-server`.
+- `pnpm run format:check`: Check that all files are formatted with Prettier (CI gate — fails if any file is unformatted; run `pnpm run format` to fix).
+- `pnpm run format`: Auto-format all files with Prettier.
 - `pnpm --filter @workspace/api-spec run codegen`: Regenerate API hooks and Zod schemas.
 - `pnpm --filter @workspace/db run push`: Push DB schema changes (development only).
 - `pnpm --filter @workspace/api-server run dev`: Run API server locally.

@@ -66,4 +66,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Check formatting (Prettier)
-        run: pnpm run format:check
+        run: |
+          pnpm run format:check || (
+            echo ""
+            echo "❌ Formatting issues detected. Run the following command locally to fix:"
+            echo ""
+            echo "    pnpm run format"
+            echo ""
+            echo "Then commit the changes and push again."
+            exit 1
+          )
