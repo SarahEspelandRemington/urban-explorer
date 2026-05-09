@@ -658,6 +658,70 @@ jobs:
           path: /tmp/warn-history/warn-history.json
           retention-days: 90
 
+  record-warn-history-base:
+    name: Record base branch warning history
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    # Records a rolling warn-history-base artifact on every push (base branch
+    # merges). Skipped for pull_request events — those are tracked by
+    # record-warn-history instead.
+    # continue-on-error keeps transient GitHub API failures non-fatal.
+    if: always() && github.event_name == 'push'
+    continue-on-error: true
+    steps:
+      - name: Download previous warn-history-base artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current_branch="${GITHUB_REF_NAME}"
+          current_run_id="${{ github.run_id }}"
+
+          prev_run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --branch "$current_branch" \
+            --workflow "ci.yml" \
+            --limit 10 \
+            --json databaseId \
+            --jq "[.[] | select(.databaseId != ${current_run_id})] | .[0].databaseId" \
+            2>/dev/null || true)
+
+          mkdir -p /tmp/warn-history-base
+
+          if [ -n "$prev_run_id" ] && [ "$prev_run_id" != "null" ]; then
+            gh run download "$prev_run_id" \
+              --repo "${{ github.repository }}" \
+              --name warn-history-base \
+              --dir /tmp/warn-history-base 2>/dev/null || true
+          fi
+
+          if [ ! -f /tmp/warn-history-base/warn-history-base.json ]; then
+            echo "[]" > /tmp/warn-history-base/warn-history-base.json
+          fi
+
+      - name: Append current counts and cap history
+        env:
+          LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
+          TC_WARNINGS: ${{ needs.typecheck.outputs.tc_warning_count }}
+        run: |
+          lint_w="${LINT_WARNINGS:-0}"
+          tc_w="${TC_WARNINGS:-0}"
+          sha="${GITHUB_SHA}"
+          short_sha="${sha:0:7}"
+          ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          history=$(cat /tmp/warn-history-base/warn-history-base.json)
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_w},\"tc\":${tc_w}}"
+          # Append new entry and keep only the last 20 to avoid unbounded growth.
+          updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
+          echo "$updated" > /tmp/warn-history-base/warn-history-base.json
+
+      - name: Upload warn-history-base artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warn-history-base
+          path: /tmp/warn-history-base/warn-history-base.json
+          retention-days: 90
+
   report:
     name: Post CI summary comment
     runs-on: ubuntu-latest
@@ -1054,6 +1118,33 @@ jobs:
             echo "base_warnings=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Download base-branch warn-history-base
+        id: base-history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base_branch="${{ github.event.pull_request.base.ref }}"
+
+          # Find the most recent CI run (any status) on the base branch that
+          # has a warn-history-base artifact. Non-fatal if not found.
+          run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --branch "$base_branch" \
+            --workflow "ci.yml" \
+            --limit 10 \
+            --json databaseId \
+            --jq '.[0].databaseId' 2>/dev/null || true)
+
+          mkdir -p /tmp/warn-history-base
+          echo "[]" > /tmp/warn-history-base/warn-history-base.json
+
+          if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+            gh run download "$run_id" \
+              --repo "${{ github.repository }}" \
+              --name warn-history-base \
+              --dir /tmp/warn-history-base 2>/dev/null || true
+          fi
+
       - name: Post warning trend comment
         uses: actions/github-script@v7
         env:
@@ -1061,12 +1152,40 @@ jobs:
           HEAD_ERRORS: ${{ needs.lint.outputs.lint_error_count }}
           BASE_WARNINGS: ${{ steps.base-counts.outputs.base_warnings }}
           BASE_BRANCH: ${{ github.event.pull_request.base.ref }}
+          BASE_HISTORY_FILE: /tmp/warn-history-base/warn-history-base.json
         with:
           script: |
+            const fs = require('fs');
             const marker = '<!-- CI-WARN-TREND -->';
             const headWarnings = parseInt(process.env.HEAD_WARNINGS || '0', 10);
             const baseWarningsRaw = process.env.BASE_WARNINGS;
             const baseBranch = process.env.BASE_BRANCH;
+
+            // Load base branch history (last 5 entries for the sparkline table).
+            let baseHistory = [];
+            try {
+              const raw = fs.readFileSync(process.env.BASE_HISTORY_FILE, 'utf8');
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed)) baseHistory = parsed.slice(-5);
+            } catch (_) {
+              // History unavailable — table section will be omitted.
+            }
+
+            // Build a compact history table (last 5 merges, oldest → newest).
+            function buildHistoryTable(entries, branch) {
+              if (entries.length === 0) return [];
+              const header = [
+                `<details><summary><strong>\`${branch}\` recent history</strong> (last ${entries.length} merge${entries.length === 1 ? '' : 's'})</summary>`,
+                '',
+                '| Commit | Date | Lint warnings | TS warnings |',
+                '|---|---|---|---|',
+              ];
+              const rows = entries.map(e => {
+                const date = e.ts ? e.ts.slice(0, 10) : '—';
+                return `| \`${e.shortSha || e.sha.slice(0, 7)}\` | ${date} | ${e.lint} | ${e.tc} |`;
+              });
+              return [...header, ...rows, '', '</details>'];
+            }
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -1109,6 +1228,7 @@ jobs:
             }
 
             // Warnings increased — post or update an informational comment.
+            const historySection = buildHistoryTable(baseHistory, baseBranch);
             const body = [
               marker,
               `## ⚠️ ESLint warnings increased`,
@@ -1124,6 +1244,7 @@ jobs:
               '',
               'To resolve: fix the warnings, or add the `ci: allow-warning-increase` label to bypass',
               'the gate for intentional exceptions.',
+              ...(historySection.length > 0 ? ['', ...historySection] : []),
             ].join('\n');
 
             if (existing) {
