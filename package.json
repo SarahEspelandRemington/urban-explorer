@@ -11,7 +11,7 @@
     "codegen:check": "pnpm run codegen && git diff --exit-code -- lib/api-client-react/src/generated lib/api-zod/src/generated",
     "spec-sync": "pnpm run codegen && pnpm run typecheck",
     "check:conflicts": "sh scripts/check-conflicts.sh",
-    "lint": "pnpm run check:conflicts && pnpm run check:prompt-manifest && eslint \"artifacts/urban-explorer/**/*.{ts,tsx}\" \"artifacts/api-server/**/*.{ts,tsx}\"",
+    "lint": "pnpm run check:conflicts && pnpm run check:prompt-manifest && eslint --max-warnings 0 \"artifacts/urban-explorer/**/*.{ts,tsx}\" \"artifacts/api-server/**/*.{ts,tsx}\"",
     "check:prompt-manifest": "pnpm --filter @workspace/scripts run check:prompt-manifest",
     "update:prompt-manifest": "pnpm --filter @workspace/scripts run update:prompt-manifest",
     "lint:rules": "node eslint-rules/no-pii-in-sentry.test.mjs",
