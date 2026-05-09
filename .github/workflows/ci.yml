@@ -462,3 +462,147 @@ jobs:
                 body,
               });
             }
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Restore TypeScript build cache (db)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/db/dist
+            lib/db/*.tsbuildinfo
+          key: tsbuildinfo-db-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/db/tsconfig.json', 'lib/db/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-db-${{ runner.os }}-
+
+      - name: Restore codegen cache (api-spec)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/api-zod/src/generated
+            lib/api-client-react/src/generated
+          key: codegen-api-spec-${{ runner.os }}-${{ hashFiles('lib/api-spec/openapi.yaml', 'lib/api-spec/orval.config.ts') }}
+          restore-keys: |
+            codegen-api-spec-${{ runner.os }}-
+
+      - name: Restore TypeScript build cache (api-zod)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/api-zod/dist
+            lib/api-zod/*.tsbuildinfo
+          key: tsbuildinfo-api-zod-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/api-zod/tsconfig.json', 'lib/api-zod/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-api-zod-${{ runner.os }}-
+
+      - name: Restore TypeScript build cache (api-client-react)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/api-client-react/dist
+            lib/api-client-react/*.tsbuildinfo
+          key: tsbuildinfo-api-client-react-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/api-client-react/tsconfig.json', 'lib/api-client-react/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-api-client-react-${{ runner.os }}-
+
+      - name: Restore TypeScript build cache (integrations-openai-ai-server)
+        uses: actions/cache@v4
+        with:
+          path: |
+            lib/integrations-openai-ai-server/dist
+            lib/integrations-openai-ai-server/*.tsbuildinfo
+          key: tsbuildinfo-integrations-openai-ai-server-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/integrations-openai-ai-server/tsconfig.json', 'lib/integrations-openai-ai-server/src/**/*.ts') }}
+          restore-keys: |
+            tsbuildinfo-integrations-openai-ai-server-${{ runner.os }}-
+
+      - name: Restore TypeScript solution build cache (root)
+        uses: actions/cache@v4
+        with:
+          path: tsconfig.tsbuildinfo
+          key: tsbuildinfo-root-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json') }}
+          restore-keys: |
+            tsbuildinfo-root-${{ runner.os }}-
+
+      - name: Build
+        run: |
+          build_output=$(pnpm run build 2>&1) && echo "$build_output" || {
+            echo "$build_output"
+
+            # Extract packages that failed: pnpm prints a line containing
+            # ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL followed by the package name.
+            pkg_list=$(printf '%s\n' "$build_output" | awk '
+              /ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL/ {
+                for (i = 1; i <= NF; i++) {
+                  if ($i ~ /^@workspace\//) {
+                    printf "- `%s`\n", $i
+                    break
+                  }
+                }
+              }
+            ' | sort -u)
+
+            # Also extract TypeScript errors in case the typecheck phase failed.
+            # tsc error lines have the form: path/to/file.ts(line,col): error TSxxxx: …
+            tc_file_list=$(printf '%s\n' "$build_output" | awk '
+              /: error TS/ {
+                f = $0
+                sub(/\(.*/, "", f)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+                if (f != "") count[f]++
+              }
+              END {
+                for (f in count)
+                  printf "- `%s` — %d error(s)\n", f, count[f]
+              }
+            ' | sort)
+
+            echo "## ❌ Build failed" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+
+            if [ -n "$pkg_list" ]; then
+              pkg_count=$(printf '%s\n' "$pkg_list" | grep -c '^-' || true)
+              echo "**${pkg_count} package(s) failed to build:**" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              printf '%s\n' "$pkg_list" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            fi
+
+            if [ -n "$tc_file_list" ]; then
+              tc_file_count=$(printf '%s\n' "$tc_file_list" | grep -c '^-' || true)
+              tc_error_count=$(printf '%s\n' "$build_output" | grep -c ': error TS' || true)
+              echo "**${tc_error_count} TypeScript error(s) in ${tc_file_count} file(s):**" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+              printf '%s\n' "$tc_file_list" >> "$GITHUB_STEP_SUMMARY"
+              echo "" >> "$GITHUB_STEP_SUMMARY"
+            fi
+
+            echo "Fix locally with:" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "pnpm run build" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "<details><summary>Full build output</summary>" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "$build_output" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "</details>" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          }
