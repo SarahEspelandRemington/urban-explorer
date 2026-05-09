@@ -245,16 +245,27 @@ jobs:
               }
             '
 
-            # Build a per-file error summary from ESLint's default output.
+            # Build a per-file error/warning summary from ESLint's default output.
             # File header lines start at column 0 and contain a source extension;
-            # error lines are indented and contain the word "error".
-            # Summary rows include the first-error line number: file.ts:42 — N error(s): msg
+            # error/warning lines are indented and contain the word "error"/"warning".
+            # Summary rows include the first-error line number: file.ts:42 — N error(s), M warning(s): msg
             lint_file_list=$(printf '%s\n' "$lint_output" | awk '
               /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
               /[[:space:]]error[[:space:]]/ {
                 split($1, loc, ":")
                 line_num = loc[1]
-                count[current_file]++
+                ecount[current_file]++
+                if (!first_msg[current_file]) {
+                  msg = ""
+                  for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
+                  first_msg[current_file] = msg
+                  first_line[current_file] = line_num
+                }
+              }
+              /[[:space:]]warning[[:space:]]/ {
+                split($1, loc, ":")
+                line_num = loc[1]
+                wcount[current_file]++
                 if (!first_msg[current_file]) {
                   msg = ""
                   for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
@@ -263,18 +274,21 @@ jobs:
                 }
               }
               END {
-                for (f in count)
-                  if (f != "" && count[f] > 0)
-                    printf "- `%s:%s` — %d error(s): %s\n", f, first_line[f], count[f], first_msg[f]
+                for (f in ecount) seen[f] = 1
+                for (f in wcount) seen[f] = 1
+                for (f in seen)
+                  if (f != "")
+                    printf "- `%s:%s` — %d error(s), %d warning(s): %s\n", f, first_line[f], ecount[f]+0, wcount[f]+0, first_msg[f]
               }
             ' | sort)
             lint_file_count=$(printf '%s\n' "$lint_file_list" | grep -c '^-' || true)
             lint_error_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]error[[:space:]]' || true)
+            lint_warning_count=$(printf '%s\n' "$lint_output" | grep -c '[[:space:]]warning[[:space:]]' || true)
 
             echo "## ❌ Lint failed" >> "$GITHUB_STEP_SUMMARY"
             echo "" >> "$GITHUB_STEP_SUMMARY"
             if [ -n "$lint_file_list" ]; then
-              echo "**${lint_error_count} error(s) in ${lint_file_count} file(s):**" >> "$GITHUB_STEP_SUMMARY"
+              echo "**${lint_error_count} error(s), ${lint_warning_count} warning(s) across ${lint_file_count} file(s):**" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
               printf '%s\n' "$lint_file_list" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
