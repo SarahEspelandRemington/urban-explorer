@@ -180,10 +180,27 @@ jobs:
 
           if ! gh api "repos/${REPO}/branches/ci-data" --silent 2>/dev/null; then
             echo "ci-data branch does not exist — nothing to trim."
+            {
+              echo "## CI history trim — $(date -u +%Y-%m-%d)"
+              echo ""
+              echo "> **ci-data branch does not exist — nothing to trim.**"
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
           trimmed_files=0
+          total_checked=0
+          total_pruned=0
+
+          # Start the step summary table now; rows are appended as each file is processed.
+          {
+            echo "## CI history trim — $(date -u +%Y-%m-%d)"
+            echo ""
+            echo "Cutoff: entries older than **$(date -u -d '90 days ago' +%Y-%m-%d)** (90-day window, 20-entry cap)"
+            echo ""
+            echo "| File | Before | After | Pruned | Status |"
+            echo "|------|-------:|------:|------:|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           for dir in warn-history warn-history-base; do
             echo "--- Trimming ${dir}/ ---"
@@ -196,12 +213,14 @@ jobs:
 
             while IFS=$'\t' read -r file_name file_sha; do
               file_path="${dir}/${file_name}"
+              total_checked=$((total_checked + 1))
 
               # Fetch and decode the file content.
               raw=$(gh api "repos/${REPO}/contents/${file_path}?ref=ci-data" \
                 --jq '.content' 2>/dev/null || true)
               if [ -z "$raw" ] || [ "$raw" = "null" ]; then
                 echo "${file_path}: could not fetch content — skipping."
+                echo "| \`${file_path}\` | — | — | — | ⚠️ fetch error |" >> "$GITHUB_STEP_SUMMARY"
                 continue
               fi
               decoded=$(printf '%s' "$raw" | base64 -d)
@@ -219,6 +238,7 @@ jobs:
 
               if [ -z "$updated" ]; then
                 echo "${file_path}: failed to parse JSON — skipping."
+                echo "| \`${file_path}\` | ${original_count} | — | — | ⚠️ parse error |" >> "$GITHUB_STEP_SUMMARY"
                 continue
               fi
 
@@ -226,6 +246,7 @@ jobs:
 
               if [ "$new_count" -eq "$original_count" ]; then
                 echo "${file_path}: ${original_count} entries, none pruned — OK."
+                echo "| \`${file_path}\` | ${original_count} | ${new_count} | 0 | ✅ no change |" >> "$GITHUB_STEP_SUMMARY"
                 continue
               fi
 
@@ -233,18 +254,35 @@ jobs:
               echo "${file_path}: pruning ${pruned} entries (${original_count} → ${new_count})."
 
               content=$(printf '%s' "$updated" | base64 -w 0)
-              gh api "repos/${REPO}/contents/${file_path}" \
+              if gh api "repos/${REPO}/contents/${file_path}" \
                 --method PUT \
                 --field "message=ci: trim ${file_path} (${pruned} stale entries removed) [skip ci]" \
                 --field "content=${content}" \
                 --field "sha=${file_sha}" \
                 --field "branch=ci-data" \
-                2>/dev/null \
-                && { echo "${file_path}: updated."; trimmed_files=$((trimmed_files + 1)); } \
-                || echo "::warning::Failed to update ${file_path} — will retry next week."
+                2>/dev/null; then
+                echo "${file_path}: updated."
+                trimmed_files=$((trimmed_files + 1))
+                total_pruned=$((total_pruned + pruned))
+                echo "| \`${file_path}\` | ${original_count} | ${new_count} | ${pruned} | ✂️ pruned |" >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo "::warning::Failed to update ${file_path} — will retry next week."
+                echo "| \`${file_path}\` | ${original_count} | ${new_count} | ${pruned} | ⚠️ update failed |" >> "$GITHUB_STEP_SUMMARY"
+              fi
 
             done < <(printf '%s' "$dir_listing" | jq -r '.[] | select(.type == "file" and (.name | endswith(".json"))) | [.name, .sha] | @tsv')
           done
 
           echo ""
           echo "Trim complete. Updated ${trimmed_files} file(s)."
+
+          # ── Append totals to the step summary ──────────────────────────────
+          if [ "$total_checked" -eq 0 ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "_No history files found on ci-data._" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo ""
+              echo "**Total files checked:** ${total_checked} &nbsp;|&nbsp; **Files updated:** ${trimmed_files} &nbsp;|&nbsp; **Entries pruned:** ${total_pruned}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
