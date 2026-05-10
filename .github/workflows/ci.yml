@@ -883,6 +883,7 @@ jobs:
           fi
 
       - name: Compare build time against base-branch average
+        id: compare
         env:
           MAX_BUILD_TIME_INCREASE_PCT: ${{ vars.MAX_BUILD_TIME_INCREASE_PCT }}
         run: |
@@ -928,6 +929,8 @@ jobs:
               echo "No \`build_s\` entries found in \`warn-history-base\`."
               echo "Comparison will be available after the base branch accumulates build history."
             } >> "$GITHUB_STEP_SUMMARY"
+            echo "spike=false" >> "$GITHUB_OUTPUT"
+            echo "avg_s=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -964,6 +967,17 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::warning::Build time spike: ${current_fmt} is ${increase_pct}% above the base-branch average of ${avg_fmt} (threshold: ${threshold_pct}%). Review recent changes for unexpected build slowdowns."
             echo "Build time increased by ${increase_pct}% (${avg_fmt} → ${current_fmt}), exceeding the ${threshold_pct}% threshold (allowed max: ${allowed_fmt})."
+            {
+              echo "spike=true"
+              echo "current_s=${current_build_s}"
+              echo "avg_s=${avg_build_s}"
+              echo "threshold_pct=${threshold_pct}"
+              echo "increase_pct=${increase_pct}"
+              echo "over_s=${over_s}"
+              echo "current_fmt=${current_fmt}"
+              echo "avg_fmt=${avg_fmt}"
+              echo "allowed_fmt=${allowed_fmt}"
+            } >> "$GITHUB_OUTPUT"
             exit 1
           else
             if [ "$current_build_s" -le "$avg_build_s" ]; then
@@ -976,7 +990,86 @@ jobs:
               echo ""
             } >> "$GITHUB_STEP_SUMMARY"
             echo "Build time is within the ${threshold_pct}% threshold (${avg_fmt} → ${current_fmt})."
+            {
+              echo "spike=false"
+              echo "current_s=${current_build_s}"
+              echo "avg_s=${avg_build_s}"
+              echo "threshold_pct=${threshold_pct}"
+              echo "increase_pct=${increase_pct}"
+              echo "current_fmt=${current_fmt}"
+              echo "avg_fmt=${avg_fmt}"
+              echo "allowed_fmt=${allowed_fmt}"
+            } >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Post build time spike comment
+        if: always()
+        uses: actions/github-script@v7
+        env:
+          SPIKE: ${{ steps.compare.outputs.spike }}
+          AVG_S: ${{ steps.compare.outputs.avg_s }}
+          THRESHOLD_PCT: ${{ steps.compare.outputs.threshold_pct }}
+          INCREASE_PCT: ${{ steps.compare.outputs.increase_pct }}
+          OVER_S: ${{ steps.compare.outputs.over_s }}
+          CURRENT_FMT: ${{ steps.compare.outputs.current_fmt }}
+          AVG_FMT: ${{ steps.compare.outputs.avg_fmt }}
+          ALLOWED_FMT: ${{ steps.compare.outputs.allowed_fmt }}
+        with:
+          script: |
+            const marker = '<!-- CI-BUILD-TIME-GATE -->';
+            const spike = process.env.SPIKE === 'true';
+            const avgS = parseInt(process.env.AVG_S || '0', 10);
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+
+            if (!spike || avgS <= 0) {
+              // No spike (or no base history) — delete any stale comment.
+              if (existing) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: existing.id,
+                });
+              }
+              return;
+            }
+
+            const thresholdPct = process.env.THRESHOLD_PCT;
+            const body = [
+              marker,
+              '## ⚠️ Build time spike detected',
+              '',
+              '| | Time |',
+              '|---|---|',
+              `| Base-branch average | ${process.env.AVG_FMT} |`,
+              `| This PR | ${process.env.CURRENT_FMT} |`,
+              `| Allowed max (+${thresholdPct}%) | ${process.env.ALLOWED_FMT} |`,
+              `| **Status** | **❌ +${process.env.INCREASE_PCT}% (${process.env.OVER_S}s over limit)** |`,
+              '',
+              `Build time increased by **${process.env.INCREASE_PCT}%** above the base-branch average,`,
+              `exceeding the ${thresholdPct}% threshold. Review recent changes for unexpected build slowdowns.`,
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
   record-warn-history-base:
     name: Record base branch warning history
