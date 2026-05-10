@@ -880,7 +880,7 @@ jobs:
              | sort_by(-.warnings)
              | .[:10]' 2>/dev/null || echo '[]')
 
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"lint_min_s\":${lint_min_s},\"lint_max_s\":${lint_max_s},\"tc_s\":${tc_s},\"tc_min_s\":${tc_min_s},\"tc_max_s\":${tc_max_s},\"format_s\":${format_s},\"format_min_s\":${format_min_s},\"format_max_s\":${format_max_s},\"build_job_s\":${build_s},\"build_job_min_s\":${build_job_min_s},\"build_job_max_s\":${build_job_max_s},\"build_s\":${total_build_s},\"build_spike\":false,\"topFiles\":${top_files}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"install_spike\":false,\"lint_s\":${lint_s},\"lint_min_s\":${lint_min_s},\"lint_max_s\":${lint_max_s},\"tc_s\":${tc_s},\"tc_min_s\":${tc_min_s},\"tc_max_s\":${tc_max_s},\"format_s\":${format_s},\"format_min_s\":${format_min_s},\"format_max_s\":${format_max_s},\"build_job_s\":${build_s},\"build_job_min_s\":${build_job_min_s},\"build_job_max_s\":${build_job_max_s},\"build_s\":${total_build_s},\"build_spike\":false,\"topFiles\":${top_files}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           # Cap = 20. On push events, build-time-gate reads this same file and
           # excludes the current run's SHA from the rolling average, so the
@@ -1172,6 +1172,7 @@ jobs:
     continue-on-error: ${{ vars.BUILD_TIME_GATE_BLOCK_MERGE != 'true' }}
     outputs:
       spike: ${{ steps.compare.outputs.spike }}
+      install_spike: ${{ steps.compare.outputs.install_spike }}
       job_details_b64: ${{ steps.compare.outputs.job_details_b64 }}
     steps:
       - name: Download current-run job timing artifacts
@@ -1179,7 +1180,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/job-counts
-          for artifact in lint-counts tc-counts format-counts build-counts; do
+          for artifact in install-counts lint-counts tc-counts format-counts build-counts; do
             gh run download "${{ github.run_id }}" \
               --repo "${{ github.repository }}" \
               --name "$artifact" \
@@ -1240,6 +1241,8 @@ jobs:
         id: compare
         env:
           # ── Global thresholds (apply to every branch unless overridden) ────
+          MAX_INSTALL_TIME_SPIKE_PCT: ${{ vars.MAX_INSTALL_TIME_SPIKE_PCT }}
+          MAX_INSTALL_TIME_SPIKE_S: ${{ vars.MAX_INSTALL_TIME_SPIKE_S }}
           MAX_LINT_TIME_SPIKE_PCT: ${{ vars.MAX_LINT_TIME_SPIKE_PCT }}
           MAX_TC_TIME_SPIKE_PCT: ${{ vars.MAX_TC_TIME_SPIKE_PCT }}
           MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.MAX_FORMAT_TIME_SPIKE_PCT }}
@@ -1249,11 +1252,14 @@ jobs:
           # Set the corresponding repository variable to override a global
           # threshold for that branch only.  Supported branches:
           #
-          #   main    → MAIN_MAX_LINT_TIME_SPIKE_PCT, MAIN_MAX_TC_TIME_SPIKE_PCT,
+          #   main    → MAIN_MAX_INSTALL_TIME_SPIKE_PCT, MAIN_MAX_INSTALL_TIME_SPIKE_S,
+          #             MAIN_MAX_LINT_TIME_SPIKE_PCT, MAIN_MAX_TC_TIME_SPIKE_PCT,
           #             MAIN_MAX_FORMAT_TIME_SPIKE_PCT, MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT
-          #   develop → DEVELOP_MAX_LINT_TIME_SPIKE_PCT, DEVELOP_MAX_TC_TIME_SPIKE_PCT,
+          #   develop → DEVELOP_MAX_INSTALL_TIME_SPIKE_PCT, DEVELOP_MAX_INSTALL_TIME_SPIKE_S,
+          #             DEVELOP_MAX_LINT_TIME_SPIKE_PCT, DEVELOP_MAX_TC_TIME_SPIKE_PCT,
           #             DEVELOP_MAX_FORMAT_TIME_SPIKE_PCT, DEVELOP_MAX_BUILD_JOB_TIME_SPIKE_PCT
-          #   release → RELEASE_MAX_LINT_TIME_SPIKE_PCT, RELEASE_MAX_TC_TIME_SPIKE_PCT,
+          #   release → RELEASE_MAX_INSTALL_TIME_SPIKE_PCT, RELEASE_MAX_INSTALL_TIME_SPIKE_S,
+          #             RELEASE_MAX_LINT_TIME_SPIKE_PCT, RELEASE_MAX_TC_TIME_SPIKE_PCT,
           #             RELEASE_MAX_FORMAT_TIME_SPIKE_PCT, RELEASE_MAX_BUILD_JOB_TIME_SPIKE_PCT
           #
           # Other branches are also supported: the step normalises the branch
@@ -1262,14 +1268,20 @@ jobs:
           # ALL_VARS before falling back to the global value.  No workflow
           # edits are needed for branches beyond these three — just add the
           # prefixed variable in the GitHub repository Actions settings.
+          MAIN_MAX_INSTALL_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_INSTALL_TIME_SPIKE_PCT }}
+          MAIN_MAX_INSTALL_TIME_SPIKE_S: ${{ vars.MAIN_MAX_INSTALL_TIME_SPIKE_S }}
           MAIN_MAX_LINT_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_LINT_TIME_SPIKE_PCT }}
           MAIN_MAX_TC_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_TC_TIME_SPIKE_PCT }}
           MAIN_MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_FORMAT_TIME_SPIKE_PCT }}
           MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT }}
+          DEVELOP_MAX_INSTALL_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_INSTALL_TIME_SPIKE_PCT }}
+          DEVELOP_MAX_INSTALL_TIME_SPIKE_S: ${{ vars.DEVELOP_MAX_INSTALL_TIME_SPIKE_S }}
           DEVELOP_MAX_LINT_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_LINT_TIME_SPIKE_PCT }}
           DEVELOP_MAX_TC_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_TC_TIME_SPIKE_PCT }}
           DEVELOP_MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_FORMAT_TIME_SPIKE_PCT }}
           DEVELOP_MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_BUILD_JOB_TIME_SPIKE_PCT }}
+          RELEASE_MAX_INSTALL_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_INSTALL_TIME_SPIKE_PCT }}
+          RELEASE_MAX_INSTALL_TIME_SPIKE_S: ${{ vars.RELEASE_MAX_INSTALL_TIME_SPIKE_S }}
           RELEASE_MAX_LINT_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_LINT_TIME_SPIKE_PCT }}
           RELEASE_MAX_TC_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_TC_TIME_SPIKE_PCT }}
           RELEASE_MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_FORMAT_TIME_SPIKE_PCT }}
@@ -1278,12 +1290,13 @@ jobs:
           ALL_VARS: ${{ toJson(vars) }}
         run: |
           # ── Current run per-job durations ──────────────────────────────────
+          install_s=$(jq -r '.duration_s // 0' /tmp/job-counts/install-counts/install-counts.json 2>/dev/null || echo "0")
           lint_s=$(jq -r '.duration_s // 0' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "0")
           tc_s=$(jq -r '.duration_s // 0' /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo "0")
           format_s=$(jq -r '.duration_s // 0' /tmp/job-counts/format-counts/format-counts.json 2>/dev/null || echo "0")
           build_job_s=$(jq -r '.duration_s // 0' /tmp/job-counts/build-counts/build-counts.json 2>/dev/null || echo "0")
 
-          echo "Current run: lint=${lint_s}s tc=${tc_s}s format=${format_s}s build_job=${build_job_s}s"
+          echo "Current run: install=${install_s}s lint=${lint_s}s tc=${tc_s}s format=${format_s}s build_job=${build_job_s}s"
 
           # ── Per-job thresholds with validation ─────────────────────────────
           # Defaults: lint=30%, typecheck=25%, format=50%, build=25%.
@@ -1351,6 +1364,14 @@ jobs:
             echo "$src"
           }
 
+          _tmp=$(resolve_threshold "MAX_INSTALL_TIME_SPIKE_PCT"  "50")
+          install_thr=$(echo "$_tmp" | sed -n '1p')
+          install_thr_src=$(echo "$_tmp" | sed -n '2p')
+
+          _tmp=$(resolve_threshold "MAX_INSTALL_TIME_SPIKE_S"   "30")
+          install_abs_thr=$(echo "$_tmp" | sed -n '1p')
+          install_abs_thr_src=$(echo "$_tmp" | sed -n '2p')
+
           _tmp=$(resolve_threshold "MAX_LINT_TIME_SPIKE_PCT"      "30")
           lint_thr=$(echo "$_tmp" | sed -n '1p')
           lint_thr_src=$(echo "$_tmp" | sed -n '2p')
@@ -1371,8 +1392,8 @@ jobs:
           spread_pct=$(echo "$_tmp" | sed -n '1p')
           spread_pct_src=$(echo "$_tmp" | sed -n '2p')
 
-          echo "Thresholds: lint=${lint_thr}% tc=${tc_thr}% format=${fmt_thr}% build_job=${bld_thr}% spread=${spread_pct}%"
-          echo "Threshold sources: lint=[${lint_thr_src}] tc=[${tc_thr_src}] format=[${fmt_thr_src}] build_job=[${bld_thr_src}] spread=[${spread_pct_src}]"
+          echo "Thresholds: install=${install_thr}% (+${install_abs_thr}s abs) lint=${lint_thr}% tc=${tc_thr}% format=${fmt_thr}% build_job=${bld_thr}% spread=${spread_pct}%"
+          echo "Threshold sources: install=[${install_thr_src}] install_abs=[${install_abs_thr_src}] lint=[${lint_thr_src}] tc=[${tc_thr_src}] format=[${fmt_thr_src}] build_job=[${bld_thr_src}] spread=[${spread_pct_src}]"
           echo "History source: ${HISTORY_LABEL}"
 
           # ── Per-job rolling averages ─────────────────────────────────────────
@@ -1419,23 +1440,25 @@ jobs:
             ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo '{"min":0,"max":0,"n":0}'
           }
 
+          avg_install_s=$(avg_for_field "install_s")
           avg_lint_s=$(avg_for_field "lint_s")
           avg_tc_s=$(avg_for_field "tc_s")
           avg_format_s=$(avg_for_field "format_s")
           avg_build_job_s=$(avg_for_field "build_job_s")
 
+          spread_install=$(spread_for_field "install_s")
           spread_lint=$(spread_for_field "lint_s")
           spread_tc=$(spread_for_field "tc_s")
           spread_format=$(spread_for_field "format_s")
           spread_build=$(spread_for_field "build_job_s")
 
           # Sanitize nulls that jq may return on malformed input.
-          for vname in avg_lint_s avg_tc_s avg_format_s avg_build_job_s; do
+          for vname in avg_install_s avg_lint_s avg_tc_s avg_format_s avg_build_job_s; do
             v=$(eval "echo \${${vname}}")
             if [ -z "$v" ] || [ "$v" = "null" ]; then eval "${vname}=0"; fi
           done
 
-          echo "Rolling averages (${HISTORY_LABEL}): lint=${avg_lint_s}s tc=${avg_tc_s}s format=${avg_format_s}s build_job=${avg_build_job_s}s"
+          echo "Rolling averages (${HISTORY_LABEL}): install=${avg_install_s}s lint=${avg_lint_s}s tc=${avg_tc_s}s format=${avg_format_s}s build_job=${avg_build_job_s}s"
 
           total_avg=$((avg_lint_s + avg_tc_s + avg_format_s + avg_build_job_s))
 
@@ -1449,6 +1472,7 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             echo "spike=false" >> "$GITHUB_OUTPUT"
             echo "any_high_variance=false" >> "$GITHUB_OUTPUT"
+            echo "install_spike=false" >> "$GITHUB_OUTPUT"
             echo "avg_s=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -1462,11 +1486,13 @@ jobs:
           }
 
           # ── Per-job spike detection ─────────────────────────────────────────
-          # check_job <label> <current_s> <avg_s> <threshold_pct> <spread_json> <spread_pct>
+          # check_job <label> <current_s> <avg_s> <threshold_pct> <spread_json> [abs_thr_s] [spread_pct]
           # Prints a JSON object with the job's spike details to stdout.
           # Emits a ::warning annotation to stderr when a spike is detected.
+          # A spike triggers when current exceeds the percentage threshold OR
+          # (if abs_thr_s > 0) when the absolute increase exceeds abs_thr_s.
           check_job() {
-            local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}" spct="${6:-80}"
+            local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}" abs_thr="${6:-0}" spct="${7:-80}"
             if [ "$avg" -le 0 ]; then
               printf '{"name":"%s","skipped":true,"highVariance":false}' "$label"
               return
@@ -1478,6 +1504,10 @@ jobs:
               spiked=true
               over_s=$(( cur - allowed ))
               echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is ${inc_pct}% above the rolling average of $(fmt_time "$avg") (threshold: ${thr}%). Review recent changes for unexpected slowdowns." >&2
+            elif [ "$abs_thr" -gt 0 ] && [ "$cur" -gt $(( avg + abs_thr )) ]; then
+              spiked=true
+              over_s=$(( cur - avg - abs_thr ))
+              echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is $(fmt_time $(( cur - avg ))) above the rolling average of $(fmt_time "$avg") (absolute threshold: ${abs_thr}s). Review recent changes for unexpected slowdowns." >&2
             fi
             local sp_n sp_min sp_max high_variance=false
             sp_n=$(printf '%s' "$spread" | jq -r '.n // 0')
@@ -1493,15 +1523,16 @@ jobs:
               "$label" "$spiked" "$high_variance" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s" "$spread"
           }
 
-          lint_detail=$(check_job "Lint"      "$lint_s"      "$avg_lint_s"      "$lint_thr" "$spread_lint"   "$spread_pct")
-          tc_detail=$(check_job   "Typecheck" "$tc_s"        "$avg_tc_s"        "$tc_thr"   "$spread_tc"     "$spread_pct")
-          fmt_detail=$(check_job  "Format"    "$format_s"    "$avg_format_s"    "$fmt_thr"  "$spread_format" "$spread_pct")
-          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr"  "$spread_build"  "$spread_pct")
+          install_detail=$(check_job "Install"  "$install_s"   "$avg_install_s"   "$install_thr" "$spread_install" "$install_abs_thr" "$spread_pct")
+          lint_detail=$(check_job "Lint"      "$lint_s"      "$avg_lint_s"      "$lint_thr" "$spread_lint"   "0" "$spread_pct")
+          tc_detail=$(check_job   "Typecheck" "$tc_s"        "$avg_tc_s"        "$tc_thr"   "$spread_tc"     "0" "$spread_pct")
+          fmt_detail=$(check_job  "Format"    "$format_s"    "$avg_format_s"    "$fmt_thr"  "$spread_format" "0" "$spread_pct")
+          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr"  "$spread_build"  "0" "$spread_pct")
 
           # Determine overall spike and high-variance flags.
           any_spike=false
           any_high_variance=false
-          for d in "$lint_detail" "$tc_detail" "$fmt_detail" "$bld_detail"; do
+          for d in "$install_detail" "$lint_detail" "$tc_detail" "$fmt_detail" "$bld_detail"; do
             if echo "$d" | grep -q '"spiked":true'; then
               any_spike=true
             fi
@@ -1509,6 +1540,12 @@ jobs:
               any_high_variance=true
             fi
           done
+
+          # Determine install-specific spike flag for patching into warn-history.
+          install_spike=false
+          if echo "$install_detail" | grep -q '"spiked":true'; then
+            install_spike=true
+          fi
 
           # ── Step summary table (per-job breakdown) ──────────────────────────
           render_row() {
@@ -1567,6 +1604,7 @@ jobs:
             echo ""
             echo "| Job | ${HISTORY_LABEL} avg | ${run_label} | Allowed max | Spread (min – max) | Status |"
             echo "|---|---|---|---|---|---|"
+            render_row "$install_detail"
             render_row "$lint_detail"
             render_row "$tc_detail"
             render_row "$fmt_detail"
@@ -1596,11 +1634,12 @@ jobs:
 
           # ── Emit outputs ────────────────────────────────────────────────────
           total_avg_s=$((avg_lint_s + avg_tc_s + avg_format_s + avg_build_job_s))
-          details_json="[${lint_detail},${tc_detail},${fmt_detail},${bld_detail}]"
+          details_json="[${install_detail},${lint_detail},${tc_detail},${fmt_detail},${bld_detail}]"
           details_b64=$(printf '%s' "$details_json" | base64 -w 0)
           {
             echo "spike=${any_spike}"
             echo "any_high_variance=${any_high_variance}"
+            echo "install_spike=${install_spike}"
             echo "avg_s=${total_avg_s}"
             echo "job_details_b64=${details_b64}"
           } >> "$GITHUB_OUTPUT"
@@ -1609,11 +1648,12 @@ jobs:
             exit 1
           fi
 
-      - name: Patch build_spike into warn-history artifact
+      - name: Patch build_spike and install_spike into warn-history artifact
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           SPIKE: ${{ steps.compare.outputs.spike }}
+          INSTALL_SPIKE: ${{ steps.compare.outputs.install_spike }}
         run: |
           mkdir -p /tmp/warn-history-patch
           gh run download "${{ github.run_id }}" \
@@ -1629,9 +1669,12 @@ jobs:
           spike_val="false"
           if [ "${SPIKE}" = "true" ]; then spike_val="true"; fi
 
+          install_spike_val="false"
+          if [ "${INSTALL_SPIKE}" = "true" ]; then install_spike_val="true"; fi
+
           sha="${{ github.sha }}"
-          jq --arg sha "$sha" --argjson spike "$spike_val" \
-            'map(if .sha == $sha then . + {"build_spike": $spike} else . end)' \
+          jq --arg sha "$sha" --argjson spike "$spike_val" --argjson install_spike "$install_spike_val" \
+            'map(if .sha == $sha then . + {"build_spike": $spike, "install_spike": $install_spike} else . end)' \
             /tmp/warn-history-patch/warn-history.json \
             > /tmp/warn-history-patch/warn-history-patched.json
 
@@ -1967,8 +2010,8 @@ jobs:
           # build_s  = total (lint + tc + format + build step) — kept for backward
           #            compat with build-time-gate which reads this field.
           # build_job_s = only the build step; distinguishes from the total.
-          # build_spike is always false for push-to-base entries; spike detection
-          #              only runs for PRs.
+          # build_spike and install_spike are always false for push-to-base entries;
+          #              spike detection only runs for PRs.
 
           # Merge per-file warning arrays from lint and typecheck into a top-10 list.
           lint_file_w=$(jq -c '[(.file_warnings // []) | .[] | . + {"source":"lint"}]' \
@@ -1991,7 +2034,7 @@ jobs:
              | sort_by(-.warnings)
              | .[:10]' 2>/dev/null || echo '[]')
 
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false,\"topFiles\":${top_files}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"install_spike\":false,\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false,\"topFiles\":${top_files}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           # Cap = 20. build-time-gate averages entries from this file while
           # excluding the current run's SHA, so the effective sample size is
@@ -2426,6 +2469,7 @@ jobs:
           PREV_FORMAT_WARNINGS: ${{ steps.prev-counts.outputs.prev_format_warnings }}
           FORMAT_ERROR_COUNT: ${{ needs.format.outputs.format_error_count }}
           BUILD_TIME_SPIKE: ${{ needs.build-time-gate.outputs.spike }}
+          INSTALL_TIME_SPIKE: ${{ needs.build-time-gate.outputs.install_spike }}
           BUILD_TIME_JOB_DETAILS_B64: ${{ needs.build-time-gate.outputs.job_details_b64 }}
         with:
           script: |
@@ -2443,6 +2487,7 @@ jobs:
             const tcWarningCount = parseInt(process.env.TC_WARNING_COUNT || '0', 10);
             const formatErrorCount = parseInt(process.env.FORMAT_ERROR_COUNT || '0', 10);
             const buildTimeSpike = process.env.BUILD_TIME_SPIKE === 'true';
+            const installTimeSpike = process.env.INSTALL_TIME_SPIKE === 'true';
             let buildTimeJobs = [];
             try {
               const raw = Buffer.from(process.env.BUILD_TIME_JOB_DETAILS_B64 || '', 'base64').toString('utf8');
@@ -2542,7 +2587,11 @@ jobs:
                 const shaLabel = isCurrent
                   ? `\`${e.shortSha}\` *(now)*`
                   : `\`${e.shortSha}\``;
-                return `| ${shaLabel} | ${fmtTime(e.install_s)} | ${fmtTime(e.lint_s)} | ${fmtTime(e.tc_s)} | ${fmtTime(e.format_s)} | ${fmtTime(e.build_job_s)} |`;
+                // install_spike may be absent on old entries — treat as false.
+                const installCell = e.install_spike === true
+                  ? `${fmtTime(e.install_s)} ⚠️`
+                  : fmtTime(e.install_s);
+                return `| ${shaLabel} | ${installCell} | ${fmtTime(e.lint_s)} | ${fmtTime(e.tc_s)} | ${fmtTime(e.format_s)} | ${fmtTime(e.build_job_s)} |`;
               });
               const breakdownSection = breakdownRows.length > 0 ? [
                 '',
@@ -2595,10 +2644,24 @@ jobs:
             // Include a build-time delta line only when a spike is detected, so
             // the comment stays clean on normal (within-threshold) builds.
             const spikedJobs = buildTimeJobs.filter(j => !j.skipped && j.spiked);
-            const buildTimeDelta = buildTimeSpike && spikedJobs.length > 0
-              ? `⬆️ Build time spike: ${spikedJobs.map(j => `${j.name} +${j.inc_pct}%`).join(', ')} vs base average`
+            // Install spikes get their own dedicated line below; only include
+            // non-install spiked jobs in the generic build-time delta line.
+            const nonInstallSpikedJobs = spikedJobs.filter(j => j.name !== 'Install');
+            const buildTimeDelta = nonInstallSpikedJobs.length > 0
+              ? `⬆️ Build time spike: ${nonInstallSpikedJobs.map(j => `${j.name} +${j.inc_pct}%`).join(', ')} vs base average`
               : null;
-            const deltaLines = [lintDelta, tcDelta, formatDelta, buildTimeDelta].filter(Boolean);
+            // Show a dedicated install spike callout with before/after times.
+            const fmtTimeJs = (s) => {
+              if (s == null || s <= 0) return '—';
+              const min = Math.floor(s / 60);
+              const sec = s % 60;
+              return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+            };
+            const installSpikeJob = buildTimeJobs.find(j => j.name === 'Install' && !j.skipped && j.spiked);
+            const installSpikeDelta = installTimeSpike && installSpikeJob
+              ? `⚠️ Install time spiked from ${fmtTimeJs(installSpikeJob.avg)} → ${fmtTimeJs(installSpikeJob.cur)} (+${installSpikeJob.inc_pct}%)`
+              : null;
+            const deltaLines = [lintDelta, tcDelta, formatDelta, buildTimeDelta, installSpikeDelta].filter(Boolean);
 
             const failed = [formatResult, lintResult, tcResult].some(
               (r) => r === 'failure',
@@ -2635,7 +2698,7 @@ jobs:
               const deltaSection = deltaLines.length > 0
                 ? ['', ...deltaLines]
                 : [];
-              const successHeader = buildTimeSpike
+              const successHeader = buildTimeSpike || installTimeSpike
                 ? '## ✅ All checks passed · ⏱️ Build time spike'
                 : '## ✅ All checks passed';
               const successBody = [
@@ -2742,7 +2805,7 @@ jobs:
             const failureDeltaSection = deltaLines.length > 0
               ? ['', ...deltaLines, '']
               : [''];
-            const failureHeader = buildTimeSpike
+            const failureHeader = buildTimeSpike || installTimeSpike
               ? `## \u274c CI failed \u2014 ${failedNames} · ⏱️ Build time spike`
               : `## \u274c CI failed \u2014 ${failedNames}`;
             const body = [
