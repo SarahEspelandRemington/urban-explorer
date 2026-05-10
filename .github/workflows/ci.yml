@@ -1119,11 +1119,12 @@ jobs:
           AVG_FMT: ${{ steps.compare.outputs.avg_fmt }}
           ALLOWED_FMT: ${{ steps.compare.outputs.allowed_fmt }}
           RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
         with:
           script: |
             const marker = '<!-- CI-BUILD-TIME-GATE -->';
-            const runIdPrefix = '<!-- CI-BUILD-TIME-RUN:';
             const currentRunId = parseInt(process.env.RUN_ID, 10);
+            const currentRunAttempt = parseInt(process.env.RUN_ATTEMPT || '1', 10);
             const spike = process.env.SPIKE === 'true';
             const avgS = parseInt(process.env.AVG_S || '0', 10);
 
@@ -1134,18 +1135,32 @@ jobs:
             });
             const existing = comments.find(c => c.body && c.body.includes(marker));
 
-            // Extract the run ID embedded in an existing comment, if present.
-            function extractRunId(body) {
-              const match = body && body.match(/<!-- CI-BUILD-TIME-RUN:(\d+) -->/);
-              return match ? parseInt(match[1], 10) : 0;
+            // Extract the composite run key (run_id, run_attempt) embedded in an
+            // existing comment. Falls back to attempt=1 for comments written before
+            // run_attempt was included, and to (0,0) when no marker is present.
+            function extractRunKey(body) {
+              const match = body && body.match(/<!-- CI-BUILD-TIME-RUN:(\d+):(\d+) -->/);
+              if (match) return { runId: parseInt(match[1], 10), runAttempt: parseInt(match[2], 10) };
+              // Legacy format without attempt number — treat as attempt 1.
+              const legacyMatch = body && body.match(/<!-- CI-BUILD-TIME-RUN:(\d+) -->/);
+              if (legacyMatch) return { runId: parseInt(legacyMatch[1], 10), runAttempt: 1 };
+              return { runId: 0, runAttempt: 0 };
+            }
+
+            // Returns true when the existing comment's run is strictly newer than
+            // the current run. A newer run_id always wins; run_attempt is used as a
+            // tiebreaker only when both runs share the same run_id (i.e. a re-run).
+            function existingIsNewer(existingKey) {
+              if (existingKey.runId !== currentRunId) return existingKey.runId > currentRunId;
+              return existingKey.runAttempt > currentRunAttempt;
             }
 
             if (!spike || avgS <= 0) {
               // No spike (or no base history) — delete any stale comment,
               // but only if it belongs to an older run than ours.
               if (existing) {
-                const existingRunId = extractRunId(existing.body);
-                if (existingRunId > currentRunId) {
+                const existingKey = extractRunKey(existing.body);
+                if (existingIsNewer(existingKey)) {
                   // A newer run already owns this comment; leave it alone.
                   return;
                 }
@@ -1161,8 +1176,8 @@ jobs:
             // If an existing comment belongs to a newer run, skip — that run's
             // data is fresher and we must not overwrite or duplicate it.
             if (existing) {
-              const existingRunId = extractRunId(existing.body);
-              if (existingRunId > currentRunId) {
+              const existingKey = extractRunKey(existing.body);
+              if (existingIsNewer(existingKey)) {
                 return;
               }
             }
@@ -1170,7 +1185,7 @@ jobs:
             const thresholdPct = process.env.THRESHOLD_PCT;
             const body = [
               marker,
-              `${runIdPrefix}${currentRunId} -->`,
+              `<!-- CI-BUILD-TIME-RUN:${currentRunId}:${currentRunAttempt} -->`,
               '## ⚠️ Build time spike detected',
               '',
               '| | Time |',
@@ -1183,7 +1198,7 @@ jobs:
               `Build time increased by **${process.env.INCREASE_PCT}%** above the base-branch average,`,
               `exceeding the ${thresholdPct}% threshold. Review recent changes for unexpected build slowdowns.`,
               '',
-              `_Last updated by run [#${currentRunId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${currentRunId})._`,
+              `_Last updated by run [#${currentRunId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${currentRunId}) (attempt ${currentRunAttempt})._`,
             ].join('\n');
 
             if (existing) {
