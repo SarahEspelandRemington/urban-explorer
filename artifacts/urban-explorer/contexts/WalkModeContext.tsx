@@ -7,6 +7,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -1615,30 +1616,53 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [narration]);
 
+  const contextValue = useMemo(
+    () => ({
+      isWalking,
+      startWalk,
+      stopWalk,
+      currentLocation,
+      nearbyPlaces,
+      narratedIds,
+      stats,
+      narration,
+      isLoading,
+      density,
+      setDensity,
+      currentNarrationPlace,
+      isReplay,
+      fetchPlacesAlongRoute,
+      enabledBuildingGroups,
+      setEnabledBuildingGroups,
+      prefetchStats,
+      showPrefetchStats,
+      setShowPrefetchStats,
+    }),
+    [
+      isWalking,
+      startWalk,
+      stopWalk,
+      currentLocation,
+      nearbyPlaces,
+      narratedIds,
+      stats,
+      narration,
+      isLoading,
+      density,
+      setDensity,
+      currentNarrationPlace,
+      isReplay,
+      fetchPlacesAlongRoute,
+      enabledBuildingGroups,
+      setEnabledBuildingGroups,
+      prefetchStats,
+      showPrefetchStats,
+      setShowPrefetchStats,
+    ],
+  );
+
   return (
-    <WalkModeContext.Provider
-      value={{
-        isWalking,
-        startWalk,
-        stopWalk,
-        currentLocation,
-        nearbyPlaces,
-        narratedIds,
-        stats,
-        narration,
-        isLoading,
-        density,
-        setDensity,
-        currentNarrationPlace,
-        isReplay,
-        fetchPlacesAlongRoute,
-        enabledBuildingGroups,
-        setEnabledBuildingGroups,
-        prefetchStats,
-        showPrefetchStats,
-        setShowPrefetchStats,
-      }}
-    >
+    <WalkModeContext.Provider value={contextValue}>
       {children}
     </WalkModeContext.Provider>
   );

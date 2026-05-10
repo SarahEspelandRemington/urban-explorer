@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -148,10 +149,13 @@ export function UserRatingsProvider({
     [ratings],
   );
 
+  const contextValue = useMemo(
+    () => ({ ratings, isLoaded, userId, setLocalRating, getRating }),
+    [ratings, isLoaded, userId, setLocalRating, getRating],
+  );
+
   return (
-    <UserRatingsContext.Provider
-      value={{ ratings, isLoaded, userId, setLocalRating, getRating }}
-    >
+    <UserRatingsContext.Provider value={contextValue}>
       {children}
     </UserRatingsContext.Provider>
   );

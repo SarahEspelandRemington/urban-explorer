@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -117,10 +118,13 @@ export function DiscoveryProvider({ children }: { children: React.ReactNode }) {
     [persist],
   );
 
+  const contextValue = useMemo(
+    () => ({ savedPlaces, savePlace, removePlace, isPlaceSaved, updateNote }),
+    [savedPlaces, savePlace, removePlace, isPlaceSaved, updateNote],
+  );
+
   return (
-    <DiscoveryContext.Provider
-      value={{ savedPlaces, savePlace, removePlace, isPlaceSaved, updateNote }}
-    >
+    <DiscoveryContext.Provider value={contextValue}>
       {children}
     </DiscoveryContext.Provider>
   );
