@@ -1279,6 +1279,8 @@ jobs:
         # never overwrites the canonical live dashboard. Fork PRs are already
         # excluded by the job-level `if`.
         if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -1294,9 +1296,52 @@ jobs:
             git worktree add --orphan -b gh-pages /tmp/gh-pages
           fi
 
+          # Always update the canonical latest copy.
           cp ci-dashboard.html /tmp/gh-pages/ci-dashboard.html
+
+          # Derive a dated slug: YYYYMMDD-<short-sha>
+          SHORT_SHA="${GITHUB_SHA::7}"
+          DATE_STR=$(date -u +%Y%m%d)
+          SLUG="${DATE_STR}-${SHORT_SHA}"
+
+          # Write the dated archive copy.
+          mkdir -p /tmp/gh-pages/runs
+          cp ci-dashboard.html "/tmp/gh-pages/runs/${SLUG}.html"
+
+          # Update runs/manifest.json — add this run, cap at 30, prune old files.
+          export SLUG SHORT_SHA DATE_STR RUN_URL
+          node - <<'JSEOF'
+          const fs = require('fs');
+          const manifest = '/tmp/gh-pages/runs/manifest.json';
+          let existing = [];
+          try { existing = JSON.parse(fs.readFileSync(manifest, 'utf8')); } catch {}
+          const newEntry = {
+            slug: process.env.SLUG,
+            sha: process.env.SHORT_SHA,
+            date: process.env.DATE_STR,
+            runUrl: process.env.RUN_URL,
+          };
+          // Deduplicate by slug (re-runs of the same SHA overwrite).
+          const updated = [newEntry, ...existing.filter(e => e.slug !== newEntry.slug)];
+          const cap = 30;
+          const removed = updated.slice(cap);
+          const kept = updated.slice(0, cap);
+          // Delete HTML files for evicted entries.
+          removed.forEach(e => {
+            try { fs.unlinkSync('/tmp/gh-pages/runs/' + e.slug + '.html'); } catch {}
+          });
+          fs.writeFileSync(manifest, JSON.stringify(kept, null, 2));
+          JSEOF
+
+          # Regenerate the archive index page.
+          node .github/scripts/gen-index.js \
+            /tmp/gh-pages/runs/manifest.json \
+            /tmp/gh-pages/index.html
+
           cd /tmp/gh-pages
-          git add ci-dashboard.html
+          git add ci-dashboard.html "runs/${SLUG}.html" runs/manifest.json index.html
+          # Stage any HTML files that were removed by the cap.
+          git add -u runs/ 2>/dev/null || true
 
           # Skip the push when nothing changed (e.g. a rerun with identical history).
           if git diff --cached --quiet; then
@@ -1304,7 +1349,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: update CI dashboard [skip ci]"
+          git commit -m "chore: archive CI dashboard ${SLUG} [skip ci]"
           git push origin HEAD:gh-pages
 
       - name: Link dashboard from job summary
@@ -1317,7 +1362,9 @@ jobs:
           default_branch="${{ github.event.repository.default_branch }}"
           owner_lc=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           repo_name=$(echo "${{ github.repository }}" | cut -d'/' -f2)
-          pages_url="https://${owner_lc}.github.io/${repo_name}/ci-dashboard.html"
+          pages_base="https://${owner_lc}.github.io/${repo_name}"
+          pages_url="${pages_base}/ci-dashboard.html"
+          archive_url="${pages_base}/index.html"
           is_default_push=false
           if [ "$event_name" = "push" ] && [ "$git_ref" = "refs/heads/${default_branch}" ]; then
             is_default_push=true
@@ -1330,11 +1377,15 @@ jobs:
             if [ "$is_default_push" = "true" ]; then
               echo "**Live dashboard:** [${pages_url}](${pages_url}) *(GitHub Pages — updated by this run)*"
               echo ""
+              echo "**Archive index:** [${archive_url}](${archive_url}) *(all archived runs, newest first)*"
+              echo ""
               echo "**This run's artifact:** [ci-dashboard artifact](${run_url}#artifacts)"
             else
               echo "**Download:** [ci-dashboard artifact](${run_url}#artifacts) *(available on the Artifacts section of this run page)*"
               echo ""
               echo "Live dashboard (default branch): [${pages_url}](${pages_url})"
+              echo ""
+              echo "Archive index (default branch): [${archive_url}](${archive_url})"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
