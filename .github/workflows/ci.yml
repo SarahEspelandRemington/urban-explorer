@@ -880,11 +880,13 @@ jobs:
     name: Build time gate
     runs-on: ubuntu-latest
     needs: [record-warn-history]
-    # Informational only — never hard-blocks a merge. Runs on push events and
-    # non-fork PRs. Fork PRs are skipped (no write token for artifact access).
-    # continue-on-error keeps transient failures from blocking the run.
+    # Runs on push events and non-fork PRs. Fork PRs are skipped (no write
+    # token for artifact access). By default (BUILD_TIME_GATE_BLOCK_MERGE unset
+    # or not 'true') the job continues on error so spikes never hard-block a
+    # merge. Set the repository variable BUILD_TIME_GATE_BLOCK_MERGE=true to
+    # turn spikes into a required status check that must pass before merging.
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false))
-    continue-on-error: true
+    continue-on-error: ${{ vars.BUILD_TIME_GATE_BLOCK_MERGE != 'true' }}
     outputs:
       spike: ${{ steps.compare.outputs.spike }}
       job_details_b64: ${{ steps.compare.outputs.job_details_b64 }}
