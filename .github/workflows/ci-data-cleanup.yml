@@ -94,6 +94,11 @@ jobs:
           # ── 1. Check that ci-data exists ───────────────────────────────────
           if ! gh api "repos/${REPO}/branches/ci-data" --silent 2>/dev/null; then
             echo "ci-data branch does not exist — nothing to clean up."
+            {
+              echo "## CI history sweep — $(date -u +%Y-%m-%d)"
+              echo ""
+              echo "> **ci-data branch does not exist — nothing to clean up.**"
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
@@ -121,6 +126,16 @@ jobs:
           active_list=$(printf '%s\n' "${active_slugs[@]}")
 
           deleted_count=0
+          kept_count=0
+          total_checked=0
+
+          # Start the step summary table.
+          {
+            echo "## CI history sweep — $(date -u +%Y-%m-%d)"
+            echo ""
+            echo "| File | Status |"
+            echo "|------|--------|"
+          } >> "$GITHUB_STEP_SUMMARY"
 
           # ── 3. Sweep each history directory ───────────────────────────────
           for dir in warn-history warn-history-base; do
@@ -138,10 +153,13 @@ jobs:
             while IFS=$'\t' read -r file_name file_sha; do
               # Strip the .json extension to get the slug.
               file_slug="${file_name%.json}"
+              total_checked=$((total_checked + 1))
 
               # Check whether this slug matches any active branch.
               if printf '%s\n' "$active_list" | grep -qxF "$file_slug"; then
                 echo "${dir}/${file_name}: branch is active — keeping."
+                kept_count=$((kept_count + 1))
+                echo "| \`${dir}/${file_name}\` | ✅ kept |" >> "$GITHUB_STEP_SUMMARY"
                 continue
               fi
 
@@ -153,14 +171,32 @@ jobs:
                 --field "sha=${file_sha}" \
                 --field "branch=ci-data" \
                 2>/dev/null \
-                && { echo "${dir}/${file_name}: deleted."; deleted_count=$((deleted_count + 1)); } \
-                || echo "::warning::Failed to delete ${dir}/${file_name}."
+                && {
+                  echo "${dir}/${file_name}: deleted."
+                  deleted_count=$((deleted_count + 1))
+                  echo "| \`${dir}/${file_name}\` | 🗑️ deleted |" >> "$GITHUB_STEP_SUMMARY"
+                } \
+                || {
+                  echo "::warning::Failed to delete ${dir}/${file_name}."
+                  echo "| \`${dir}/${file_name}\` | ⚠️ delete failed |" >> "$GITHUB_STEP_SUMMARY"
+                }
 
             done < <(printf '%s' "$dir_listing" | jq -r '.[] | select(.type == "file" and (.name | endswith(".json"))) | [.name, .sha] | @tsv')
           done
 
           echo ""
           echo "Sweep complete. Deleted ${deleted_count} stale file(s)."
+
+          # ── Append totals to the step summary ──────────────────────────────
+          if [ "$total_checked" -eq 0 ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "_No history files found on ci-data._" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo ""
+              echo "**Total files checked:** ${total_checked} &nbsp;|&nbsp; **Kept:** ${kept_count} &nbsp;|&nbsp; **Deleted:** ${deleted_count}"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Trim stale entries in active-branch history arrays
         env:
