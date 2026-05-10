@@ -615,9 +615,104 @@ function jobTimingBg(val, colMax) {
   return `background:rgb(${r},${g},${b})`;
 }
 
+// Jobs considered for per-job trend badges (matches buildBranchSection).
+// install_s is excluded because it is not part of the per-branch breakdown.
+const TREND_BADGE_JOBS = [
+  { key: "lint_s", label: "Lint" },
+  { key: "tc_s", label: "Typecheck" },
+  { key: "format_s", label: "Format" },
+  { key: "build_job_s", label: "Build" },
+];
+
+/**
+ * Render a small coloured delta badge for a trend-badge job cell.
+ * amber = slower than avg (+Xs), green = faster (−Xs).
+ * Returns "" when the absolute delta is ≤ 2 s (noise floor).
+ * @param {number} delta     - seconds relative to rolling avg (positive = slower)
+ * @param {string} jobLabel  - human-readable job name for the tooltip
+ * @param {number} windowLen - how many runs were used to compute the avg
+ */
+function trendDeltaBadge(delta, jobLabel, windowLen) {
+  if (Math.abs(delta) <= 2) return "";
+  const absFmt = fmtTime(Math.abs(delta));
+  const runsLabel = `${windowLen}-run avg`;
+  if (delta > 0) {
+    return (
+      `<span style="display:inline-block;font-size:.65rem;font-weight:600;` +
+      `color:#92400e;background:#fef3c7;border:1px solid #fbbf24;border-radius:3px;` +
+      `padding:0 4px;margin-left:4px;vertical-align:middle;white-space:nowrap" ` +
+      `title="${escHtml(jobLabel)} is +${escHtml(absFmt)} above its ${runsLabel} — consistently the slowest job">` +
+      `+${absFmt}</span>`
+    );
+  } else {
+    return (
+      `<span style="display:inline-block;font-size:.65rem;font-weight:600;` +
+      `color:#14532d;background:#dcfce7;border:1px solid #86efac;border-radius:3px;` +
+      `padding:0 4px;margin-left:4px;vertical-align:middle;white-space:nowrap" ` +
+      `title="${escHtml(jobLabel)} is \u2212${escHtml(absFmt)} below its ${runsLabel} — consistently the slowest job but improving">` +
+      `\u2212${absFmt}</span>`
+    );
+  }
+}
+
+/**
+ * Precompute per-row trend badges for the summary table.
+ * For entry at index `i` in `history`:
+ *   - examines up to 5 runs ending at `i` (the context window)
+ *   - identifies the slowest job for *this* run (must be >50% of total, matching
+ *     buildBranchSection logic so transient multi-bottleneck runs are skipped)
+ *   - only emits a badge when that job was the bottleneck in >= 3 context runs
+ * Returns an object mapping job key → badge HTML (at most one key is non-empty).
+ */
+const summaryTrendBadges = history.map((e, idx) => {
+  const window = history.slice(Math.max(0, idx - 4), idx + 1);
+
+  const jobVals = TREND_BADGE_JOBS.map((j) => ({
+    key: j.key,
+    label: j.label,
+    val: e[j.key] != null && e[j.key] > 0 ? e[j.key] : 0,
+  }));
+  const maxVal = Math.max(...jobVals.map((j) => j.val));
+  if (maxVal <= 0) return {};
+
+  const total = jobVals.reduce((s, j) => s + j.val, 0);
+  const slowestJob =
+    total > 0 && maxVal / total > 0.5
+      ? jobVals.find((j) => j.val === maxVal)
+      : null;
+  if (!slowestJob) return {};
+
+  let consistentCount = 0;
+  const timeHistory = [];
+  for (const we of window) {
+    const wVals = TREND_BADGE_JOBS.map((j) =>
+      we[j.key] != null && we[j.key] > 0 ? we[j.key] : 0,
+    );
+    const wMax = Math.max(...wVals);
+    const wKeyVal =
+      we[slowestJob.key] != null && we[slowestJob.key] > 0
+        ? we[slowestJob.key]
+        : 0;
+    if (wMax > 0 && wKeyVal === wMax) consistentCount++;
+    if (wKeyVal > 0) timeHistory.push(wKeyVal);
+  }
+
+  if (consistentCount < 3 || timeHistory.length < 2) return {};
+
+  const avgTime = Math.round(
+    timeHistory.reduce((a, b) => a + b, 0) / timeHistory.length,
+  );
+  const delta = slowestJob.val - avgTime;
+  const badge = trendDeltaBadge(delta, slowestJob.label, window.length);
+  if (!badge) return {};
+  return { [slowestJob.key]: badge };
+});
+
 const tableRows = [...history]
   .reverse()
-  .map((e) => {
+  .map((e, revIdx) => {
+    const origIdx = history.length - 1 - revIdx;
+    const trendBadge = summaryTrendBadges[origIdx] || {};
     let buildTime =
       e.build_s != null && e.build_s > 0 ? fmtTime(e.build_s) : "\u2014";
     if (e.build_spike === true) buildTime += " \u26a0\ufe0f";
@@ -641,10 +736,10 @@ const tableRows = [...history]
       `<td>${e.format != null ? e.format : 0}</td>`,
       `<td>${buildTime}</td>`,
       `<td style="${jobTimingBg(e.install_s, colMaxes.install_s)}">${installCell}</td>`,
-      `<td style="${jobTimingBg(e.lint_s, colMaxes.lint_s)}">${lintCell}</td>`,
-      `<td style="${jobTimingBg(e.tc_s, colMaxes.tc_s)}">${tcCell}</td>`,
-      `<td style="${jobTimingBg(e.format_s, colMaxes.format_s)}">${fmtCell}</td>`,
-      `<td style="${jobTimingBg(e.build_job_s, colMaxes.build_job_s)}">${buildJobCell}</td>`,
+      `<td style="${jobTimingBg(e.lint_s, colMaxes.lint_s)}">${lintCell}${trendBadge.lint_s || ""}</td>`,
+      `<td style="${jobTimingBg(e.tc_s, colMaxes.tc_s)}">${tcCell}${trendBadge.tc_s || ""}</td>`,
+      `<td style="${jobTimingBg(e.format_s, colMaxes.format_s)}">${fmtCell}${trendBadge.format_s || ""}</td>`,
+      `<td style="${jobTimingBg(e.build_job_s, colMaxes.build_job_s)}">${buildJobCell}${trendBadge.build_job_s || ""}</td>`,
       "</tr>",
     ].join("");
   })
