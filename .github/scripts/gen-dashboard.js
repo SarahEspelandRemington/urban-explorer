@@ -10,6 +10,16 @@ try {
   console.error("Could not read warn-history:", e.message);
 }
 
+// Multi-branch build-time data (collected by CI step; absent on first run).
+let allBranches = {};
+try {
+  allBranches = JSON.parse(
+    fs.readFileSync("/tmp/branch-histories/all-branches.json", "utf8"),
+  );
+} catch (_) {
+  // File is optional — silently continue without cross-branch section.
+}
+
 const branch = process.env.BRANCH || "unknown";
 const runUrl = process.env.RUN_URL || "#";
 const generatedAt = new Date().toUTCString();
@@ -317,6 +327,156 @@ const tableRows = [...history]
 const noRowsMsg =
   '<tr><td colspan="11" style="color:#999;text-align:center;padding:20px">No runs recorded yet.</td></tr>';
 
+// ---------------------------------------------------------------------------
+// Per-branch build time sparkline section
+// ---------------------------------------------------------------------------
+
+const SPARK_W = 120;
+const SPARK_H = 28;
+const SPARK_PAD = 4;
+const SPARK_COLOR = "#27ae60";
+const SPARK_RUNS = 5; // number of recent runs to show per branch
+
+/**
+ * Generate a mini SVG sparkline for an array of build_s values (nulls excluded).
+ * Returns an inline SVG string.
+ */
+function buildSparkline(vals) {
+  const points = vals.filter((v) => v != null && v > 0).slice(-SPARK_RUNS);
+
+  if (points.length < 2) {
+    const label =
+      points.length === 1
+        ? `<text x="${SPARK_W / 2}" y="${SPARK_H / 2 + 4}" font-size="9" text-anchor="middle" fill="#999">${fmtTime(points[0])}</text>`
+        : `<text x="${SPARK_W / 2}" y="${SPARK_H / 2 + 4}" font-size="9" text-anchor="middle" fill="#bbb">no data</text>`;
+    return `<svg viewBox="0 0 ${SPARK_W} ${SPARK_H}" width="${SPARK_W}" height="${SPARK_H}" xmlns="http://www.w3.org/2000/svg">${label}</svg>`;
+  }
+
+  const minV = Math.min(...points);
+  const maxV = Math.max(...points);
+  const range = maxV - minV || 1;
+  const innerW = SPARK_W - SPARK_PAD * 2;
+  const innerH = SPARK_H - SPARK_PAD * 2;
+
+  function sx(i) {
+    return (
+      SPARK_PAD +
+      (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW)
+    );
+  }
+  function sy(v) {
+    return SPARK_PAD + innerH - ((v - minV) / range) * innerH;
+  }
+
+  const coords = points.map(
+    (v, i) => `${sx(i).toFixed(1)},${sy(v).toFixed(1)}`,
+  );
+  const polyPts = coords.join(" ");
+
+  // Closed area fill path: line + close down to baseline
+  const baseY = SPARK_PAD + innerH;
+  const fillPts = [
+    `${sx(0).toFixed(1)},${baseY}`,
+    ...coords,
+    `${sx(points.length - 1).toFixed(1)},${baseY}`,
+  ].join(" ");
+
+  // Tooltip title for last point
+  const lastTip = fmtTime(points[points.length - 1]);
+
+  return [
+    `<svg viewBox="0 0 ${SPARK_W} ${SPARK_H}" width="${SPARK_W}" height="${SPARK_H}" xmlns="http://www.w3.org/2000/svg">`,
+    `<polygon points="${fillPts}" fill="${SPARK_COLOR}" fill-opacity="0.12"/>`,
+    `<polyline points="${polyPts}" fill="none" stroke="${SPARK_COLOR}" stroke-width="1.8" stroke-linejoin="round"/>`,
+    // Endpoint dot with tooltip
+    `<circle cx="${sx(points.length - 1).toFixed(1)}" cy="${sy(points[points.length - 1]).toFixed(1)}" r="2.5" fill="${SPARK_COLOR}"><title>${lastTip}</title></circle>`,
+    `</svg>`,
+  ].join("");
+}
+
+/**
+ * Compute the rolling average of the last N non-null positive values.
+ */
+function rollingAvg(vals, windowSize) {
+  const pts = vals.filter((v) => v != null && v > 0).slice(-windowSize);
+  if (pts.length === 0) return null;
+  return Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
+}
+
+function buildBranchSection() {
+  const branchNames = Object.keys(allBranches);
+  if (branchNames.length === 0) return "";
+
+  // Sort branches: current branch first, then alphabetically
+  branchNames.sort((a, b) => {
+    if (a === branch) return -1;
+    if (b === branch) return 1;
+    return a.localeCompare(b);
+  });
+
+  const rows = branchNames
+    .map((br) => {
+      const entries = allBranches[br];
+      if (!Array.isArray(entries) || entries.length === 0) return null;
+
+      const buildSeries = entries.map((e) =>
+        e.build_s != null && e.build_s > 0 ? e.build_s : null,
+      );
+
+      const lastEntry = entries[entries.length - 1];
+      const lastBuild =
+        lastEntry.build_s != null && lastEntry.build_s > 0
+          ? fmtTime(lastEntry.build_s) +
+            (lastEntry.build_spike ? " \u26a0\ufe0f" : "")
+          : "\u2014";
+
+      const avg = rollingAvg(buildSeries, SPARK_RUNS);
+      const avgFmt = avg != null ? fmtTime(avg) : "\u2014";
+
+      const isCurrent = br === branch;
+      const branchCell = isCurrent
+        ? `<code style="background:#ddf4dd;color:#1a7f37">${escHtml(br)}</code>`
+        : `<code>${escHtml(br)}</code>`;
+
+      const sparkSvg = buildSparkline(buildSeries);
+
+      return [
+        `<tr${isCurrent ? ' style="font-weight:600"' : ""}>`,
+        `<td>${branchCell}</td>`,
+        `<td>${lastBuild}</td>`,
+        `<td>${avgFmt}</td>`,
+        `<td style="padding:4px 14px">${sparkSvg}</td>`,
+        "</tr>",
+      ].join("");
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  if (!rows) return "";
+
+  return `
+<h2 style="font-size:1rem;margin:28px 0 10px">&#9201;&#65039; Build time trends by branch</h2>
+<table class="branch-table" style="max-width:${W + 40}px">
+  <thead><tr>
+    <th>Branch</th>
+    <th>Last build</th>
+    <th>${SPARK_RUNS}-run avg</th>
+    <th>Trend (last ${SPARK_RUNS} runs)</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>`;
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+const branchSection = buildBranchSection();
+
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -337,6 +497,7 @@ const html = `<!DOCTYPE html>
   tr:hover td{background:#f6f8fa}
   code{font-family:ui-monospace,monospace;background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:.85em}
   .section-label{font-size:.75rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+  .branch-table td{vertical-align:middle}
 </style>
 </head>
 <body>
@@ -360,8 +521,11 @@ const html = `<!DOCTYPE html>
   </tr></thead>
   <tbody>${tableRows || noRowsMsg}</tbody>
 </table>
+${branchSection}
 </body>
 </html>`;
 
 fs.writeFileSync("ci-dashboard.html", html);
-console.log(`Dashboard written: ${n} entries, branch=${branch}`);
+console.log(
+  `Dashboard written: ${n} entries, branch=${branch}, cross-branch rows=${Object.keys(allBranches).length}`,
+);
