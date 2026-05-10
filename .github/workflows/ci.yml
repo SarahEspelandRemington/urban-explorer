@@ -777,14 +777,14 @@ jobs:
           last5=$(jq '.[-5:]' "$history_file")
 
           {
-            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Lint ⏱ | TC ⏱ | Fmt ⏱ | Build ⏱ |"
-            echo "|-----|------|---------|-------|---------------|--------|------|-------|---------|"
+            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Install time | Lint ⏱ | TC ⏱ | Fmt ⏱ | Build ⏱ |"
+            echo "|-----|------|---------|-------|---------------|--------------|--------|------|-------|---------|"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Emit one table row per entry. Null counts (skipped/cancelled jobs)
           # are rendered as "—" rather than 0 to avoid misleading the reader.
           # Old entries without a "format" field default to 0 for backward compat.
-          # Old entries without per-job time fields (lint_s etc.) render as "—".
+          # Old entries without per-job time fields (lint_s, install_s, etc.) render as "—".
           echo "$last5" | jq -r '
             def fmt(s):
               if s == null then "—"
@@ -800,7 +800,7 @@ jobs:
               ({"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun",
                 "07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"}[$m])
               + " " + ($d | ltrimstr("0"))) as $date |
-            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) | \(fmt(.lint_s)) | \(fmt(.tc_s)) | \(fmt(.format_s)) | \(fmt(.build_job_s)) |"
+            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) | \(fmt(.install_s)) | \(fmt(.lint_s)) | \(fmt(.tc_s)) | \(fmt(.format_s)) | \(fmt(.build_job_s)) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
