@@ -297,10 +297,33 @@ jobs:
           echo "lint_warning_count=${lint_warning_count}" >> "$GITHUB_OUTPUT"
           echo "lint_error_count=${lint_error_count}" >> "$GITHUB_OUTPUT"
 
+          # Build per-file warning/error counts as a JSON array (top 20 by warnings desc).
+          # Emitted alongside aggregate totals so the dashboard can show file-level trends.
+          lint_file_json=$(printf '%s\n' "$lint_output" | awk '
+            /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
+            /[[:space:]]error[[:space:]]/ { ecount[current_file]++ }
+            /[[:space:]]warning[[:space:]]/ { wcount[current_file]++ }
+            END {
+              for (f in ecount) seen[f] = 1
+              for (f in wcount) seen[f] = 1
+              printf "["
+              first = 1
+              for (f in seen) {
+                if (f == "") continue
+                if (!first) printf ","
+                first = 0
+                fname = f
+                gsub(/\\/, "\\\\", fname); gsub(/"/, "\\\"", fname)
+                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d}", fname, wcount[f]+0, ecount[f]+0
+              }
+              printf "]"
+            }
+          ' | jq -c 'sort_by(-.warnings) | .[:20]' 2>/dev/null || echo '[]')
+
           # Write a JSON artifact so warning trends can be compared across runs.
-          printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s"}\n' \
+          printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s","file_warnings":%s}\n' \
             "$lint_error_count" "$lint_warning_count" "${lint_duration_s}" \
-            "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            "${GITHUB_SHA}" "${GITHUB_REF_NAME}" "${lint_file_json:-[]}" \
             > lint-counts.json
 
           if [ $lint_exit -ne 0 ]; then
@@ -509,10 +532,38 @@ jobs:
           echo "tc_error_count=${tc_error_count}" >> "$GITHUB_OUTPUT"
           echo "tc_warning_count=${tc_warning_count}" >> "$GITHUB_OUTPUT"
 
+          # Build per-file warning/error counts as a JSON array (top 20 by warnings desc).
+          # tsc diagnostic lines: path/to/file.ts(line,col): warning|error TSxxxx: …
+          tc_file_json=$(printf '%s\n' "$tc_output" | awk '
+            /: error TS/ {
+              f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+              if (f != "") ecount[f]++
+            }
+            /: warning TS/ {
+              f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
+              if (f != "") wcount[f]++
+            }
+            END {
+              for (f in ecount) seen[f] = 1
+              for (f in wcount) seen[f] = 1
+              printf "["
+              first = 1
+              for (f in seen) {
+                if (f == "") continue
+                if (!first) printf ","
+                first = 0
+                fname = f
+                gsub(/\\/, "\\\\", fname); gsub(/"/, "\\\"", fname)
+                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d}", fname, wcount[f]+0, ecount[f]+0
+              }
+              printf "]"
+            }
+          ' | jq -c 'sort_by(-.warnings) | .[:20]' 2>/dev/null || echo '[]')
+
           # Write a JSON artifact so warning trends can be compared across runs.
-          printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s"}\n' \
+          printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s","file_warnings":%s}\n' \
             "$tc_error_count" "$tc_warning_count" "${tc_duration_s}" \
-            "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            "${GITHUB_SHA}" "${GITHUB_REF_NAME}" "${tc_file_json:-[]}" \
             > tc-counts.json
 
           if [ $tc_exit -ne 0 ]; then
@@ -749,7 +800,30 @@ jobs:
           # *_min_s / *_max_s = pre-computed spread from history at record time,
           #              allowing spread_for_field to fall back to these when raw
           #              samples are unavailable (e.g. after history is pruned).
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"lint_min_s\":${lint_min_s},\"lint_max_s\":${lint_max_s},\"tc_s\":${tc_s},\"tc_min_s\":${tc_min_s},\"tc_max_s\":${tc_max_s},\"format_s\":${format_s},\"format_min_s\":${format_min_s},\"format_max_s\":${format_max_s},\"build_job_s\":${build_s},\"build_job_min_s\":${build_job_min_s},\"build_job_max_s\":${build_job_max_s},\"build_s\":${total_build_s},\"build_spike\":false}"
+
+          # Merge per-file warning arrays from lint and typecheck into a top-10 list.
+          # Each source artifact now carries a file_warnings array; we tag each entry
+          # with its source so lint_warnings / tc_warnings can be stored separately.
+          lint_file_w=$(jq -c '[(.file_warnings // []) | .[] | . + {"source":"lint"}]' \
+            /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo '[]')
+          tc_file_w=$(jq -c '[(.file_warnings // []) | .[] | . + {"source":"tc"}]' \
+            /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo '[]')
+          top_files=$(jq -c -n \
+            --argjson lint "$lint_file_w" \
+            --argjson tc "$tc_file_w" \
+            '($lint + $tc)
+             | group_by(.file)
+             | map({
+                 file: .[0].file,
+                 lint_warnings: ([.[] | select(.source == "lint") | .warnings] | add // 0),
+                 tc_warnings:   ([.[] | select(.source == "tc")   | .warnings] | add // 0),
+                 warnings: (map(.warnings) | add),
+                 errors:   (map(.errors)   | add)
+               })
+             | sort_by(-.warnings)
+             | .[:10]' 2>/dev/null || echo '[]')
+
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"lint_min_s\":${lint_min_s},\"lint_max_s\":${lint_max_s},\"tc_s\":${tc_s},\"tc_min_s\":${tc_min_s},\"tc_max_s\":${tc_max_s},\"format_s\":${format_s},\"format_min_s\":${format_min_s},\"format_max_s\":${format_max_s},\"build_job_s\":${build_s},\"build_job_min_s\":${build_job_min_s},\"build_job_max_s\":${build_job_max_s},\"build_s\":${total_build_s},\"build_spike\":false,\"topFiles\":${top_files}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           # Cap = 20. On push events, build-time-gate reads this same file and
           # excludes the current run's SHA from the rolling average, so the
@@ -1689,7 +1763,28 @@ jobs:
           # build_job_s = only the build step; distinguishes from the total.
           # build_spike is always false for push-to-base entries; spike detection
           #              only runs for PRs.
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
+
+          # Merge per-file warning arrays from lint and typecheck into a top-10 list.
+          lint_file_w=$(jq -c '[(.file_warnings // []) | .[] | . + {"source":"lint"}]' \
+            /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo '[]')
+          tc_file_w=$(jq -c '[(.file_warnings // []) | .[] | . + {"source":"tc"}]' \
+            /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo '[]')
+          top_files=$(jq -c -n \
+            --argjson lint "$lint_file_w" \
+            --argjson tc "$tc_file_w" \
+            '($lint + $tc)
+             | group_by(.file)
+             | map({
+                 file: .[0].file,
+                 lint_warnings: ([.[] | select(.source == "lint") | .warnings] | add // 0),
+                 tc_warnings:   ([.[] | select(.source == "tc")   | .warnings] | add // 0),
+                 warnings: (map(.warnings) | add),
+                 errors:   (map(.errors)   | add)
+               })
+             | sort_by(-.warnings)
+             | .[:10]' 2>/dev/null || echo '[]')
+
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false,\"topFiles\":${top_files}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           # Cap = 20. build-time-gate averages entries from this file while
           # excluding the current run's SHA, so the effective sample size is

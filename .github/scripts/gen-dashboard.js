@@ -319,6 +319,126 @@ const svg2 = [
   "</svg>",
 ].join("\n");
 
+// ── Chart 3: Top warning files table ─────────────────────────────────────────
+// Collect the union of all files that appear in any run's topFiles list,
+// then render a table with runs as columns and files as rows.
+
+// Runs shown in table (up to last 10, oldest → newest for left-to-right reading)
+const fileTableRuns = history.slice(-10);
+const fileTableN = fileTableRuns.length;
+
+// Build a map: file → array of warning counts indexed by run position within fileTableRuns.
+// Also track each file's peak total for sorting.
+const fileMap = new Map(); // file → { lintByRun, tcByRun, totalByRun, peakTotal }
+
+for (let ri = 0; ri < fileTableN; ri++) {
+  const entry = fileTableRuns[ri];
+  const topFiles = Array.isArray(entry.topFiles) ? entry.topFiles : [];
+  for (const tf of topFiles) {
+    if (!tf.file) continue;
+    if (!fileMap.has(tf.file)) {
+      fileMap.set(tf.file, {
+        lintByRun: new Array(fileTableN).fill(null),
+        tcByRun: new Array(fileTableN).fill(null),
+        totalByRun: new Array(fileTableN).fill(null),
+        peakTotal: 0,
+      });
+    }
+    const rec = fileMap.get(tf.file);
+    const lw = tf.lint_warnings != null ? tf.lint_warnings : 0;
+    const tw = tf.tc_warnings != null ? tf.tc_warnings : 0;
+    const total = tf.warnings != null ? tf.warnings : lw + tw;
+    rec.lintByRun[ri] = lw;
+    rec.tcByRun[ri] = tw;
+    rec.totalByRun[ri] = total;
+    if (total > rec.peakTotal) rec.peakTotal = total;
+  }
+}
+
+// Sort files by warning count in the most recent run (desc), then by peak total (desc).
+const latestRunIdx = fileTableN - 1;
+const sortedFiles = [...fileMap.entries()].sort((a, b) => {
+  const aLast = a[1].totalByRun[latestRunIdx] ?? 0;
+  const bLast = b[1].totalByRun[latestRunIdx] ?? 0;
+  if (bLast !== aLast) return bLast - aLast;
+  return b[1].peakTotal - a[1].peakTotal;
+});
+
+// Strip common path prefix (repo root) from file names for display.
+function stripCommonPrefix(files) {
+  if (files.length === 0) return {};
+  const parts = files.map((f) => f.split("/"));
+  let prefixLen = 0;
+  outer: while (true) {
+    const seg = parts[0][prefixLen];
+    if (seg === undefined) break;
+    for (const p of parts) {
+      if (p[prefixLen] !== seg) break outer;
+    }
+    prefixLen++;
+  }
+  const map = {};
+  for (let i = 0; i < files.length; i++) {
+    map[files[i]] = parts[i].slice(prefixLen).join("/") || files[i];
+  }
+  return map;
+}
+
+const allFileNames = sortedFiles.map(([f]) => f);
+const displayNames = stripCommonPrefix(allFileNames);
+
+// Render the files table as HTML (not SVG — a table is cleaner for per-file data).
+function renderFileTable() {
+  if (fileTableN === 0 || sortedFiles.length === 0) {
+    return `<p style="color:#999;font-size:.85rem">No per-file warning data yet — needs at least one CI run with lint or typecheck warnings.</p>`;
+  }
+
+  // Column headers: short SHA + date
+  const headCols = fileTableRuns
+    .map((e) => {
+      const date = e.ts ? e.ts.slice(5, 10) : "";
+      return `<th title="${e.sha || ""}">${e.shortSha || ""}<br><span style="font-weight:400;color:#888">${date}</span></th>`;
+    })
+    .join("");
+
+  // Colour-scale a cell: white (0) → amber (high)
+  function cellBg(val, peak) {
+    if (val === null || val === 0 || peak === 0) return "";
+    const t = Math.min(val / peak, 1);
+    // amber tint: rgb(255, 215-t*80, 180-t*130)
+    const g = Math.round(215 - t * 80);
+    const b = Math.round(180 - t * 130);
+    return `background:rgb(255,${g},${b})`;
+  }
+
+  const globalPeak = Math.max(1, ...sortedFiles.map(([, r]) => r.peakTotal));
+
+  const rows = sortedFiles
+    .map(([file, rec]) => {
+      const cells = rec.totalByRun
+        .map((v) => {
+          if (v === null)
+            return `<td style="color:#ccc;text-align:center">—</td>`;
+          const bg = cellBg(v, globalPeak);
+          return `<td style="text-align:center;${bg ? bg + ";" : ""}">${v}</td>`;
+        })
+        .join("");
+      const label = escHtml(displayNames[file] || file);
+      return `<tr><td style="font-family:ui-monospace,monospace;font-size:.78rem;white-space:nowrap;max-width:380px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(file)}"><code>${label}</code></td>${cells}</tr>`;
+    })
+    .join("\n");
+
+  return `<table style="border-collapse:collapse;background:#fff;border:1px solid #d0d7de;border-radius:8px;overflow:hidden;font-size:.82rem">
+  <thead><tr>
+    <th style="background:#f6f8fa;text-align:left;padding:8px 14px;font-size:.82rem;color:#444;border-bottom:1px solid #d0d7de;white-space:nowrap">File</th>
+    ${headCols.replace(/<th/g, '<th style="background:#f6f8fa;text-align:center;padding:8px 10px;font-size:.8rem;color:#444;border-bottom:1px solid #d0d7de;min-width:58px"')}
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>`;
+}
+
+const fileTableHtml = renderFileTable();
+
 // ── Summary table ──────────────────────────────────────────────────────────────
 
 const tableRows = [...history]
@@ -568,6 +688,10 @@ const html = `<!DOCTYPE html>
 <h2>Per-job timing breakdown</h2>
 <p class="section-label">Stacked bars show install + lint + typecheck + format + build durations per run. Hover a segment for exact time.</p>
 <div class="card">${svg2}</div>
+
+<h2>Top warning files</h2>
+<p class="section-label">Files with the most warnings across recent runs (lint + typecheck combined). Cells are colour-coded by intensity — darker amber = higher count. Only files that appeared in the top-10 of at least one run are shown.</p>
+<div style="overflow-x:auto;margin-bottom:24px">${fileTableHtml}</div>
 
 <h2>Run history</h2>
 <table>
