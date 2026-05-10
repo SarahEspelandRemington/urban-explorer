@@ -781,6 +781,9 @@ jobs:
     # failures from blocking the PR.
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false))
     continue-on-error: true
+    permissions:
+      contents: write
+      actions: read
     steps:
       - name: Download previous warn-history artifact
         env:
@@ -790,23 +793,38 @@ jobs:
           # github.ref_name (the branch that was pushed to).
           head_ref="${{ github.head_ref || github.ref_name }}"
           current_run_id="${{ github.run_id }}"
-
-          prev_run_id=$(gh run list \
-            --repo "${{ github.repository }}" \
-            --branch "$head_ref" \
-            --workflow "ci.yml" \
-            --limit 10 \
-            --json databaseId \
-            --jq "[.[] | select(.databaseId != ${current_run_id})] | .[0].databaseId" \
-            2>/dev/null || true)
+          branch_slug=$(printf '%s' "$head_ref" | tr '/' '_')
 
           mkdir -p /tmp/warn-history
 
-          if [ -n "$prev_run_id" ] && [ "$prev_run_id" != "null" ]; then
-            gh run download "$prev_run_id" \
+          # Primary: read from the ci-data branch (survives the 90-day artifact
+          # expiry window and gives the per-file chart a durable history).
+          ci_data_content=$(gh api \
+            "repos/${{ github.repository }}/contents/warn-history/${branch_slug}.json?ref=ci-data" \
+            --jq '.content' 2>/dev/null || true)
+          if [ -n "$ci_data_content" ] && [ "$ci_data_content" != "null" ]; then
+            printf '%s' "$ci_data_content" | base64 -d > /tmp/warn-history/warn-history.json
+            echo "Loaded warn-history from ci-data branch (warn-history/${branch_slug}.json)."
+          fi
+
+          # Fallback: download from the most recent artifact when the ci-data
+          # file doesn't exist yet (e.g. first run after this change lands).
+          if [ ! -f /tmp/warn-history/warn-history.json ]; then
+            prev_run_id=$(gh run list \
               --repo "${{ github.repository }}" \
-              --name warn-history \
-              --dir /tmp/warn-history 2>/dev/null || true
+              --branch "$head_ref" \
+              --workflow "ci.yml" \
+              --limit 10 \
+              --json databaseId \
+              --jq "[.[] | select(.databaseId != ${current_run_id})] | .[0].databaseId" \
+              2>/dev/null || true)
+
+            if [ -n "$prev_run_id" ] && [ "$prev_run_id" != "null" ]; then
+              gh run download "$prev_run_id" \
+                --repo "${{ github.repository }}" \
+                --name warn-history \
+                --dir /tmp/warn-history 2>/dev/null || true
+            fi
           fi
 
           if [ ! -f /tmp/warn-history/warn-history.json ]; then
@@ -1226,6 +1244,75 @@ jobs:
           path: /tmp/warn-history/warn-history.json
           retention-days: 90
 
+      - name: Persist warn-history to ci-data branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f /tmp/warn-history/warn-history.json ]; then
+            echo "warn-history.json not found — skipping persist."
+            exit 0
+          fi
+
+          head_ref="${{ github.head_ref || github.ref_name }}"
+          branch_slug=$(printf '%s' "$head_ref" | tr '/' '_')
+          file_path="warn-history/${branch_slug}.json"
+          content=$(base64 -w 0 /tmp/warn-history/warn-history.json)
+
+          # Ensure the ci-data branch exists; create an orphan if not.
+          # --input - is required so tree/commit payloads arrive as JSON objects,
+          # not strings (--field would coerce [] to a string literal).
+          if ! gh api "repos/${{ github.repository }}/branches/ci-data" --silent 2>/dev/null; then
+            echo "ci-data branch not found — creating orphan branch."
+            tree_sha=$(printf '{"tree":[]}' | gh api \
+              "repos/${{ github.repository }}/git/trees" \
+              --method POST \
+              --input - \
+              --jq '.sha' 2>/dev/null || true)
+            if [ -n "$tree_sha" ]; then
+              commit_payload=$(printf '{"message":"ci: init ci-data branch [skip ci]","tree":"%s"}' "$tree_sha")
+              commit_sha=$(printf '%s' "$commit_payload" | gh api \
+                "repos/${{ github.repository }}/git/commits" \
+                --method POST \
+                --input - \
+                --jq '.sha' 2>/dev/null || true)
+              if [ -n "$commit_sha" ]; then
+                ref_payload=$(printf '{"ref":"refs/heads/ci-data","sha":"%s"}' "$commit_sha")
+                printf '%s' "$ref_payload" | gh api \
+                  "repos/${{ github.repository }}/git/refs" \
+                  --method POST \
+                  --input - \
+                  2>/dev/null || echo "::warning::Failed to create ci-data branch ref."
+              else
+                echo "::warning::Failed to create root commit for ci-data branch."
+              fi
+            else
+              echo "::warning::Failed to create empty git tree for ci-data branch."
+            fi
+          fi
+
+          # Get current SHA of the file (required by the Contents API for updates).
+          file_sha=$(gh api \
+            "repos/${{ github.repository }}/contents/${file_path}?ref=ci-data" \
+            --jq '.sha' 2>/dev/null || true)
+
+          if [ -n "$file_sha" ] && [ "$file_sha" != "null" ]; then
+            gh api "repos/${{ github.repository }}/contents/${file_path}" \
+              --method PUT \
+              --field "message=ci: update ${file_path} [skip ci]" \
+              --field "content=${content}" \
+              --field "sha=${file_sha}" \
+              --field "branch=ci-data" \
+              2>/dev/null || echo "::warning::Failed to update ${file_path} on ci-data branch."
+          else
+            gh api "repos/${{ github.repository }}/contents/${file_path}" \
+              --method PUT \
+              --field "message=ci: init ${file_path} [skip ci]" \
+              --field "content=${content}" \
+              --field "branch=ci-data" \
+              2>/dev/null || echo "::warning::Failed to create ${file_path} on ci-data branch."
+          fi
+
       - name: Upload time-counts artifact
         uses: actions/upload-artifact@v4
         with:
@@ -1244,6 +1331,10 @@ jobs:
     # turn spikes into a required status check that must pass before merging.
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false))
     continue-on-error: ${{ vars.BUILD_TIME_GATE_BLOCK_MERGE != 'true' }}
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: write
     outputs:
       spike: ${{ steps.compare.outputs.spike }}
       install_spike: ${{ steps.compare.outputs.install_spike }}
@@ -1768,6 +1859,77 @@ jobs:
           overwrite: true
           retention-days: 90
 
+      - name: Persist patched warn-history to ci-data branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Update the ci-data copy with the build_spike-patched version so
+          # historical entries on the persistent branch stay accurate.
+          if [ ! -f /tmp/warn-history-patch/warn-history.json ]; then
+            echo "Patched warn-history.json not found — skipping persist."
+            exit 0
+          fi
+
+          head_ref="${{ github.head_ref || github.ref_name }}"
+          branch_slug=$(printf '%s' "$head_ref" | tr '/' '_')
+          file_path="warn-history/${branch_slug}.json"
+          content=$(base64 -w 0 /tmp/warn-history-patch/warn-history.json)
+
+          # Ensure the ci-data branch exists; create an orphan if not.
+          # --input - is required so tree/commit payloads arrive as JSON objects,
+          # not strings (--field would coerce [] to a string literal).
+          if ! gh api "repos/${{ github.repository }}/branches/ci-data" --silent 2>/dev/null; then
+            echo "ci-data branch not found — creating orphan branch."
+            tree_sha=$(printf '{"tree":[]}' | gh api \
+              "repos/${{ github.repository }}/git/trees" \
+              --method POST \
+              --input - \
+              --jq '.sha' 2>/dev/null || true)
+            if [ -n "$tree_sha" ]; then
+              commit_payload=$(printf '{"message":"ci: init ci-data branch [skip ci]","tree":"%s"}' "$tree_sha")
+              commit_sha=$(printf '%s' "$commit_payload" | gh api \
+                "repos/${{ github.repository }}/git/commits" \
+                --method POST \
+                --input - \
+                --jq '.sha' 2>/dev/null || true)
+              if [ -n "$commit_sha" ]; then
+                ref_payload=$(printf '{"ref":"refs/heads/ci-data","sha":"%s"}' "$commit_sha")
+                printf '%s' "$ref_payload" | gh api \
+                  "repos/${{ github.repository }}/git/refs" \
+                  --method POST \
+                  --input - \
+                  2>/dev/null || echo "::warning::Failed to create ci-data branch ref."
+              else
+                echo "::warning::Failed to create root commit for ci-data branch."
+              fi
+            else
+              echo "::warning::Failed to create empty git tree for ci-data branch."
+            fi
+          fi
+
+          # Get current SHA of the file (required by the Contents API for updates).
+          file_sha=$(gh api \
+            "repos/${{ github.repository }}/contents/${file_path}?ref=ci-data" \
+            --jq '.sha' 2>/dev/null || true)
+
+          if [ -n "$file_sha" ] && [ "$file_sha" != "null" ]; then
+            gh api "repos/${{ github.repository }}/contents/${file_path}" \
+              --method PUT \
+              --field "message=ci: update ${file_path} (build_spike patch) [skip ci]" \
+              --field "content=${content}" \
+              --field "sha=${file_sha}" \
+              --field "branch=ci-data" \
+              2>/dev/null || echo "::warning::Failed to update ${file_path} on ci-data branch."
+          else
+            gh api "repos/${{ github.repository }}/contents/${file_path}" \
+              --method PUT \
+              --field "message=ci: init ${file_path} [skip ci]" \
+              --field "content=${content}" \
+              --field "branch=ci-data" \
+              2>/dev/null || echo "::warning::Failed to create ${file_path} on ci-data branch."
+          fi
+
       - name: Post build time spike comment
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -2223,6 +2385,9 @@ jobs:
     # continue-on-error keeps transient GitHub API failures non-fatal.
     if: always() && github.event_name == 'push'
     continue-on-error: true
+    permissions:
+      contents: write
+      actions: read
     steps:
       - name: Download previous warn-history-base artifact
         env:
@@ -2230,23 +2395,38 @@ jobs:
         run: |
           current_branch="${GITHUB_REF_NAME}"
           current_run_id="${{ github.run_id }}"
-
-          prev_run_id=$(gh run list \
-            --repo "${{ github.repository }}" \
-            --branch "$current_branch" \
-            --workflow "ci.yml" \
-            --limit 10 \
-            --json databaseId \
-            --jq "[.[] | select(.databaseId != ${current_run_id})] | .[0].databaseId" \
-            2>/dev/null || true)
+          branch_slug=$(printf '%s' "$current_branch" | tr '/' '_')
 
           mkdir -p /tmp/warn-history-base
 
-          if [ -n "$prev_run_id" ] && [ "$prev_run_id" != "null" ]; then
-            gh run download "$prev_run_id" \
+          # Primary: read from the ci-data branch (survives the 90-day artifact
+          # expiry window and gives the build-time-gate a durable history source).
+          ci_data_content=$(gh api \
+            "repos/${{ github.repository }}/contents/warn-history-base/${branch_slug}.json?ref=ci-data" \
+            --jq '.content' 2>/dev/null || true)
+          if [ -n "$ci_data_content" ] && [ "$ci_data_content" != "null" ]; then
+            printf '%s' "$ci_data_content" | base64 -d > /tmp/warn-history-base/warn-history-base.json
+            echo "Loaded warn-history-base from ci-data branch (warn-history-base/${branch_slug}.json)."
+          fi
+
+          # Fallback: download from the most recent artifact when the ci-data
+          # file doesn't exist yet (e.g. first run after this change lands).
+          if [ ! -f /tmp/warn-history-base/warn-history-base.json ]; then
+            prev_run_id=$(gh run list \
               --repo "${{ github.repository }}" \
-              --name warn-history-base \
-              --dir /tmp/warn-history-base 2>/dev/null || true
+              --branch "$current_branch" \
+              --workflow "ci.yml" \
+              --limit 10 \
+              --json databaseId \
+              --jq "[.[] | select(.databaseId != ${current_run_id})] | .[0].databaseId" \
+              2>/dev/null || true)
+
+            if [ -n "$prev_run_id" ] && [ "$prev_run_id" != "null" ]; then
+              gh run download "$prev_run_id" \
+                --repo "${{ github.repository }}" \
+                --name warn-history-base \
+                --dir /tmp/warn-history-base 2>/dev/null || true
+            fi
           fi
 
           if [ ! -f /tmp/warn-history-base/warn-history-base.json ]; then
@@ -2335,6 +2515,75 @@ jobs:
           name: warn-history-base
           path: /tmp/warn-history-base/warn-history-base.json
           retention-days: 90
+
+      - name: Persist warn-history-base to ci-data branch
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f /tmp/warn-history-base/warn-history-base.json ]; then
+            echo "warn-history-base.json not found — skipping persist."
+            exit 0
+          fi
+
+          current_branch="${GITHUB_REF_NAME}"
+          branch_slug=$(printf '%s' "$current_branch" | tr '/' '_')
+          file_path="warn-history-base/${branch_slug}.json"
+          content=$(base64 -w 0 /tmp/warn-history-base/warn-history-base.json)
+
+          # Ensure the ci-data branch exists; create an orphan if not.
+          # --input - is required so tree/commit payloads arrive as JSON objects,
+          # not strings (--field would coerce [] to a string literal).
+          if ! gh api "repos/${{ github.repository }}/branches/ci-data" --silent 2>/dev/null; then
+            echo "ci-data branch not found — creating orphan branch."
+            tree_sha=$(printf '{"tree":[]}' | gh api \
+              "repos/${{ github.repository }}/git/trees" \
+              --method POST \
+              --input - \
+              --jq '.sha' 2>/dev/null || true)
+            if [ -n "$tree_sha" ]; then
+              commit_payload=$(printf '{"message":"ci: init ci-data branch [skip ci]","tree":"%s"}' "$tree_sha")
+              commit_sha=$(printf '%s' "$commit_payload" | gh api \
+                "repos/${{ github.repository }}/git/commits" \
+                --method POST \
+                --input - \
+                --jq '.sha' 2>/dev/null || true)
+              if [ -n "$commit_sha" ]; then
+                ref_payload=$(printf '{"ref":"refs/heads/ci-data","sha":"%s"}' "$commit_sha")
+                printf '%s' "$ref_payload" | gh api \
+                  "repos/${{ github.repository }}/git/refs" \
+                  --method POST \
+                  --input - \
+                  2>/dev/null || echo "::warning::Failed to create ci-data branch ref."
+              else
+                echo "::warning::Failed to create root commit for ci-data branch."
+              fi
+            else
+              echo "::warning::Failed to create empty git tree for ci-data branch."
+            fi
+          fi
+
+          # Get current SHA of the file (required by the Contents API for updates).
+          file_sha=$(gh api \
+            "repos/${{ github.repository }}/contents/${file_path}?ref=ci-data" \
+            --jq '.sha' 2>/dev/null || true)
+
+          if [ -n "$file_sha" ] && [ "$file_sha" != "null" ]; then
+            gh api "repos/${{ github.repository }}/contents/${file_path}" \
+              --method PUT \
+              --field "message=ci: update ${file_path} [skip ci]" \
+              --field "content=${content}" \
+              --field "sha=${file_sha}" \
+              --field "branch=ci-data" \
+              2>/dev/null || echo "::warning::Failed to update ${file_path} on ci-data branch."
+          else
+            gh api "repos/${{ github.repository }}/contents/${file_path}" \
+              --method PUT \
+              --field "message=ci: init ${file_path} [skip ci]" \
+              --field "content=${content}" \
+              --field "branch=ci-data" \
+              2>/dev/null || echo "::warning::Failed to create ${file_path} on ci-data branch."
+          fi
 
   build-dashboard:
     name: Build CI dashboard
