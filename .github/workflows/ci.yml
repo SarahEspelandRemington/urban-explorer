@@ -887,9 +887,7 @@ jobs:
     continue-on-error: true
     outputs:
       spike: ${{ steps.compare.outputs.spike }}
-      increase_pct: ${{ steps.compare.outputs.increase_pct }}
-      current_fmt: ${{ steps.compare.outputs.current_fmt }}
-      avg_fmt: ${{ steps.compare.outputs.avg_fmt }}
+      job_details_b64: ${{ steps.compare.outputs.job_details_b64 }}
     steps:
       - name: Download current-run job timing artifacts
         env:
@@ -945,48 +943,76 @@ jobs:
       - name: Compare build time against base-branch average
         id: compare
         env:
-          MAX_BUILD_TIME_INCREASE_PCT: ${{ vars.MAX_BUILD_TIME_INCREASE_PCT }}
+          MAX_LINT_TIME_SPIKE_PCT: ${{ vars.MAX_LINT_TIME_SPIKE_PCT }}
+          MAX_TC_TIME_SPIKE_PCT: ${{ vars.MAX_TC_TIME_SPIKE_PCT }}
+          MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.MAX_FORMAT_TIME_SPIKE_PCT }}
+          MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.MAX_BUILD_JOB_TIME_SPIKE_PCT }}
         run: |
-          # Compute current run's total build time (lint + tc + format + build seconds).
+          # ── Current run per-job durations ──────────────────────────────────
           lint_s=$(jq -r '.duration_s // 0' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "0")
           tc_s=$(jq -r '.duration_s // 0' /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo "0")
           format_s=$(jq -r '.duration_s // 0' /tmp/job-counts/format-counts/format-counts.json 2>/dev/null || echo "0")
-          build_s=$(jq -r '.duration_s // 0' /tmp/job-counts/build-counts/build-counts.json 2>/dev/null || echo "0")
-          current_build_s=$((lint_s + tc_s + format_s + build_s))
+          build_job_s=$(jq -r '.duration_s // 0' /tmp/job-counts/build-counts/build-counts.json 2>/dev/null || echo "0")
 
-          # Use configurable threshold with a default of 25%.
-          threshold_pct="${MAX_BUILD_TIME_INCREASE_PCT:-25}"
+          echo "Current run: lint=${lint_s}s tc=${tc_s}s format=${format_s}s build_job=${build_job_s}s"
 
-          # Validate threshold is a positive integer; fall back to 25 on bad input.
-          if ! echo "$threshold_pct" | grep -qE '^[0-9]+$' || [ "$threshold_pct" -le 0 ]; then
-            echo "::warning::MAX_BUILD_TIME_INCREASE_PCT='${threshold_pct}' is not a positive integer — using default 25%."
-            threshold_pct=25
-          fi
+          # ── Per-job thresholds with validation ─────────────────────────────
+          # Defaults: lint=30%, typecheck=25%, format=50%, build=25%.
+          # Format gets a higher default because it is very fast and more
+          # variable on cold runners; lint and build are slower and more stable.
+          validate_threshold() {
+            local val="$1" name="$2" default="$3"
+            if [ -z "$val" ]; then
+              echo "$default"
+            elif ! echo "$val" | grep -qE '^[0-9]+$' || [ "$val" -le 0 ] 2>/dev/null; then
+              echo "::warning::${name}='${val}' is not a positive integer — using default ${default}%." >&2
+              echo "$default"
+            else
+              echo "$val"
+            fi
+          }
 
-          echo "Current run build time: ${current_build_s}s (lint=${lint_s}s tc=${tc_s}s format=${format_s}s build=${build_s}s)"
-          echo "Threshold: ${threshold_pct}%"
+          lint_thr=$(validate_threshold "${MAX_LINT_TIME_SPIKE_PCT}"     "MAX_LINT_TIME_SPIKE_PCT"     "30")
+          tc_thr=$(validate_threshold   "${MAX_TC_TIME_SPIKE_PCT}"       "MAX_TC_TIME_SPIKE_PCT"       "25")
+          fmt_thr=$(validate_threshold  "${MAX_FORMAT_TIME_SPIKE_PCT}"   "MAX_FORMAT_TIME_SPIKE_PCT"   "50")
+          bld_thr=$(validate_threshold  "${MAX_BUILD_JOB_TIME_SPIKE_PCT}" "MAX_BUILD_JOB_TIME_SPIKE_PCT" "25")
 
-          # Compute average build_s from base-branch warn-history-base entries
-          # that have build_s > 0. Old entries without the field are skipped
+          echo "Thresholds: lint=${lint_thr}% tc=${tc_thr}% format=${fmt_thr}% build_job=${bld_thr}%"
+
+          # ── Per-job base-branch averages ────────────────────────────────────
+          # Reads lint_s, tc_s, format_s, and build_job_s from the base history.
+          # Old history entries that pre-date the per-job fields are ignored
           # gracefully (select filters them out).
-          avg_build_s=$(jq '
-            [.[] | select(.build_s != null and .build_s > 0) | .build_s] |
-            if length == 0 then 0
-            else (add / length | round) end
-          ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo "0")
+          avg_for_field() {
+            local field="$1"
+            jq --arg f "$field" '
+              [.[] | select(.[$f] != null and (.[$f] | type) == "number" and .[$f] > 0) | .[$f]] |
+              if length == 0 then 0
+              else (add / length | round) end
+            ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo "0"
+          }
 
-          if [ -z "$avg_build_s" ] || [ "$avg_build_s" = "null" ]; then
-            avg_build_s=0
-          fi
+          avg_lint_s=$(avg_for_field "lint_s")
+          avg_tc_s=$(avg_for_field "tc_s")
+          avg_format_s=$(avg_for_field "format_s")
+          avg_build_job_s=$(avg_for_field "build_job_s")
 
-          echo "Base-branch average build time: ${avg_build_s}s"
+          # Sanitize nulls that jq may return on malformed input.
+          for vname in avg_lint_s avg_tc_s avg_format_s avg_build_job_s; do
+            v=$(eval "echo \${${vname}}")
+            if [ -z "$v" ] || [ "$v" = "null" ]; then eval "${vname}=0"; fi
+          done
 
-          if [ "$avg_build_s" -le 0 ]; then
-            echo "No base-branch build time history available — skipping comparison."
+          echo "Base averages: lint=${avg_lint_s}s tc=${avg_tc_s}s format=${avg_format_s}s build_job=${avg_build_job_s}s"
+
+          total_avg=$((avg_lint_s + avg_tc_s + avg_format_s + avg_build_job_s))
+
+          if [ "$total_avg" -le 0 ]; then
+            echo "No base-branch per-job build time history — skipping comparison."
             {
               echo "## ℹ️ Build time gate: no base history"
               echo ""
-              echo "No \`build_s\` entries found in \`warn-history-base\`."
+              echo "No per-job entries found in \`warn-history-base\`."
               echo "Comparison will be available after the base branch accumulates build history."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "spike=false" >> "$GITHUB_OUTPUT"
@@ -994,19 +1020,76 @@ jobs:
             exit 0
           fi
 
-          # Calculate the allowed maximum: avg * (1 + threshold_pct / 100).
-          allowed_max_s=$(( avg_build_s * (100 + threshold_pct) / 100 ))
-          increase_pct=$(( (current_build_s - avg_build_s) * 100 / avg_build_s ))
-
+          # ── Helper: format seconds as "Xm Ys" or "Ys" ─────────────────────
           fmt_time() {
             local s=$1
             local min=$(( s / 60 ))
             local sec=$(( s % 60 ))
             if [ "$min" -gt 0 ]; then echo "${min}m ${sec}s"; else echo "${sec}s"; fi
           }
-          current_fmt=$(fmt_time "$current_build_s")
-          avg_fmt=$(fmt_time "$avg_build_s")
-          allowed_fmt=$(fmt_time "$allowed_max_s")
+
+          # ── Per-job spike detection ─────────────────────────────────────────
+          # check_job <label> <current_s> <avg_s> <threshold_pct>
+          # Prints a JSON object with the job's spike details to stdout.
+          # Emits a ::warning annotation to stderr when a spike is detected.
+          check_job() {
+            local label="$1" cur="$2" avg="$3" thr="$4"
+            if [ "$avg" -le 0 ]; then
+              printf '{"name":"%s","skipped":true}' "$label"
+              return
+            fi
+            local allowed=$(( avg * (100 + thr) / 100 ))
+            local inc_pct=$(( (cur - avg) * 100 / avg ))
+            local spiked=false over_s=0
+            if [ "$cur" -gt "$allowed" ]; then
+              spiked=true
+              over_s=$(( cur - allowed ))
+              echo "::warning::${label} time spike: $(fmt_time "$cur") is ${inc_pct}% above the base-branch average of $(fmt_time "$avg") (threshold: ${thr}%). Review recent changes for unexpected slowdowns." >&2
+            fi
+            printf '{"name":"%s","skipped":false,"spiked":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"inc_pct":%d,"over_s":%d}' \
+              "$label" "$spiked" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s"
+          }
+
+          lint_detail=$(check_job "Lint"      "$lint_s"     "$avg_lint_s"     "$lint_thr")
+          tc_detail=$(check_job   "Typecheck" "$tc_s"       "$avg_tc_s"       "$tc_thr")
+          fmt_detail=$(check_job  "Format"    "$format_s"   "$avg_format_s"   "$fmt_thr")
+          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr")
+
+          # Determine overall spike flag.
+          any_spike=false
+          for d in "$lint_detail" "$tc_detail" "$fmt_detail" "$bld_detail"; do
+            if echo "$d" | grep -q '"spiked":true'; then
+              any_spike=true
+              break
+            fi
+          done
+
+          # ── Step summary table (per-job breakdown) ──────────────────────────
+          render_row() {
+            local d="$1"
+            local skipped label spiked cur avg allowed thr inc_pct over_s
+            skipped=$(echo "$d" | jq -r '.skipped')
+            [ "$skipped" = "true" ] && return
+            label=$(echo "$d" | jq -r '.name')
+            spiked=$(echo "$d" | jq -r '.spiked')
+            cur=$(echo "$d" | jq -r '.cur')
+            avg=$(echo "$d" | jq -r '.avg')
+            allowed=$(echo "$d" | jq -r '.allowed')
+            thr=$(echo "$d" | jq -r '.thr')
+            inc_pct=$(echo "$d" | jq -r '.inc_pct')
+            over_s=$(echo "$d" | jq -r '.over_s')
+            local cur_fmt avg_fmt allowed_fmt
+            cur_fmt=$(fmt_time "$cur")
+            avg_fmt=$(fmt_time "$avg")
+            allowed_fmt=$(fmt_time "$allowed")
+            if [ "$spiked" = "true" ]; then
+              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ❌ +${inc_pct}% (${over_s}s over) |"
+            elif [ "$cur" -le "$avg" ]; then
+              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ✅ On par or faster |"
+            else
+              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ✅ +${inc_pct}% (within threshold) |"
+            fi
+          }
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             run_label="This PR"
@@ -1017,55 +1100,33 @@ jobs:
           {
             echo "## 🕐 Build time gate"
             echo ""
-            echo "| | Time |"
-            echo "|---|---|"
-            echo "| Base-branch average | ${avg_fmt} |"
-            echo "| ${run_label} | ${current_fmt} |"
-            echo "| Allowed max (+${threshold_pct}%) | ${allowed_fmt} |"
+            echo "| Job | Base avg | This PR | Allowed max | Status |"
+            echo "|---|---|---|---|---|"
+            render_row "$lint_detail"
+            render_row "$tc_detail"
+            render_row "$fmt_detail"
+            render_row "$bld_detail"
+            echo ""
+            if [ "$any_spike" = "true" ]; then
+              echo "| **Overall** | — | — | — | ❌ One or more jobs exceeded their spike threshold |"
+            else
+              echo "| **Overall** | — | — | — | ✅ All jobs within threshold |"
+            fi
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "$current_build_s" -gt "$allowed_max_s" ]; then
-            over_s=$(( current_build_s - allowed_max_s ))
-            {
-              echo "| **Status** | ❌ Exceeded by ${over_s}s (${increase_pct}% over base average) |"
-              echo ""
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "::warning::Build time spike: ${current_fmt} is ${increase_pct}% above the base-branch average of ${avg_fmt} (threshold: ${threshold_pct}%). Review recent changes for unexpected build slowdowns."
-            echo "Build time increased by ${increase_pct}% (${avg_fmt} → ${current_fmt}), exceeding the ${threshold_pct}% threshold (allowed max: ${allowed_fmt})."
-            {
-              echo "spike=true"
-              echo "current_s=${current_build_s}"
-              echo "avg_s=${avg_build_s}"
-              echo "threshold_pct=${threshold_pct}"
-              echo "increase_pct=${increase_pct}"
-              echo "over_s=${over_s}"
-              echo "current_fmt=${current_fmt}"
-              echo "avg_fmt=${avg_fmt}"
-              echo "allowed_fmt=${allowed_fmt}"
-            } >> "$GITHUB_OUTPUT"
+          # ── Emit outputs ────────────────────────────────────────────────────
+          total_avg_s=$((avg_lint_s + avg_tc_s + avg_format_s + avg_build_job_s))
+          details_json="[${lint_detail},${tc_detail},${fmt_detail},${bld_detail}]"
+          details_b64=$(printf '%s' "$details_json" | base64 -w 0)
+          {
+            echo "spike=${any_spike}"
+            echo "avg_s=${total_avg_s}"
+            echo "job_details_b64=${details_b64}"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$any_spike" = "true" ]; then
             exit 1
-          else
-            if [ "$current_build_s" -le "$avg_build_s" ]; then
-              status_line="✅ On par or faster than base average"
-            else
-              status_line="✅ Within threshold (+${increase_pct}%)"
-            fi
-            {
-              echo "| **Status** | ${status_line} |"
-              echo ""
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "Build time is within the ${threshold_pct}% threshold (${avg_fmt} → ${current_fmt})."
-            {
-              echo "spike=false"
-              echo "current_s=${current_build_s}"
-              echo "avg_s=${avg_build_s}"
-              echo "threshold_pct=${threshold_pct}"
-              echo "increase_pct=${increase_pct}"
-              echo "current_fmt=${current_fmt}"
-              echo "avg_fmt=${avg_fmt}"
-              echo "allowed_fmt=${allowed_fmt}"
-            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: Patch build_spike into warn-history artifact
@@ -1112,12 +1173,7 @@ jobs:
         env:
           SPIKE: ${{ steps.compare.outputs.spike }}
           AVG_S: ${{ steps.compare.outputs.avg_s }}
-          THRESHOLD_PCT: ${{ steps.compare.outputs.threshold_pct }}
-          INCREASE_PCT: ${{ steps.compare.outputs.increase_pct }}
-          OVER_S: ${{ steps.compare.outputs.over_s }}
-          CURRENT_FMT: ${{ steps.compare.outputs.current_fmt }}
-          AVG_FMT: ${{ steps.compare.outputs.avg_fmt }}
-          ALLOWED_FMT: ${{ steps.compare.outputs.allowed_fmt }}
+          JOB_DETAILS_B64: ${{ steps.compare.outputs.job_details_b64 }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
         with:
@@ -1182,21 +1238,51 @@ jobs:
               }
             }
 
-            const thresholdPct = process.env.THRESHOLD_PCT;
+            // Decode per-job details from the base64-encoded JSON output.
+            let jobs = [];
+            try {
+              const raw = Buffer.from(process.env.JOB_DETAILS_B64 || '', 'base64').toString('utf8');
+              jobs = JSON.parse(raw);
+            } catch (_) {
+              // Malformed details — fall back to a generic message.
+            }
+
+            function fmtTime(s) {
+              const min = Math.floor(s / 60);
+              const sec = s % 60;
+              return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+            }
+
+            // Build one table row per non-skipped job.
+            const rows = jobs
+              .filter(j => !j.skipped)
+              .map(j => {
+                const curFmt = fmtTime(j.cur);
+                const avgFmt = fmtTime(j.avg);
+                const allowedFmt = fmtTime(j.allowed);
+                if (j.spiked) {
+                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ❌ +${j.inc_pct}% (${j.over_s}s over) |`;
+                } else if (j.cur <= j.avg) {
+                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ✅ On par or faster |`;
+                } else {
+                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ✅ +${j.inc_pct}% (within threshold) |`;
+                }
+              });
+
+            const spikedJobs = jobs.filter(j => !j.skipped && j.spiked).map(j => j.name);
+
             const body = [
               marker,
               `<!-- CI-BUILD-TIME-RUN:${currentRunId}:${currentRunAttempt} -->`,
               '## ⚠️ Build time spike detected',
               '',
-              '| | Time |',
-              '|---|---|',
-              `| Base-branch average | ${process.env.AVG_FMT} |`,
-              `| This PR | ${process.env.CURRENT_FMT} |`,
-              `| Allowed max (+${thresholdPct}%) | ${process.env.ALLOWED_FMT} |`,
-              `| **Status** | **❌ +${process.env.INCREASE_PCT}% (${process.env.OVER_S}s over limit)** |`,
+              `**${spikedJobs.join(', ')}** exceeded ${spikedJobs.length === 1 ? 'its' : 'their'} spike threshold.`,
               '',
-              `Build time increased by **${process.env.INCREASE_PCT}%** above the base-branch average,`,
-              `exceeding the ${thresholdPct}% threshold. Review recent changes for unexpected build slowdowns.`,
+              '| Job | Base avg | This PR | Allowed max | Status |',
+              '|---|---|---|---|---|',
+              ...rows,
+              '',
+              'Review recent changes for unexpected build slowdowns.',
               '',
               `_Last updated by run [#${currentRunId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${currentRunId}) (attempt ${currentRunAttempt})._`,
             ].join('\n');
@@ -1562,9 +1648,7 @@ jobs:
           PREV_FORMAT_WARNINGS: ${{ steps.prev-counts.outputs.prev_format_warnings }}
           FORMAT_ERROR_COUNT: ${{ needs.format.outputs.format_error_count }}
           BUILD_TIME_SPIKE: ${{ needs.build-time-gate.outputs.spike }}
-          BUILD_TIME_INCREASE_PCT: ${{ needs.build-time-gate.outputs.increase_pct }}
-          BUILD_TIME_CURRENT_FMT: ${{ needs.build-time-gate.outputs.current_fmt }}
-          BUILD_TIME_AVG_FMT: ${{ needs.build-time-gate.outputs.avg_fmt }}
+          BUILD_TIME_JOB_DETAILS_B64: ${{ needs.build-time-gate.outputs.job_details_b64 }}
         with:
           script: |
             const fs = require('fs');
@@ -1581,9 +1665,11 @@ jobs:
             const tcWarningCount = parseInt(process.env.TC_WARNING_COUNT || '0', 10);
             const formatErrorCount = parseInt(process.env.FORMAT_ERROR_COUNT || '0', 10);
             const buildTimeSpike = process.env.BUILD_TIME_SPIKE === 'true';
-            const buildTimeIncreasePct = process.env.BUILD_TIME_INCREASE_PCT || '';
-            const buildTimeCurrentFmt = process.env.BUILD_TIME_CURRENT_FMT || '';
-            const buildTimeAvgFmt = process.env.BUILD_TIME_AVG_FMT || '';
+            let buildTimeJobs = [];
+            try {
+              const raw = Buffer.from(process.env.BUILD_TIME_JOB_DETAILS_B64 || '', 'base64').toString('utf8');
+              buildTimeJobs = JSON.parse(raw);
+            } catch (_) {}
 
             // Load rolling warn-history written by the record-warn-history job.
             let warnHistory = [];
@@ -1731,8 +1817,9 @@ jobs:
               : null;
             // Include a build-time delta line only when a spike is detected, so
             // the comment stays clean on normal (within-threshold) builds.
-            const buildTimeDelta = buildTimeSpike && buildTimeIncreasePct
-              ? `⬆️ Build time +${buildTimeIncreasePct}% vs base average (${buildTimeCurrentFmt} vs avg ${buildTimeAvgFmt})`
+            const spikedJobs = buildTimeJobs.filter(j => !j.skipped && j.spiked);
+            const buildTimeDelta = buildTimeSpike && spikedJobs.length > 0
+              ? `⬆️ Build time spike: ${spikedJobs.map(j => `${j.name} +${j.inc_pct}%`).join(', ')} vs base average`
               : null;
             const deltaLines = [lintDelta, tcDelta, formatDelta, buildTimeDelta].filter(Boolean);
 
