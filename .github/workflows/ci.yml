@@ -11,7 +11,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   actions: read
 
@@ -1949,6 +1949,125 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Post build time spike commit comment
+        if: always() && github.event_name != 'pull_request' && steps.compare.outputs.spike == 'true'
+        uses: actions/github-script@v7
+        env:
+          SPIKE: ${{ steps.compare.outputs.spike }}
+          AVG_S: ${{ steps.compare.outputs.avg_s }}
+          JOB_DETAILS_B64: ${{ steps.compare.outputs.job_details_b64 }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        with:
+          script: |
+            const marker = '<!-- CI-BUILD-TIME-GATE -->';
+            const currentRunId = parseInt(process.env.RUN_ID, 10);
+            const currentRunAttempt = parseInt(process.env.RUN_ATTEMPT || '1', 10);
+
+            // Find any existing commit comment from a previous run attempt so we
+            // update in-place rather than posting a duplicate on re-runs.
+            const { data: commitComments } = await github.rest.repos.listCommentsForCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+            });
+            const existing = commitComments.find(c => c.body && c.body.includes(marker));
+
+            function extractRunKey(body) {
+              const match = body && body.match(/<!-- CI-BUILD-TIME-RUN:(\d+):(\d+) -->/);
+              if (match) return { runId: parseInt(match[1], 10), runAttempt: parseInt(match[2], 10) };
+              const legacyMatch = body && body.match(/<!-- CI-BUILD-TIME-RUN:(\d+) -->/);
+              if (legacyMatch) return { runId: parseInt(legacyMatch[1], 10), runAttempt: 1 };
+              return { runId: 0, runAttempt: 0 };
+            }
+
+            function existingIsNewer(existingKey) {
+              if (existingKey.runId !== currentRunId) return existingKey.runId > currentRunId;
+              return existingKey.runAttempt > currentRunAttempt;
+            }
+
+            if (existing) {
+              const existingKey = extractRunKey(existing.body);
+              if (existingIsNewer(existingKey)) return;
+            }
+
+            let jobs = [];
+            try {
+              const raw = Buffer.from(process.env.JOB_DETAILS_B64 || '', 'base64').toString('utf8');
+              jobs = JSON.parse(raw);
+            } catch (_) {
+              // Malformed details — fall back to a generic message.
+            }
+
+            function fmtTime(s) {
+              const min = Math.floor(s / 60);
+              const sec = s % 60;
+              return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+            }
+
+            const rows = jobs
+              .filter(j => !j.skipped)
+              .map(j => {
+                const curFmt = fmtTime(j.cur);
+                const avgFmt = fmtTime(j.avg);
+                const allowedFmt = fmtTime(j.allowed);
+                if (j.spiked) {
+                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ❌ +${j.inc_pct}% (${j.over_s}s over) |`;
+                } else if (j.cur <= j.avg) {
+                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ✅ On par or faster |`;
+                } else {
+                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ✅ +${j.inc_pct}% (within threshold) |`;
+                }
+              });
+
+            const spikedJobs = jobs.filter(j => !j.skipped && j.spiked).map(j => j.name);
+
+            const thrRows = jobs
+              .filter(j => !j.skipped)
+              .map(j => `| ${j.name} | ${j.thr}% | ${j.thr_src || 'unknown'} |`);
+
+            const body = [
+              marker,
+              `<!-- CI-BUILD-TIME-RUN:${currentRunId}:${currentRunAttempt} -->`,
+              '## ⚠️ Build time spike detected',
+              '',
+              `**${spikedJobs.join(', ')}** exceeded ${spikedJobs.length === 1 ? 'its' : 'their'} spike threshold on this push.`,
+              '',
+              '| Job | Base avg | This push | Allowed max | Status |',
+              '|---|---|---|---|---|',
+              ...rows,
+              '',
+              'Review recent changes for unexpected build slowdowns.',
+              '',
+              '<details><summary>Threshold sources for this run</summary>',
+              '',
+              '| Job | Threshold | Source |',
+              '|---|---|---|',
+              ...thrRows,
+              '',
+              'Sources: **branch override** = a branch-prefixed repo variable; **repo variable** = the global `MAX_*_TIME_SPIKE_PCT` repo variable; **built-in default** = no variable set (coded fallback).',
+              '',
+              '</details>',
+              '',
+              `_Posted by run [#${currentRunId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${currentRunId}) (attempt ${currentRunAttempt})._`,
+            ].join('\n');
+
+            if (existing) {
+              await github.rest.repos.updateCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.repos.createCommitComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: context.sha,
                 body,
               });
             }
