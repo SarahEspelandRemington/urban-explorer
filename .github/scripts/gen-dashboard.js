@@ -708,6 +708,88 @@ const summaryTrendBadges = history.map((e, idx) => {
   return { [slowestJob.key]: badge };
 });
 
+// ---------------------------------------------------------------------------
+// Cross-branch bottleneck banner
+// Pools the most recent `slowJobWindow` CI run entries across *all* active
+// (non-stale) branches in `allBranches`, falling back to current-branch
+// `history` when no multi-branch data is available.  For each pooled entry the
+// dominant job is determined by the same >50 % of combined job-time rule used
+// in buildBranchSection and summaryTrendBadges — entirely from structured
+// numeric fields, no HTML parsing.  If one job dominates in at least
+// (slowJobWindow - 1) of those pooled entries it is surfaced as a systemic
+// cross-branch bottleneck via a dismissible info banner.
+// ---------------------------------------------------------------------------
+const BOTTLENECK_THRESHOLD = Math.max(1, slowJobWindow - 1);
+
+// Collect recent entries from every active (non-stale) branch.
+const crossBranchEntries = [];
+for (const [br, brData] of Object.entries(allBranches)) {
+  const entries = Array.isArray(brData)
+    ? brData
+    : brData && Array.isArray(brData.entries)
+      ? brData.entries
+      : null;
+  const stale = !Array.isArray(brData) && brData ? !!brData.stale : false;
+  if (!entries || stale) continue;
+  for (const e of entries.slice(-slowJobWindow)) {
+    crossBranchEntries.push({ ...e, _br: br });
+  }
+}
+// If allBranches had no active data, fall back to current-branch history.
+const poolForBottleneck =
+  crossBranchEntries.length > 0
+    ? (crossBranchEntries.sort((a, b) =>
+        (b.ts || "").localeCompare(a.ts || ""),
+      ),
+      crossBranchEntries.slice(0, slowJobWindow))
+    : history.slice(-slowJobWindow);
+
+const bottleneckCounts = {};
+for (const e of poolForBottleneck) {
+  const jVals = TREND_BADGE_JOBS.map((j) => ({
+    key: j.key,
+    val: e[j.key] != null && e[j.key] > 0 ? e[j.key] : 0,
+  }));
+  const bMax = Math.max(...jVals.map((j) => j.val));
+  if (bMax <= 0) continue;
+  const bTotal = jVals.reduce((s, j) => s + j.val, 0);
+  if (bTotal <= 0 || bMax / bTotal <= 0.5) continue;
+  const bSlowest = jVals.find((j) => j.val === bMax);
+  if (bSlowest) {
+    bottleneckCounts[bSlowest.key] = (bottleneckCounts[bSlowest.key] || 0) + 1;
+  }
+}
+
+// Pick the job with the highest dominance count that meets the threshold.
+let bottleneckBanner = "";
+{
+  let topJob = null;
+  let topCount = 0;
+  for (const j of TREND_BADGE_JOBS) {
+    const c = bottleneckCounts[j.key] || 0;
+    if (c >= BOTTLENECK_THRESHOLD && c > topCount) {
+      topJob = j;
+      topCount = c;
+    }
+  }
+  if (topJob) {
+    const poolSize = poolForBottleneck.length;
+    const runsWord = poolSize === 1 ? "run" : "runs";
+    bottleneckBanner =
+      `<div id="bottleneck-banner" role="status" aria-label="Bottleneck notice" ` +
+      `style="display:flex;align-items:center;gap:10px;background:#fffbeb;border:1px solid #fbbf24;` +
+      `border-radius:8px;padding:10px 16px;margin-bottom:20px;font-size:.85rem;color:#92400e">` +
+      `<span style="font-size:1rem;flex-shrink:0">&#9888;&#65039;</span>` +
+      `<span style="flex:1"><strong>${escHtml(topJob.label)}</strong> has been the slowest job in ` +
+      `${topCount} of the last ${poolSize} ${runsWord}.</span>` +
+      `<button onclick="document.getElementById('bottleneck-banner').remove()" ` +
+      `aria-label="Dismiss bottleneck notice" ` +
+      `style="background:none;border:none;cursor:pointer;font-size:1rem;color:#92400e;` +
+      `padding:0 2px;line-height:1;flex-shrink:0">&#x2715;</button>` +
+      `</div>`;
+  }
+}
+
 const tableRows = [...history]
   .reverse()
   .map((e, revIdx) => {
@@ -1273,7 +1355,7 @@ const html = `<!DOCTYPE html>
 <body>
 <h1>CI Dashboard \u2014 ${branch}</h1>
 <p class="meta">Generated ${generatedAt} &middot; ${n} run${n !== 1 ? "s" : ""} in history &middot; <a href="${runUrl}">View workflow run &rarr;</a></p>
-
+${bottleneckBanner}
 <h2>Warnings &amp; total build time</h2>
 <div class="card">${svg1}</div>
 
