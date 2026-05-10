@@ -22,6 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Record job start time
+        run: echo "JOB_START_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
+
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
@@ -95,6 +98,22 @@ jobs:
           path: ${{ env.STORE_PATH }}
           key: ${{ steps.pnpm-cache-full.outputs.cache-primary-key }}
 
+      - name: Record install duration
+        if: always()
+        run: |
+          duration_s=$(( $(date +%s) - ${JOB_START_EPOCH:-0} ))
+          printf '{"duration_s":%d,"sha":"%s","ref":"%s"}\n' \
+            "${duration_s}" "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            > install-counts.json
+
+      - name: Upload install counts artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-counts
+          path: install-counts.json
+          retention-days: 90
+
   format:
     name: Format (Prettier)
     runs-on: ubuntu-latest
@@ -132,9 +151,11 @@ jobs:
         run: |
           # Capture the format check result without exiting immediately so we
           # can always write format-counts.json for cross-run trend comparison.
+          format_start_s=$SECONDS
           set +e
           pnpm run format:check
           format_exit=$?
+          format_duration_s=$((SECONDS - format_start_s))
           set -e
 
           # Count unformatted files for trend tracking.
@@ -148,8 +169,8 @@ jobs:
 
           # Write a JSON artifact so error counts can be compared across runs.
           # errors = number of unformatted files; warnings are always 0 for Prettier.
-          printf '{"errors":%d,"warnings":%d,"sha":"%s","ref":"%s"}\n' \
-            "${format_error_count}" 0 \
+          printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s"}\n' \
+            "${format_error_count}" 0 "${format_duration_s}" \
             "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
             > format-counts.json
 
@@ -259,9 +280,11 @@ jobs:
           # Temporarily disable errexit so a non-zero exit from ESLint doesn't
           # short-circuit the script before we can capture the exit code and
           # counts. We restore it immediately after the subshell completes.
+          lint_start_s=$SECONDS
           set +e
           lint_output=$(pnpm run lint 2>&1)
           lint_exit=$?
+          lint_duration_s=$((SECONDS - lint_start_s))
           set -e
           echo "$lint_output"
 
@@ -275,8 +298,8 @@ jobs:
           echo "lint_error_count=${lint_error_count}" >> "$GITHUB_OUTPUT"
 
           # Write a JSON artifact so warning trends can be compared across runs.
-          printf '{"errors":%d,"warnings":%d,"sha":"%s","ref":"%s"}\n' \
-            "$lint_error_count" "$lint_warning_count" \
+          printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s"}\n' \
+            "$lint_error_count" "$lint_warning_count" "${lint_duration_s}" \
             "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
             > lint-counts.json
 
@@ -472,9 +495,11 @@ jobs:
       - name: Typecheck (TypeScript)
         id: typecheck
         run: |
+          tc_start_s=$SECONDS
           set +e
           tc_output=$(pnpm run typecheck 2>&1)
           tc_exit=$?
+          tc_duration_s=$((SECONDS - tc_start_s))
           set -e
           echo "$tc_output"
 
@@ -485,8 +510,8 @@ jobs:
           echo "tc_warning_count=${tc_warning_count}" >> "$GITHUB_OUTPUT"
 
           # Write a JSON artifact so warning trends can be compared across runs.
-          printf '{"errors":%d,"warnings":%d,"sha":"%s","ref":"%s"}\n' \
-            "$tc_error_count" "$tc_warning_count" \
+          printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s"}\n' \
+            "$tc_error_count" "$tc_warning_count" "${tc_duration_s}" \
             "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
             > tc-counts.json
 
@@ -604,9 +629,9 @@ jobs:
   record-warn-history:
     name: Record warning history
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, format]
-    # Informational only — runs even when lint/typecheck/format fail so we
-    # always capture the counts and write the job summary. Skipped for fork
+    needs: [lint, typecheck, format, build]
+    # Informational only — runs even when lint/typecheck/format/build fail so
+    # we always capture the counts and write the job summary. Skipped for fork
     # PRs (no write token). continue-on-error keeps transient GitHub API
     # failures from blocking the PR.
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false))
@@ -643,6 +668,18 @@ jobs:
             echo "[]" > /tmp/warn-history/warn-history.json
           fi
 
+      - name: Download job timing artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/job-counts
+          for artifact in lint-counts tc-counts format-counts build-counts install-counts; do
+            gh run download "${{ github.run_id }}" \
+              --repo "${{ github.repository }}" \
+              --name "$artifact" \
+              --dir "/tmp/job-counts/${artifact}" 2>/dev/null || true
+          done
+
       - name: Append current counts and cap history
         env:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
@@ -661,8 +698,24 @@ jobs:
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+          # Read per-job durations captured by each job's counts artifact.
+          lint_s=$(jq -r '.duration_s // 0' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "0")
+          tc_s=$(jq -r '.duration_s // 0' /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo "0")
+          format_s=$(jq -r '.duration_s // 0' /tmp/job-counts/format-counts/format-counts.json 2>/dev/null || echo "0")
+          build_s=$(jq -r '.duration_s // 0' /tmp/job-counts/build-counts/build-counts.json 2>/dev/null || echo "0")
+          install_s=$(jq -r '.duration_s // 0' /tmp/job-counts/install-counts/install-counts.json 2>/dev/null || echo "0")
+          # Sum lint + tc + format + build as total compile/check work seconds.
+          total_build_s=$((lint_s + tc_s + format_s + build_s))
+
+          # Write combined time-counts.json for downstream consumers.
+          printf '{"install_s":%d,"lint_s":%d,"tc_s":%d,"format_s":%d,"build_s":%d,"total_s":%d,"sha":"%s","ref":"%s"}\n' \
+            "${install_s}" "${lint_s}" "${tc_s}" "${format_s}" "${build_s}" \
+            "$((install_s + lint_s + tc_s + format_s + build_s))" \
+            "${sha}" "${GITHUB_REF_NAME}" \
+            > /tmp/time-counts.json
+
           history=$(cat /tmp/warn-history/warn-history.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"build_s\":${total_build_s}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history/warn-history.json
@@ -687,20 +740,28 @@ jobs:
           last5=$(jq '.[-5:]' "$history_file")
 
           {
-            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors |"
-            echo "|-----|------|---------|-------|---------------|"
+            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Build time |"
+            echo "|-----|------|---------|-------|---------------|------------|"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Emit one table row per entry. Null counts (skipped/cancelled jobs)
           # are rendered as "—" rather than 0 to avoid misleading the reader.
           # Old entries without a "format" field default to 0 for backward compat.
+          # Old entries without a "build_s" field render as "—".
           echo "$last5" | jq -r '
             .[] |
             (.ts | split("T")[0] | split("-") as [$y, $m, $d] |
               ({"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun",
                 "07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"}[$m])
               + " " + ($d | ltrimstr("0"))) as $date |
-            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) |"
+            (if (.build_s == null or .build_s == 0) then "—"
+             else
+               ((.build_s / 60 | floor) as $min |
+                (.build_s % 60) as $sec |
+                if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
+                else ($sec | tostring) + "s" end)
+             end) as $build_time |
+            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) | \($build_time) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -711,6 +772,15 @@ jobs:
           lint_vals=$(echo "$last5" | jq -r '[.[].lint | select(. != null)] | map(tostring) | join(" → ")')
           tc_vals=$(echo "$last5"   | jq -r '[.[].tc   | select(. != null)] | map(tostring) | join(" → ")')
           format_vals=$(echo "$last5" | jq -r '[.[].format // 0] | map(tostring) | join(" → ")')
+          # Build time sparkline: format each entry as Xm Ys; omit nulls and zeros.
+          build_s_vals=$(echo "$last5" | jq -r '
+            [.[] | .build_s // 0 | select(. > 0) |
+              (. / 60 | floor) as $min |
+              (. % 60) as $sec |
+              if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
+              else ($sec | tostring) + "s" end
+            ] | join(" → ")
+          ')
 
           lint_last=$(echo "$last5" | jq '.[-1].lint')
           lint_prev=$(echo "$last5" | jq '.[-2].lint')
@@ -718,6 +788,8 @@ jobs:
           tc_prev=$(echo "$last5"   | jq '.[-2].tc')
           format_last=$(echo "$last5" | jq '.[-1].format // 0')
           format_prev=$(echo "$last5" | jq '.[-2].format // 0')
+          build_s_last=$(echo "$last5" | jq '.[-1].build_s // 0')
+          build_s_prev=$(echo "$last5" | jq '.[-2].build_s // 0')
 
           lint_arrow=""
           if [ "$lint_last" != "null" ] && [ "$lint_prev" != "null" ]; then
@@ -738,8 +810,15 @@ jobs:
           elif [ "$format_last" -lt "$format_prev" ]; then format_arrow=" ↓"
           fi
 
+          build_s_arrow=""
+          if [ "$build_s_last" -gt 0 ] && [ "$build_s_prev" -gt 0 ]; then
+            if   [ "$build_s_last" -gt "$build_s_prev" ]; then build_s_arrow=" ↑"
+            elif [ "$build_s_last" -lt "$build_s_prev" ]; then build_s_arrow=" ↓"
+            fi
+          fi
+
           {
-            echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`"
+            echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`  ·  Build: \`${build_s_vals}${build_s_arrow}\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -750,10 +829,17 @@ jobs:
           path: /tmp/warn-history/warn-history.json
           retention-days: 90
 
+      - name: Upload time-counts artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: time-counts
+          path: /tmp/time-counts.json
+          retention-days: 90
+
   record-warn-history-base:
     name: Record base branch warning history
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, format]
+    needs: [lint, typecheck, format, build]
     # Records a rolling warn-history-base artifact on every push (base branch
     # merges). Skipped for pull_request events — those are tracked by
     # record-warn-history instead.
@@ -790,6 +876,18 @@ jobs:
             echo "[]" > /tmp/warn-history-base/warn-history-base.json
           fi
 
+      - name: Download job timing artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/job-counts
+          for artifact in lint-counts tc-counts format-counts build-counts; do
+            gh run download "${{ github.run_id }}" \
+              --repo "${{ github.repository }}" \
+              --name "$artifact" \
+              --dir "/tmp/job-counts/${artifact}" 2>/dev/null || true
+          done
+
       - name: Append current counts and cap history
         env:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
@@ -808,8 +906,15 @@ jobs:
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+          # Read per-job durations and compute total compile/check work seconds.
+          lint_s=$(jq -r '.duration_s // 0' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "0")
+          tc_s=$(jq -r '.duration_s // 0' /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo "0")
+          format_s=$(jq -r '.duration_s // 0' /tmp/job-counts/format-counts/format-counts.json 2>/dev/null || echo "0")
+          build_s=$(jq -r '.duration_s // 0' /tmp/job-counts/build-counts/build-counts.json 2>/dev/null || echo "0")
+          total_build_s=$((lint_s + tc_s + format_s + build_s))
+
           history=$(cat /tmp/warn-history-base/warn-history-base.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json}}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"build_s\":${total_build_s}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history-base/warn-history-base.json
@@ -976,7 +1081,15 @@ jobs:
                 // Old entries without format field (undefined) default to 0;
                 // null means the format job was skipped/cancelled.
                 const formatCount = entry.format === undefined ? 0 : (entry.format === null ? '—' : entry.format);
-                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} |`;
+                // Old entries without build_s field (undefined or null) render as "—".
+                const buildS = entry.build_s;
+                let buildTime = '—';
+                if (buildS != null && buildS > 0) {
+                  const min = Math.floor(buildS / 60);
+                  const sec = buildS % 60;
+                  buildTime = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+                }
+                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} | ${buildTime} |`;
               });
 
               const lintLine = sparkline(last5.map((e) => e.lint));
@@ -984,17 +1097,32 @@ jobs:
               // Old entries without a format field (undefined) are treated as 0;
               // null (skipped job) is kept as null so the sparkline filters it out.
               const formatLine = sparkline(last5.map((e) => e.format === undefined ? 0 : e.format));
+              // Build time sparkline: format each entry as "Xm Ys"; compare raw seconds.
+              const buildLine = (() => {
+                const vals = last5.map((e) => (e.build_s != null && e.build_s > 0) ? e.build_s : null);
+                const nonNull = vals.filter((v) => v !== null);
+                if (nonNull.length === 0) return '—';
+                const last = nonNull[nonNull.length - 1];
+                const prev = nonNull.length > 1 ? nonNull[nonNull.length - 2] : null;
+                const arrow = prev != null ? (last > prev ? ' ↑' : last < prev ? ' ↓' : '') : '';
+                const fmt = (s) => {
+                  const min = Math.floor(s / 60);
+                  const sec = s % 60;
+                  return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+                };
+                return nonNull.map(fmt).join(' → ') + arrow;
+              })();
               const n = last5.length;
 
               return [
                 '',
                 `<details><summary>📈 Warning trend (last ${n} push${n !== 1 ? 'es' : ''} on this branch)</summary>`,
                 '',
-                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors |',
-                '|-----|------|---------|-------|---------------|',
+                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Build time |',
+                '|-----|------|---------|-------|---------------|------------|',
                 ...rows,
                 '',
-                `Lint: \`${lintLine}\`  ·  TS: \`${tcLine}\`  ·  Format: \`${formatLine}\``,
+                `Lint: \`${lintLine}\`  ·  TS: \`${tcLine}\`  ·  Format: \`${formatLine}\`  ·  Build: \`${buildLine}\``,
                 '',
                 '</details>',
               ];
@@ -1287,18 +1415,26 @@ jobs:
 
             // Build a compact history table (last 5 merges, oldest → newest).
             // Old entries without a "format" field are treated as 0.
+            // Old entries without a "build_s" field render as "—".
             function buildHistoryTable(entries, branch) {
               if (entries.length === 0) return [];
               const header = [
                 `<details><summary><strong>\`${branch}\` recent history</strong> (last ${entries.length} merge${entries.length === 1 ? '' : 's'})</summary>`,
                 '',
-                '| Commit | Date | Lint warnings | TS warnings | Format errors |',
-                '|---|---|---|---|---|',
+                '| Commit | Date | Lint warnings | TS warnings | Format errors | Build time |',
+                '|---|---|---|---|---|---|',
               ];
               const rows = entries.map(e => {
                 const date = e.ts ? e.ts.slice(0, 10) : '—';
                 const formatCount = e.format ?? 0;
-                return `| \`${e.shortSha || e.sha.slice(0, 7)}\` | ${date} | ${e.lint} | ${e.tc} | ${formatCount} |`;
+                const buildS = e.build_s;
+                let buildTime = '—';
+                if (buildS != null && buildS > 0) {
+                  const min = Math.floor(buildS / 60);
+                  const sec = buildS % 60;
+                  buildTime = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+                }
+                return `| \`${e.shortSha || e.sha.slice(0, 7)}\` | ${date} | ${e.lint} | ${e.tc} | ${formatCount} | ${buildTime} |`;
               });
               return [...header, ...rows, '', '</details>'];
             }
@@ -1628,10 +1764,18 @@ jobs:
             tsbuildinfo-root-${{ runner.os }}-
 
       - name: Build
+        id: build
         run: |
-          build_output=$(pnpm run build 2>&1) && echo "$build_output" || {
-            echo "$build_output"
+          build_start_s=$SECONDS
+          set +e
+          build_output=$(pnpm run build 2>&1)
+          build_exit=$?
+          build_duration_s=$((SECONDS - build_start_s))
+          set -e
+          echo "$build_output"
+          echo "build_duration_s=${build_duration_s}" >> "$GITHUB_OUTPUT"
 
+          if [ $build_exit -ne 0 ]; then
             # Extract packages that failed: pnpm prints a line containing
             # ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL followed by the package name.
             pkg_list=$(printf '%s\n' "$build_output" | awk '
@@ -1694,7 +1838,24 @@ jobs:
             echo "" >> "$GITHUB_STEP_SUMMARY"
             echo "</details>" >> "$GITHUB_STEP_SUMMARY"
             exit 1
-          }
+          fi
+
+      - name: Write build counts artifact
+        if: always()
+        run: |
+          duration_s="${{ steps.build.outputs.build_duration_s }}"
+          [ -z "$duration_s" ] && duration_s=0
+          printf '{"duration_s":%d,"sha":"%s","ref":"%s"}\n' \
+            "${duration_s}" "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
+            > build-counts.json
+
+      - name: Upload build counts artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-counts
+          path: build-counts.json
+          retention-days: 90
 
   clear-bot-comments:
     name: Clear CI bot comments on success
