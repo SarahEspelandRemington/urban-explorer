@@ -1411,7 +1411,7 @@ jobs:
           check_job() {
             local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}" spct="${6:-80}"
             if [ "$avg" -le 0 ]; then
-              printf '{"name":"%s","skipped":true}' "$label"
+              printf '{"name":"%s","skipped":true,"highVariance":false}' "$label"
               return
             fi
             local allowed=$(( avg * (100 + thr) / 100 ))
