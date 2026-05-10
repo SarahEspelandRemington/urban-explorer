@@ -1176,6 +1176,7 @@ jobs:
     outputs:
       spike: ${{ steps.compare.outputs.spike }}
       install_spike: ${{ steps.compare.outputs.install_spike }}
+      any_high_variance: ${{ steps.compare.outputs.any_high_variance }}
       job_details_b64: ${{ steps.compare.outputs.job_details_b64 }}
     steps:
       - name: Download current-run job timing artifacts
@@ -1700,6 +1701,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           SPIKE: ${{ steps.compare.outputs.spike }}
+          ANY_HIGH_VARIANCE: ${{ steps.compare.outputs.any_high_variance }}
           AVG_S: ${{ steps.compare.outputs.avg_s }}
           JOB_DETAILS_B64: ${{ steps.compare.outputs.job_details_b64 }}
           RUN_ID: ${{ github.run_id }}
@@ -1710,6 +1712,7 @@ jobs:
             const currentRunId = parseInt(process.env.RUN_ID, 10);
             const currentRunAttempt = parseInt(process.env.RUN_ATTEMPT || '1', 10);
             const spike = process.env.SPIKE === 'true';
+            const anyHighVariance = process.env.ANY_HIGH_VARIANCE === 'true';
             const avgS = parseInt(process.env.AVG_S || '0', 10);
 
             const { data: comments } = await github.rest.issues.listComments({
@@ -1739,9 +1742,9 @@ jobs:
               return existingKey.runAttempt > currentRunAttempt;
             }
 
-            if (!spike || avgS <= 0) {
-              // No spike (or no base history) — delete any stale comment,
-              // but only if it belongs to an older run than ours.
+            if ((!spike && !anyHighVariance) || avgS <= 0) {
+              // No spike and no high variance (or no base history) — delete any
+              // stale comment, but only if it belongs to an older run than ours.
               if (existing) {
                 const existingKey = extractRunKey(existing.body);
                 if (existingIsNewer(existingKey)) {
@@ -1781,23 +1784,44 @@ jobs:
               return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
             }
 
-            // Build one table row per non-skipped job.
+            // Build one table row per non-skipped job. The status column
+            // distinguishes spike, high variance, and both independently.
             const rows = jobs
               .filter(j => !j.skipped)
               .map(j => {
                 const curFmt = fmtTime(j.cur);
                 const avgFmt = fmtTime(j.avg);
                 const allowedFmt = fmtTime(j.allowed);
+                const hvSuffix = j.highVariance ? ' · ⚠️ high variance' : '';
+                let status;
                 if (j.spiked) {
-                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ❌ +${j.inc_pct}% (${j.over_s}s over) |`;
+                  status = `❌ +${j.inc_pct}% (${j.over_s}s over)${hvSuffix}`;
                 } else if (j.cur <= j.avg) {
-                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ✅ On par or faster |`;
+                  status = `✅ On par or faster${hvSuffix}`;
                 } else {
-                  return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ✅ +${j.inc_pct}% (within threshold) |`;
+                  status = `✅ +${j.inc_pct}% (within threshold)${hvSuffix}`;
                 }
+                return `| ${j.name} | ${avgFmt} | ${curFmt} | ${allowedFmt} (+${j.thr}%) | ${status} |`;
               });
 
             const spikedJobs = jobs.filter(j => !j.skipped && j.spiked).map(j => j.name);
+            const highVarianceJobs = jobs.filter(j => !j.skipped && j.highVariance).map(j => j.name);
+
+            // Compose the comment title and intro text so that spike and high
+            // variance are surfaced as separate, distinguishable signals.
+            let title, intro, footer;
+            if (spike) {
+              title = '## ⚠️ Build time spike detected';
+              intro = `**${spikedJobs.join(', ')}** exceeded ${spikedJobs.length === 1 ? 'its' : 'their'} spike threshold.`;
+              if (highVarianceJobs.length > 0) {
+                intro += `\n\n**High variance** detected in: **${highVarianceJobs.join(', ')}**. The baseline for ${highVarianceJobs.length === 1 ? 'this job' : 'these jobs'} has a wide spread, so the spike signal may be less reliable.`;
+              }
+              footer = 'Review recent changes for unexpected build slowdowns.';
+            } else {
+              title = '## ⚠️ High build time variance detected';
+              intro = `**${highVarianceJobs.join(', ')}** ${highVarianceJobs.length === 1 ? 'has' : 'have'} a wide spread in historical build times. No spike threshold was crossed this run, but results may be unreliable until variance stabilises.`;
+              footer = 'High variance is often caused by runner load fluctuations or flaky steps. Investigate if it persists across multiple runs.';
+            }
 
             // Build threshold source rows for the collapsible details block.
             const thrRows = jobs
@@ -1807,15 +1831,15 @@ jobs:
             const body = [
               marker,
               `<!-- CI-BUILD-TIME-RUN:${currentRunId}:${currentRunAttempt} -->`,
-              '## ⚠️ Build time spike detected',
+              title,
               '',
-              `**${spikedJobs.join(', ')}** exceeded ${spikedJobs.length === 1 ? 'its' : 'their'} spike threshold.`,
+              intro,
               '',
               '| Job | Base avg | This PR | Allowed max | Status |',
               '|---|---|---|---|---|',
               ...rows,
               '',
-              'Review recent changes for unexpected build slowdowns.',
+              footer,
               '',
               '<details><summary>Threshold sources for this run</summary>',
               '',
@@ -1853,6 +1877,7 @@ jobs:
           vars.BUILD_TIME_GATE_BLOCK_MERGE == 'true'
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_BUILD_ALERT_WEBHOOK }}
+          ANY_HIGH_VARIANCE: ${{ steps.compare.outputs.any_high_variance }}
           JOB_DETAILS_B64: ${{ steps.compare.outputs.job_details_b64 }}
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.repository }}
@@ -1877,30 +1902,42 @@ jobs:
           }
 
           # Build a plain-text table suitable for a Slack code block.
+          # Status column distinguishes spike, high variance, and both.
           table="Job           | Base avg | Current  | Allowed       | Status"$'\n'
           table+="--------------|----------|----------|---------------|-------"
           thr_sources=""
+          high_variance_jobs=""
           while IFS= read -r job; do
-            skipped=$(printf '%s' "$job" | jq -r '.skipped')
+            skipped=$(printf '%s' "$job"       | jq -r '.skipped')
             [ "$skipped" = "true" ] && continue
-            name=$(printf '%s' "$job"    | jq -r '.name')
-            spiked=$(printf '%s' "$job"  | jq -r '.spiked')
-            cur=$(printf '%s' "$job"     | jq -r '.cur')
-            avg=$(printf '%s' "$job"     | jq -r '.avg')
-            allowed=$(printf '%s' "$job" | jq -r '.allowed')
-            thr=$(printf '%s' "$job"     | jq -r '.thr')
-            thr_src=$(printf '%s' "$job" | jq -r '.thr_src // "unknown"')
-            inc_pct=$(printf '%s' "$job" | jq -r '.inc_pct')
-            over_s=$(printf '%s' "$job"  | jq -r '.over_s')
+            name=$(printf '%s' "$job"          | jq -r '.name')
+            spiked=$(printf '%s' "$job"        | jq -r '.spiked')
+            high_variance=$(printf '%s' "$job" | jq -r '.highVariance // false')
+            cur=$(printf '%s' "$job"           | jq -r '.cur')
+            avg=$(printf '%s' "$job"           | jq -r '.avg')
+            allowed=$(printf '%s' "$job"       | jq -r '.allowed')
+            thr=$(printf '%s' "$job"           | jq -r '.thr')
+            thr_src=$(printf '%s' "$job"       | jq -r '.thr_src // "unknown"')
+            inc_pct=$(printf '%s' "$job"       | jq -r '.inc_pct')
+            over_s=$(printf '%s' "$job"        | jq -r '.over_s')
             cur_fmt=$(fmt_time "$cur")
             avg_fmt=$(fmt_time "$avg")
             allowed_fmt=$(fmt_time "$allowed")
+            hv_tag=""
+            if [ "$high_variance" = "true" ]; then
+              hv_tag=" | HIGH VARIANCE"
+              if [ -z "$high_variance_jobs" ]; then
+                high_variance_jobs="$name"
+              else
+                high_variance_jobs="${high_variance_jobs}, ${name}"
+              fi
+            fi
             if [ "$spiked" = "true" ]; then
-              status="SPIKE +${inc_pct}% (${over_s}s over)"
+              status="SPIKE +${inc_pct}% (${over_s}s over)${hv_tag}"
             elif [ "$cur" -le "$avg" ]; then
-              status="OK (on par or faster)"
+              status="OK (on par or faster)${hv_tag}"
             else
-              status="OK +${inc_pct}% (within threshold)"
+              status="OK +${inc_pct}% (within threshold)${hv_tag}"
             fi
             table+=$'\n'"${name}           | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ${status}"
             thr_sources+="${name}: ${thr_src}"$'\n'
@@ -1914,9 +1951,23 @@ jobs:
             context_text="Push to \`${REF_NAME}\`"
           fi
 
+          body_text="*${context_text}* triggered a build time spike that is blocking merge.\n\nReview recent changes for unexpected build slowdowns."
+          # Surface high-variance jobs when the top-level flag agrees and the
+          # decoded job list confirms which jobs are affected. If the flag is set
+          # but no flagged jobs were found in the detail payload (data-shape drift),
+          # fall back to a generic high-variance notice so the signal is never lost.
+          if [ "$ANY_HIGH_VARIANCE" = "true" ]; then
+            if [ -n "$high_variance_jobs" ]; then
+              body_text="${body_text}\n\n:warning: *High variance* detected in: *${high_variance_jobs}*. The spike signal for these jobs may be less reliable due to a wide spread in historical times."
+            else
+              body_text="${body_text}\n\n:warning: *High build time variance* was detected in one or more jobs. Spike detection results may be less reliable this run."
+            fi
+          fi
+
           # Build and post the Slack payload via incoming webhook.
           payload=$(jq -n \
             --arg ctx "$context_text" \
+            --arg body "$body_text" \
             --arg tbl "$table" \
             --arg thr_sources "$thr_sources" \
             --arg url "$run_url" \
@@ -1928,7 +1979,7 @@ jobs:
                 },
                 {
                   "type": "section",
-                  "text": {"type": "mrkdwn", "text": ("*" + $ctx + "* triggered a build time spike that is blocking merge.\n\nReview recent changes for unexpected build slowdowns.")}
+                  "text": {"type": "mrkdwn", "text": $body}
                 },
                 {
                   "type": "section",
@@ -2498,6 +2549,7 @@ jobs:
           FORMAT_ERROR_COUNT: ${{ needs.format.outputs.format_error_count }}
           BUILD_TIME_SPIKE: ${{ needs.build-time-gate.outputs.spike }}
           INSTALL_TIME_SPIKE: ${{ needs.build-time-gate.outputs.install_spike }}
+          BUILD_TIME_ANY_HIGH_VARIANCE: ${{ needs.build-time-gate.outputs.any_high_variance }}
           BUILD_TIME_JOB_DETAILS_B64: ${{ needs.build-time-gate.outputs.job_details_b64 }}
         with:
           script: |
@@ -2516,6 +2568,7 @@ jobs:
             const formatErrorCount = parseInt(process.env.FORMAT_ERROR_COUNT || '0', 10);
             const buildTimeSpike = process.env.BUILD_TIME_SPIKE === 'true';
             const installTimeSpike = process.env.INSTALL_TIME_SPIKE === 'true';
+            const buildTimeAnyHighVariance = process.env.BUILD_TIME_ANY_HIGH_VARIANCE === 'true';
             let buildTimeJobs = [];
             try {
               const raw = Buffer.from(process.env.BUILD_TIME_JOB_DETAILS_B64 || '', 'base64').toString('utf8');
@@ -2669,9 +2722,10 @@ jobs:
             const formatDelta = formatErrorCount > 0
               ? deltaLine(formatErrorCount, process.env.PREV_FORMAT_WARNINGS, 'format', 'error')
               : null;
-            // Include a build-time delta line only when a spike is detected, so
-            // the comment stays clean on normal (within-threshold) builds.
+            // Include build-time delta lines when a spike or high variance is
+            // detected, so the comment stays clean on normal builds.
             const spikedJobs = buildTimeJobs.filter(j => !j.skipped && j.spiked);
+            const highVarianceJobs = buildTimeJobs.filter(j => !j.skipped && j.highVariance);
             // Install spikes get their own dedicated line below; only include
             // non-install spiked jobs in the generic build-time delta line.
             const nonInstallSpikedJobs = spikedJobs.filter(j => j.name !== 'Install');
@@ -2689,7 +2743,10 @@ jobs:
             const installSpikeDelta = installTimeSpike && installSpikeJob
               ? `⚠️ Install time spiked from ${fmtTimeJs(installSpikeJob.avg)} → ${fmtTimeJs(installSpikeJob.cur)} (+${installSpikeJob.inc_pct}%)`
               : null;
-            const deltaLines = [lintDelta, tcDelta, formatDelta, buildTimeDelta, installSpikeDelta].filter(Boolean);
+            const buildTimeVarianceDelta = buildTimeAnyHighVariance && highVarianceJobs.length > 0
+              ? `⚠️ High build time variance: ${highVarianceJobs.map(j => j.name).join(', ')} — baseline spread is wide; spike detection may be less reliable`
+              : null;
+            const deltaLines = [lintDelta, tcDelta, formatDelta, buildTimeDelta, installSpikeDelta, buildTimeVarianceDelta].filter(Boolean);
 
             const failed = [formatResult, lintResult, tcResult].some(
               (r) => r === 'failure',
@@ -2726,8 +2783,12 @@ jobs:
               const deltaSection = deltaLines.length > 0
                 ? ['', ...deltaLines]
                 : [];
-              const successHeader = buildTimeSpike || installTimeSpike
+              const successHeader = (buildTimeSpike || installTimeSpike) && buildTimeAnyHighVariance
+                ? '## ✅ All checks passed · ⏱️ Build time spike · ⚠️ High variance'
+                : (buildTimeSpike || installTimeSpike)
                 ? '## ✅ All checks passed · ⏱️ Build time spike'
+                : buildTimeAnyHighVariance
+                ? '## ✅ All checks passed · ⚠️ High build time variance'
                 : '## ✅ All checks passed';
               const successBody = [
                 marker,
@@ -2833,8 +2894,12 @@ jobs:
             const failureDeltaSection = deltaLines.length > 0
               ? ['', ...deltaLines, '']
               : [''];
-            const failureHeader = buildTimeSpike || installTimeSpike
+            const failureHeader = (buildTimeSpike || installTimeSpike) && buildTimeAnyHighVariance
+              ? `## \u274c CI failed \u2014 ${failedNames} · ⏱️ Build time spike · ⚠️ High variance`
+              : (buildTimeSpike || installTimeSpike)
               ? `## \u274c CI failed \u2014 ${failedNames} · ⏱️ Build time spike`
+              : buildTimeAnyHighVariance
+              ? `## \u274c CI failed \u2014 ${failedNames} · ⚠️ High build time variance`
               : `## \u274c CI failed \u2014 ${failedNames}`;
             const body = [
               marker,
