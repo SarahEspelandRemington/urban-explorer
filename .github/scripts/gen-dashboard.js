@@ -535,6 +535,7 @@ const SPARK_H = 28;
 const SPARK_PAD = 4;
 const SPARK_COLOR = "#27ae60";
 const SPARK_RUNS = 5; // number of recent runs to show per branch
+const TREND_THRESHOLD = 0.1; // >10% delta from rolling avg = meaningful change
 
 /**
  * Generate a mini SVG sparkline for an array of build_s values (nulls excluded).
@@ -615,6 +616,29 @@ function rollingAvg(vals, windowSize) {
   const pts = vals.filter((v) => v != null && v > 0).slice(-windowSize);
   if (pts.length === 0) return null;
   return Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
+}
+
+/**
+ * Return a trend arrow span comparing lastVal to avgVal.
+ * ↑ red   = last is more than TREND_THRESHOLD above avg (getting slower)
+ * ↓ green = last is more than TREND_THRESHOLD below avg (getting faster)
+ * → gray  = within threshold (flat)
+ * Returns "" when data is insufficient.
+ * @param {number|null} lastVal
+ * @param {number|null} avgVal
+ * @param {number} threshold  fractional threshold (e.g. 0.1 = 10%)
+ */
+function trendArrow(lastVal, avgVal, threshold) {
+  if (lastVal == null || avgVal == null || avgVal === 0) return "";
+  const delta = (lastVal - avgVal) / avgVal;
+  const pct = Math.round(Math.abs(delta) * 100);
+  if (delta > threshold) {
+    return `<span style="color:#e74c3c;font-size:.8rem;font-weight:700;line-height:1" title="\u2191 ${pct}% above ${SPARK_RUNS}-run avg (slower)">\u2191</span>`;
+  } else if (delta < -threshold) {
+    return `<span style="color:#27ae60;font-size:.8rem;font-weight:700;line-height:1" title="\u2193 ${pct}% below ${SPARK_RUNS}-run avg (faster)">\u2193</span>`;
+  } else {
+    return `<span style="color:#aaa;font-size:.8rem;line-height:1" title="\u2192 within ${Math.round(threshold * 100)}% of ${SPARK_RUNS}-run avg (flat)">\u2192</span>`;
+  }
 }
 
 function buildBranchSection() {
@@ -719,11 +743,17 @@ function buildBranchSection() {
             const labelColor = isSlowest ? "#e67e22" : "#888";
             const labelWeight = isSlowest ? "600" : "normal";
             const valueColor = isSlowest ? ";color:#e67e22" : "";
+            const jobAvg = rollingAvg(series, SPARK_RUNS);
+            const arrow =
+              lastVal != null && lastVal > 0
+                ? trendArrow(lastVal, jobAvg, TREND_THRESHOLD)
+                : "";
             return (
               `<div style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;margin-bottom:3px">` +
               `<span style="color:${labelColor};font-weight:${labelWeight};font-size:.75rem;min-width:60px">${j.label}${isSlowest ? " \u26a0\ufe0f" : ""}</span>` +
               spark +
               `<strong style="font-size:.75rem;min-width:32px;text-align:right${valueColor}">${lastFmt}</strong>` +
+              arrow +
               `</div>`
             );
           })
