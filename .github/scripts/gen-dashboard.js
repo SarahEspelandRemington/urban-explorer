@@ -635,12 +635,21 @@ const TREND_THRESHOLD = 0.1; // >10% delta from rolling avg = meaningful change
  * @param {number} [w] - SVG width (defaults to SPARK_W)
  * @param {number} [h] - SVG height (defaults to SPARK_H)
  * @param {string} [color] - Stroke/fill color (defaults to SPARK_COLOR)
+ * @param {object[]} [entries] - Parallel array of history entries (same length as vals).
+ *   When provided, each entry's `shortSha` and `ts` are used to label every data-point dot.
  */
-function buildSparkline(vals, runUrl, w, h, color) {
+function buildSparkline(vals, runUrl, w, h, color, entries) {
   const svgW = w != null ? w : SPARK_W;
   const svgH = h != null ? h : SPARK_H;
   const svgColor = color != null ? color : SPARK_COLOR;
-  const points = vals.filter((v) => v != null && v > 0).slice(-SPARK_RUNS);
+
+  // Pair each value with its corresponding entry (if provided) so we keep
+  // SHA/date metadata through the filter+slice that trims nulls and old runs.
+  const paired = vals
+    .map((v, i) => ({ v, entry: entries ? entries[i] : null }))
+    .filter(({ v }) => v != null && v > 0)
+    .slice(-SPARK_RUNS);
+  const points = paired.map(({ v }) => v);
 
   if (points.length < 2) {
     const label =
@@ -679,25 +688,33 @@ function buildSparkline(vals, runUrl, w, h, color) {
     `${sx(points.length - 1).toFixed(1)},${baseY}`,
   ].join(" ");
 
-  // Dots for intermediate points (all except the last) — tooltip only, no link
-  const lastIdx = points.length - 1;
-  const intermediateDots = points
-    .slice(0, lastIdx)
-    .map((v, i) => {
+  // Intermediate dots — every point except the last gets a <title> showing
+  // the run's SHA, date, and build time so hovering reveals per-run details.
+  const intermediateDots = paired
+    .slice(0, -1)
+    .map(({ v, entry }, i) => {
       const cx = sx(i).toFixed(1);
       const cy = sy(v).toFixed(1);
-      return `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${svgColor}"><title>${fmtTime(v)}</title></circle>`;
+      const tip = entry
+        ? `${entry.shortSha} (${entry.ts.slice(0, 10)}): ${fmtTime(v)}`
+        : fmtTime(v);
+      return `<circle cx="${cx}" cy="${cy}" r="2" fill="${svgColor}" opacity="0.7"><title>${tip}</title></circle>`;
     })
     .join("");
 
-  // Tooltip title for last point (include run URL if available)
+  // Endpoint dot — also shows SHA/date when available, plus the run URL for
+  // discoverability (the whole SVG is an anchor link too, added in task-549).
+  const lastPaired = paired[paired.length - 1];
+  const lastEntryPrefix =
+    lastPaired.entry
+      ? `${lastPaired.entry.shortSha} (${lastPaired.entry.ts.slice(0, 10)}): `
+      : "";
   const lastTip = runUrl
-    ? `${fmtTime(points[lastIdx])} — ${escHtml(runUrl)}`
-    : fmtTime(points[lastIdx]);
+    ? `${lastEntryPrefix}${fmtTime(points[points.length - 1])} — ${escHtml(runUrl)}`
+    : `${lastEntryPrefix}${fmtTime(points[points.length - 1])}`;
 
-  const endCx = sx(lastIdx).toFixed(1);
-  const endCy = sy(points[lastIdx]).toFixed(1);
-  // Keep the tooltip on the dot for discoverability; the whole SVG is now the link.
+  const endCx = sx(points.length - 1).toFixed(1);
+  const endCy = sy(points[points.length - 1]).toFixed(1);
   const endDot = `<circle cx="${endCx}" cy="${endCy}" r="2.5" fill="${svgColor}"><title>${lastTip}</title></circle>`;
 
   const svgStyle = runUrl ? ` style="cursor:pointer"` : "";
@@ -916,6 +933,7 @@ function buildBranchSection() {
               JOB_SPARK_W,
               JOB_SPARK_H,
               JOB_SPARK_COLORS[j.key],
+              entries,
             );
             const isSlowest = slowestLabel != null && j.label === slowestLabel;
             const labelColor = isSlowest ? "#e67e22" : "#888";
@@ -946,7 +964,7 @@ function buildBranchSection() {
 
       const branchCell = `<details style="cursor:pointer"><summary style="list-style:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:.7rem;color:#888">&#9654;</span>${branchLinked}</summary>${jobBreakdown}</details>`;
 
-      const sparkSvg = buildSparkline(buildSeries, runUrl);
+      const sparkSvg = buildSparkline(buildSeries, runUrl, undefined, undefined, undefined, entries);
 
       const lastBuildRaw =
         lastEntry.build_s != null && lastEntry.build_s > 0
