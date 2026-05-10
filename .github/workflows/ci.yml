@@ -100,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     outputs:
-      format_warning_count: ${{ steps.format.outputs.format_warning_count }}
+      format_error_count: ${{ steps.format.outputs.format_error_count }}
     steps:
       - uses: actions/checkout@v4
 
@@ -137,13 +137,19 @@ jobs:
           format_exit=$?
           set -e
 
-          # Prettier is pass/fail only — warnings are always 0.
-          echo "format_warning_count=0" >> "$GITHUB_OUTPUT"
+          # Count unformatted files for trend tracking.
+          # If the check passed there are none; otherwise run list-different to count.
+          if [ $format_exit -eq 0 ]; then
+            format_error_count=0
+          else
+            format_error_count=$(pnpm prettier --list-different . 2>/dev/null | wc -l | tr -d ' ')
+          fi
+          echo "format_error_count=${format_error_count}" >> "$GITHUB_OUTPUT"
 
-          # Write a JSON artifact so warning trends can be compared across runs.
-          # Errors represent unformatted files; warnings are always 0 for Prettier.
+          # Write a JSON artifact so error counts can be compared across runs.
+          # errors = number of unformatted files; warnings are always 0 for Prettier.
           printf '{"errors":%d,"warnings":%d,"sha":"%s","ref":"%s"}\n' \
-            "$format_exit" 0 \
+            "${format_error_count}" 0 \
             "${GITHUB_SHA}" "${GITHUB_REF_NAME}" \
             > format-counts.json
 
@@ -641,16 +647,16 @@ jobs:
         env:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
           TC_WARNINGS: ${{ needs.typecheck.outputs.tc_warning_count }}
-          FORMAT_WARNINGS: ${{ needs.format.outputs.format_warning_count }}
+          FORMAT_ERRORS: ${{ needs.format.outputs.format_error_count }}
         run: |
           # Use null (JSON null) when a job was skipped/cancelled so we don't
           # silently record 0 and distort the trend sparkline downward.
           lint_w="${LINT_WARNINGS}"
           tc_w="${TC_WARNINGS}"
-          format_w="${FORMAT_WARNINGS}"
+          format_e="${FORMAT_ERRORS}"
           [ -z "$lint_w" ]   && lint_json="null"   || lint_json="$lint_w"
           [ -z "$tc_w" ]     && tc_json="null"     || tc_json="$tc_w"
-          [ -z "$format_w" ] && format_json="null" || format_json="$format_w"
+          [ -z "$format_e" ] && format_json="null" || format_json="$format_e"
           sha="${GITHUB_SHA}"
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -681,8 +687,8 @@ jobs:
           last5=$(jq '.[-5:]' "$history_file")
 
           {
-            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format ⚠️ |"
-            echo "|-----|------|---------|-------|-----------|"
+            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors |"
+            echo "|-----|------|---------|-------|---------------|"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Emit one table row per entry. Null counts (skipped/cancelled jobs)
@@ -788,16 +794,16 @@ jobs:
         env:
           LINT_WARNINGS: ${{ needs.lint.outputs.lint_warning_count }}
           TC_WARNINGS: ${{ needs.typecheck.outputs.tc_warning_count }}
-          FORMAT_WARNINGS: ${{ needs.format.outputs.format_warning_count }}
+          FORMAT_ERRORS: ${{ needs.format.outputs.format_error_count }}
         run: |
           # Use null (JSON null) when a job was skipped/cancelled so we don't
           # silently record 0 and distort the trend sparkline downward.
           lint_w="${LINT_WARNINGS}"
           tc_w="${TC_WARNINGS}"
-          format_w="${FORMAT_WARNINGS}"
+          format_e="${FORMAT_ERRORS}"
           [ -z "$lint_w" ]   && lint_json="null"   || lint_json="$lint_w"
           [ -z "$tc_w" ]     && tc_json="null"     || tc_json="$tc_w"
-          [ -z "$format_w" ] && format_json="null" || format_json="$format_w"
+          [ -z "$format_e" ] && format_json="null" || format_json="$format_e"
           sha="${GITHUB_SHA}"
           short_sha="${sha:0:7}"
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -873,7 +879,7 @@ jobs:
               --repo "${{ github.repository }}" \
               --name format-counts \
               --dir /tmp/prev-counts/format 2>/dev/null; then
-            prev_format=$(jq -r '.warnings' /tmp/prev-counts/format/format-counts.json 2>/dev/null || echo "")
+            prev_format=$(jq -r '.errors' /tmp/prev-counts/format/format-counts.json 2>/dev/null || echo "")
           else
             prev_format=""
           fi
@@ -907,7 +913,7 @@ jobs:
           PREV_LINT_WARNINGS: ${{ steps.prev-counts.outputs.prev_lint_warnings }}
           PREV_TC_WARNINGS: ${{ steps.prev-counts.outputs.prev_tc_warnings }}
           PREV_FORMAT_WARNINGS: ${{ steps.prev-counts.outputs.prev_format_warnings }}
-          FORMAT_WARNING_COUNT: ${{ needs.format.outputs.format_warning_count }}
+          FORMAT_ERROR_COUNT: ${{ needs.format.outputs.format_error_count }}
         with:
           script: |
             const fs = require('fs');
@@ -922,7 +928,7 @@ jobs:
             const tcOutput = process.env.TC_OUTPUT || '';
             const tcErrorCount = parseInt(process.env.TC_ERROR_COUNT || '0', 10);
             const tcWarningCount = parseInt(process.env.TC_WARNING_COUNT || '0', 10);
-            const formatWarningCount = parseInt(process.env.FORMAT_WARNING_COUNT || '0', 10);
+            const formatErrorCount = parseInt(process.env.FORMAT_ERROR_COUNT || '0', 10);
 
             // Load rolling warn-history written by the record-warn-history job.
             let warnHistory = [];
@@ -984,8 +990,8 @@ jobs:
                 '',
                 `<details><summary>📈 Warning trend (last ${n} push${n !== 1 ? 'es' : ''} on this branch)</summary>`,
                 '',
-                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format ⚠️ |',
-                '|-----|------|---------|-------|-----------|',
+                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors |',
+                '|-----|------|---------|-------|---------------|',
                 ...rows,
                 '',
                 `Lint: \`${lintLine}\`  ·  TS: \`${tcLine}\`  ·  Format: \`${formatLine}\``,
@@ -998,12 +1004,12 @@ jobs:
 
             // Build per-check delta lines for the comment when previous counts
             // are available. Returns null when there is no prior data.
-            function deltaLine(current, prevRaw, label) {
+            function deltaLine(current, prevRaw, label, metricNoun = 'warning') {
               const prev = parseInt(prevRaw || '', 10);
               if (!prevRaw || isNaN(prev)) return null;
               const delta = current - prev;
               const n = Math.abs(delta);
-              const noun = `${label} warning${n !== 1 ? 's' : ''}`;
+              const noun = `${label} ${metricNoun}${n !== 1 ? 's' : ''}`;
               if (delta > 0) return `⬆️ +${delta} ${noun} since last push`;
               if (delta < 0) return `⬇️ −${n} ${noun} since last push`;
               return `➡️ ${noun} unchanged since last push`;
@@ -1011,8 +1017,8 @@ jobs:
 
             const lintDelta = deltaLine(lintWarningCount, process.env.PREV_LINT_WARNINGS, 'lint');
             const tcDelta = deltaLine(tcWarningCount, process.env.PREV_TC_WARNINGS, 'typecheck');
-            const formatDelta = formatWarningCount > 0
-              ? deltaLine(formatWarningCount, process.env.PREV_FORMAT_WARNINGS, 'format')
+            const formatDelta = formatErrorCount > 0
+              ? deltaLine(formatErrorCount, process.env.PREV_FORMAT_WARNINGS, 'format', 'error')
               : null;
             const deltaLines = [lintDelta, tcDelta, formatDelta].filter(Boolean);
 
@@ -1286,7 +1292,7 @@ jobs:
               const header = [
                 `<details><summary><strong>\`${branch}\` recent history</strong> (last ${entries.length} merge${entries.length === 1 ? '' : 's'})</summary>`,
                 '',
-                '| Commit | Date | Lint warnings | TS warnings | Format warnings |',
+                '| Commit | Date | Lint warnings | TS warnings | Format errors |',
                 '|---|---|---|---|---|',
               ];
               const rows = entries.map(e => {
@@ -1429,7 +1435,7 @@ jobs:
                 --repo "${{ github.repository }}" \
                 --name format-counts \
                 --dir /tmp/base-counts/format 2>/dev/null; then
-              base_format=$(jq -r '.warnings' /tmp/base-counts/format/format-counts.json 2>/dev/null || echo "")
+              base_format=$(jq -r '.errors' /tmp/base-counts/format/format-counts.json 2>/dev/null || echo "")
             fi
           else
             echo "No successful base-branch CI run found for '${base_branch}'. Skipping gate."
@@ -1444,7 +1450,7 @@ jobs:
         env:
           HEAD_LINT: ${{ needs.lint.outputs.lint_warning_count }}
           HEAD_TC: ${{ needs.typecheck.outputs.tc_warning_count }}
-          HEAD_FORMAT: ${{ needs.format.outputs.format_warning_count }}
+          HEAD_FORMAT: ${{ needs.format.outputs.format_error_count }}
           BASE_LINT: ${{ steps.base-counts.outputs.base_lint }}
           BASE_TC: ${{ steps.base-counts.outputs.base_tc }}
           BASE_FORMAT: ${{ steps.base-counts.outputs.base_format }}
