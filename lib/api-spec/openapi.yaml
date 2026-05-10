@@ -14,6 +14,8 @@ tags:
     description: Urban exploration operations
   - name: Auth
     description: Browser and mobile authentication endpoints.
+  - name: saved-places
+    description: User's saved/bookmarked places (requires authentication)
 paths:
   /healthz:
     get:
@@ -318,6 +320,91 @@ paths:
                 $ref: "#/components/schemas/ErrorEnvelope"
         "500":
           description: Token exchange failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /saved-places:
+    get:
+      operationId: listSavedPlaces
+      tags: [saved-places]
+      summary: List the current user's saved places
+      description: Returns all places the authenticated user has saved. Returns 401 when not authenticated.
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationSessionHeader"
+        - $ref: "#/components/parameters/SessionCookie"
+      responses:
+        "200":
+          description: List of saved places
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListSavedPlacesResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /saved-places/{placeId}:
+    put:
+      operationId: upsertSavedPlace
+      tags: [saved-places]
+      summary: Save or update a place
+      description: Creates or replaces a saved place for the authenticated user. Returns 401 when not authenticated.
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationSessionHeader"
+        - $ref: "#/components/parameters/SessionCookie"
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 600
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSavedPlaceRequest"
+      responses:
+        "200":
+          description: Place saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedPlaceOkResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    delete:
+      operationId: deleteSavedPlace
+      tags: [saved-places]
+      summary: Remove a saved place
+      description: Removes a saved place for the authenticated user. Returns 401 when not authenticated.
+      parameters:
+        - $ref: "#/components/parameters/AuthorizationSessionHeader"
+        - $ref: "#/components/parameters/SessionCookie"
+        - name: placeId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 600
+      responses:
+        "200":
+          description: Place removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SavedPlaceOkResponse"
+        "401":
+          description: Not authenticated
           content:
             application/json:
               schema:
@@ -995,3 +1082,95 @@ components:
           description: "Places sorted by netScore descending"
         total:
           type: integer
+    SavedPlaceEntry:
+      type: object
+      required: [id, name, category, summary, facts, latitude, longitude, savedAt]
+      properties:
+        id:
+          type: string
+          description: "Unique place identifier (name-lat-lng)"
+        name:
+          type: string
+        category:
+          type: string
+        yearBuilt:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        summary:
+          type: string
+        facts:
+          type: array
+          items:
+            type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: string
+        photoUrl:
+          type: string
+        savedAt:
+          type: string
+          format: date-time
+        note:
+          type: string
+    ListSavedPlacesResponse:
+      type: object
+      required: [places]
+      properties:
+        places:
+          type: array
+          items:
+            $ref: "#/components/schemas/SavedPlaceEntry"
+    UpsertSavedPlaceRequest:
+      type: object
+      required: [name, category, summary, facts, latitude, longitude, savedAt]
+      properties:
+        name:
+          type: string
+          maxLength: 300
+        category:
+          type: string
+          maxLength: 100
+        yearBuilt:
+          type: string
+          maxLength: 50
+        tags:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+        summary:
+          type: string
+          maxLength: 1000
+        facts:
+          type: array
+          items:
+            type: string
+          maxItems: 20
+        latitude:
+          type: number
+        longitude:
+          type: number
+        address:
+          type: string
+          maxLength: 500
+        photoUrl:
+          type: string
+          maxLength: 1000
+        savedAt:
+          type: string
+          format: date-time
+        note:
+          type: string
+          maxLength: 2000
+    SavedPlaceOkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean

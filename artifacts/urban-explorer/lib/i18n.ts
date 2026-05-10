@@ -546,7 +546,7 @@ const en: Strings = {
     welcomeBody:
       "Tap Start Walking to hear stories about places you pass, or Plan a Route to pre-load a path.",
     welcomeDismiss: "Got it",
-    subtitle: "Explore the city with live audio stories",
+    subtitle: "Explore the city with synced audio stories",
     editMessages: "Loading messages",
   },
   notFound: {

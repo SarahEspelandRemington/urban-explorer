@@ -28,6 +28,7 @@ import type {
   GeocodeRequest,
   GeocodeResponse,
   HealthStatus,
+  ListSavedPlacesResponse,
   LogoutSuccess,
   MobileTokenExchangeRequest,
   MobileTokenExchangeSuccess,
@@ -42,8 +43,10 @@ import type {
   RatingsResponse,
   RouteRequest,
   RouteResponse,
+  SavedPlaceOkResponse,
   SuggestLocationsRequest,
   SuggestionsResult,
+  UpsertSavedPlaceRequest,
   WalkNarrationRequest,
   WalkNarrationResponse,
 } from "./api.schemas";
@@ -1494,6 +1497,255 @@ export const useExchangeMobileAuthorizationCode = <
   return useMutation(
     getExchangeMobileAuthorizationCodeMutationOptions(options),
   );
+};
+
+/**
+ * Returns all places the authenticated user has saved. Returns 401 when not authenticated.
+ * @summary List the current user's saved places
+ */
+export const getListSavedPlacesUrl = () => {
+  return `/api/saved-places`;
+};
+
+export const listSavedPlaces = async (
+  options?: RequestInit,
+): Promise<ListSavedPlacesResponse> => {
+  return customFetch<ListSavedPlacesResponse>(getListSavedPlacesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSavedPlacesQueryKey = () => {
+  return [`/api/saved-places`] as const;
+};
+
+export const getListSavedPlacesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSavedPlaces>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listSavedPlaces>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSavedPlacesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSavedPlaces>>> = ({
+    signal,
+  }) => listSavedPlaces({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSavedPlaces>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListSavedPlacesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSavedPlaces>>
+>;
+export type ListSavedPlacesQueryError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary List the current user's saved places
+ */
+
+export function useListSavedPlaces<
+  TData = Awaited<ReturnType<typeof listSavedPlaces>>,
+  TError = ErrorType<ErrorEnvelope>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listSavedPlaces>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListSavedPlacesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Creates or replaces a saved place for the authenticated user. Returns 401 when not authenticated.
+ * @summary Save or update a place
+ */
+export const getUpsertSavedPlaceUrl = (placeId: string) => {
+  return `/api/saved-places/${placeId}`;
+};
+
+export const upsertSavedPlace = async (
+  placeId: string,
+  upsertSavedPlaceRequest: UpsertSavedPlaceRequest,
+  options?: RequestInit,
+): Promise<SavedPlaceOkResponse> => {
+  return customFetch<SavedPlaceOkResponse>(getUpsertSavedPlaceUrl(placeId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(upsertSavedPlaceRequest),
+  });
+};
+
+export const getUpsertSavedPlaceMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertSavedPlace>>,
+    TError,
+    { placeId: string; data: BodyType<UpsertSavedPlaceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof upsertSavedPlace>>,
+  TError,
+  { placeId: string; data: BodyType<UpsertSavedPlaceRequest> },
+  TContext
+> => {
+  const mutationKey = ["upsertSavedPlace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof upsertSavedPlace>>,
+    { placeId: string; data: BodyType<UpsertSavedPlaceRequest> }
+  > = (props) => {
+    const { placeId, data } = props ?? {};
+
+    return upsertSavedPlace(placeId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpsertSavedPlaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof upsertSavedPlace>>
+>;
+export type UpsertSavedPlaceMutationBody = BodyType<UpsertSavedPlaceRequest>;
+export type UpsertSavedPlaceMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Save or update a place
+ */
+export const useUpsertSavedPlace = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof upsertSavedPlace>>,
+    TError,
+    { placeId: string; data: BodyType<UpsertSavedPlaceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof upsertSavedPlace>>,
+  TError,
+  { placeId: string; data: BodyType<UpsertSavedPlaceRequest> },
+  TContext
+> => {
+  return useMutation(getUpsertSavedPlaceMutationOptions(options));
+};
+
+/**
+ * Removes a saved place for the authenticated user. Returns 401 when not authenticated.
+ * @summary Remove a saved place
+ */
+export const getDeleteSavedPlaceUrl = (placeId: string) => {
+  return `/api/saved-places/${placeId}`;
+};
+
+export const deleteSavedPlace = async (
+  placeId: string,
+  options?: RequestInit,
+): Promise<SavedPlaceOkResponse> => {
+  return customFetch<SavedPlaceOkResponse>(getDeleteSavedPlaceUrl(placeId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteSavedPlaceMutationOptions = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSavedPlace>>,
+    TError,
+    { placeId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteSavedPlace>>,
+  TError,
+  { placeId: string },
+  TContext
+> => {
+  const mutationKey = ["deleteSavedPlace"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteSavedPlace>>,
+    { placeId: string }
+  > = (props) => {
+    const { placeId } = props ?? {};
+
+    return deleteSavedPlace(placeId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteSavedPlaceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteSavedPlace>>
+>;
+
+export type DeleteSavedPlaceMutationError = ErrorType<ErrorEnvelope>;
+
+/**
+ * @summary Remove a saved place
+ */
+export const useDeleteSavedPlace = <
+  TError = ErrorType<ErrorEnvelope>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteSavedPlace>>,
+    TError,
+    { placeId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteSavedPlace>>,
+  TError,
+  { placeId: string },
+  TContext
+> => {
+  return useMutation(getDeleteSavedPlaceMutationOptions(options));
 };
 
 /**

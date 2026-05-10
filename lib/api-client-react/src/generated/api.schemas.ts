@@ -410,6 +410,55 @@ export interface RatingsResponse {
   total: number;
 }
 
+export interface SavedPlaceEntry {
+  /** Unique place identifier (name-lat-lng) */
+  id: string;
+  name: string;
+  category: string;
+  yearBuilt?: string;
+  tags?: string[];
+  summary: string;
+  facts: string[];
+  latitude: number;
+  longitude: number;
+  address?: string;
+  photoUrl?: string;
+  savedAt: string;
+  note?: string;
+}
+
+export interface ListSavedPlacesResponse {
+  places: SavedPlaceEntry[];
+}
+
+export interface UpsertSavedPlaceRequest {
+  /** @maxLength 300 */
+  name: string;
+  /** @maxLength 100 */
+  category: string;
+  /** @maxLength 50 */
+  yearBuilt?: string;
+  /** @maxItems 20 */
+  tags?: string[];
+  /** @maxLength 1000 */
+  summary: string;
+  /** @maxItems 20 */
+  facts: string[];
+  latitude: number;
+  longitude: number;
+  /** @maxLength 500 */
+  address?: string;
+  /** @maxLength 1000 */
+  photoUrl?: string;
+  savedAt: string;
+  /** @maxLength 2000 */
+  note?: string;
+}
+
+export interface SavedPlaceOkResponse {
+  ok: boolean;
+}
+
 /**
  * Opaque session token — `Bearer <sid>`.
  */
