@@ -299,10 +299,36 @@ jobs:
 
           # Build per-file warning/error counts as a JSON array (top 20 by warnings desc).
           # Emitted alongside aggregate totals so the dashboard can show file-level trends.
+          # Up to 3 distinct warning/error messages per file are captured for dashboard tooltips.
+          # msg1/msg2/msg3 track unique messages; duplicates (same rule firing on many lines) are skipped.
           lint_file_json=$(printf '%s\n' "$lint_output" | awk '
             /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
-            /[[:space:]]error[[:space:]]/ { ecount[current_file]++ }
-            /[[:space:]]warning[[:space:]]/ { wcount[current_file]++ }
+            /[[:space:]]error[[:space:]]/ {
+              ecount[current_file]++
+              if (msgCount[current_file] < 3) {
+                msg = ""
+                for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
+                if (msg != "" && msg != msg1[current_file] && msg != msg2[current_file] && msg != msg3[current_file]) {
+                  if (msgCount[current_file] == 0) msg1[current_file] = msg
+                  else if (msgCount[current_file] == 1) msg2[current_file] = msg
+                  else msg3[current_file] = msg
+                  msgCount[current_file]++
+                }
+              }
+            }
+            /[[:space:]]warning[[:space:]]/ {
+              wcount[current_file]++
+              if (msgCount[current_file] < 3) {
+                msg = ""
+                for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
+                if (msg != "" && msg != msg1[current_file] && msg != msg2[current_file] && msg != msg3[current_file]) {
+                  if (msgCount[current_file] == 0) msg1[current_file] = msg
+                  else if (msgCount[current_file] == 1) msg2[current_file] = msg
+                  else msg3[current_file] = msg
+                  msgCount[current_file]++
+                }
+              }
+            }
             END {
               for (f in ecount) seen[f] = 1
               for (f in wcount) seen[f] = 1
@@ -314,11 +340,14 @@ jobs:
                 first = 0
                 fname = f
                 gsub(/\\/, "\\\\", fname); gsub(/"/, "\\\"", fname)
-                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d}", fname, wcount[f]+0, ecount[f]+0
+                m1 = msg1[f]; gsub(/\\/, "\\\\", m1); gsub(/"/, "\\\"", m1)
+                m2 = msg2[f]; gsub(/\\/, "\\\\", m2); gsub(/"/, "\\\"", m2)
+                m3 = msg3[f]; gsub(/\\/, "\\\\", m3); gsub(/"/, "\\\"", m3)
+                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d,\"msg1\":\"%s\",\"msg2\":\"%s\",\"msg3\":\"%s\"}", fname, wcount[f]+0, ecount[f]+0, m1, m2, m3
               }
               printf "]"
             }
-          ' | jq -c 'sort_by(-.warnings) | .[:20]' 2>/dev/null || echo '[]')
+          ' | jq -c 'sort_by(-.warnings) | .[:20] | map(. + {messages: ([.msg1, .msg2, .msg3] | map(select(. != null and . != "")) | .[:3])} | del(.msg1, .msg2, .msg3))' 2>/dev/null || echo '[]')
 
           # Write a JSON artifact so warning trends can be compared across runs.
           printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s","file_warnings":%s}\n' \
@@ -534,14 +563,38 @@ jobs:
 
           # Build per-file warning/error counts as a JSON array (top 20 by warnings desc).
           # tsc diagnostic lines: path/to/file.ts(line,col): warning|error TSxxxx: …
+          # Up to 3 distinct diagnostic messages per file are captured for dashboard tooltips.
+          # msg1/msg2/msg3 track unique messages; duplicate diagnostics are skipped.
           tc_file_json=$(printf '%s\n' "$tc_output" | awk '
             /: error TS/ {
               f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
-              if (f != "") ecount[f]++
+              if (f != "") {
+                ecount[f]++
+                if (msgCount[f] < 3) {
+                  msg = $0; sub(/.*: error TS[0-9]+: /, "", msg)
+                  if (msg != "" && msg != msg1[f] && msg != msg2[f] && msg != msg3[f]) {
+                    if (msgCount[f] == 0) msg1[f] = msg
+                    else if (msgCount[f] == 1) msg2[f] = msg
+                    else msg3[f] = msg
+                    msgCount[f]++
+                  }
+                }
+              }
             }
             /: warning TS/ {
               f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
-              if (f != "") wcount[f]++
+              if (f != "") {
+                wcount[f]++
+                if (msgCount[f] < 3) {
+                  msg = $0; sub(/.*: warning TS[0-9]+: /, "", msg)
+                  if (msg != "" && msg != msg1[f] && msg != msg2[f] && msg != msg3[f]) {
+                    if (msgCount[f] == 0) msg1[f] = msg
+                    else if (msgCount[f] == 1) msg2[f] = msg
+                    else msg3[f] = msg
+                    msgCount[f]++
+                  }
+                }
+              }
             }
             END {
               for (f in ecount) seen[f] = 1
@@ -554,11 +607,14 @@ jobs:
                 first = 0
                 fname = f
                 gsub(/\\/, "\\\\", fname); gsub(/"/, "\\\"", fname)
-                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d}", fname, wcount[f]+0, ecount[f]+0
+                m1 = msg1[f]; gsub(/\\/, "\\\\", m1); gsub(/"/, "\\\"", m1)
+                m2 = msg2[f]; gsub(/\\/, "\\\\", m2); gsub(/"/, "\\\"", m2)
+                m3 = msg3[f]; gsub(/\\/, "\\\\", m3); gsub(/"/, "\\\"", m3)
+                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d,\"msg1\":\"%s\",\"msg2\":\"%s\",\"msg3\":\"%s\"}", fname, wcount[f]+0, ecount[f]+0, m1, m2, m3
               }
               printf "]"
             }
-          ' | jq -c 'sort_by(-.warnings) | .[:20]' 2>/dev/null || echo '[]')
+          ' | jq -c 'sort_by(-.warnings) | .[:20] | map(. + {messages: ([.msg1, .msg2, .msg3] | map(select(. != null and . != "")) | .[:3])} | del(.msg1, .msg2, .msg3))' 2>/dev/null || echo '[]')
 
           # Write a JSON artifact so warning trends can be compared across runs.
           printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s","file_warnings":%s}\n' \
@@ -818,7 +874,8 @@ jobs:
                  lint_warnings: ([.[] | select(.source == "lint") | .warnings] | add // 0),
                  tc_warnings:   ([.[] | select(.source == "tc")   | .warnings] | add // 0),
                  warnings: (map(.warnings) | add),
-                 errors:   (map(.errors)   | add)
+                 errors:   (map(.errors)   | add),
+                 messages: ([.[] | (.messages // []) | .[]] | unique | .[:3])
                })
              | sort_by(-.warnings)
              | .[:10]' 2>/dev/null || echo '[]')
@@ -1928,7 +1985,8 @@ jobs:
                  lint_warnings: ([.[] | select(.source == "lint") | .warnings] | add // 0),
                  tc_warnings:   ([.[] | select(.source == "tc")   | .warnings] | add // 0),
                  warnings: (map(.warnings) | add),
-                 errors:   (map(.errors)   | add)
+                 errors:   (map(.errors)   | add),
+                 messages: ([.[] | (.messages // []) | .[]] | unique | .[:3])
                })
              | sort_by(-.warnings)
              | .[:10]' 2>/dev/null || echo '[]')

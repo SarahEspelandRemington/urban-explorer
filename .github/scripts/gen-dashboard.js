@@ -344,7 +344,7 @@ const fileTableN = fileTableRuns.length;
 
 // Build a map: file → array of warning counts indexed by run position within fileTableRuns.
 // Also track each file's peak total for sorting.
-const fileMap = new Map(); // file → { lintByRun, tcByRun, totalByRun, peakTotal }
+const fileMap = new Map(); // file → { lintByRun, tcByRun, totalByRun, peakTotal, msgsByRun }
 
 for (let ri = 0; ri < fileTableN; ri++) {
   const entry = fileTableRuns[ri];
@@ -357,6 +357,7 @@ for (let ri = 0; ri < fileTableN; ri++) {
         tcByRun: new Array(fileTableN).fill(null),
         totalByRun: new Array(fileTableN).fill(null),
         peakTotal: 0,
+        msgsByRun: new Array(fileTableN).fill(null),
       });
     }
     const rec = fileMap.get(tf.file);
@@ -367,6 +368,13 @@ for (let ri = 0; ri < fileTableN; ri++) {
     rec.tcByRun[ri] = tw;
     rec.totalByRun[ri] = total;
     if (total > rec.peakTotal) rec.peakTotal = total;
+    // Accept new-style messages array or fall back to legacy firstMsg string
+    const msgs = Array.isArray(tf.messages)
+      ? tf.messages.filter(Boolean)
+      : tf.firstMsg
+        ? [tf.firstMsg]
+        : null;
+    if (msgs && msgs.length > 0) rec.msgsByRun[ri] = msgs;
   }
 }
 
@@ -470,11 +478,28 @@ function renderFileTable() {
   const rows = sortedFiles
     .map(([file, rec]) => {
       const cells = rec.totalByRun
-        .map((v) => {
+        .map((v, ci) => {
           if (v === null)
             return `<td style="color:#ccc;text-align:center">—</td>`;
           const bg = cellBg(v, globalPeak);
-          return `<td style="text-align:center;${bg ? bg + ";" : ""}">${v}</td>`;
+          const msgs = rec.msgsByRun[ci];
+          const isLatest = ci === latestRunIdx;
+          if (isLatest && msgs && msgs.length > 0) {
+            // Most recent run: expandable <details> popover listing up to 3 messages
+            const msgItems = msgs
+              .map(
+                (m) =>
+                  `<div style="margin-top:3px;color:#444;white-space:normal;font-size:.72rem">${escHtml(m)}</div>`,
+              )
+              .join("");
+            return `<td style="text-align:center;${bg ? bg + ";" : ""}vertical-align:top;padding:4px 6px"><details style="display:inline-block;cursor:pointer"><summary style="list-style:none;cursor:pointer" title="Expand to see warning messages">${v} <span style="font-size:.65rem;opacity:.55">ⓘ</span></summary>${msgItems}</details></td>`;
+          }
+          // Older runs: title tooltip only
+          const titleAttr =
+            msgs && msgs.length > 0
+              ? ` title="${msgs.map(escHtml).join("&#10;")}"`
+              : "";
+          return `<td style="text-align:center;${bg ? bg + ";" : ""}${msgs ? "cursor:help;" : ""}"${titleAttr}>${v}</td>`;
         })
         .join("");
       const label = escHtml(displayNames[file] || file);
@@ -490,7 +515,7 @@ function renderFileTable() {
       ? `<p style="font-size:.78rem;color:#666;margin:6px 0 0">🔥 = chronic hotspot: ranked in the top ${HOTSPOT_RANK} for warnings across the last ${HOTSPOT_RUNS} consecutive runs.</p>`
       : "";
 
-  return `<table style="border-collapse:collapse;background:#fff;border:1px solid #d0d7de;border-radius:8px;overflow:hidden;font-size:.82rem">
+  return `<table class="file-table" style="border-collapse:collapse;background:#fff;border:1px solid #d0d7de;border-radius:8px;overflow:hidden;font-size:.82rem">
   <thead><tr>
     <th style="background:#f6f8fa;text-align:left;padding:8px 14px;font-size:.82rem;color:#444;border-bottom:1px solid #d0d7de;white-space:nowrap">File</th>
     ${headCols.replace(/<th/g, '<th style="background:#f6f8fa;text-align:center;padding:8px 10px;font-size:.8rem;color:#444;border-bottom:1px solid #d0d7de;min-width:58px"')}
@@ -1002,6 +1027,8 @@ const html = `<!DOCTYPE html>
   .branch-table tr.branch-current{font-weight:600}
   .branch-table th[data-col]:hover{background:#eaecf0;color:#1a1a1a}
   .branch-table th[data-col] .sort-ind{color:#0969da;font-size:.75rem}
+  .file-table details summary::-webkit-details-marker{display:none}
+  .file-table details summary::marker{display:none}
 </style>
 </head>
 <body>
@@ -1016,7 +1043,7 @@ const html = `<!DOCTYPE html>
 <div class="card">${svg2}</div>
 
 <h2>Top warning files</h2>
-<p class="section-label">Files with the most warnings across recent runs (lint + typecheck combined). Cells are colour-coded by intensity — darker amber = higher count. Only files that appeared in the top-10 of at least one run are shown.</p>
+<p class="section-label">Files with the most warnings across recent runs (lint + typecheck combined). Cells are colour-coded by intensity — darker amber = higher count. Click ⓘ in the most recent run column to expand up to 3 warning messages per file. Older run cells show messages on hover. Only files that appeared in the top-10 of at least one run are shown.</p>
 <div style="overflow-x:auto;margin-bottom:24px">${fileTableHtml}</div>
 
 <h2>Run history</h2>
