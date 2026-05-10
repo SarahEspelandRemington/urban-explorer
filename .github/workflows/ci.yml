@@ -828,7 +828,28 @@ jobs:
           # Cap = 20. On push events, build-time-gate reads this same file and
           # excludes the current run's SHA from the rolling average, so the
           # effective sample size is cap - 1 = 19.
-          updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
+          trimmed=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
+          # Recompute *_min_s/*_max_s on the last entry from the post-trim slice.
+          # The values embedded above were computed from pre-trim history; if the
+          # entries that held the historical min or max were among those pruned, the
+          # pre-computed spread values would be stale.  Recomputing here ensures
+          # they always reflect the 20-entry window that will actually be stored.
+          updated=$(printf '%s\n' "$trimmed" | jq '
+            . as $arr |
+            def sp(f): [$arr[] | select(.[f] != null and (.[f]|type)=="number" and .[f] > 0) | .[f]] |
+              if length == 0 then {min:0,max:0} else {min:(min|round),max:(max|round)} end;
+            sp("lint_s") as $ls |
+            sp("tc_s") as $ts |
+            sp("format_s") as $fs |
+            sp("build_job_s") as $bs |
+            $arr[:-1] + [
+              $arr[-1] |
+              .lint_min_s = $ls.min | .lint_max_s = $ls.max |
+              .tc_min_s = $ts.min | .tc_max_s = $ts.max |
+              .format_min_s = $fs.min | .format_max_s = $fs.max |
+              .build_job_min_s = $bs.min | .build_job_max_s = $bs.max
+            ]
+          ')
           echo "$updated" > /tmp/warn-history/warn-history.json
 
       - name: Check for chronic file hotspots
