@@ -722,6 +722,9 @@ jobs:
           #              to true when the PR build time exceeds the threshold.
           new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
+          # Cap = 20. On push events, build-time-gate reads this same file and
+          # excludes the current run's SHA from the rolling average, so the
+          # effective sample size is cap - 1 = 19.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history/warn-history.json
 
@@ -997,8 +1000,10 @@ jobs:
           # Reads lint_s, tc_s, format_s, and build_job_s from the history file.
           # Old history entries that pre-date the per-job fields are ignored
           # gracefully (select filters them out).
-          # For push events the history file is the current run's warn-history,
-          # so entries matching CURRENT_SHA are excluded to avoid self-comparison.
+          # For push events the history file is the current run's warn-history
+          # (capped at 20 entries by record-warn-history). The current run's
+          # entry is always excluded by the .sha != $sha filter to avoid
+          # self-comparison, so the effective sample size is cap - 1 = 19.
           avg_for_field() {
             local field="$1"
             jq --arg f "$field" --arg sha "$CURRENT_SHA" '
@@ -1508,6 +1513,9 @@ jobs:
           #              only runs for PRs.
           new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
+          # Cap = 20. build-time-gate averages entries from this file while
+          # excluding the current run's SHA, so the effective sample size is
+          # cap - 1 = 19.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history-base/warn-history-base.json
 
