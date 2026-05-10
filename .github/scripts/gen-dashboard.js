@@ -498,6 +498,44 @@ const fileTableHtml = renderFileTable();
 
 // ── Summary table ──────────────────────────────────────────────────────────────
 
+// Per-column historical maxima used to colour-scale the per-job timing cells.
+const JOB_TIME_KEYS = ["install_s", "lint_s", "tc_s", "format_s", "build_job_s"];
+const colMaxes = {};
+for (const key of JOB_TIME_KEYS) {
+  const vals = history
+    .map((e) => (e[key] != null && e[key] > 0 ? e[key] : null))
+    .filter((v) => v !== null);
+  colMaxes[key] = vals.length > 0 ? Math.max(...vals) : 0;
+}
+
+/**
+ * Return an inline CSS background value (green → yellow → orange) for a
+ * per-job timing cell.  t=0 → fastest (light green), t=1 → slowest/max
+ * (light orange).  Returns an empty string when the cell has no data so
+ * the <td> style attribute becomes a harmless style="".
+ * @param {number|null} val - raw seconds for this run
+ * @param {number} colMax - historical max seconds for this column
+ */
+function jobTimingBg(val, colMax) {
+  if (val == null || val <= 0 || colMax <= 0) return "";
+  const t = Math.min(val / colMax, 1);
+  let r, g, b;
+  if (t <= 0.5) {
+    // light green rgb(200,237,200) → light yellow rgb(255,244,170)
+    const u = t * 2;
+    r = Math.round(200 + u * 55);
+    g = Math.round(237 + u * 7);
+    b = Math.round(200 - u * 30);
+  } else {
+    // light yellow rgb(255,244,170) → light orange rgb(255,200,120)
+    const u = (t - 0.5) * 2;
+    r = 255;
+    g = Math.round(244 - u * 44);
+    b = Math.round(170 - u * 50);
+  }
+  return `background:rgb(${r},${g},${b})`;
+}
+
 const tableRows = [...history]
   .reverse()
   .map((e) => {
@@ -523,11 +561,11 @@ const tableRows = [...history]
       `<td>${e.tc != null ? e.tc : "\u2014"}</td>`,
       `<td>${e.format != null ? e.format : 0}</td>`,
       `<td>${buildTime}</td>`,
-      `<td>${installCell}</td>`,
-      `<td>${lintCell}</td>`,
-      `<td>${tcCell}</td>`,
-      `<td>${fmtCell}</td>`,
-      `<td>${buildJobCell}</td>`,
+      `<td style="${jobTimingBg(e.install_s, colMaxes.install_s)}">${installCell}</td>`,
+      `<td style="${jobTimingBg(e.lint_s, colMaxes.lint_s)}">${lintCell}</td>`,
+      `<td style="${jobTimingBg(e.tc_s, colMaxes.tc_s)}">${tcCell}</td>`,
+      `<td style="${jobTimingBg(e.format_s, colMaxes.format_s)}">${fmtCell}</td>`,
+      `<td style="${jobTimingBg(e.build_job_s, colMaxes.build_job_s)}">${buildJobCell}</td>`,
       "</tr>",
     ].join("");
   })
