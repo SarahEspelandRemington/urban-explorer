@@ -32,6 +32,11 @@ try {
 
 const branch = process.env.BRANCH || "unknown";
 const runUrl = process.env.RUN_URL || "#";
+const buildSpikePct =
+  Math.max(
+    0,
+    parseInt(process.env.DASHBOARD_BUILD_SPIKE_PCT ?? "20", 10) || 20,
+  ) / 100;
 const generatedAt = new Date().toUTCString();
 const n = history.length;
 
@@ -499,7 +504,13 @@ const fileTableHtml = renderFileTable();
 // ── Summary table ──────────────────────────────────────────────────────────────
 
 // Per-column historical maxima used to colour-scale the per-job timing cells.
-const JOB_TIME_KEYS = ["install_s", "lint_s", "tc_s", "format_s", "build_job_s"];
+const JOB_TIME_KEYS = [
+  "install_s",
+  "lint_s",
+  "tc_s",
+  "format_s",
+  "build_job_s",
+];
 const colMaxes = {};
 for (const key of JOB_TIME_KEYS) {
   const vals = history
@@ -719,6 +730,18 @@ function buildBranchSection() {
     return a.localeCompare(b);
   });
 
+  // Compute main's rolling average to use as the spike baseline
+  const mainEntries = allBranches["main"];
+  const mainAvg =
+    Array.isArray(mainEntries) && mainEntries.length > 0
+      ? rollingAvg(
+          mainEntries.map((e) =>
+            e.build_s != null && e.build_s > 0 ? e.build_s : null,
+          ),
+          SPARK_RUNS,
+        )
+      : null;
+
   const rows = branchNames
     .map((br) => {
       const branchData = allBranches[br];
@@ -751,13 +774,25 @@ function buildBranchSection() {
       const avg = rollingAvg(buildSeries, SPARK_RUNS);
       const avgFmt = avg != null ? fmtTime(avg) : "\u2014";
 
+      // Determine whether this branch's rolling avg exceeds main's by >= threshold.
+      // Only flag non-main branches when both averages are available.
+      let spikeBadge = "";
+      if (
+        br !== "main" &&
+        avg != null &&
+        mainAvg != null &&
+        avg > mainAvg * (1 + buildSpikePct)
+      ) {
+        const deltaPct = Math.round(((avg - mainAvg) / mainAvg) * 100);
+        spikeBadge = `<abbr title="+${deltaPct}% vs main's ${SPARK_RUNS}-run avg (${escHtml(fmtTime(mainAvg))})" style="text-decoration:none;cursor:help">\u26a0\ufe0f</abbr>`;
+      }
       const isCurrent = br === branch;
       const staleBadge = stale
         ? ` <span style="font-size:.68rem;color:#6e7781;background:#f0f0f0;border:1px solid #d0d7de;border-radius:3px;padding:1px 5px;vertical-align:middle;font-family:system-ui,sans-serif">merged</span>`
         : "";
       const branchLabel = isCurrent
         ? `<code style="background:#ddf4dd;color:#1a7f37">${escHtml(br)}</code>${staleBadge}`
-        : `<code style="${stale ? "text-decoration:line-through;color:#8a8a8a" : ""}">${escHtml(br)}</code>${staleBadge}`;
+        : `<code style="${stale ? "text-decoration:line-through;color:#8a8a8a" : ""}">${escHtml(br)}</code>${spikeBadge}${staleBadge}`;
       const branchLinked = runUrl
         ? `<a href="${escHtml(runUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${branchLabel}</a>`
         : branchLabel;
