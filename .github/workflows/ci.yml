@@ -1056,9 +1056,12 @@ jobs:
           CURRENT_FMT: ${{ steps.compare.outputs.current_fmt }}
           AVG_FMT: ${{ steps.compare.outputs.avg_fmt }}
           ALLOWED_FMT: ${{ steps.compare.outputs.allowed_fmt }}
+          RUN_ID: ${{ github.run_id }}
         with:
           script: |
             const marker = '<!-- CI-BUILD-TIME-GATE -->';
+            const runIdPrefix = '<!-- CI-BUILD-TIME-RUN:';
+            const currentRunId = parseInt(process.env.RUN_ID, 10);
             const spike = process.env.SPIKE === 'true';
             const avgS = parseInt(process.env.AVG_S || '0', 10);
 
@@ -1069,9 +1072,21 @@ jobs:
             });
             const existing = comments.find(c => c.body && c.body.includes(marker));
 
+            // Extract the run ID embedded in an existing comment, if present.
+            function extractRunId(body) {
+              const match = body && body.match(/<!-- CI-BUILD-TIME-RUN:(\d+) -->/);
+              return match ? parseInt(match[1], 10) : 0;
+            }
+
             if (!spike || avgS <= 0) {
-              // No spike (or no base history) — delete any stale comment.
+              // No spike (or no base history) — delete any stale comment,
+              // but only if it belongs to an older run than ours.
               if (existing) {
+                const existingRunId = extractRunId(existing.body);
+                if (existingRunId > currentRunId) {
+                  // A newer run already owns this comment; leave it alone.
+                  return;
+                }
                 await github.rest.issues.deleteComment({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
@@ -1081,9 +1096,19 @@ jobs:
               return;
             }
 
+            // If an existing comment belongs to a newer run, skip — that run's
+            // data is fresher and we must not overwrite or duplicate it.
+            if (existing) {
+              const existingRunId = extractRunId(existing.body);
+              if (existingRunId > currentRunId) {
+                return;
+              }
+            }
+
             const thresholdPct = process.env.THRESHOLD_PCT;
             const body = [
               marker,
+              `${runIdPrefix}${currentRunId} -->`,
               '## ⚠️ Build time spike detected',
               '',
               '| | Time |',
@@ -1095,6 +1120,8 @@ jobs:
               '',
               `Build time increased by **${process.env.INCREASE_PCT}%** above the base-branch average,`,
               `exceeding the ${thresholdPct}% threshold. Review recent changes for unexpected build slowdowns.`,
+              '',
+              `_Last updated by run [#${currentRunId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${currentRunId})._`,
             ].join('\n');
 
             if (existing) {
