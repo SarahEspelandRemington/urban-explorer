@@ -300,11 +300,14 @@ jobs:
           # Build per-file warning/error counts as a JSON array (top 20 by warnings desc).
           # Emitted alongside aggregate totals so the dashboard can show file-level trends.
           # Up to 3 distinct warning/error messages per file are captured for dashboard tooltips.
-          # msg1/msg2/msg3 track unique messages; duplicates (same rule firing on many lines) are skipped.
+          # Top 3 rule names per file are also tracked so the hotspot step and dashboard can
+          # surface which specific rules are causing chronic warnings.
           lint_file_json=$(printf '%s\n' "$lint_output" | awk '
             /^[^ \t]/ && /\.(ts|tsx|js|jsx|mjs|cjs)/ { current_file = $0; next }
             /[[:space:]]error[[:space:]]/ {
               ecount[current_file]++
+              rule = $NF
+              if (current_file != "" && rule != "") rcount[current_file SUBSEP rule]++
               if (msgCount[current_file] < 3) {
                 msg = ""
                 for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
@@ -318,6 +321,8 @@ jobs:
             }
             /[[:space:]]warning[[:space:]]/ {
               wcount[current_file]++
+              rule = $NF
+              if (current_file != "" && rule != "") rcount[current_file SUBSEP rule]++
               if (msgCount[current_file] < 3) {
                 msg = ""
                 for (i = 3; i <= NF-1; i++) msg = (msg == "" ? $i : msg " " $i)
@@ -343,11 +348,24 @@ jobs:
                 m1 = msg1[f]; gsub(/\\/, "\\\\", m1); gsub(/"/, "\\\"", m1)
                 m2 = msg2[f]; gsub(/\\/, "\\\\", m2); gsub(/"/, "\\\"", m2)
                 m3 = msg3[f]; gsub(/\\/, "\\\\", m3); gsub(/"/, "\\\"", m3)
-                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d,\"msg1\":\"%s\",\"msg2\":\"%s\",\"msg3\":\"%s\"}", fname, wcount[f]+0, ecount[f]+0, m1, m2, m3
+                rules = "["
+                rfirst = 1
+                for (k in rcount) {
+                  n = split(k, parts, SUBSEP)
+                  if (parts[1] == f) {
+                    r = parts[2]
+                    gsub(/\\/, "\\\\", r); gsub(/"/, "\\\"", r)
+                    if (!rfirst) rules = rules ","
+                    rules = rules sprintf("{\"rule\":\"%s\",\"count\":%d}", r, rcount[k])
+                    rfirst = 0
+                  }
+                }
+                rules = rules "]"
+                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d,\"msg1\":\"%s\",\"msg2\":\"%s\",\"msg3\":\"%s\",\"rules\":%s}", fname, wcount[f]+0, ecount[f]+0, m1, m2, m3, rules
               }
               printf "]"
             }
-          ' | jq -c 'sort_by(-.warnings) | .[:20] | map(. + {messages: ([.msg1, .msg2, .msg3] | map(select(. != null and . != "")) | .[:3])} | del(.msg1, .msg2, .msg3))' 2>/dev/null || echo '[]')
+          ' | jq -c 'sort_by(-.warnings) | map(. + {messages: ([.msg1,.msg2,.msg3] | map(select(. != null and . != "")) | .[:3]), top_rules: (.rules | sort_by(-.count) | .[:3] | map(.rule))}) | map(del(.msg1,.msg2,.msg3,.rules)) | .[:20]' 2>/dev/null || echo '[]')
 
           # Write a JSON artifact so warning trends can be compared across runs.
           printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s","file_warnings":%s}\n' \
@@ -570,6 +588,10 @@ jobs:
               f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
               if (f != "") {
                 ecount[f]++
+                if (match($0, /TS[0-9]+/)) {
+                  code = substr($0, RSTART, RLENGTH)
+                  if (code != "") rcount[f SUBSEP code]++
+                }
                 if (msgCount[f] < 3) {
                   msg = $0; sub(/.*: error TS[0-9]+: /, "", msg)
                   if (msg != "" && msg != msg1[f] && msg != msg2[f] && msg != msg3[f]) {
@@ -585,6 +607,10 @@ jobs:
               f = $0; sub(/\(.*/, "", f); gsub(/^[[:space:]]+|[[:space:]]+$/, "", f)
               if (f != "") {
                 wcount[f]++
+                if (match($0, /TS[0-9]+/)) {
+                  code = substr($0, RSTART, RLENGTH)
+                  if (code != "") rcount[f SUBSEP code]++
+                }
                 if (msgCount[f] < 3) {
                   msg = $0; sub(/.*: warning TS[0-9]+: /, "", msg)
                   if (msg != "" && msg != msg1[f] && msg != msg2[f] && msg != msg3[f]) {
@@ -610,11 +636,23 @@ jobs:
                 m1 = msg1[f]; gsub(/\\/, "\\\\", m1); gsub(/"/, "\\\"", m1)
                 m2 = msg2[f]; gsub(/\\/, "\\\\", m2); gsub(/"/, "\\\"", m2)
                 m3 = msg3[f]; gsub(/\\/, "\\\\", m3); gsub(/"/, "\\\"", m3)
-                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d,\"msg1\":\"%s\",\"msg2\":\"%s\",\"msg3\":\"%s\"}", fname, wcount[f]+0, ecount[f]+0, m1, m2, m3
+                rules = "["
+                rfirst = 1
+                for (k in rcount) {
+                  n = split(k, parts, SUBSEP)
+                  if (parts[1] == f) {
+                    r = parts[2]
+                    if (!rfirst) rules = rules ","
+                    rules = rules sprintf("{\"rule\":\"%s\",\"count\":%d}", r, rcount[k])
+                    rfirst = 0
+                  }
+                }
+                rules = rules "]"
+                printf "{\"file\":\"%s\",\"warnings\":%d,\"errors\":%d,\"msg1\":\"%s\",\"msg2\":\"%s\",\"msg3\":\"%s\",\"rules\":%s}", fname, wcount[f]+0, ecount[f]+0, m1, m2, m3, rules
               }
               printf "]"
             }
-          ' | jq -c 'sort_by(-.warnings) | .[:20] | map(. + {messages: ([.msg1, .msg2, .msg3] | map(select(. != null and . != "")) | .[:3])} | del(.msg1, .msg2, .msg3))' 2>/dev/null || echo '[]')
+          ' | jq -c 'sort_by(-.warnings) | map(. + {messages: ([.msg1,.msg2,.msg3] | map(select(. != null and . != "")) | .[:3]), top_rules: (.rules | sort_by(-.count) | .[:3] | map(.rule))}) | map(del(.msg1,.msg2,.msg3,.rules)) | .[:20]' 2>/dev/null || echo '[]')
 
           # Write a JSON artifact so warning trends can be compared across runs.
           printf '{"errors":%d,"warnings":%d,"duration_s":%d,"sha":"%s","ref":"%s","file_warnings":%s}\n' \
@@ -875,7 +913,9 @@ jobs:
                  tc_warnings:   ([.[] | select(.source == "tc")   | .warnings] | add // 0),
                  warnings: (map(.warnings) | add),
                  errors:   (map(.errors)   | add),
-                 messages: ([.[] | (.messages // []) | .[]] | unique | .[:3])
+                 messages: ([.[] | (.messages // []) | .[]] | unique | .[:3]),
+                 top_lint_rules: ([.[] | select(.source == "lint") | .top_rules // []] | flatten | .[:3]),
+                 top_tc_rules:   ([.[] | select(.source == "tc")   | .top_rules // []] | flatten | .[:3])
                })
              | sort_by(-.warnings)
              | .[:10]' 2>/dev/null || echo '[]')
@@ -985,8 +1025,39 @@ jobs:
 
           while IFS= read -r file; do
             [ -z "$file" ] && continue
-            echo "::warning file=${file}::Chronic warning hotspot: this file ranked in the top ${rank_threshold} for warnings across ${runs_threshold} consecutive CI runs. Consider fixing these warnings to reduce technical debt."
-            echo "- \`${file}\`" >> "$GITHUB_STEP_SUMMARY"
+
+            # Look up top lint rule names for this file from the current run's lint artifact.
+            lint_rules=$(jq -r --arg f "$file" '
+              (.file_warnings // []) | map(select(.file == $f)) |
+              if length > 0 and (.[0].top_rules // [] | length) > 0
+              then .[0].top_rules | join(", ")
+              else "" end
+            ' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "")
+
+            # Look up top TC error codes for this file from the current run's tc artifact.
+            tc_rules=$(jq -r --arg f "$file" '
+              (.file_warnings // []) | map(select(.file == $f)) |
+              if length > 0 and (.[0].top_rules // [] | length) > 0
+              then .[0].top_rules | join(", ")
+              else "" end
+            ' /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo "")
+
+            # Build a combined rule hint string from whichever sources have data.
+            rule_parts=""
+            [ -n "$lint_rules" ] && rule_parts="Lint: ${lint_rules}"
+            if [ -n "$tc_rules" ]; then
+              [ -n "$rule_parts" ] \
+                && rule_parts="${rule_parts} | TC: ${tc_rules}" \
+                || rule_parts="TC: ${tc_rules}"
+            fi
+
+            if [ -n "$rule_parts" ]; then
+              echo "::warning file=${file}::Chronic warning hotspot: this file ranked in the top ${rank_threshold} for warnings across ${runs_threshold} consecutive CI runs. Top rules: ${rule_parts}. Consider fixing these warnings to reduce technical debt."
+              echo "- \`${file}\` — ${rule_parts}" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::warning file=${file}::Chronic warning hotspot: this file ranked in the top ${rank_threshold} for warnings across ${runs_threshold} consecutive CI runs. Consider fixing these warnings to reduce technical debt."
+              echo "- \`${file}\`" >> "$GITHUB_STEP_SUMMARY"
+            fi
           done <<< "$chronic_files"
 
           {
@@ -2108,7 +2179,9 @@ jobs:
                  tc_warnings:   ([.[] | select(.source == "tc")   | .warnings] | add // 0),
                  warnings: (map(.warnings) | add),
                  errors:   (map(.errors)   | add),
-                 messages: ([.[] | (.messages // []) | .[]] | unique | .[:3])
+                 messages: ([.[] | (.messages // []) | .[]] | unique | .[:3]),
+                 top_lint_rules: ([.[] | select(.source == "lint") | .top_rules // []] | flatten | .[:3]),
+                 top_tc_rules:   ([.[] | select(.source == "tc")   | .top_rules // []] | flatten | .[:3])
                })
              | sort_by(-.warnings)
              | .[:10]' 2>/dev/null || echo '[]')

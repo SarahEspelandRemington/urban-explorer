@@ -344,7 +344,7 @@ const fileTableN = fileTableRuns.length;
 
 // Build a map: file → array of warning counts indexed by run position within fileTableRuns.
 // Also track each file's peak total for sorting.
-const fileMap = new Map(); // file → { lintByRun, tcByRun, totalByRun, peakTotal, msgsByRun }
+const fileMap = new Map(); // file → { lintByRun, tcByRun, totalByRun, peakTotal, msgsByRun, topLintRules, topTcRules }
 
 for (let ri = 0; ri < fileTableN; ri++) {
   const entry = fileTableRuns[ri];
@@ -358,6 +358,8 @@ for (let ri = 0; ri < fileTableN; ri++) {
         totalByRun: new Array(fileTableN).fill(null),
         peakTotal: 0,
         msgsByRun: new Array(fileTableN).fill(null),
+        topLintRules: [],
+        topTcRules: [],
       });
     }
     const rec = fileMap.get(tf.file);
@@ -368,13 +370,19 @@ for (let ri = 0; ri < fileTableN; ri++) {
     rec.tcByRun[ri] = tw;
     rec.totalByRun[ri] = total;
     if (total > rec.peakTotal) rec.peakTotal = total;
-    // Accept new-style messages array or fall back to legacy firstMsg string
+    // Accept new-style messages array or fall back to legacy firstMsg string.
     const msgs = Array.isArray(tf.messages)
       ? tf.messages.filter(Boolean)
       : tf.firstMsg
         ? [tf.firstMsg]
         : null;
     if (msgs && msgs.length > 0) rec.msgsByRun[ri] = msgs;
+    // Always overwrite with the latest run's rule breakdown so the most
+    // recent data is used when rendering the dashboard.
+    rec.topLintRules = Array.isArray(tf.top_lint_rules)
+      ? tf.top_lint_rules
+      : [];
+    rec.topTcRules = Array.isArray(tf.top_tc_rules) ? tf.top_tc_rules : [];
   }
 }
 
@@ -510,9 +518,21 @@ function renderFileTable() {
         })
         .join("");
       const label = escHtml(displayNames[file] || file);
-      const hotspotBadge = chronicFiles.has(file)
-        ? ` <span title="Chronic hotspot: ranked in the top ${HOTSPOT_RANK} for warnings across ${HOTSPOT_RUNS} consecutive runs" style="font-size:.8rem">🔥</span>`
-        : "";
+      let hotspotBadge = "";
+      if (chronicFiles.has(file)) {
+        const ruleParts = [];
+        if (rec.topLintRules && rec.topLintRules.length > 0)
+          ruleParts.push(`Lint: ${rec.topLintRules.join(", ")}`);
+        if (rec.topTcRules && rec.topTcRules.length > 0)
+          ruleParts.push(`TC: ${rec.topTcRules.join(", ")}`);
+        const ruleHint = ruleParts.join(" | ");
+        const titleSuffix = ruleHint ? `. Top rules — ${ruleHint}` : "";
+        const ruleInline =
+          ruleHint !== ""
+            ? ` <span style="color:#a84300;font-size:.72rem;font-weight:400">(${escHtml(ruleHint)})</span>`
+            : "";
+        hotspotBadge = ` <span title="${escHtml(`Chronic hotspot: ranked in the top ${HOTSPOT_RANK} for warnings across ${HOTSPOT_RUNS} consecutive runs${titleSuffix}`)}" style="font-size:.8rem">🔥</span>${ruleInline}`;
+      }
       return `<tr><td style="font-family:ui-monospace,monospace;font-size:.78rem;white-space:nowrap;max-width:380px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(file)}"><code>${label}</code>${hotspotBadge}</td>${cells}</tr>`;
     })
     .join("\n");
