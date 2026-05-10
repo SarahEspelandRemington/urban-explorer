@@ -1955,6 +1955,40 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: Download previous branch-summary artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/branch-summary
+          echo "{}" > /tmp/branch-summary/branch-summary.json
+
+          # Download the branch-summary from the most recent completed CI run
+          # (any branch). This preserves history for branches that have been
+          # merged and deleted so they continue to appear in the dashboard.
+          run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow "ci.yml" \
+            --status completed \
+            --limit 10 \
+            --json databaseId \
+            --jq '.[0].databaseId' 2>/dev/null || true)
+
+          if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+            gh run download "$run_id" \
+              --repo "${{ github.repository }}" \
+              --name branch-summary \
+              --dir /tmp/branch-summary 2>/dev/null || true
+          fi
+
+          # Validate JSON; reset to empty object on parse error.
+          if ! node -e "JSON.parse(require('fs').readFileSync('/tmp/branch-summary/branch-summary.json','utf8'))" 2>/dev/null; then
+            echo "branch-summary.json is invalid — resetting to empty object."
+            echo "{}" > /tmp/branch-summary/branch-summary.json
+          fi
+
+          branch_count=$(node -e "console.log(Object.keys(JSON.parse(require('fs').readFileSync('/tmp/branch-summary/branch-summary.json','utf8'))).length)" 2>/dev/null || echo "0")
+          echo "Loaded previous branch-summary with ${branch_count} branches"
+
       - name: Collect multi-branch build-time histories
         env:
           GH_TOKEN: ${{ github.token }}
@@ -2023,6 +2057,65 @@ jobs:
             console.log('Merged ' + loaded + ' of ' + runs.length + ' branch histories into all-branches.json');
           "
 
+      - name: Merge branch histories with previous branch-summary
+        run: |
+          node -e "
+            const fs = require('fs');
+
+            // Current live data written by the previous step: { branchName: [...entries] }
+            let current = {};
+            try {
+              current = JSON.parse(fs.readFileSync('/tmp/branch-histories/all-branches.json', 'utf8'));
+            } catch (_) {}
+
+            // Previous summary: { branchName: { entries: [...], stale: bool } }
+            // On first run this is {}; the legacy array format is also tolerated.
+            let prevSummary = {};
+            try {
+              prevSummary = JSON.parse(fs.readFileSync('/tmp/branch-summary/branch-summary.json', 'utf8'));
+            } catch (_) {}
+
+            const liveSet = new Set(Object.keys(current));
+
+            // Build merged summary.
+            const merged = {};
+
+            // Live branches: mark as not stale, use fresh entries from this run.
+            for (const [br, entries] of Object.entries(current)) {
+              merged[br] = { entries, stale: false };
+            }
+
+            // Stale branches: preserve from previous summary if not in live set.
+            for (const [br, data] of Object.entries(prevSummary)) {
+              if (!liveSet.has(br)) {
+                // Tolerate both the old array format and the current object format.
+                const entries = Array.isArray(data) ? data : (data.entries || []);
+                merged[br] = { entries, stale: true };
+              }
+            }
+
+            // Cap at 20 total branches to prevent unbounded growth.
+            // Live branches always take priority; stale ones fill remaining slots.
+            const live  = Object.entries(merged).filter(([, v]) => !v.stale);
+            const stale = Object.entries(merged).filter(([, v]) =>  v.stale);
+            const MAX = 20;
+            const kept = [...live, ...stale.slice(0, Math.max(0, MAX - live.length))];
+            const capped = Object.fromEntries(kept);
+
+            console.log(
+              'branch-summary: total=' + kept.length +
+              ' live=' + live.length +
+              ' stale=' + Math.min(stale.length, MAX - live.length)
+            );
+
+            // Overwrite all-branches.json with the enriched format for gen-dashboard.js.
+            fs.writeFileSync('/tmp/branch-histories/all-branches.json', JSON.stringify(capped));
+
+            // Persist branch-summary so future runs can restore stale branches.
+            fs.mkdirSync('/tmp/branch-summary', { recursive: true });
+            fs.writeFileSync('/tmp/branch-summary/branch-summary.json', JSON.stringify(capped));
+          "
+
       - name: Generate CI dashboard HTML
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
@@ -2034,6 +2127,14 @@ jobs:
         with:
           name: ci-dashboard
           path: ci-dashboard.html
+          retention-days: 90
+
+      - name: Upload branch-summary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-summary
+          path: /tmp/branch-summary/branch-summary.json
+          overwrite: true
           retention-days: 90
 
       - name: Deploy dashboard to GitHub Pages

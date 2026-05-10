@@ -11,11 +11,21 @@ try {
 }
 
 // Multi-branch build-time data (collected by CI step; absent on first run).
+// Normalized shape: { branchName: { entries: [...], stale: bool } }
+// Supports both the legacy { branch: [...entries] } format and the current
+// { branch: { entries, stale } } format produced by the merge step.
 let allBranches = {};
 try {
-  allBranches = JSON.parse(
+  const raw = JSON.parse(
     fs.readFileSync("/tmp/branch-histories/all-branches.json", "utf8"),
   );
+  for (const [br, val] of Object.entries(raw)) {
+    if (Array.isArray(val)) {
+      allBranches[br] = { entries: val, stale: false };
+    } else if (val && Array.isArray(val.entries)) {
+      allBranches[br] = { entries: val.entries, stale: !!val.stale };
+    }
+  }
 } catch (_) {
   // File is optional — silently continue without cross-branch section.
 }
@@ -645,17 +655,21 @@ function buildBranchSection() {
   const branchNames = Object.keys(allBranches);
   if (branchNames.length === 0) return "";
 
-  // Default sort: current branch first, then alphabetically
+  // Sort branches: current branch first, then live branches alphabetically,
+  // then stale (merged/deleted) branches alphabetically.
   branchNames.sort((a, b) => {
     if (a === branch) return -1;
     if (b === branch) return 1;
+    const aStale = allBranches[a].stale;
+    const bStale = allBranches[b].stale;
+    if (aStale !== bStale) return aStale ? 1 : -1;
     return a.localeCompare(b);
   });
 
   const rows = branchNames
     .map((br) => {
       const branchData = allBranches[br];
-      // Support both old format (array) and new format ({ entries, runUrl })
+      // Support legacy array format and enriched { entries, runUrl, stale } format.
       const entries = Array.isArray(branchData)
         ? branchData
         : branchData && Array.isArray(branchData.entries)
@@ -665,6 +679,8 @@ function buildBranchSection() {
         !Array.isArray(branchData) && branchData && branchData.runUrl
           ? branchData.runUrl
           : null;
+      const stale =
+        !Array.isArray(branchData) && branchData ? !!branchData.stale : false;
 
       if (!entries || entries.length === 0) return null;
 
@@ -683,9 +699,12 @@ function buildBranchSection() {
       const avgFmt = avg != null ? fmtTime(avg) : "\u2014";
 
       const isCurrent = br === branch;
+      const staleBadge = stale
+        ? ` <span style="font-size:.68rem;color:#6e7781;background:#f0f0f0;border:1px solid #d0d7de;border-radius:3px;padding:1px 5px;vertical-align:middle;font-family:system-ui,sans-serif">merged</span>`
+        : "";
       const branchLabel = isCurrent
-        ? `<code style="background:#ddf4dd;color:#1a7f37">${escHtml(br)}</code>`
-        : `<code>${escHtml(br)}</code>`;
+        ? `<code style="background:#ddf4dd;color:#1a7f37">${escHtml(br)}</code>${staleBadge}`
+        : `<code style="${stale ? "text-decoration:line-through;color:#8a8a8a" : ""}">${escHtml(br)}</code>${staleBadge}`;
       const branchLinked = runUrl
         ? `<a href="${escHtml(runUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${branchLabel}</a>`
         : branchLabel;
