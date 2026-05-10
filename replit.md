@@ -101,7 +101,7 @@ SESSION_SECRET=<output of: openssl rand -hex 32>
 
 The server starts but all session-based features silently break without this.
 
-**Step 4 — Set GitHub Actions variable**
+**Step 4 — Set GitHub Actions variables**
 In the GitHub repo Settings → Variables → Actions, set:
 
 ```
@@ -109,6 +109,14 @@ MAX_NEW_WARNINGS=<copy value from original repo>
 ```
 
 This controls the CI warning gate. CI will fail on every PR until it is set.
+
+Optionally, also set:
+
+```
+DASHBOARD_BUILD_SPIKE_PCT=20
+```
+
+This controls the build-time spike threshold (%) shown in the CI dashboard. Defaults to `20` if unset. Raise or lower it from the GitHub UI without editing any workflow YAML.
 
 **Step 5 — Push the database schema**
 The PostgreSQL database is provisioned automatically by Replit. Run:

@@ -2245,7 +2245,7 @@ jobs:
         env:
           BRANCH: ${{ github.head_ref || github.ref_name }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          DASHBOARD_BUILD_SPIKE_PCT: 20
+          DASHBOARD_BUILD_SPIKE_PCT: ${{ vars.DASHBOARD_BUILD_SPIKE_PCT || '20' }}
         run: node .github/scripts/gen-dashboard.js
 
       - name: Upload CI dashboard artifact
