@@ -903,15 +903,18 @@ jobs:
               --dir "/tmp/job-counts/${artifact}" 2>/dev/null || true
           done
 
-      - name: Download base-branch warn-history-base
+      - name: Download build time history
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          current_run_id="${{ github.run_id }}"
+          mkdir -p /tmp/warn-history-base
+          echo "[]" > /tmp/warn-history-base/warn-history-base.json
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             # For PRs: compare against the most recent push run on the base branch.
             base_branch="${{ github.event.pull_request.base.ref }}"
+            history_label="base branch (\`${base_branch}\`)"
+
             run_id=$(gh run list \
               --repo "${{ github.repository }}" \
               --branch "$base_branch" \
@@ -919,30 +922,38 @@ jobs:
               --limit 10 \
               --json databaseId \
               --jq '.[0].databaseId' 2>/dev/null || true)
+
+            if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+              gh run download "$run_id" \
+                --repo "${{ github.repository }}" \
+                --name warn-history-base \
+                --dir /tmp/warn-history-base 2>/dev/null || true
+            fi
           else
-            # For push: compare against the previous run on the same branch,
-            # skipping the current run which hasn't written its base history yet.
-            run_id=$(gh run list \
-              --repo "${{ github.repository }}" \
-              --branch "$GITHUB_REF_NAME" \
-              --workflow "ci.yml" \
-              --limit 10 \
-              --json databaseId \
-              --jq "[.[] | select(.databaseId != ${current_run_id})] | .[0].databaseId" \
-              2>/dev/null || true)
-          fi
+            # For push events: compare against this branch's own rolling average.
+            # Use the warn-history artifact from the current run (guaranteed available
+            # since build-time-gate depends on record-warn-history). The current
+            # run's entry is excluded by SHA in the comparison step so we only
+            # average prior pushes on this branch.
+            branch_name="$GITHUB_REF_NAME"
+            history_label="this branch (\`${branch_name}\`)"
 
-          mkdir -p /tmp/warn-history-base
-          echo "[]" > /tmp/warn-history-base/warn-history-base.json
-
-          if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
-            gh run download "$run_id" \
+            gh run download "${{ github.run_id }}" \
               --repo "${{ github.repository }}" \
-              --name warn-history-base \
+              --name warn-history \
               --dir /tmp/warn-history-base 2>/dev/null || true
+
+            # Normalise filename so the comparison step has a single path to read.
+            if [ -f /tmp/warn-history-base/warn-history.json ]; then
+              mv /tmp/warn-history-base/warn-history.json \
+                 /tmp/warn-history-base/warn-history-base.json
+            fi
           fi
 
-      - name: Compare build time against base-branch average
+          echo "HISTORY_LABEL=${history_label}" >> "$GITHUB_ENV"
+          echo "CURRENT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+
+      - name: Compare build time against history
         id: compare
         env:
           MAX_LINT_TIME_SPIKE_PCT: ${{ vars.MAX_LINT_TIME_SPIKE_PCT }}
@@ -980,15 +991,18 @@ jobs:
           bld_thr=$(validate_threshold  "${MAX_BUILD_JOB_TIME_SPIKE_PCT}" "MAX_BUILD_JOB_TIME_SPIKE_PCT" "25")
 
           echo "Thresholds: lint=${lint_thr}% tc=${tc_thr}% format=${fmt_thr}% build_job=${bld_thr}%"
+          echo "History source: ${HISTORY_LABEL}"
 
-          # ── Per-job base-branch averages ────────────────────────────────────
-          # Reads lint_s, tc_s, format_s, and build_job_s from the base history.
+          # ── Per-job rolling averages ─────────────────────────────────────────
+          # Reads lint_s, tc_s, format_s, and build_job_s from the history file.
           # Old history entries that pre-date the per-job fields are ignored
           # gracefully (select filters them out).
+          # For push events the history file is the current run's warn-history,
+          # so entries matching CURRENT_SHA are excluded to avoid self-comparison.
           avg_for_field() {
             local field="$1"
-            jq --arg f "$field" '
-              [.[] | select(.[$f] != null and (.[$f] | type) == "number" and .[$f] > 0) | .[$f]] |
+            jq --arg f "$field" --arg sha "$CURRENT_SHA" '
+              [.[] | select(.[$f] != null and (.[$f] | type) == "number" and .[$f] > 0 and .sha != $sha) | .[$f]] |
               if length == 0 then 0
               else (add / length | round) end
             ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo "0"
@@ -1005,17 +1019,17 @@ jobs:
             if [ -z "$v" ] || [ "$v" = "null" ]; then eval "${vname}=0"; fi
           done
 
-          echo "Base averages: lint=${avg_lint_s}s tc=${avg_tc_s}s format=${avg_format_s}s build_job=${avg_build_job_s}s"
+          echo "Rolling averages (${HISTORY_LABEL}): lint=${avg_lint_s}s tc=${avg_tc_s}s format=${avg_format_s}s build_job=${avg_build_job_s}s"
 
           total_avg=$((avg_lint_s + avg_tc_s + avg_format_s + avg_build_job_s))
 
           if [ "$total_avg" -le 0 ]; then
-            echo "No base-branch per-job build time history — skipping comparison."
+            echo "No per-job build time history for ${HISTORY_LABEL} — skipping comparison."
             {
-              echo "## ℹ️ Build time gate: no base history"
+              echo "## ℹ️ Build time gate: no history yet"
               echo ""
-              echo "No per-job entries found in \`warn-history-base\`."
-              echo "Comparison will be available after the base branch accumulates build history."
+              echo "No per-job entries found for ${HISTORY_LABEL}."
+              echo "Comparison will be available after this branch accumulates build history."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "spike=false" >> "$GITHUB_OUTPUT"
             echo "avg_s=0" >> "$GITHUB_OUTPUT"
@@ -1046,7 +1060,7 @@ jobs:
             if [ "$cur" -gt "$allowed" ]; then
               spiked=true
               over_s=$(( cur - allowed ))
-              echo "::warning::${label} time spike: $(fmt_time "$cur") is ${inc_pct}% above the base-branch average of $(fmt_time "$avg") (threshold: ${thr}%). Review recent changes for unexpected slowdowns." >&2
+              echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is ${inc_pct}% above the rolling average of $(fmt_time "$avg") (threshold: ${thr}%). Review recent changes for unexpected slowdowns." >&2
             fi
             printf '{"name":"%s","skipped":false,"spiked":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"inc_pct":%d,"over_s":%d}' \
               "$label" "$spiked" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s"
@@ -1102,7 +1116,9 @@ jobs:
           {
             echo "## 🕐 Build time gate"
             echo ""
-            echo "| Job | Base avg | This PR | Allowed max | Status |"
+            echo "_History source: ${HISTORY_LABEL}_"
+            echo ""
+            echo "| Job | ${HISTORY_LABEL} avg | ${run_label} | Allowed max | Status |"
             echo "|---|---|---|---|---|"
             render_row "$lint_detail"
             render_row "$tc_detail"
