@@ -1489,13 +1489,13 @@ jobs:
           }
 
           # ── Per-job spike detection ─────────────────────────────────────────
-          # check_job <label> <current_s> <avg_s> <threshold_pct> <spread_json> [abs_thr_s] [spread_pct]
+          # check_job <label> <current_s> <avg_s> <threshold_pct> <spread_json> [abs_thr_s] [spread_pct] [thr_src]
           # Prints a JSON object with the job's spike details to stdout.
           # Emits a ::warning annotation to stderr when a spike is detected.
           # A spike triggers when current exceeds the percentage threshold OR
           # (if abs_thr_s > 0) when the absolute increase exceeds abs_thr_s.
           check_job() {
-            local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}" abs_thr="${6:-0}" spct="${7:-80}"
+            local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}" abs_thr="${6:-0}" spct="${7:-80}" thr_src="${8:-built-in default}"
             if [ "$avg" -le 0 ]; then
               printf '{"name":"%s","skipped":true,"highVariance":false}' "$label"
               return
@@ -1522,15 +1522,17 @@ jobs:
                 high_variance=true
               fi
             fi
-            printf '{"name":"%s","skipped":false,"spiked":%s,"highVariance":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"inc_pct":%d,"over_s":%d,"spread":%s}' \
-              "$label" "$spiked" "$high_variance" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s" "$spread"
+            local thr_src_json
+            thr_src_json=$(printf '%s' "$thr_src" | jq -Rs '.')
+            printf '{"name":"%s","skipped":false,"spiked":%s,"highVariance":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"thr_src":%s,"inc_pct":%d,"over_s":%d,"spread":%s}' \
+              "$label" "$spiked" "$high_variance" "$cur" "$avg" "$allowed" "$thr" "$thr_src_json" "$inc_pct" "$over_s" "$spread"
           }
 
-          install_detail=$(check_job "Install"  "$install_s"   "$avg_install_s"   "$install_thr" "$spread_install" "$install_abs_thr" "$spread_pct")
-          lint_detail=$(check_job "Lint"      "$lint_s"      "$avg_lint_s"      "$lint_thr" "$spread_lint"   "0" "$spread_pct")
-          tc_detail=$(check_job   "Typecheck" "$tc_s"        "$avg_tc_s"        "$tc_thr"   "$spread_tc"     "0" "$spread_pct")
-          fmt_detail=$(check_job  "Format"    "$format_s"    "$avg_format_s"    "$fmt_thr"  "$spread_format" "0" "$spread_pct")
-          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr"  "$spread_build"  "0" "$spread_pct")
+          install_detail=$(check_job "Install"  "$install_s"   "$avg_install_s"   "$install_thr" "$spread_install" "$install_abs_thr" "$spread_pct" "$install_thr_src")
+          lint_detail=$(check_job "Lint"      "$lint_s"      "$avg_lint_s"      "$lint_thr" "$spread_lint"   "0" "$spread_pct" "$lint_thr_src")
+          tc_detail=$(check_job   "Typecheck" "$tc_s"        "$avg_tc_s"        "$tc_thr"   "$spread_tc"     "0" "$spread_pct" "$tc_thr_src")
+          fmt_detail=$(check_job  "Format"    "$format_s"    "$avg_format_s"    "$fmt_thr"  "$spread_format" "0" "$spread_pct" "$fmt_thr_src")
+          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr"  "$spread_build"  "0" "$spread_pct" "$bld_thr_src")
 
           # Determine overall spike and high-variance flags.
           any_spike=false
@@ -1797,6 +1799,11 @@ jobs:
 
             const spikedJobs = jobs.filter(j => !j.skipped && j.spiked).map(j => j.name);
 
+            // Build threshold source rows for the collapsible details block.
+            const thrRows = jobs
+              .filter(j => !j.skipped)
+              .map(j => `| ${j.name} | ${j.thr}% | ${j.thr_src || 'unknown'} |`);
+
             const body = [
               marker,
               `<!-- CI-BUILD-TIME-RUN:${currentRunId}:${currentRunAttempt} -->`,
@@ -1809,6 +1816,16 @@ jobs:
               ...rows,
               '',
               'Review recent changes for unexpected build slowdowns.',
+              '',
+              '<details><summary>Threshold sources for this run</summary>',
+              '',
+              '| Job | Threshold | Source |',
+              '|---|---|---|',
+              ...thrRows,
+              '',
+              'Sources: **branch override** = a branch-prefixed repo variable; **repo variable** = the global `MAX_*_TIME_SPIKE_PCT` repo variable; **built-in default** = no variable set (coded fallback).',
+              '',
+              '</details>',
               '',
               `_Last updated by run [#${currentRunId}](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${currentRunId}) (attempt ${currentRunAttempt})._`,
             ].join('\n');
@@ -1862,6 +1879,7 @@ jobs:
           # Build a plain-text table suitable for a Slack code block.
           table="Job           | Base avg | Current  | Allowed       | Status"$'\n'
           table+="--------------|----------|----------|---------------|-------"
+          thr_sources=""
           while IFS= read -r job; do
             skipped=$(printf '%s' "$job" | jq -r '.skipped')
             [ "$skipped" = "true" ] && continue
@@ -1871,6 +1889,7 @@ jobs:
             avg=$(printf '%s' "$job"     | jq -r '.avg')
             allowed=$(printf '%s' "$job" | jq -r '.allowed')
             thr=$(printf '%s' "$job"     | jq -r '.thr')
+            thr_src=$(printf '%s' "$job" | jq -r '.thr_src // "unknown"')
             inc_pct=$(printf '%s' "$job" | jq -r '.inc_pct')
             over_s=$(printf '%s' "$job"  | jq -r '.over_s')
             cur_fmt=$(fmt_time "$cur")
@@ -1884,6 +1903,7 @@ jobs:
               status="OK +${inc_pct}% (within threshold)"
             fi
             table+=$'\n'"${name}           | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ${status}"
+            thr_sources+="${name}: ${thr_src}"$'\n'
           done < <(printf '%s' "$details" | jq -c '.[]')
 
           run_url="https://github.com/${REPO}/actions/runs/${RUN_ID}"
@@ -1898,6 +1918,7 @@ jobs:
           payload=$(jq -n \
             --arg ctx "$context_text" \
             --arg tbl "$table" \
+            --arg thr_sources "$thr_sources" \
             --arg url "$run_url" \
             '{
               "blocks": [
@@ -1912,6 +1933,10 @@ jobs:
                 {
                   "type": "section",
                   "text": {"type": "mrkdwn", "text": ("```" + $tbl + "```")}
+                },
+                {
+                  "type": "section",
+                  "text": {"type": "mrkdwn", "text": ("*Threshold sources:*\n" + $thr_sources)}
                 },
                 {
                   "type": "actions",
