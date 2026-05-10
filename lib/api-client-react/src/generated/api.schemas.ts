@@ -41,6 +41,11 @@ export interface DiscoverRequest {
   mode?: DiscoverRequestMode;
   /** Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in. */
   includeBuildingTypes?: string[];
+  /**
+   * Optional human-readable address or neighbourhood context for the current location (e.g. 'South St & 2nd Ave, Old City, Philadelphia'). Sourced from the device reverse-geocode cache — never blocks the request. Injected into the brainstorm step to improve obscure-history recall.
+   * @maxLength 200
+   */
+  addressHint?: string;
 }
 
 /**
@@ -408,55 +413,6 @@ export interface RatingsResponse {
   /** Places sorted by netScore descending */
   ratings: PlaceRatingEntry[];
   total: number;
-}
-
-export interface SavedPlaceEntry {
-  /** Unique place identifier (name-lat-lng) */
-  id: string;
-  name: string;
-  category: string;
-  yearBuilt?: string;
-  tags?: string[];
-  summary: string;
-  facts: string[];
-  latitude: number;
-  longitude: number;
-  address?: string;
-  photoUrl?: string;
-  savedAt: string;
-  note?: string;
-}
-
-export interface ListSavedPlacesResponse {
-  places: SavedPlaceEntry[];
-}
-
-export interface UpsertSavedPlaceRequest {
-  /** @maxLength 300 */
-  name: string;
-  /** @maxLength 100 */
-  category: string;
-  /** @maxLength 50 */
-  yearBuilt?: string;
-  /** @maxItems 20 */
-  tags?: string[];
-  /** @maxLength 1000 */
-  summary: string;
-  /** @maxItems 20 */
-  facts: string[];
-  latitude: number;
-  longitude: number;
-  /** @maxLength 500 */
-  address?: string;
-  /** @maxLength 1000 */
-  photoUrl?: string;
-  savedAt: string;
-  /** @maxLength 2000 */
-  note?: string;
-}
-
-export interface SavedPlaceOkResponse {
-  ok: boolean;
 }
 
 /**
