@@ -434,9 +434,32 @@ function buildBranchSection() {
       const avgFmt = avg != null ? fmtTime(avg) : "\u2014";
 
       const isCurrent = br === branch;
-      const branchCell = isCurrent
+      const branchCode = isCurrent
         ? `<code style="background:#ddf4dd;color:#1a7f37">${escHtml(br)}</code>`
         : `<code>${escHtml(br)}</code>`;
+
+      // Per-job breakdown from the most recent entry
+      const jobBreakdown = (() => {
+        const jobs = [
+          { label: "Lint", val: lastEntry.lint_s },
+          { label: "Typecheck", val: lastEntry.tc_s },
+          { label: "Format", val: lastEntry.format_s },
+          { label: "Build", val: lastEntry.build_job_s },
+        ];
+        const hasAny = jobs.some((j) => j.val != null && j.val > 0);
+        if (!hasAny) {
+          return `<span style="color:#999;font-size:.78rem">no per-job data</span>`;
+        }
+        const cells = jobs
+          .map(
+            (j) =>
+              `<span style="margin-right:12px"><span style="color:#888">${j.label}:</span> <strong>${j.val != null && j.val > 0 ? fmtTime(j.val) : "\u2014"}</strong></span>`,
+          )
+          .join("");
+        return `<div style="margin-top:5px;font-size:.78rem;color:#444;white-space:normal">${cells}</div>`;
+      })();
+
+      const branchCell = `<details style="cursor:pointer"><summary style="list-style:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:.7rem;color:#888">&#9654;</span>${branchCode}</summary>${jobBreakdown}</details>`;
 
       const sparkSvg = buildSparkline(buildSeries);
 
@@ -498,6 +521,9 @@ const html = `<!DOCTYPE html>
   code{font-family:ui-monospace,monospace;background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:.85em}
   .section-label{font-size:.75rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
   .branch-table td{vertical-align:middle}
+  .branch-table details summary::-webkit-details-marker{display:none}
+  .branch-table details summary::marker{display:none}
+  .branch-table details[open] summary span:first-child{transform:rotate(90deg);display:inline-block}
 </style>
 </head>
 <body>
