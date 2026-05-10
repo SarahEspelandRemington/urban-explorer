@@ -49,8 +49,19 @@ function fmtTime(s) {
 
 const lintVals = history.map((e) => (e.lint != null ? e.lint : null));
 const tcVals = history.map((e) => (e.tc != null ? e.tc : null));
-const buildVals = history.map((e) =>
-  e.build_s != null && e.build_s > 0 ? e.build_s : null,
+
+// Per-job build time series (null for old entries that pre-date these fields).
+const lintSVals = history.map((e) =>
+  e.lint_s != null && e.lint_s > 0 ? e.lint_s : null,
+);
+const tcSVals = history.map((e) =>
+  e.tc_s != null && e.tc_s > 0 ? e.tc_s : null,
+);
+const formatSVals = history.map((e) =>
+  e.format_s != null && e.format_s > 0 ? e.format_s : null,
+);
+const buildJobSVals = history.map((e) =>
+  e.build_job_s != null && e.build_job_s > 0 ? e.build_job_s : null,
 );
 
 const maxW = Math.max(
@@ -58,7 +69,13 @@ const maxW = Math.max(
   ...lintVals.filter((v) => v !== null),
   ...tcVals.filter((v) => v !== null),
 );
-const maxB = Math.max(1, ...buildVals.filter((v) => v !== null));
+const maxB = Math.max(
+  1,
+  ...lintSVals.filter((v) => v !== null),
+  ...tcSVals.filter((v) => v !== null),
+  ...formatSVals.filter((v) => v !== null),
+  ...buildJobSVals.filter((v) => v !== null),
+);
 
 function yWarn(v) {
   return mt + ph - (v / maxW) * ph;
@@ -94,13 +111,13 @@ function polylines(vals, yFn, color, dash) {
     .join("");
 }
 
-function circles(vals, yFn, color) {
+function circles(vals, yFn, color, labelFn) {
   return vals
     .map((v, i) => {
       if (v === null) return "";
       const cx = xPos(i).toFixed(1),
         cy = yFn(v).toFixed(1);
-      const label = yFn === yBuild ? fmtTime(v) : String(v);
+      const label = labelFn ? labelFn(v) : String(v);
       const tip = `${history[i].shortSha} (${history[i].ts.slice(0, 10)}): ${label}`;
       return `<circle cx="${cx}" cy="${cy}" r="4.5" fill="${color}" stroke="white" stroke-width="1.5"><title>${tip}</title></circle>`;
     })
@@ -151,9 +168,18 @@ const legend1 = [
   `<text x="${lx + 16}" y="${ly + 2}" font-size="11" fill="#333">Lint warnings</text>`,
   `<rect x="${lx + 105}" y="${ly - 8}" width="12" height="12" rx="2" fill="#3498db"/>`,
   `<text x="${lx + 121}" y="${ly + 2}" font-size="11" fill="#333">TS warnings</text>`,
-  `<line x1="${lx + 210}" y1="${ly - 2}" x2="${lx + 222}" y2="${ly - 2}" stroke="#27ae60" stroke-width="2.2" stroke-dasharray="5,3"/>`,
-  `<circle cx="${lx + 216}" cy="${ly - 2}" r="3.5" fill="#27ae60" stroke="white" stroke-width="1"/>`,
-  `<text x="${lx + 226}" y="${ly + 2}" font-size="11" fill="#333">Build time (right axis)</text>`,
+  `<line x1="${lx + 210}" y1="${ly - 2}" x2="${lx + 222}" y2="${ly - 2}" stroke="#9b59b6" stroke-width="2.2" stroke-dasharray="5,3"/>`,
+  `<circle cx="${lx + 216}" cy="${ly - 2}" r="3.5" fill="#9b59b6" stroke="white" stroke-width="1"/>`,
+  `<text x="${lx + 226}" y="${ly + 2}" font-size="11" fill="#333">Lint ⏱</text>`,
+  `<line x1="${lx + 278}" y1="${ly - 2}" x2="${lx + 290}" y2="${ly - 2}" stroke="#e74c3c" stroke-width="2.2" stroke-dasharray="5,3"/>`,
+  `<circle cx="${lx + 284}" cy="${ly - 2}" r="3.5" fill="#e74c3c" stroke="white" stroke-width="1"/>`,
+  `<text x="${lx + 294}" y="${ly + 2}" font-size="11" fill="#333">TC ⏱</text>`,
+  `<line x1="${lx + 338}" y1="${ly - 2}" x2="${lx + 350}" y2="${ly - 2}" stroke="#f39c12" stroke-width="2.2" stroke-dasharray="5,3"/>`,
+  `<circle cx="${lx + 344}" cy="${ly - 2}" r="3.5" fill="#f39c12" stroke="white" stroke-width="1"/>`,
+  `<text x="${lx + 354}" y="${ly + 2}" font-size="11" fill="#333">Fmt ⏱</text>`,
+  `<line x1="${lx + 398}" y1="${ly - 2}" x2="${lx + 410}" y2="${ly - 2}" stroke="#27ae60" stroke-width="2.2" stroke-dasharray="5,3"/>`,
+  `<circle cx="${lx + 404}" cy="${ly - 2}" r="3.5" fill="#27ae60" stroke="white" stroke-width="1"/>`,
+  `<text x="${lx + 414}" y="${ly + 2}" font-size="11" fill="#333">Build ⏱ (right axis)</text>`,
 ].join("");
 
 const noDataMsg =
@@ -168,15 +194,21 @@ const svg1 = [
   `<line x1="${ml}" y1="${mt + ph}" x2="${ml + pw}" y2="${mt + ph}" stroke="#ccc" stroke-width="1"/>`,
   `<line x1="${ml + pw}" y1="${mt}" x2="${ml + pw}" y2="${mt + ph}" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>`,
   `<text x="${ml - 42}" y="${mt + ph / 2}" font-size="11" fill="#666" transform="rotate(-90,${ml - 42},${mt + ph / 2})" text-anchor="middle">Warnings</text>`,
-  `<text x="${ml + pw + 60}" y="${mt + ph / 2}" font-size="11" fill="#aaa" transform="rotate(90,${ml + pw + 60},${mt + ph / 2})" text-anchor="middle">Build time</text>`,
+  `<text x="${ml + pw + 60}" y="${mt + ph / 2}" font-size="11" fill="#aaa" transform="rotate(90,${ml + pw + 60},${mt + ph / 2})" text-anchor="middle">Job time</text>`,
   n > 0 ? leftAxis() : "",
   n > 0 ? rightAxis() : "",
   polylines(lintVals, yWarn, "#e67e22"),
   polylines(tcVals, yWarn, "#3498db"),
-  polylines(buildVals, yBuild, "#27ae60", "6,3"),
+  polylines(lintSVals, yBuild, "#9b59b6", "6,3"),
+  polylines(tcSVals, yBuild, "#e74c3c", "6,3"),
+  polylines(formatSVals, yBuild, "#f39c12", "6,3"),
+  polylines(buildJobSVals, yBuild, "#27ae60", "6,3"),
   circles(lintVals, yWarn, "#e67e22"),
   circles(tcVals, yWarn, "#3498db"),
-  circles(buildVals, yBuild, "#27ae60"),
+  circles(lintSVals, yBuild, "#9b59b6", fmtTime),
+  circles(tcSVals, yBuild, "#e74c3c", fmtTime),
+  circles(formatSVals, yBuild, "#f39c12", fmtTime),
+  circles(buildJobSVals, yBuild, "#27ae60", fmtTime),
   n > 0 ? xLabels() : "",
   noDataMsg,
   "</svg>",

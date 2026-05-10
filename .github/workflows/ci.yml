@@ -748,29 +748,30 @@ jobs:
           last5=$(jq '.[-5:]' "$history_file")
 
           {
-            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Build time |"
-            echo "|-----|------|---------|-------|---------------|------------|"
+            echo "| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Lint ⏱ | TC ⏱ | Fmt ⏱ | Build ⏱ |"
+            echo "|-----|------|---------|-------|---------------|--------|------|-------|---------|"
           } >> "$GITHUB_STEP_SUMMARY"
 
           # Emit one table row per entry. Null counts (skipped/cancelled jobs)
           # are rendered as "—" rather than 0 to avoid misleading the reader.
           # Old entries without a "format" field default to 0 for backward compat.
-          # Old entries without a "build_s" field render as "—".
+          # Old entries without per-job time fields (lint_s etc.) render as "—".
           echo "$last5" | jq -r '
+            def fmt(s):
+              if s == null then "—"
+              elif s == 0 then "0s"
+              else
+                (s / 60 | floor) as $min |
+                (s % 60) as $sec |
+                if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
+                else ($sec | tostring) + "s" end
+              end;
             .[] |
             (.ts | split("T")[0] | split("-") as [$y, $m, $d] |
               ({"01":"Jan","02":"Feb","03":"Mar","04":"Apr","05":"May","06":"Jun",
                 "07":"Jul","08":"Aug","09":"Sep","10":"Oct","11":"Nov","12":"Dec"}[$m])
               + " " + ($d | ltrimstr("0"))) as $date |
-            (if (.build_s == null or .build_s == 0) then "—"
-             else
-               ((.build_s / 60 | floor) as $min |
-                (.build_s % 60) as $sec |
-                if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
-                else ($sec | tostring) + "s" end)
-             end) as $build_time_raw |
-            (if .build_spike == true then $build_time_raw + " ⚠️" else $build_time_raw end) as $build_time |
-            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) | \($build_time) |"
+            "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) | \(fmt(.lint_s)) | \(fmt(.tc_s)) | \(fmt(.format_s)) | \(fmt(.build_job_s)) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -781,24 +782,26 @@ jobs:
           lint_vals=$(echo "$last5" | jq -r '[.[].lint | select(. != null)] | map(tostring) | join(" → ")')
           tc_vals=$(echo "$last5"   | jq -r '[.[].tc   | select(. != null)] | map(tostring) | join(" → ")')
           format_vals=$(echo "$last5" | jq -r '[.[].format // 0] | map(tostring) | join(" → ")')
-          # Install time sparkline: format each entry as Xm Ys; omit nulls and zeros.
-          install_s_vals=$(echo "$last5" | jq -r '
-            [.[] | .install_s // 0 | select(. > 0) |
-              (. / 60 | floor) as $min |
-              (. % 60) as $sec |
-              if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
-              else ($sec | tostring) + "s" end
-            ] | join(" → ")
-          ')
-          # Build time sparkline: format each entry as Xm Ys; omit nulls and zeros.
-          build_s_vals=$(echo "$last5" | jq -r '
-            [.[] | .build_s // 0 | select(. > 0) |
-              (. / 60 | floor) as $min |
-              (. % 60) as $sec |
-              if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
-              else ($sec | tostring) + "s" end
-            ] | join(" → ")
-          ')
+
+          # Per-job build time sparklines (install_s / lint_s / tc_s / format_s / build_job_s).
+          # Old entries without these fields are omitted (select(. > 0) filters nulls/zeros).
+          # Returns "—" when no positive values exist so the output is never an empty backtick pair.
+          _time_sparkline() {
+            local field="$1"
+            local result
+            result=$(echo "$last5" | jq -r --arg f "$field" '
+              [.[] | .[$f] // 0 | select(. > 0) |
+                (. / 60 | floor) as $min | (. % 60) as $sec |
+                if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
+                else ($sec | tostring) + "s" end
+              ] | if length == 0 then "—" else join(" → ") end')
+            echo "$result"
+          }
+          install_s_vals=$(_time_sparkline install_s)
+          lint_s_vals=$(   _time_sparkline lint_s)
+          tc_s_vals=$(     _time_sparkline tc_s)
+          format_s_vals=$( _time_sparkline format_s)
+          build_job_s_vals=$(_time_sparkline build_job_s)
 
           lint_last=$(echo "$last5" | jq '.[-1].lint')
           lint_prev=$(echo "$last5" | jq '.[-2].lint')
@@ -808,8 +811,14 @@ jobs:
           format_prev=$(echo "$last5" | jq '.[-2].format // 0')
           install_s_last=$(echo "$last5" | jq '.[-1].install_s // 0')
           install_s_prev=$(echo "$last5" | jq '.[-2].install_s // 0')
-          build_s_last=$(echo "$last5" | jq '.[-1].build_s // 0')
-          build_s_prev=$(echo "$last5" | jq '.[-2].build_s // 0')
+          lint_s_last=$(echo "$last5" | jq '.[-1].lint_s // 0')
+          lint_s_prev=$(echo "$last5" | jq '.[-2].lint_s // 0')
+          tc_s_last=$(echo "$last5"   | jq '.[-1].tc_s // 0')
+          tc_s_prev=$(echo "$last5"   | jq '.[-2].tc_s // 0')
+          format_s_last=$(echo "$last5" | jq '.[-1].format_s // 0')
+          format_s_prev=$(echo "$last5" | jq '.[-2].format_s // 0')
+          build_job_s_last=$(echo "$last5" | jq '.[-1].build_job_s // 0')
+          build_job_s_prev=$(echo "$last5" | jq '.[-2].build_job_s // 0')
 
           lint_arrow=""
           if [ "$lint_last" != "null" ] && [ "$lint_prev" != "null" ]; then
@@ -837,51 +846,41 @@ jobs:
             fi
           fi
 
-          build_s_arrow=""
-          if [ "$build_s_last" -gt 0 ] && [ "$build_s_prev" -gt 0 ]; then
-            if   [ "$build_s_last" -gt "$build_s_prev" ]; then build_s_arrow=" ↑"
-            elif [ "$build_s_last" -lt "$build_s_prev" ]; then build_s_arrow=" ↓"
+          lint_s_arrow=""
+          if [ "$lint_s_last" -gt 0 ] && [ "$lint_s_prev" -gt 0 ]; then
+            if   [ "$lint_s_last" -gt "$lint_s_prev" ]; then lint_s_arrow=" ↑"
+            elif [ "$lint_s_last" -lt "$lint_s_prev" ]; then lint_s_arrow=" ↓"
+            fi
+          fi
+
+          tc_s_arrow=""
+          if [ "$tc_s_last" -gt 0 ] && [ "$tc_s_prev" -gt 0 ]; then
+            if   [ "$tc_s_last" -gt "$tc_s_prev" ]; then tc_s_arrow=" ↑"
+            elif [ "$tc_s_last" -lt "$tc_s_prev" ]; then tc_s_arrow=" ↓"
+            fi
+          fi
+
+          format_s_arrow=""
+          if [ "$format_s_last" -gt 0 ] && [ "$format_s_prev" -gt 0 ]; then
+            if   [ "$format_s_last" -gt "$format_s_prev" ]; then format_s_arrow=" ↑"
+            elif [ "$format_s_last" -lt "$format_s_prev" ]; then format_s_arrow=" ↓"
+            fi
+          fi
+
+          build_job_s_arrow=""
+          if [ "$build_job_s_last" -gt 0 ] && [ "$build_job_s_prev" -gt 0 ]; then
+            if   [ "$build_job_s_last" -gt "$build_job_s_prev" ]; then build_job_s_arrow=" ↑"
+            elif [ "$build_job_s_last" -lt "$build_job_s_prev" ]; then build_job_s_arrow=" ↓"
             fi
           fi
 
           {
-            echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`  ·  Install: \`${install_s_vals}${install_s_arrow}\`  ·  Build: \`${build_s_vals}${build_s_arrow}\`"
+            echo "Warnings — Lint ⚠️: \`${lint_vals}${lint_arrow}\`  ·  TS ⚠️: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`"
+            echo ""
+            echo "Job times — Install ⏱: \`${install_s_vals}${install_s_arrow}\`  ·  Lint ⏱: \`${lint_s_vals}${lint_s_arrow}\`  ·  TC ⏱: \`${tc_s_vals}${tc_s_arrow}\`  ·  Fmt ⏱: \`${format_s_vals}${format_s_arrow}\`  ·  Build ⏱: \`${build_job_s_vals}${build_job_s_arrow}\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # Per-job build time breakdown scoped to the same last-5 entries shown
-          # in the main trend table. Only rendered when at least one of those
-          # entries has per-job fields; old entries without them are skipped.
-          has_breakdown=$(echo "$last5" | jq '[.[] | select(.lint_s != null)] | length')
-          if [ "$has_breakdown" -gt 0 ]; then
-            {
-              echo "<details><summary>⏱️ Per-job build time breakdown</summary>"
-              echo ""
-              echo "| SHA | Install | Lint | TC | Fmt | Build |"
-              echo "|-----|---------|------|----|-----|-------|"
-            } >> "$GITHUB_STEP_SUMMARY"
-
-            echo "$last5" | jq -r '
-              .[] |
-              select(.lint_s != null) |
-              def fmt(s):
-                if s == null then "—"
-                elif s == 0 then "0s"
-                else
-                  (s / 60 | floor) as $min |
-                  (s % 60) as $sec |
-                  if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
-                  else ($sec | tostring) + "s" end
-                end;
-              "| `\(.shortSha)` | \(fmt(.install_s)) | \(fmt(.lint_s)) | \(fmt(.tc_s)) | \(fmt(.format_s)) | \(fmt(.build_job_s)) |"
-            ' >> "$GITHUB_STEP_SUMMARY"
-
-            {
-              echo ""
-              echo "</details>"
-              echo ""
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
 
       - name: Upload warn-history artifact
         uses: actions/upload-artifact@v4
@@ -1982,6 +1981,14 @@ jobs:
                 return nonNull.map(String).join(' → ') + arrow;
               }
 
+              // Helper: format seconds as "Xm Ys" or "Ys"; null/0 → "—".
+              const fmtTime = (s) => {
+                if (s == null || s === 0) return '—';
+                const min = Math.floor(s / 60);
+                const sec = s % 60;
+                return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+              };
+
               const rows = last5.map((entry) => {
                 const date = new Date(entry.ts).toLocaleDateString('en-US', {
                   month: 'short', day: 'numeric', timeZone: 'UTC',
@@ -1995,16 +2002,8 @@ jobs:
                 // Old entries without format field (undefined) default to 0;
                 // null means the format job was skipped/cancelled.
                 const formatCount = entry.format === undefined ? 0 : (entry.format === null ? '—' : entry.format);
-                // Old entries without build_s field (undefined or null) render as "—".
-                const buildS = entry.build_s;
-                let buildTime = '—';
-                if (buildS != null && buildS > 0) {
-                  const min = Math.floor(buildS / 60);
-                  const sec = buildS % 60;
-                  buildTime = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
-                }
-                if (entry.build_spike === true) buildTime += ' ⚠️';
-                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} | ${buildTime} |`;
+                // Per-job time columns; old entries without these fields render "—".
+                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} | ${fmtTime(entry.lint_s)} | ${fmtTime(entry.tc_s)} | ${fmtTime(entry.format_s)} | ${fmtTime(entry.build_job_s)} |`;
               });
 
               const lintLine = sparkline(last5.map((e) => e.lint));
@@ -2012,33 +2011,29 @@ jobs:
               // Old entries without a format field (undefined) are treated as 0;
               // null (skipped job) is kept as null so the sparkline filters it out.
               const formatLine = sparkline(last5.map((e) => e.format === undefined ? 0 : e.format));
-              // Build time sparkline: format each entry as "Xm Ys"; compare raw seconds.
-              const buildLine = (() => {
-                const vals = last5.map((e) => (e.build_s != null && e.build_s > 0) ? e.build_s : null);
-                const nonNull = vals.filter((v) => v !== null);
-                if (nonNull.length === 0) return '—';
-                const last = nonNull[nonNull.length - 1];
-                const prev = nonNull.length > 1 ? nonNull[nonNull.length - 2] : null;
-                const arrow = prev != null ? (last > prev ? ' ↑' : last < prev ? ' ↓' : '') : '';
-                const fmt = (s) => {
-                  const min = Math.floor(s / 60);
-                  const sec = s % 60;
-                  return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
-                };
-                return nonNull.map(fmt).join(' → ') + arrow;
-              })();
-              const n = last5.length;
-
-              // Per-job breakdown: only include rows for entries that have the
-              // per-job fields (lint_s, tc_s, format_s, build_job_s). Old entries
-              // without these fields are silently skipped (backward compat).
-              const fmtTime = (s) => {
-                if (s == null) return '—';
-                if (s === 0) return '0s';
+              // Per-job build time sparklines; format each value as "Xm Ys".
+              const fmtTimeSpark = (s) => {
+                if (s == null || s <= 0) return null;
                 const min = Math.floor(s / 60);
                 const sec = s % 60;
                 return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
               };
+              const timeSparkline = (field) => {
+                const vals = last5.map((e) => fmtTimeSpark(e[field]));
+                const nonNull = vals.filter((v) => v !== null);
+                if (nonNull.length === 0) return '—';
+                const rawVals = last5.map((e) => (e[field] != null && e[field] > 0) ? e[field] : null).filter((v) => v !== null);
+                const last = rawVals[rawVals.length - 1];
+                const prev = rawVals.length > 1 ? rawVals[rawVals.length - 2] : null;
+                const arrow = prev != null ? (last > prev ? ' ↑' : last < prev ? ' ↓' : '') : '';
+                return nonNull.join(' → ') + arrow;
+              };
+              const installSLine = timeSparkline('install_s');
+              const lintSLine   = timeSparkline('lint_s');
+              const tcSLine     = timeSparkline('tc_s');
+              const formatSLine = timeSparkline('format_s');
+              const buildSLine  = timeSparkline('build_job_s');
+              const n = last5.length;
               const breakdownEntries = last5.filter((e) => e.lint_s != null);
               const breakdownRows = breakdownEntries.map((e) => {
                 const isCurrent = e.sha === currentSha;
@@ -2062,13 +2057,15 @@ jobs:
                 '',
                 `<details><summary>📈 Warning trend (last ${n} push${n !== 1 ? 'es' : ''} on this branch)</summary>`,
                 '',
-                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Build time |',
-                '|-----|------|---------|-------|---------------|------------|',
+                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Lint ⏱ | TC ⏱ | Fmt ⏱ | Build ⏱ |',
+                '|-----|------|---------|-------|---------------|--------|------|-------|---------|',
                 ...rows,
                 '',
-                `Lint: \`${lintLine}\`  ·  TS: \`${tcLine}\`  ·  Format: \`${formatLine}\`  ·  Build: \`${buildLine}\``,
-                ...breakdownSection,
+                `Warnings — Lint ⚠️: \`${lintLine}\`  ·  TS ⚠️: \`${tcLine}\`  ·  Format: \`${formatLine}\``,
                 '',
+                `Job times — Install ⏱: \`${installSLine}\`  ·  Lint ⏱: \`${lintSLine}\`  ·  TC ⏱: \`${tcSLine}\`  ·  Fmt ⏱: \`${formatSLine}\`  ·  Build ⏱: \`${buildSLine}\``,
+                '',
+                ...breakdownSection,
                 '</details>',
               ];
             }
