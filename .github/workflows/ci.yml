@@ -882,6 +882,11 @@ jobs:
     # from blocking the PR.
     if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
     continue-on-error: true
+    outputs:
+      spike: ${{ steps.compare.outputs.spike }}
+      increase_pct: ${{ steps.compare.outputs.increase_pct }}
+      current_fmt: ${{ steps.compare.outputs.current_fmt }}
+      avg_fmt: ${{ steps.compare.outputs.avg_fmt }}
     steps:
       - name: Download current-run job timing artifacts
         env:
@@ -1256,7 +1261,7 @@ jobs:
   report:
     name: Post CI summary comment
     runs-on: ubuntu-latest
-    needs: [format, lint, typecheck, record-warn-history]
+    needs: [format, lint, typecheck, record-warn-history, build-time-gate]
     if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
     steps:
       - name: Download previous-push warning counts
@@ -1346,6 +1351,10 @@ jobs:
           PREV_TC_WARNINGS: ${{ steps.prev-counts.outputs.prev_tc_warnings }}
           PREV_FORMAT_WARNINGS: ${{ steps.prev-counts.outputs.prev_format_warnings }}
           FORMAT_ERROR_COUNT: ${{ needs.format.outputs.format_error_count }}
+          BUILD_TIME_SPIKE: ${{ needs.build-time-gate.outputs.spike }}
+          BUILD_TIME_INCREASE_PCT: ${{ needs.build-time-gate.outputs.increase_pct }}
+          BUILD_TIME_CURRENT_FMT: ${{ needs.build-time-gate.outputs.current_fmt }}
+          BUILD_TIME_AVG_FMT: ${{ needs.build-time-gate.outputs.avg_fmt }}
         with:
           script: |
             const fs = require('fs');
@@ -1361,6 +1370,10 @@ jobs:
             const tcErrorCount = parseInt(process.env.TC_ERROR_COUNT || '0', 10);
             const tcWarningCount = parseInt(process.env.TC_WARNING_COUNT || '0', 10);
             const formatErrorCount = parseInt(process.env.FORMAT_ERROR_COUNT || '0', 10);
+            const buildTimeSpike = process.env.BUILD_TIME_SPIKE === 'true';
+            const buildTimeIncreasePct = process.env.BUILD_TIME_INCREASE_PCT || '';
+            const buildTimeCurrentFmt = process.env.BUILD_TIME_CURRENT_FMT || '';
+            const buildTimeAvgFmt = process.env.BUILD_TIME_AVG_FMT || '';
 
             // Load rolling warn-history written by the record-warn-history job.
             let warnHistory = [];
@@ -1505,7 +1518,12 @@ jobs:
             const formatDelta = formatErrorCount > 0
               ? deltaLine(formatErrorCount, process.env.PREV_FORMAT_WARNINGS, 'format', 'error')
               : null;
-            const deltaLines = [lintDelta, tcDelta, formatDelta].filter(Boolean);
+            // Include a build-time delta line only when a spike is detected, so
+            // the comment stays clean on normal (within-threshold) builds.
+            const buildTimeDelta = buildTimeSpike && buildTimeIncreasePct
+              ? `⬆️ Build time +${buildTimeIncreasePct}% vs base average (${buildTimeCurrentFmt} vs avg ${buildTimeAvgFmt})`
+              : null;
+            const deltaLines = [lintDelta, tcDelta, formatDelta, buildTimeDelta].filter(Boolean);
 
             const failed = [formatResult, lintResult, tcResult].some(
               (r) => r === 'failure',
