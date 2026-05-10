@@ -1031,10 +1031,26 @@ jobs:
             ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo "0"
           }
 
+          # Returns a compact JSON object {"min":X,"max":Y,"n":N} for the field,
+          # using the same SHA-exclusion filter as avg_for_field.
+          spread_for_field() {
+            local field="$1"
+            jq --arg f "$field" --arg sha "$CURRENT_SHA" '
+              [.[] | select(.[$f] != null and (.[$f] | type) == "number" and .[$f] > 0 and .sha != $sha) | .[$f]] |
+              if length == 0 then {"min":0,"max":0,"n":0}
+              else {"min":(min | round),"max":(max | round),"n":length} end
+            ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo '{"min":0,"max":0,"n":0}'
+          }
+
           avg_lint_s=$(avg_for_field "lint_s")
           avg_tc_s=$(avg_for_field "tc_s")
           avg_format_s=$(avg_for_field "format_s")
           avg_build_job_s=$(avg_for_field "build_job_s")
+
+          spread_lint=$(spread_for_field "lint_s")
+          spread_tc=$(spread_for_field "tc_s")
+          spread_format=$(spread_for_field "format_s")
+          spread_build=$(spread_for_field "build_job_s")
 
           # Sanitize nulls that jq may return on malformed input.
           for vname in avg_lint_s avg_tc_s avg_format_s avg_build_job_s; do
@@ -1068,11 +1084,11 @@ jobs:
           }
 
           # ── Per-job spike detection ─────────────────────────────────────────
-          # check_job <label> <current_s> <avg_s> <threshold_pct>
+          # check_job <label> <current_s> <avg_s> <threshold_pct> <spread_json>
           # Prints a JSON object with the job's spike details to stdout.
           # Emits a ::warning annotation to stderr when a spike is detected.
           check_job() {
-            local label="$1" cur="$2" avg="$3" thr="$4"
+            local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}"
             if [ "$avg" -le 0 ]; then
               printf '{"name":"%s","skipped":true}' "$label"
               return
@@ -1085,14 +1101,14 @@ jobs:
               over_s=$(( cur - allowed ))
               echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is ${inc_pct}% above the rolling average of $(fmt_time "$avg") (threshold: ${thr}%). Review recent changes for unexpected slowdowns." >&2
             fi
-            printf '{"name":"%s","skipped":false,"spiked":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"inc_pct":%d,"over_s":%d}' \
-              "$label" "$spiked" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s"
+            printf '{"name":"%s","skipped":false,"spiked":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"inc_pct":%d,"over_s":%d,"spread":%s}' \
+              "$label" "$spiked" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s" "$spread"
           }
 
-          lint_detail=$(check_job "Lint"      "$lint_s"     "$avg_lint_s"     "$lint_thr")
-          tc_detail=$(check_job   "Typecheck" "$tc_s"       "$avg_tc_s"       "$tc_thr")
-          fmt_detail=$(check_job  "Format"    "$format_s"   "$avg_format_s"   "$fmt_thr")
-          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr")
+          lint_detail=$(check_job "Lint"      "$lint_s"      "$avg_lint_s"      "$lint_thr" "$spread_lint")
+          tc_detail=$(check_job   "Typecheck" "$tc_s"        "$avg_tc_s"        "$tc_thr"   "$spread_tc")
+          fmt_detail=$(check_job  "Format"    "$format_s"    "$avg_format_s"    "$fmt_thr"  "$spread_format")
+          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr"  "$spread_build")
 
           # Determine overall spike flag.
           any_spike=false
@@ -1106,7 +1122,7 @@ jobs:
           # ── Step summary table (per-job breakdown) ──────────────────────────
           render_row() {
             local d="$1"
-            local skipped label spiked cur avg allowed thr inc_pct over_s
+            local skipped label spiked cur avg allowed thr inc_pct over_s sp_min sp_max sp_n
             skipped=$(echo "$d" | jq -r '.skipped')
             [ "$skipped" = "true" ] && return
             label=$(echo "$d" | jq -r '.name')
@@ -1117,16 +1133,24 @@ jobs:
             thr=$(echo "$d" | jq -r '.thr')
             inc_pct=$(echo "$d" | jq -r '.inc_pct')
             over_s=$(echo "$d" | jq -r '.over_s')
-            local cur_fmt avg_fmt allowed_fmt
+            sp_min=$(echo "$d" | jq -r '.spread.min // 0')
+            sp_max=$(echo "$d" | jq -r '.spread.max // 0')
+            sp_n=$(echo "$d" | jq -r '.spread.n // 0')
+            local cur_fmt avg_fmt allowed_fmt spread_fmt
             cur_fmt=$(fmt_time "$cur")
             avg_fmt=$(fmt_time "$avg")
             allowed_fmt=$(fmt_time "$allowed")
-            if [ "$spiked" = "true" ]; then
-              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ❌ +${inc_pct}% (${over_s}s over) |"
-            elif [ "$cur" -le "$avg" ]; then
-              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ✅ On par or faster |"
+            if [ "$sp_n" -gt 0 ]; then
+              spread_fmt="$(fmt_time "$sp_min") – $(fmt_time "$sp_max") (${sp_n} runs)"
             else
-              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ✅ +${inc_pct}% (within threshold) |"
+              spread_fmt="—"
+            fi
+            if [ "$spiked" = "true" ]; then
+              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ${spread_fmt} | ❌ +${inc_pct}% (${over_s}s over) |"
+            elif [ "$cur" -le "$avg" ]; then
+              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ${spread_fmt} | ✅ On par or faster |"
+            else
+              echo "| ${label} | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ${spread_fmt} | ✅ +${inc_pct}% (within threshold) |"
             fi
           }
 
@@ -1141,17 +1165,17 @@ jobs:
             echo ""
             echo "_History source: ${HISTORY_LABEL}_"
             echo ""
-            echo "| Job | ${HISTORY_LABEL} avg | ${run_label} | Allowed max | Status |"
-            echo "|---|---|---|---|---|"
+            echo "| Job | ${HISTORY_LABEL} avg | ${run_label} | Allowed max | Spread (min – max) | Status |"
+            echo "|---|---|---|---|---|---|"
             render_row "$lint_detail"
             render_row "$tc_detail"
             render_row "$fmt_detail"
             render_row "$bld_detail"
             echo ""
             if [ "$any_spike" = "true" ]; then
-              echo "| **Overall** | — | — | — | ❌ One or more jobs exceeded their spike threshold |"
+              echo "| **Overall** | — | — | — | — | ❌ One or more jobs exceeded their spike threshold |"
             else
-              echo "| **Overall** | — | — | — | ✅ All jobs within threshold |"
+              echo "| **Overall** | — | — | — | — | ✅ All jobs within threshold |"
             fi
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
