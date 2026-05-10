@@ -2454,6 +2454,7 @@ jobs:
               const tcSLine     = timeSparkline('tc_s');
               const formatSLine = timeSparkline('format_s');
               const buildSLine  = timeSparkline('build_job_s');
+              const totalSLine  = timeSparkline('total_s');
               const n = last5.length;
               const breakdownEntries = last5.filter((e) => e.lint_s != null);
               const breakdownRows = breakdownEntries.map((e) => {
@@ -2484,7 +2485,7 @@ jobs:
                 '',
                 `Warnings — Lint ⚠️: \`${lintLine}\`  ·  TS ⚠️: \`${tcLine}\`  ·  Format: \`${formatLine}\``,
                 '',
-                `Job times — Install ⏱: \`${installSLine}\`  ·  Lint ⏱: \`${lintSLine}\`  ·  TC ⏱: \`${tcSLine}\`  ·  Fmt ⏱: \`${formatSLine}\`  ·  Build ⏱: \`${buildSLine}\``,
+                `Job times — Install ⏱: \`${installSLine}\`  ·  Lint ⏱: \`${lintSLine}\`  ·  TC ⏱: \`${tcSLine}\`  ·  Fmt ⏱: \`${formatSLine}\`  ·  Build ⏱: \`${buildSLine}\`  ·  Total: \`${totalSLine}\``,
                 '',
                 ...breakdownSection,
                 '</details>',
