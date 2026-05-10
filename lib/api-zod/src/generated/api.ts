@@ -25,6 +25,8 @@ export const discoverPlacesBodyRadiusMax = 1000;
 export const discoverPlacesBodyAccuracyMin = 0;
 export const discoverPlacesBodyAccuracyMax = 10000;
 
+export const discoverPlacesBodyAddressHintMax = 200;
+
 export const DiscoverPlacesBody = zod.object({
   latitude: zod.number().describe("Current latitude"),
   longitude: zod.number().describe("Current longitude"),
@@ -55,6 +57,13 @@ export const DiscoverPlacesBody = zod.object({
     .optional()
     .describe(
       "Building type keys to un-filter from the default denylist (e.g. garage, shed). Allows callers to opt specific boring types back in.",
+    ),
+  addressHint: zod
+    .string()
+    .max(discoverPlacesBodyAddressHintMax)
+    .optional()
+    .describe(
+      "Optional human-readable address or neighbourhood context for the current location (e.g. 'South St & 2nd Ave, Old City, Philadelphia'). Sourced from the device reverse-geocode cache — never blocks the request. Injected into the brainstorm step to improve obscure-history recall.",
     ),
 });
 
@@ -554,112 +563,6 @@ export const ExchangeMobileAuthorizationCodeBody = zod.object({
 
 export const ExchangeMobileAuthorizationCodeResponse = zod.object({
   token: zod.string(),
-});
-
-/**
- * Returns all places the authenticated user has saved. Returns 401 when not authenticated.
- * @summary List the current user's saved places
- */
-export const ListSavedPlacesHeader = zod.object({
-  Authorization: zod
-    .string()
-    .optional()
-    .describe("Opaque session token — `Bearer <sid>`."),
-});
-
-export const ListSavedPlacesResponse = zod.object({
-  places: zod.array(
-    zod.object({
-      id: zod.string().describe("Unique place identifier (name-lat-lng)"),
-      name: zod.string(),
-      category: zod.string(),
-      yearBuilt: zod.string().optional(),
-      tags: zod.array(zod.string()).optional(),
-      summary: zod.string(),
-      facts: zod.array(zod.string()),
-      latitude: zod.number(),
-      longitude: zod.number(),
-      address: zod.string().optional(),
-      photoUrl: zod.string().optional(),
-      savedAt: zod.coerce.date(),
-      note: zod.string().optional(),
-    }),
-  ),
-});
-
-/**
- * Creates or replaces a saved place for the authenticated user. Returns 401 when not authenticated.
- * @summary Save or update a place
- */
-export const upsertSavedPlacePathPlaceIdMax = 600;
-
-export const UpsertSavedPlaceParams = zod.object({
-  placeId: zod.coerce.string().min(1).max(upsertSavedPlacePathPlaceIdMax),
-});
-
-export const UpsertSavedPlaceHeader = zod.object({
-  Authorization: zod
-    .string()
-    .optional()
-    .describe("Opaque session token — `Bearer <sid>`."),
-});
-
-export const upsertSavedPlaceBodyNameMax = 300;
-
-export const upsertSavedPlaceBodyCategoryMax = 100;
-
-export const upsertSavedPlaceBodyYearBuiltMax = 50;
-
-export const upsertSavedPlaceBodyTagsMax = 20;
-
-export const upsertSavedPlaceBodySummaryMax = 1000;
-
-export const upsertSavedPlaceBodyFactsMax = 20;
-
-export const upsertSavedPlaceBodyAddressMax = 500;
-
-export const upsertSavedPlaceBodyPhotoUrlMax = 1000;
-
-export const upsertSavedPlaceBodyNoteMax = 2000;
-
-export const UpsertSavedPlaceBody = zod.object({
-  name: zod.string().max(upsertSavedPlaceBodyNameMax),
-  category: zod.string().max(upsertSavedPlaceBodyCategoryMax),
-  yearBuilt: zod.string().max(upsertSavedPlaceBodyYearBuiltMax).optional(),
-  tags: zod.array(zod.string()).max(upsertSavedPlaceBodyTagsMax).optional(),
-  summary: zod.string().max(upsertSavedPlaceBodySummaryMax),
-  facts: zod.array(zod.string()).max(upsertSavedPlaceBodyFactsMax),
-  latitude: zod.number(),
-  longitude: zod.number(),
-  address: zod.string().max(upsertSavedPlaceBodyAddressMax).optional(),
-  photoUrl: zod.string().max(upsertSavedPlaceBodyPhotoUrlMax).optional(),
-  savedAt: zod.coerce.date(),
-  note: zod.string().max(upsertSavedPlaceBodyNoteMax).optional(),
-});
-
-export const UpsertSavedPlaceResponse = zod.object({
-  ok: zod.boolean(),
-});
-
-/**
- * Removes a saved place for the authenticated user. Returns 401 when not authenticated.
- * @summary Remove a saved place
- */
-export const deleteSavedPlacePathPlaceIdMax = 600;
-
-export const DeleteSavedPlaceParams = zod.object({
-  placeId: zod.coerce.string().min(1).max(deleteSavedPlacePathPlaceIdMax),
-});
-
-export const DeleteSavedPlaceHeader = zod.object({
-  Authorization: zod
-    .string()
-    .optional()
-    .describe("Opaque session token — `Bearer <sid>`."),
-});
-
-export const DeleteSavedPlaceResponse = zod.object({
-  ok: zod.boolean(),
 });
 
 /**
