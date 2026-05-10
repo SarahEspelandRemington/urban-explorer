@@ -2045,14 +2045,14 @@ jobs:
                 const shaLabel = isCurrent
                   ? `\`${e.shortSha}\` *(now)*`
                   : `\`${e.shortSha}\``;
-                return `| ${shaLabel} | ${fmtTime(e.lint_s)} | ${fmtTime(e.tc_s)} | ${fmtTime(e.format_s)} | ${fmtTime(e.build_job_s)} |`;
+                return `| ${shaLabel} | ${fmtTime(e.install_s)} | ${fmtTime(e.lint_s)} | ${fmtTime(e.tc_s)} | ${fmtTime(e.format_s)} | ${fmtTime(e.build_job_s)} |`;
               });
               const breakdownSection = breakdownRows.length > 0 ? [
                 '',
                 '<details><summary>⏱️ Per-job build time breakdown</summary>',
                 '',
-                '| SHA | Lint | TC | Fmt | Build |',
-                '|-----|------|----|-----|-------|',
+                '| SHA | Install | Lint | TC | Fmt | Build |',
+                '|-----|---------|------|----|-----|-------|',
                 ...breakdownRows,
                 '',
                 '</details>',
@@ -2375,11 +2375,17 @@ jobs:
             // Old entries without a "build_s" field render as "—".
             function buildHistoryTable(entries, branch) {
               if (entries.length === 0) return [];
+              const fmtS = (s) => {
+                if (s == null || s === 0) return '—';
+                const min = Math.floor(s / 60);
+                const sec = s % 60;
+                return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+              };
               const header = [
                 `<details><summary><strong>\`${branch}\` recent history</strong> (last ${entries.length} merge${entries.length === 1 ? '' : 's'})</summary>`,
                 '',
-                '| Commit | Date | Lint warnings | TS warnings | Format errors | Build time |',
-                '|---|---|---|---|---|---|',
+                '| Commit | Date | Lint warnings | TS warnings | Format errors | Install | Build time |',
+                '|---|---|---|---|---|---|---|',
               ];
               const rows = entries.map(e => {
                 const date = e.ts ? e.ts.slice(0, 10) : '—';
@@ -2391,7 +2397,7 @@ jobs:
                   const sec = buildS % 60;
                   buildTime = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
                 }
-                return `| \`${e.shortSha || e.sha.slice(0, 7)}\` | ${date} | ${e.lint} | ${e.tc} | ${formatCount} | ${buildTime} |`;
+                return `| \`${e.shortSha || e.sha.slice(0, 7)}\` | ${date} | ${e.lint} | ${e.tc} | ${formatCount} | ${fmtS(e.install_s)} | ${buildTime} |`;
               });
               return [...header, ...rows, '', '</details>'];
             }
