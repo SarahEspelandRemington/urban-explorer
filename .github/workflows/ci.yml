@@ -836,6 +836,148 @@ jobs:
           path: /tmp/time-counts.json
           retention-days: 90
 
+  build-time-gate:
+    name: Build time gate (PR)
+    runs-on: ubuntu-latest
+    needs: [record-warn-history]
+    # Informational only — never hard-blocks a merge. Skipped for push events
+    # and fork PRs (no write token). continue-on-error keeps transient failures
+    # from blocking the PR.
+    if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+    continue-on-error: true
+    steps:
+      - name: Download current-run job timing artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/job-counts
+          for artifact in lint-counts tc-counts format-counts build-counts; do
+            gh run download "${{ github.run_id }}" \
+              --repo "${{ github.repository }}" \
+              --name "$artifact" \
+              --dir "/tmp/job-counts/${artifact}" 2>/dev/null || true
+          done
+
+      - name: Download base-branch warn-history-base
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base_branch="${{ github.event.pull_request.base.ref }}"
+
+          run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
+            --branch "$base_branch" \
+            --workflow "ci.yml" \
+            --limit 10 \
+            --json databaseId \
+            --jq '.[0].databaseId' 2>/dev/null || true)
+
+          mkdir -p /tmp/warn-history-base
+          echo "[]" > /tmp/warn-history-base/warn-history-base.json
+
+          if [ -n "$run_id" ] && [ "$run_id" != "null" ]; then
+            gh run download "$run_id" \
+              --repo "${{ github.repository }}" \
+              --name warn-history-base \
+              --dir /tmp/warn-history-base 2>/dev/null || true
+          fi
+
+      - name: Compare build time against base-branch average
+        env:
+          MAX_BUILD_TIME_INCREASE_PCT: ${{ vars.MAX_BUILD_TIME_INCREASE_PCT }}
+        run: |
+          # Compute current run's total build time (lint + tc + format + build seconds).
+          lint_s=$(jq -r '.duration_s // 0' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "0")
+          tc_s=$(jq -r '.duration_s // 0' /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo "0")
+          format_s=$(jq -r '.duration_s // 0' /tmp/job-counts/format-counts/format-counts.json 2>/dev/null || echo "0")
+          build_s=$(jq -r '.duration_s // 0' /tmp/job-counts/build-counts/build-counts.json 2>/dev/null || echo "0")
+          current_build_s=$((lint_s + tc_s + format_s + build_s))
+
+          # Use configurable threshold with a default of 25%.
+          threshold_pct="${MAX_BUILD_TIME_INCREASE_PCT:-25}"
+
+          # Validate threshold is a positive integer; fall back to 25 on bad input.
+          if ! echo "$threshold_pct" | grep -qE '^[0-9]+$' || [ "$threshold_pct" -le 0 ]; then
+            echo "::warning::MAX_BUILD_TIME_INCREASE_PCT='${threshold_pct}' is not a positive integer — using default 25%."
+            threshold_pct=25
+          fi
+
+          echo "Current run build time: ${current_build_s}s (lint=${lint_s}s tc=${tc_s}s format=${format_s}s build=${build_s}s)"
+          echo "Threshold: ${threshold_pct}%"
+
+          # Compute average build_s from base-branch warn-history-base entries
+          # that have build_s > 0. Old entries without the field are skipped
+          # gracefully (select filters them out).
+          avg_build_s=$(jq '
+            [.[] | select(.build_s != null and .build_s > 0) | .build_s] |
+            if length == 0 then 0
+            else (add / length | round) end
+          ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo "0")
+
+          if [ -z "$avg_build_s" ] || [ "$avg_build_s" = "null" ]; then
+            avg_build_s=0
+          fi
+
+          echo "Base-branch average build time: ${avg_build_s}s"
+
+          if [ "$avg_build_s" -le 0 ]; then
+            echo "No base-branch build time history available — skipping comparison."
+            {
+              echo "## ℹ️ Build time gate: no base history"
+              echo ""
+              echo "No \`build_s\` entries found in \`warn-history-base\`."
+              echo "Comparison will be available after the base branch accumulates build history."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Calculate the allowed maximum: avg * (1 + threshold_pct / 100).
+          allowed_max_s=$(( avg_build_s * (100 + threshold_pct) / 100 ))
+          increase_pct=$(( (current_build_s - avg_build_s) * 100 / avg_build_s ))
+
+          fmt_time() {
+            local s=$1
+            local min=$(( s / 60 ))
+            local sec=$(( s % 60 ))
+            if [ "$min" -gt 0 ]; then echo "${min}m ${sec}s"; else echo "${sec}s"; fi
+          }
+          current_fmt=$(fmt_time "$current_build_s")
+          avg_fmt=$(fmt_time "$avg_build_s")
+          allowed_fmt=$(fmt_time "$allowed_max_s")
+
+          {
+            echo "## 🕐 Build time gate"
+            echo ""
+            echo "| | Time |"
+            echo "|---|---|"
+            echo "| Base-branch average | ${avg_fmt} |"
+            echo "| This PR | ${current_fmt} |"
+            echo "| Allowed max (+${threshold_pct}%) | ${allowed_fmt} |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$current_build_s" -gt "$allowed_max_s" ]; then
+            over_s=$(( current_build_s - allowed_max_s ))
+            {
+              echo "| **Status** | ❌ Exceeded by ${over_s}s (${increase_pct}% over base average) |"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Build time spike: ${current_fmt} is ${increase_pct}% above the base-branch average of ${avg_fmt} (threshold: ${threshold_pct}%). Review recent changes for unexpected build slowdowns."
+            echo "Build time increased by ${increase_pct}% (${avg_fmt} → ${current_fmt}), exceeding the ${threshold_pct}% threshold (allowed max: ${allowed_fmt})."
+            exit 1
+          else
+            if [ "$current_build_s" -le "$avg_build_s" ]; then
+              status_line="✅ On par or faster than base average"
+            else
+              status_line="✅ Within threshold (+${increase_pct}%)"
+            fi
+            {
+              echo "| **Status** | ${status_line} |"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Build time is within the ${threshold_pct}% threshold (${avg_fmt} → ${current_fmt})."
+          fi
+
   record-warn-history-base:
     name: Record base branch warning history
     runs-on: ubuntu-latest
