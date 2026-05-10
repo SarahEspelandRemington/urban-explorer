@@ -88,8 +88,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          SWEEP_SUMMARY: ${{ runner.temp }}/sweep-summary.md
         run: |
           set -euo pipefail
+
+          # Write this step's summary fragment to a temp file rather than
+          # $GITHUB_STEP_SUMMARY directly. A later "Publish combined summary"
+          # step concatenates the sweep and trim fragments into a single
+          # job-level summary so readers don't have to expand two separate
+          # step sections on the Actions run page.
+          : > "$SWEEP_SUMMARY"
 
           # ── 1. Check that ci-data exists ───────────────────────────────────
           if ! gh api "repos/${REPO}/branches/ci-data" --silent 2>/dev/null; then
@@ -98,7 +106,7 @@ jobs:
               echo "## CI history sweep — $(date -u +%Y-%m-%d)"
               echo ""
               echo "> **ci-data branch does not exist — nothing to clean up.**"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } >> "$SWEEP_SUMMARY"
             exit 0
           fi
 
@@ -135,7 +143,7 @@ jobs:
             echo ""
             echo "| File | Status |"
             echo "|------|--------|"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> "$SWEEP_SUMMARY"
 
           # ── 3. Sweep each history directory ───────────────────────────────
           for dir in warn-history warn-history-base; do
@@ -159,7 +167,7 @@ jobs:
               if printf '%s\n' "$active_list" | grep -qxF "$file_slug"; then
                 echo "${dir}/${file_name}: branch is active — keeping."
                 kept_count=$((kept_count + 1))
-                echo "| \`${dir}/${file_name}\` | ✅ kept |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| \`${dir}/${file_name}\` | ✅ kept |" >> "$SWEEP_SUMMARY"
                 continue
               fi
 
@@ -174,11 +182,11 @@ jobs:
                 && {
                   echo "${dir}/${file_name}: deleted."
                   deleted_count=$((deleted_count + 1))
-                  echo "| \`${dir}/${file_name}\` | 🗑️ deleted |" >> "$GITHUB_STEP_SUMMARY"
+                  echo "| \`${dir}/${file_name}\` | 🗑️ deleted |" >> "$SWEEP_SUMMARY"
                 } \
                 || {
                   echo "::warning::Failed to delete ${dir}/${file_name}."
-                  echo "| \`${dir}/${file_name}\` | ⚠️ delete failed |" >> "$GITHUB_STEP_SUMMARY"
+                  echo "| \`${dir}/${file_name}\` | ⚠️ delete failed |" >> "$SWEEP_SUMMARY"
                 }
 
             done < <(printf '%s' "$dir_listing" | jq -r '.[] | select(.type == "file" and (.name | endswith(".json"))) | [.name, .sha] | @tsv')
@@ -189,21 +197,27 @@ jobs:
 
           # ── Append totals to the step summary ──────────────────────────────
           if [ "$total_checked" -eq 0 ]; then
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "_No history files found on ci-data._" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$SWEEP_SUMMARY"
+            echo "_No history files found on ci-data._" >> "$SWEEP_SUMMARY"
           else
             {
               echo ""
               echo "**Total files checked:** ${total_checked} &nbsp;|&nbsp; **Kept:** ${kept_count} &nbsp;|&nbsp; **Deleted:** ${deleted_count}"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } >> "$SWEEP_SUMMARY"
           fi
 
       - name: Trim stale entries in active-branch history arrays
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
+          TRIM_SUMMARY: ${{ runner.temp }}/trim-summary.md
         run: |
           set -euo pipefail
+
+          # Write this step's summary fragment to a temp file; the final
+          # "Publish combined summary" step concatenates it with the sweep
+          # fragment into a single job-level summary.
+          : > "$TRIM_SUMMARY"
 
           # Drop entries older than 90 days from every history array that is
           # still on ci-data (i.e. whose branch was not removed above).
@@ -220,7 +234,7 @@ jobs:
               echo "## CI history trim — $(date -u +%Y-%m-%d)"
               echo ""
               echo "> **ci-data branch does not exist — nothing to trim.**"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } >> "$TRIM_SUMMARY"
             exit 0
           fi
 
@@ -236,7 +250,7 @@ jobs:
             echo ""
             echo "| File | Before | After | Pruned | Status |"
             echo "|------|-------:|------:|------:|--------|"
-          } >> "$GITHUB_STEP_SUMMARY"
+          } >> "$TRIM_SUMMARY"
 
           for dir in warn-history warn-history-base; do
             echo "--- Trimming ${dir}/ ---"
@@ -256,7 +270,7 @@ jobs:
                 --jq '.content' 2>/dev/null || true)
               if [ -z "$raw" ] || [ "$raw" = "null" ]; then
                 echo "${file_path}: could not fetch content — skipping."
-                echo "| \`${file_path}\` | — | — | — | ⚠️ fetch error |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| \`${file_path}\` | — | — | — | ⚠️ fetch error |" >> "$TRIM_SUMMARY"
                 continue
               fi
               decoded=$(printf '%s' "$raw" | base64 -d)
@@ -274,7 +288,7 @@ jobs:
 
               if [ -z "$updated" ]; then
                 echo "${file_path}: failed to parse JSON — skipping."
-                echo "| \`${file_path}\` | ${original_count} | — | — | ⚠️ parse error |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| \`${file_path}\` | ${original_count} | — | — | ⚠️ parse error |" >> "$TRIM_SUMMARY"
                 continue
               fi
 
@@ -282,7 +296,7 @@ jobs:
 
               if [ "$new_count" -eq "$original_count" ]; then
                 echo "${file_path}: ${original_count} entries, none pruned — OK."
-                echo "| \`${file_path}\` | ${original_count} | ${new_count} | 0 | ✅ no change |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| \`${file_path}\` | ${original_count} | ${new_count} | 0 | ✅ no change |" >> "$TRIM_SUMMARY"
                 continue
               fi
 
@@ -300,10 +314,10 @@ jobs:
                 echo "${file_path}: updated."
                 trimmed_files=$((trimmed_files + 1))
                 total_pruned=$((total_pruned + pruned))
-                echo "| \`${file_path}\` | ${original_count} | ${new_count} | ${pruned} | ✂️ pruned |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| \`${file_path}\` | ${original_count} | ${new_count} | ${pruned} | ✂️ pruned |" >> "$TRIM_SUMMARY"
               else
                 echo "::warning::Failed to update ${file_path} — will retry next week."
-                echo "| \`${file_path}\` | ${original_count} | ${new_count} | ${pruned} | ⚠️ update failed |" >> "$GITHUB_STEP_SUMMARY"
+                echo "| \`${file_path}\` | ${original_count} | ${new_count} | ${pruned} | ⚠️ update failed |" >> "$TRIM_SUMMARY"
               fi
 
             done < <(printf '%s' "$dir_listing" | jq -r '.[] | select(.type == "file" and (.name | endswith(".json"))) | [.name, .sha] | @tsv')
@@ -314,11 +328,49 @@ jobs:
 
           # ── Append totals to the step summary ──────────────────────────────
           if [ "$total_checked" -eq 0 ]; then
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "_No history files found on ci-data._" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$TRIM_SUMMARY"
+            echo "_No history files found on ci-data._" >> "$TRIM_SUMMARY"
           else
             {
               echo ""
               echo "**Total files checked:** ${total_checked} &nbsp;|&nbsp; **Files updated:** ${trimmed_files} &nbsp;|&nbsp; **Entries pruned:** ${total_pruned}"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } >> "$TRIM_SUMMARY"
           fi
+
+      - name: Publish combined cleanup summary
+        # Always run so partial results from one step are still surfaced even if
+        # the other step failed.
+        if: always()
+        env:
+          SWEEP_SUMMARY: ${{ runner.temp }}/sweep-summary.md
+          TRIM_SUMMARY: ${{ runner.temp }}/trim-summary.md
+        run: |
+          set -euo pipefail
+
+          # Combine the sweep and trim fragments into a single job-level
+          # $GITHUB_STEP_SUMMARY block so readers see one consolidated cleanup
+          # report instead of having to expand two separate step sections.
+          {
+            echo "# Weekly CI history cleanup — $(date -u +%Y-%m-%d)"
+            echo ""
+
+            if [ -s "$SWEEP_SUMMARY" ]; then
+              cat "$SWEEP_SUMMARY"
+            else
+              echo "## CI history sweep — $(date -u +%Y-%m-%d)"
+              echo ""
+              echo "_Sweep step did not produce a summary._"
+            fi
+
+            echo ""
+            echo "---"
+            echo ""
+
+            if [ -s "$TRIM_SUMMARY" ]; then
+              cat "$TRIM_SUMMARY"
+            else
+              echo "## CI history trim — $(date -u +%Y-%m-%d)"
+              echo ""
+              echo "_Trim step did not produce a summary._"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
