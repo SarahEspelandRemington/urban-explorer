@@ -2191,7 +2191,7 @@ jobs:
                 // null means the format job was skipped/cancelled.
                 const formatCount = entry.format === undefined ? 0 : (entry.format === null ? '—' : entry.format);
                 // Per-job time columns; old entries without these fields render "—".
-                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} | ${fmtTime(entry.lint_s)} | ${fmtTime(entry.tc_s)} | ${fmtTime(entry.format_s)} | ${fmtTime(entry.build_job_s)} |`;
+                return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} | ${fmtTime(entry.install_s)} | ${fmtTime(entry.lint_s)} | ${fmtTime(entry.tc_s)} | ${fmtTime(entry.format_s)} | ${fmtTime(entry.build_job_s)} |`;
               });
 
               const lintLine = sparkline(last5.map((e) => e.lint));
@@ -2245,8 +2245,8 @@ jobs:
                 '',
                 `<details><summary>📈 Warning trend (last ${n} push${n !== 1 ? 'es' : ''} on this branch)</summary>`,
                 '',
-                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Lint ⏱ | TC ⏱ | Fmt ⏱ | Build ⏱ |',
-                '|-----|------|---------|-------|---------------|--------|------|-------|---------|',
+                '| SHA | Date | Lint ⚠️ | TS ⚠️ | Format errors | Install ⏱ | Lint ⏱ | TC ⏱ | Fmt ⏱ | Build ⏱ |',
+                '|-----|------|---------|-------|---------------|-----------|--------|------|-------|---------|',
                 ...rows,
                 '',
                 `Warnings — Lint ⚠️: \`${lintLine}\`  ·  TS ⚠️: \`${tcLine}\`  ·  Format: \`${formatLine}\``,
