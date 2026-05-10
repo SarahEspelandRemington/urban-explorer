@@ -641,6 +641,18 @@ function buildBranchSection() {
         if (!hasAny) {
           return `<span style="color:#999;font-size:.78rem">no per-job data</span>`;
         }
+        const validJobs = jobs.filter(
+          (j) => lastEntry[j.key] != null && lastEntry[j.key] > 0,
+        );
+        const total = validJobs.reduce((sum, j) => sum + lastEntry[j.key], 0);
+        const maxVal = validJobs.reduce(
+          (best, j) => (lastEntry[j.key] > best ? lastEntry[j.key] : best),
+          0,
+        );
+        const slowestLabel =
+          total > 0 && maxVal / total > 0.5
+            ? validJobs.find((j) => lastEntry[j.key] === maxVal)?.label
+            : null;
         const cells = jobs
           .map((j) => {
             const series = entries.map((e) =>
@@ -656,11 +668,15 @@ function buildBranchSection() {
               JOB_SPARK_H,
               JOB_SPARK_COLORS[j.key],
             );
+            const isSlowest = slowestLabel != null && j.label === slowestLabel;
+            const labelColor = isSlowest ? "#e67e22" : "#888";
+            const labelWeight = isSlowest ? "600" : "normal";
+            const valueColor = isSlowest ? ";color:#e67e22" : "";
             return (
               `<div style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;margin-bottom:3px">` +
-              `<span style="color:#888;font-size:.75rem;min-width:60px">${j.label}</span>` +
+              `<span style="color:${labelColor};font-weight:${labelWeight};font-size:.75rem;min-width:60px">${j.label}${isSlowest ? " \u26a0\ufe0f" : ""}</span>` +
               spark +
-              `<strong style="font-size:.75rem;min-width:32px;text-align:right">${lastFmt}</strong>` +
+              `<strong style="font-size:.75rem;min-width:32px;text-align:right${valueColor}">${lastFmt}</strong>` +
               `</div>`
             );
           })
