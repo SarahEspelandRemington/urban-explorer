@@ -1,10 +1,15 @@
-import { readdirSync, writeFileSync } from "fs";
+import { existsSync, readdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const TYPES_DIR = join(__dirname, "../../lib/api-zod/src/generated/types");
+
+if (!existsSync(TYPES_DIR)) {
+  console.log("[api-zod barrel] generated/types dir not found — skipping.");
+  process.exit(0);
+}
 
 const EXCLUDED = new Set(["index.ts", "ratePlaceResponse.ts"]);
 

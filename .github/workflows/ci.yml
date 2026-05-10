@@ -720,7 +720,7 @@ jobs:
           # build_job_s = only the build step; distinguishes from the total.
           # build_spike is initialised to false here; build-time-gate patches it
           #              to true when the PR build time exceeds the threshold.
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           # Cap = 20. On push events, build-time-gate reads this same file and
           # excludes the current run's SHA from the rolling average, so the
@@ -1473,7 +1473,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/job-counts
-          for artifact in lint-counts tc-counts format-counts build-counts; do
+          for artifact in lint-counts tc-counts format-counts build-counts install-counts; do
             gh run download "${{ github.run_id }}" \
               --repo "${{ github.repository }}" \
               --name "$artifact" \
@@ -1499,6 +1499,7 @@ jobs:
           ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           # Read per-job durations and compute total compile/check work seconds.
+          install_s=$(jq -r '.duration_s // 0' /tmp/job-counts/install-counts/install-counts.json 2>/dev/null || echo "0")
           lint_s=$(jq -r '.duration_s // 0' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "0")
           tc_s=$(jq -r '.duration_s // 0' /tmp/job-counts/tc-counts/tc-counts.json 2>/dev/null || echo "0")
           format_s=$(jq -r '.duration_s // 0' /tmp/job-counts/format-counts/format-counts.json 2>/dev/null || echo "0")
@@ -1511,7 +1512,7 @@ jobs:
           # build_job_s = only the build step; distinguishes from the total.
           # build_spike is always false for push-to-base entries; spike detection
           #              only runs for PRs.
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           # Cap = 20. build-time-gate averages entries from this file while
           # excluding the current run's SHA, so the effective sample size is

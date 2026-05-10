@@ -15,7 +15,7 @@ const runUrl = process.env.RUN_URL || "#";
 const generatedAt = new Date().toUTCString();
 const n = history.length;
 
-// Chart dimensions
+// Chart dimensions (shared)
 const W = 740,
   H = 330;
 const mt = 30,
@@ -28,6 +28,14 @@ const ph = H - mt - mb;
 function xPos(i) {
   return ml + (n <= 1 ? pw / 2 : (i / (n - 1)) * pw);
 }
+
+function fmtTime(s) {
+  const min = Math.floor(s / 60),
+    sec = s % 60;
+  return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+}
+
+// ── Chart 1: warnings + total build time ─────────────────────────────────────
 
 const lintVals = history.map((e) => (e.lint != null ? e.lint : null));
 const tcVals = history.map((e) => (e.tc != null ? e.tc : null));
@@ -47,12 +55,6 @@ function yWarn(v) {
 }
 function yBuild(v) {
   return mt + ph - (v / maxB) * ph;
-}
-
-function fmtTime(s) {
-  const min = Math.floor(s / 60),
-    sec = s % 60;
-  return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
 }
 
 // Break series into connected segments, skipping null gaps
@@ -134,7 +136,7 @@ function xLabels() {
 
 const lx = ml,
   ly = mt - 14;
-const legend = [
+const legend1 = [
   `<rect x="${lx}" y="${ly - 8}" width="12" height="12" rx="2" fill="#e67e22"/>`,
   `<text x="${lx + 16}" y="${ly + 2}" font-size="11" fill="#333">Lint warnings</text>`,
   `<rect x="${lx + 105}" y="${ly - 8}" width="12" height="12" rx="2" fill="#3498db"/>`,
@@ -149,9 +151,9 @@ const noDataMsg =
     ? `<text x="${W / 2}" y="${H / 2}" font-size="14" text-anchor="middle" fill="#999">No history yet — need at least one completed run.</text>`
     : "";
 
-const svg = [
+const svg1 = [
   `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace,monospace">`,
-  legend,
+  legend1,
   `<line x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt + ph}" stroke="#ccc" stroke-width="1"/>`,
   `<line x1="${ml}" y1="${mt + ph}" x2="${ml + pw}" y2="${mt + ph}" stroke="#ccc" stroke-width="1"/>`,
   `<line x1="${ml + pw}" y1="${mt}" x2="${ml + pw}" y2="${mt + ph}" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>`,
@@ -170,13 +172,130 @@ const svg = [
   "</svg>",
 ].join("\n");
 
-// History table (newest first)
+// ── Chart 2: per-job timing stacked bar chart ─────────────────────────────────
+
+const JOB_KEYS = ["install_s", "lint_s", "tc_s", "format_s", "build_job_s"];
+const JOB_LABELS = ["Install", "Lint", "TC", "Format", "Build"];
+const JOB_COLORS = ["#9b59b6", "#e67e22", "#3498db", "#2ecc71", "#e74c3c"];
+
+// Check whether any entry has per-job fields (lint_s is present in all new entries)
+const hasJobData = history.some((e) => e.lint_s != null);
+
+// Per-run stacked values
+const barData = history.map((e) =>
+  JOB_KEYS.map((k) => (e[k] != null && e[k] > 0 ? e[k] : 0)),
+);
+const barTotals = barData.map((d) => d.reduce((a, b) => a + b, 0));
+const maxBarTotal = Math.max(1, ...barTotals);
+
+// Band scale: divide plot width into n equal slots so bars stay within bounds.
+// Each bar is centred in its slot; barW is 70% of the slot width.
+const bandW = n <= 1 ? pw : pw / n;
+const barW = Math.max(4, bandW * 0.7);
+
+function xPos2(i) {
+  return n <= 1 ? ml + pw / 2 : ml + (i + 0.5) * bandW;
+}
+
+function yJobTime(v) {
+  return mt + ph - (v / maxBarTotal) * ph;
+}
+
+// Y axis ticks (time) for stacked bar chart
+function barLeftAxis() {
+  const step = Math.max(1, Math.ceil(maxBarTotal / 5));
+  let out = "";
+  for (let v = 0; v <= maxBarTotal + step; v += step) {
+    if (v > maxBarTotal + step * 0.5) break;
+    const y = yJobTime(v).toFixed(1);
+    out += `<line x1="${ml}" y1="${y}" x2="${ml + pw}" y2="${y}" stroke="#ebebeb" stroke-width="1"/>`;
+    out += `<text x="${ml - 8}" y="${parseFloat(y) + 4}" font-size="10" text-anchor="end" fill="#666">${fmtTime(v)}</text>`;
+  }
+  return out;
+}
+
+function stackedBars() {
+  if (!hasJobData) return "";
+  let out = "";
+  for (let i = 0; i < n; i++) {
+    const cx = xPos2(i);
+    const x = cx - barW / 2;
+    let accum = 0;
+    for (let j = 0; j < JOB_KEYS.length; j++) {
+      const val = barData[i][j];
+      if (val <= 0) continue;
+      const segH = (val / maxBarTotal) * ph;
+      const y = yJobTime(accum + val);
+      const tip = `${history[i].shortSha} (${history[i].ts.slice(0, 10)}) — ${JOB_LABELS[j]}: ${fmtTime(val)}`;
+      out += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${segH.toFixed(1)}" fill="${JOB_COLORS[j]}" opacity="0.85" rx="1"><title>${tip}</title></rect>`;
+      accum += val;
+    }
+    // Total label above bar
+    if (barTotals[i] > 0) {
+      const labelY = (yJobTime(barTotals[i]) - 4).toFixed(1);
+      out += `<text x="${cx.toFixed(1)}" y="${labelY}" font-size="9" text-anchor="middle" fill="#555">${fmtTime(barTotals[i])}</text>`;
+    }
+  }
+  return out;
+}
+
+// Legend for stacked bar chart
+const legend2 = JOB_LABELS.map((label, j) => {
+  const lx2 = ml + j * 118;
+  const ly2 = mt - 14;
+  return [
+    `<rect x="${lx2}" y="${ly2 - 8}" width="12" height="12" rx="2" fill="${JOB_COLORS[j]}"/>`,
+    `<text x="${lx2 + 16}" y="${ly2 + 2}" font-size="11" fill="#333">${label}</text>`,
+  ].join("");
+}).join("");
+
+const noBarDataMsg = !hasJobData
+  ? `<text x="${W / 2}" y="${H / 2}" font-size="13" text-anchor="middle" fill="#999">Per-job timing available after the next CI run.</text>`
+  : "";
+
+// X axis labels for bar chart — uses band-scale xPos2 so labels stay centred under bars
+function xLabels2() {
+  return history
+    .map((e, i) => {
+      const x = xPos2(i).toFixed(1);
+      const y = (mt + ph + 13).toFixed(1);
+      return `<text x="${x}" y="${y}" font-size="10" text-anchor="end" fill="#666" transform="rotate(-45,${x},${y})">${e.shortSha} ${e.ts.slice(5, 10)}</text>`;
+    })
+    .join("");
+}
+
+const svg2 = [
+  `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace,monospace">`,
+  legend2,
+  `<line x1="${ml}" y1="${mt}" x2="${ml}" y2="${mt + ph}" stroke="#ccc" stroke-width="1"/>`,
+  `<line x1="${ml}" y1="${mt + ph}" x2="${ml + pw}" y2="${mt + ph}" stroke="#ccc" stroke-width="1"/>`,
+  `<text x="${ml - 42}" y="${mt + ph / 2}" font-size="11" fill="#666" transform="rotate(-90,${ml - 42},${mt + ph / 2})" text-anchor="middle">Duration</text>`,
+  n > 0 && hasJobData ? barLeftAxis() : "",
+  n > 0 && hasJobData ? stackedBars() : "",
+  n > 0 ? xLabels2() : "",
+  noBarDataMsg,
+  "</svg>",
+].join("\n");
+
+// ── Summary table ──────────────────────────────────────────────────────────────
+
 const tableRows = [...history]
   .reverse()
   .map((e) => {
     let buildTime =
       e.build_s != null && e.build_s > 0 ? fmtTime(e.build_s) : "\u2014";
     if (e.build_spike === true) buildTime += " \u26a0\ufe0f";
+    const installCell =
+      e.install_s != null && e.install_s > 0 ? fmtTime(e.install_s) : "\u2014";
+    const lintCell =
+      e.lint_s != null && e.lint_s > 0 ? fmtTime(e.lint_s) : "\u2014";
+    const tcCell = e.tc_s != null && e.tc_s > 0 ? fmtTime(e.tc_s) : "\u2014";
+    const fmtCell =
+      e.format_s != null && e.format_s > 0 ? fmtTime(e.format_s) : "\u2014";
+    const buildJobCell =
+      e.build_job_s != null && e.build_job_s > 0
+        ? fmtTime(e.build_job_s)
+        : "\u2014";
     return [
       "<tr>",
       `<td><code>${e.shortSha}</code></td>`,
@@ -185,13 +304,18 @@ const tableRows = [...history]
       `<td>${e.tc != null ? e.tc : "\u2014"}</td>`,
       `<td>${e.format != null ? e.format : 0}</td>`,
       `<td>${buildTime}</td>`,
+      `<td>${installCell}</td>`,
+      `<td>${lintCell}</td>`,
+      `<td>${tcCell}</td>`,
+      `<td>${fmtCell}</td>`,
+      `<td>${buildJobCell}</td>`,
       "</tr>",
     ].join("");
   })
   .join("\n");
 
 const noRowsMsg =
-  '<tr><td colspan="6" style="color:#999;text-align:center;padding:20px">No runs recorded yet.</td></tr>';
+  '<tr><td colspan="11" style="color:#999;text-align:center;padding:20px">No runs recorded yet.</td></tr>';
 
 const html = `<!DOCTYPE html>
 <html lang="en">
@@ -202,6 +326,7 @@ const html = `<!DOCTYPE html>
   *{box-sizing:border-box}
   body{font-family:system-ui,sans-serif;margin:0;padding:28px 32px;background:#f6f8fa;color:#1a1a1a}
   h1{font-size:1.35rem;margin:0 0 4px}
+  h2{font-size:1.05rem;margin:24px 0 10px;color:#444}
   .meta{font-size:.82rem;color:#666;margin-bottom:24px}
   .meta a{color:#0969da;text-decoration:none}
   .meta a:hover{text-decoration:underline}
@@ -211,17 +336,27 @@ const html = `<!DOCTYPE html>
   td{padding:7px 14px;font-size:.82rem;border-top:1px solid #f0f0f0;white-space:nowrap}
   tr:hover td{background:#f6f8fa}
   code{font-family:ui-monospace,monospace;background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:.85em}
+  .section-label{font-size:.75rem;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
 </style>
 </head>
 <body>
 <h1>CI Dashboard \u2014 ${branch}</h1>
 <p class="meta">Generated ${generatedAt} &middot; ${n} run${n !== 1 ? "s" : ""} in history &middot; <a href="${runUrl}">View workflow run &rarr;</a></p>
-<div class="card">${svg}</div>
+
+<h2>Warnings &amp; total build time</h2>
+<div class="card">${svg1}</div>
+
+<h2>Per-job timing breakdown</h2>
+<p class="section-label">Stacked bars show install + lint + typecheck + format + build durations per run. Hover a segment for exact time.</p>
+<div class="card">${svg2}</div>
+
+<h2>Run history</h2>
 <table>
   <thead><tr>
     <th>SHA</th><th>Date</th>
     <th>Lint &#x26a0;&#xfe0f;</th><th>TS &#x26a0;&#xfe0f;</th>
-    <th>Format errors</th><th>Build time</th>
+    <th>Format errors</th><th>Total time</th>
+    <th>Install</th><th>Lint time</th><th>TC time</th><th>Fmt time</th><th>Build time</th>
   </tr></thead>
   <tbody>${tableRows || noRowsMsg}</tbody>
 </table>
