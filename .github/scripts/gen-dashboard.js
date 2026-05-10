@@ -725,10 +725,9 @@ function buildSparkline(vals, runUrl, w, h, color, entries) {
   // Endpoint dot — also shows SHA/date when available, plus the run URL for
   // discoverability (the whole SVG is an anchor link too, added in task-549).
   const lastPaired = paired[paired.length - 1];
-  const lastEntryPrefix =
-    lastPaired.entry
-      ? `${lastPaired.entry.shortSha} (${lastPaired.entry.ts.slice(0, 10)}): `
-      : "";
+  const lastEntryPrefix = lastPaired.entry
+    ? `${lastPaired.entry.shortSha} (${lastPaired.entry.ts.slice(0, 10)}): `
+    : "";
   const lastTip = runUrl
     ? `${lastEntryPrefix}${fmtTime(points[points.length - 1])} — ${escHtml(runUrl)}`
     : `${lastEntryPrefix}${fmtTime(points[points.length - 1])}`;
@@ -984,7 +983,14 @@ function buildBranchSection() {
 
       const branchCell = `<details style="cursor:pointer"><summary style="list-style:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:.7rem;color:#888">&#9654;</span>${branchLinked}</summary>${jobBreakdown}</details>`;
 
-      const sparkSvg = buildSparkline(buildSeries, runUrl, undefined, undefined, undefined, entries);
+      const sparkSvg = buildSparkline(
+        buildSeries,
+        runUrl,
+        undefined,
+        undefined,
+        undefined,
+        entries,
+      );
 
       const lastBuildRaw =
         lastEntry.build_s != null && lastEntry.build_s > 0
@@ -1089,6 +1095,38 @@ function escHtml(s) {
 
 const branchSection = buildBranchSection();
 
+// Spike badge for the run-history table "Build time" column header.
+// Mirrors the guard used in buildBranchSection: only shown when the current
+// branch is not main and main's rolling average is available.
+const currentBranchBuildAvg = rollingAvg(
+  history.map((e) => (e.build_s != null && e.build_s > 0 ? e.build_s : null)),
+  SPARK_RUNS,
+);
+const mainEntriesForHeader =
+  allBranches["main"] && Array.isArray(allBranches["main"].entries)
+    ? allBranches["main"].entries
+    : null;
+const mainAvgForHeader = mainEntriesForHeader
+  ? rollingAvg(
+      mainEntriesForHeader.map((e) =>
+        e.build_s != null && e.build_s > 0 ? e.build_s : null,
+      ),
+      SPARK_RUNS,
+    )
+  : null;
+const buildTimeHeaderSpike =
+  branch !== "main" &&
+  currentBranchBuildAvg != null &&
+  mainAvgForHeader != null &&
+  currentBranchBuildAvg > mainAvgForHeader * (1 + buildSpikePct)
+    ? (() => {
+        const deltaPct = Math.round(
+          ((currentBranchBuildAvg - mainAvgForHeader) / mainAvgForHeader) * 100,
+        );
+        return ` <abbr title="+${deltaPct}% vs main\u2019s ${SPARK_RUNS}-run avg (${escHtml(fmtTime(mainAvgForHeader))})" style="text-decoration:none;cursor:help">\u26a0\ufe0f</abbr>`;
+      })()
+    : "";
+
 const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1141,7 +1179,7 @@ const html = `<!DOCTYPE html>
     <th>SHA</th><th>Date</th>
     <th>Lint &#x26a0;&#xfe0f;</th><th>TS &#x26a0;&#xfe0f;</th>
     <th>Format errors</th><th>Total time</th>
-    <th>Install</th><th>Lint time</th><th>TC time</th><th>Fmt time</th><th>Build time</th>
+    <th>Install</th><th>Lint time</th><th>TC time</th><th>Fmt time</th><th>Build time${buildTimeHeaderSpike}</th>
   </tr></thead>
   <tbody>${tableRows || noRowsMsg}</tbody>
 </table>
