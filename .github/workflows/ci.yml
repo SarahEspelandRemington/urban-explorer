@@ -984,7 +984,6 @@ jobs:
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
-
       - name: Upload warn-history artifact
         uses: actions/upload-artifact@v4
         with:
@@ -1338,6 +1337,7 @@ jobs:
               spread_range=$(( sp_max - sp_min ))
               if [ "$avg" -gt 0 ] && [ $(( spread_range * 100 )) -gt $(( avg * spread_pct )) ]; then
                 high_var=true
+                echo "::warning::${label} high variance on ${HISTORY_LABEL}: spread $(fmt_time "$sp_min") – $(fmt_time "$sp_max") (range $(fmt_time "$spread_range")) exceeds ${spread_pct}% of rolling average $(fmt_time "$avg") (${sp_n} runs). Results may be unreliable." >&2
               fi
               spread_fmt="$(fmt_time "$sp_min") – $(fmt_time "$sp_max") (${sp_n} runs)"
               if [ "$high_var" = "true" ]; then
