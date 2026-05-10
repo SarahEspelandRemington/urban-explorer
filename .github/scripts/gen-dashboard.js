@@ -492,23 +492,30 @@ const SPARK_RUNS = 5; // number of recent runs to show per branch
 /**
  * Generate a mini SVG sparkline for an array of build_s values (nulls excluded).
  * Returns an inline SVG string.
+ * @param {(number|null)[]} vals
+ * @param {number} [w] - SVG width (defaults to SPARK_W)
+ * @param {number} [h] - SVG height (defaults to SPARK_H)
+ * @param {string} [color] - Stroke/fill color (defaults to SPARK_COLOR)
  */
-function buildSparkline(vals) {
+function buildSparkline(vals, w, h, color) {
+  const svgW = w != null ? w : SPARK_W;
+  const svgH = h != null ? h : SPARK_H;
+  const svgColor = color != null ? color : SPARK_COLOR;
   const points = vals.filter((v) => v != null && v > 0).slice(-SPARK_RUNS);
 
   if (points.length < 2) {
     const label =
       points.length === 1
-        ? `<text x="${SPARK_W / 2}" y="${SPARK_H / 2 + 4}" font-size="9" text-anchor="middle" fill="#999">${fmtTime(points[0])}</text>`
-        : `<text x="${SPARK_W / 2}" y="${SPARK_H / 2 + 4}" font-size="9" text-anchor="middle" fill="#bbb">no data</text>`;
-    return `<svg viewBox="0 0 ${SPARK_W} ${SPARK_H}" width="${SPARK_W}" height="${SPARK_H}" xmlns="http://www.w3.org/2000/svg">${label}</svg>`;
+        ? `<text x="${svgW / 2}" y="${svgH / 2 + 4}" font-size="9" text-anchor="middle" fill="#999">${fmtTime(points[0])}</text>`
+        : `<text x="${svgW / 2}" y="${svgH / 2 + 4}" font-size="9" text-anchor="middle" fill="#bbb">no data</text>`;
+    return `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">${label}</svg>`;
   }
 
   const minV = Math.min(...points);
   const maxV = Math.max(...points);
   const range = maxV - minV || 1;
-  const innerW = SPARK_W - SPARK_PAD * 2;
-  const innerH = SPARK_H - SPARK_PAD * 2;
+  const innerW = svgW - SPARK_PAD * 2;
+  const innerH = svgH - SPARK_PAD * 2;
 
   function sx(i) {
     return (
@@ -537,11 +544,11 @@ function buildSparkline(vals) {
   const lastTip = fmtTime(points[points.length - 1]);
 
   return [
-    `<svg viewBox="0 0 ${SPARK_W} ${SPARK_H}" width="${SPARK_W}" height="${SPARK_H}" xmlns="http://www.w3.org/2000/svg">`,
-    `<polygon points="${fillPts}" fill="${SPARK_COLOR}" fill-opacity="0.12"/>`,
-    `<polyline points="${polyPts}" fill="none" stroke="${SPARK_COLOR}" stroke-width="1.8" stroke-linejoin="round"/>`,
+    `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">`,
+    `<polygon points="${fillPts}" fill="${svgColor}" fill-opacity="0.12"/>`,
+    `<polyline points="${polyPts}" fill="none" stroke="${svgColor}" stroke-width="1.8" stroke-linejoin="round"/>`,
     // Endpoint dot with tooltip
-    `<circle cx="${sx(points.length - 1).toFixed(1)}" cy="${sy(points[points.length - 1]).toFixed(1)}" r="2.5" fill="${SPARK_COLOR}"><title>${lastTip}</title></circle>`,
+    `<circle cx="${sx(points.length - 1).toFixed(1)}" cy="${sy(points[points.length - 1]).toFixed(1)}" r="2.5" fill="${svgColor}"><title>${lastTip}</title></circle>`,
     `</svg>`,
   ].join("");
 }
@@ -590,25 +597,52 @@ function buildBranchSection() {
         ? `<code style="background:#ddf4dd;color:#1a7f37">${escHtml(br)}</code>`
         : `<code>${escHtml(br)}</code>`;
 
-      // Per-job breakdown from the most recent entry
+      // Per-job breakdown: sparkline trend across recent runs + last value
+      const JOB_SPARK_W = 80;
+      const JOB_SPARK_H = 24;
+      const JOB_SPARK_COLORS = {
+        lint_s: "#e67e22",
+        tc_s: "#3498db",
+        format_s: "#2ecc71",
+        build_job_s: "#e74c3c",
+      };
       const jobBreakdown = (() => {
         const jobs = [
-          { label: "Lint", val: lastEntry.lint_s },
-          { label: "Typecheck", val: lastEntry.tc_s },
-          { label: "Format", val: lastEntry.format_s },
-          { label: "Build", val: lastEntry.build_job_s },
+          { label: "Lint", key: "lint_s" },
+          { label: "Typecheck", key: "tc_s" },
+          { label: "Format", key: "format_s" },
+          { label: "Build", key: "build_job_s" },
         ];
-        const hasAny = jobs.some((j) => j.val != null && j.val > 0);
+        const hasAny = jobs.some(
+          (j) => lastEntry[j.key] != null && lastEntry[j.key] > 0,
+        );
         if (!hasAny) {
           return `<span style="color:#999;font-size:.78rem">no per-job data</span>`;
         }
         const cells = jobs
-          .map(
-            (j) =>
-              `<span style="margin-right:12px"><span style="color:#888">${j.label}:</span> <strong>${j.val != null && j.val > 0 ? fmtTime(j.val) : "\u2014"}</strong></span>`,
-          )
+          .map((j) => {
+            const series = entries.map((e) =>
+              e[j.key] != null && e[j.key] > 0 ? e[j.key] : null,
+            );
+            const lastVal = lastEntry[j.key];
+            const lastFmt =
+              lastVal != null && lastVal > 0 ? fmtTime(lastVal) : "\u2014";
+            const spark = buildSparkline(
+              series,
+              JOB_SPARK_W,
+              JOB_SPARK_H,
+              JOB_SPARK_COLORS[j.key],
+            );
+            return (
+              `<div style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;margin-bottom:3px">` +
+              `<span style="color:#888;font-size:.75rem;min-width:60px">${j.label}</span>` +
+              spark +
+              `<strong style="font-size:.75rem;min-width:32px;text-align:right">${lastFmt}</strong>` +
+              `</div>`
+            );
+          })
           .join("");
-        return `<div style="margin-top:5px;font-size:.78rem;color:#444;white-space:normal">${cells}</div>`;
+        return `<div style="margin-top:6px;white-space:normal;display:flex;flex-wrap:wrap;gap:2px 0">${cells}</div>`;
       })();
 
       const branchCell = `<details style="cursor:pointer"><summary style="list-style:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:.7rem;color:#888">&#9654;</span>${branchCode}</summary>${jobBreakdown}</details>`;
