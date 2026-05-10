@@ -3582,6 +3582,7 @@ router.post(
         });
     }
 
+    invalidateRatingsResponseCache();
     res.json({ ok: true, placeId, up: updated.up, down: updated.down });
   },
 );
@@ -3616,7 +3617,32 @@ router.get("/explore/user-ratings", async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /explore/ratings — retrieve aggregate rating data (sorted by net score)
 // ---------------------------------------------------------------------------
+// Short-TTL in-memory cache for the aggregate ratings list.  This endpoint
+// scans the entire place_ratings table and sorts in JS, so under load it can
+// block the event loop.  A 60s TTL gives the cache near-realtime feel while
+// shielding the DB from repeated unauthenticated scans.  Writes via
+// /explore/rate-place invalidate this cache so user-visible changes
+// propagate immediately to other clients.
+const RATINGS_RESPONSE_TTL_MS = 60_000;
+let ratingsResponseCache: {
+  payload: { ratings: unknown[]; total: number };
+  timestamp: number;
+} | null = null;
+
+function invalidateRatingsResponseCache(): void {
+  ratingsResponseCache = null;
+}
+
 router.get("/explore/ratings", async (_req, res) => {
+  const now = Date.now();
+  if (
+    ratingsResponseCache &&
+    now - ratingsResponseCache.timestamp < RATINGS_RESPONSE_TTL_MS
+  ) {
+    res.json(ratingsResponseCache.payload);
+    return;
+  }
+
   const rows = await db.select().from(placeRatings);
   const entries = rows
     .map((e) => ({
@@ -3626,7 +3652,9 @@ router.get("/explore/ratings", async (_req, res) => {
     }))
     .sort((a, b) => b.netScore - a.netScore);
 
-  res.json({ ratings: entries, total: entries.length });
+  const payload = { ratings: entries, total: entries.length };
+  ratingsResponseCache = { payload, timestamp: now };
+  res.json(payload);
 });
 
 // ---------------------------------------------------------------------------
