@@ -831,6 +831,89 @@ jobs:
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history/warn-history.json
 
+      - name: Check for chronic file hotspots
+        continue-on-error: true
+        env:
+          FILE_HOTSPOT_RUNS: ${{ vars.FILE_HOTSPOT_RUNS }}
+          FILE_HOTSPOT_RANK: ${{ vars.FILE_HOTSPOT_RANK }}
+        run: |
+          history_file="/tmp/warn-history/warn-history.json"
+
+          # ── Validate and apply thresholds ────────────────────────────────────
+          runs_threshold="${FILE_HOTSPOT_RUNS:-5}"
+          rank_threshold="${FILE_HOTSPOT_RANK:-3}"
+
+          if ! echo "$runs_threshold" | grep -qE '^[1-9][0-9]*$'; then
+            echo "::warning::FILE_HOTSPOT_RUNS='${FILE_HOTSPOT_RUNS}' is not a positive integer — using default 5."
+            runs_threshold=5
+          fi
+          if ! echo "$rank_threshold" | grep -qE '^[1-9][0-9]*$'; then
+            echo "::warning::FILE_HOTSPOT_RANK='${FILE_HOTSPOT_RANK}' is not a positive integer — using default 3."
+            rank_threshold=3
+          fi
+
+          echo "Hotspot thresholds: runs=${runs_threshold} rank=${rank_threshold}"
+
+          # ── Need enough history to make a meaningful comparison ───────────────
+          count=$(jq 'length' "$history_file" 2>/dev/null || echo "0")
+          if [ "$count" -lt "$runs_threshold" ]; then
+            echo "Not enough history (${count} run(s), need ${runs_threshold}) — skipping hotspot check."
+            exit 0
+          fi
+
+          # ── Find files in the top-K by warnings for each of the last N runs ──
+          # Strategy: for each of the last N runs take the top-K files sorted by
+          # warnings desc, then intersect all N sets. Files surviving the
+          # intersection were in the top-K for every one of those runs.
+          chronic_files=$(jq -r \
+            --argjson n "$runs_threshold" \
+            --argjson k "$rank_threshold" '
+            .[-$n:] |
+            map(
+              .topFiles // [] |
+              sort_by(-.warnings) |
+              .[:$k] |
+              [.[].file] |
+              map(select(. != null and . != ""))
+            ) as $sets |
+            if ($sets | length) < $n then []
+            elif ($sets | length) == 0 or (($sets[0]) | length) == 0 then []
+            else
+              reduce $sets[1:][] as $s (
+                $sets[0];
+                . as $acc |
+                [ $acc[] | . as $f | select($s | index($f) != null) ]
+              )
+            end |
+            .[]
+          ' "$history_file" 2>/dev/null || true)
+
+          if [ -z "$chronic_files" ]; then
+            echo "No chronic file hotspots found (top-${rank_threshold} for ${runs_threshold} consecutive runs)."
+            exit 0
+          fi
+
+          # ── Emit ::warning annotations and step summary ───────────────────────
+          {
+            echo ""
+            echo "### 🔥 Chronic Warning Hotspots"
+            echo ""
+            echo "_Files that ranked in the top **${rank_threshold}** for warnings in each of the last **${runs_threshold}** consecutive runs. Consider addressing these warnings to reduce technical debt._"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            echo "::warning file=${file}::Chronic warning hotspot: this file ranked in the top ${rank_threshold} for warnings across ${runs_threshold} consecutive CI runs. Consider fixing these warnings to reduce technical debt."
+            echo "- \`${file}\`" >> "$GITHUB_STEP_SUMMARY"
+          done <<< "$chronic_files"
+
+          {
+            echo ""
+            echo "_Configure thresholds via repository variables \`FILE_HOTSPOT_RUNS\` (default 5) and \`FILE_HOTSPOT_RANK\` (default 3)._"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Write warning trend to job summary
         run: |
           history_file="/tmp/warn-history/warn-history.json"

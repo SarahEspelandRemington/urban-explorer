@@ -364,6 +364,45 @@ const sortedFiles = [...fileMap.entries()].sort((a, b) => {
   return b[1].peakTotal - a[1].peakTotal;
 });
 
+// ── Chronic file hotspot detection ───────────────────────────────────────────
+// A file is a chronic offender when it ranks in the top HOTSPOT_RANK (by
+// warnings) for each of the last HOTSPOT_RUNS consecutive runs shown in the
+// table. Mirrors the thresholds used by the CI hotspot-gate step.
+const HOTSPOT_RUNS = 5;
+const HOTSPOT_RANK = 3;
+
+function computeChronicFiles(tableRuns, rankThreshold, runsThreshold) {
+  if (tableRuns.length < runsThreshold) return new Set();
+  const recentRuns = tableRuns.slice(-runsThreshold);
+  // For each run build the sorted top-rankThreshold file name list.
+  const topSets = recentRuns.map((e) => {
+    const files = Array.isArray(e.topFiles) ? e.topFiles : [];
+    return files
+      .slice()
+      .sort((a, b) => (b.warnings ?? 0) - (a.warnings ?? 0))
+      .slice(0, rankThreshold)
+      .map((f) => f.file)
+      .filter(Boolean);
+  });
+  if (topSets.length === 0 || topSets[0].length === 0) return new Set();
+  // Intersect: start with first run's set, keep only files present in every
+  // subsequent run's set.
+  const candidates = new Set(topSets[0]);
+  for (let i = 1; i < topSets.length; i++) {
+    const runSet = new Set(topSets[i]);
+    for (const f of candidates) {
+      if (!runSet.has(f)) candidates.delete(f);
+    }
+  }
+  return candidates;
+}
+
+const chronicFiles = computeChronicFiles(
+  fileTableRuns,
+  HOTSPOT_RANK,
+  HOTSPOT_RUNS,
+);
+
 // Strip common path prefix (repo root) from file names for display.
 function stripCommonPrefix(files) {
   if (files.length === 0) return {};
@@ -424,9 +463,17 @@ function renderFileTable() {
         })
         .join("");
       const label = escHtml(displayNames[file] || file);
-      return `<tr><td style="font-family:ui-monospace,monospace;font-size:.78rem;white-space:nowrap;max-width:380px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(file)}"><code>${label}</code></td>${cells}</tr>`;
+      const hotspotBadge = chronicFiles.has(file)
+        ? ` <span title="Chronic hotspot: ranked in the top ${HOTSPOT_RANK} for warnings across ${HOTSPOT_RUNS} consecutive runs" style="font-size:.8rem">🔥</span>`
+        : "";
+      return `<tr><td style="font-family:ui-monospace,monospace;font-size:.78rem;white-space:nowrap;max-width:380px;overflow:hidden;text-overflow:ellipsis" title="${escHtml(file)}"><code>${label}</code>${hotspotBadge}</td>${cells}</tr>`;
     })
     .join("\n");
+
+  const hotspotLegend =
+    chronicFiles.size > 0
+      ? `<p style="font-size:.78rem;color:#666;margin:6px 0 0">🔥 = chronic hotspot: ranked in the top ${HOTSPOT_RANK} for warnings across the last ${HOTSPOT_RUNS} consecutive runs.</p>`
+      : "";
 
   return `<table style="border-collapse:collapse;background:#fff;border:1px solid #d0d7de;border-radius:8px;overflow:hidden;font-size:.82rem">
   <thead><tr>
@@ -434,7 +481,7 @@ function renderFileTable() {
     ${headCols.replace(/<th/g, '<th style="background:#f6f8fa;text-align:center;padding:8px 10px;font-size:.8rem;color:#444;border-bottom:1px solid #d0d7de;min-width:58px"')}
   </tr></thead>
   <tbody>${rows}</tbody>
-</table>`;
+</table>${hotspotLegend}`;
 }
 
 const fileTableHtml = renderFileTable();
