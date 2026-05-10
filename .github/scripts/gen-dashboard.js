@@ -859,10 +859,49 @@ function buildBranchSection() {
           (best, j) => (lastEntry[j.key] > best ? lastEntry[j.key] : best),
           0,
         );
-        const slowestLabel =
+        const slowestJob =
           total > 0 && maxVal / total > 0.5
-            ? validJobs.find((j) => lastEntry[j.key] === maxVal)?.label
+            ? validJobs.find((j) => lastEntry[j.key] === maxVal)
             : null;
+        const slowestLabel = slowestJob?.label ?? null;
+        const slowestKey = slowestJob?.key ?? null;
+
+        // Compute trend indicator: only shown when this job has been the
+        // bottleneck in >= 3 of the last 5 runs (transient spikes are ignored).
+        let trendIndicator = "";
+        if (slowestKey != null) {
+          const jobKeys = jobs.map((j) => j.key);
+          const last5 = entries.slice(-5);
+          let consistentCount = 0;
+          const timeHistory = [];
+
+          for (const e of last5) {
+            const jobVals = jobKeys.map((k) =>
+              e[k] != null && e[k] > 0 ? e[k] : 0,
+            );
+            const runMax = Math.max(...jobVals);
+            const keyVal =
+              e[slowestKey] != null && e[slowestKey] > 0 ? e[slowestKey] : 0;
+            if (runMax > 0 && keyVal === runMax) consistentCount++;
+            if (keyVal > 0) timeHistory.push(keyVal);
+          }
+
+          if (consistentCount >= 3 && timeHistory.length >= 2) {
+            const avgTime = Math.round(
+              timeHistory.reduce((a, b) => a + b, 0) / timeHistory.length,
+            );
+            const timeDelta = maxVal - avgTime;
+            const runsLabel = `${last5.length}-run avg`;
+            if (timeDelta > 2) {
+              trendIndicator = `\u25b2\u202f+${fmtTime(timeDelta)} vs ${runsLabel}`;
+            } else if (timeDelta < -2) {
+              trendIndicator = `\u25bc\u202f\u2212${fmtTime(-timeDelta)} vs ${runsLabel}`;
+            } else {
+              trendIndicator = `\u2248\u202f${runsLabel}`;
+            }
+          }
+        }
+
         const cells = jobs
           .map((j) => {
             const series = entries.map((e) =>
@@ -887,12 +926,17 @@ function buildBranchSection() {
               lastVal != null && lastVal > 0
                 ? trendArrow(lastVal, jobAvg, TREND_THRESHOLD)
                 : "";
+            const trendHtml =
+              isSlowest && trendIndicator
+                ? `<span style="font-size:.68rem;color:#888;margin-left:3px" title="Slowest in ${Math.min(5, entries.length)} of last ${Math.min(5, entries.length)} runs">${trendIndicator}</span>`
+                : "";
             return (
               `<div style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;margin-bottom:3px">` +
               `<span style="color:${labelColor};font-weight:${labelWeight};font-size:.75rem;min-width:60px">${j.label}${isSlowest ? " \u26a0\ufe0f" : ""}</span>` +
               spark +
               `<strong style="font-size:.75rem;min-width:32px;text-align:right${valueColor}">${lastFmt}</strong>` +
               arrow +
+              trendHtml +
               `</div>`
             );
           })
