@@ -574,7 +574,7 @@ function buildBranchSection() {
   const branchNames = Object.keys(allBranches);
   if (branchNames.length === 0) return "";
 
-  // Sort branches: current branch first, then alphabetically
+  // Default sort: current branch first, then alphabetically
   branchNames.sort((a, b) => {
     if (a === branch) return -1;
     if (b === branch) return 1;
@@ -688,8 +688,14 @@ function buildBranchSection() {
 
       const sparkSvg = buildSparkline(buildSeries, runUrl);
 
+      const lastBuildRaw =
+        lastEntry.build_s != null && lastEntry.build_s > 0
+          ? lastEntry.build_s
+          : -1;
+      const avgRaw = avg != null ? avg : -1;
+
       return [
-        `<tr${isCurrent ? ' style="font-weight:600"' : ""}>`,
+        `<tr${isCurrent ? ' class="branch-current"' : ""} data-branch="${escHtml(br)}" data-last="${lastBuildRaw}" data-avg="${avgRaw}">`,
         `<td>${branchCell}</td>`,
         `<td>${lastBuild}</td>`,
         `<td>${avgFmt}</td>`,
@@ -702,17 +708,77 @@ function buildBranchSection() {
 
   if (!rows) return "";
 
+  const sortScript = `
+<script>
+(function(){
+  var SK = 'branch-table-sort';
+  var table = document.getElementById('branch-sort-table');
+  if(!table) return;
+  var tbody = table.querySelector('tbody');
+  var headers = table.querySelectorAll('th[data-col]');
+  var state = {col:null, dir:1};
+  try{ var s=sessionStorage.getItem(SK); if(s){ state=JSON.parse(s); } }catch(e){}
+
+  function colVal(tr, col){
+    if(col==='branch') return (tr.getAttribute('data-branch')||'').toLowerCase();
+    if(col==='last') return parseFloat(tr.getAttribute('data-last')||'-1');
+    if(col==='avg' || col==='trend') return parseFloat(tr.getAttribute('data-avg')||'-1');
+    return '';
+  }
+
+  function applySort(){
+    headers.forEach(function(th){
+      var ind = th.querySelector('.sort-ind');
+      if(!ind) return;
+      if(th.getAttribute('data-col')===state.col){
+        ind.textContent = state.dir===1 ? ' \u25b2' : ' \u25bc';
+      } else {
+        ind.textContent = '';
+      }
+    });
+    if(!state.col) return;
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    rows.sort(function(a,b){
+      var av = colVal(a, state.col);
+      var bv = colVal(b, state.col);
+      if(typeof av==='string') return state.dir * av.localeCompare(bv);
+      // Push missing values (-1) to the bottom regardless of sort direction
+      if(av===-1 && bv===-1) return 0;
+      if(av===-1) return 1;
+      if(bv===-1) return -1;
+      return state.dir * (av - bv);
+    });
+    rows.forEach(function(r){ tbody.appendChild(r); });
+  }
+
+  headers.forEach(function(th){
+    th.style.cursor='pointer';
+    th.style.userSelect='none';
+    th.addEventListener('click', function(){
+      var col = th.getAttribute('data-col');
+      if(state.col===col){ state.dir = state.dir===1 ? -1 : 1; }
+      else { state.col=col; state.dir=1; }
+      try{ sessionStorage.setItem(SK, JSON.stringify(state)); }catch(e){}
+      applySort();
+    });
+  });
+
+  applySort();
+})();
+</script>`;
+
   return `
 <h2 style="font-size:1rem;margin:28px 0 10px">&#9201;&#65039; Build time trends by branch</h2>
-<table class="branch-table" style="max-width:${W + 40}px">
+<table id="branch-sort-table" class="branch-table" style="max-width:${W + 40}px">
   <thead><tr>
-    <th>Branch</th>
-    <th>Last build</th>
-    <th>${SPARK_RUNS}-run avg</th>
-    <th>Trend (last ${SPARK_RUNS} runs)</th>
+    <th data-col="branch">Branch<span class="sort-ind"></span></th>
+    <th data-col="last">Last build<span class="sort-ind"></span></th>
+    <th data-col="avg">${SPARK_RUNS}-run avg<span class="sort-ind"></span></th>
+    <th data-col="trend">Trend (last ${SPARK_RUNS} runs)<span class="sort-ind"></span></th>
   </tr></thead>
   <tbody>${rows}</tbody>
-</table>`;
+</table>
+${sortScript}`;
 }
 
 function escHtml(s) {
@@ -749,6 +815,9 @@ const html = `<!DOCTYPE html>
   .branch-table details summary::-webkit-details-marker{display:none}
   .branch-table details summary::marker{display:none}
   .branch-table details[open] summary span:first-child{transform:rotate(90deg);display:inline-block}
+  .branch-table tr.branch-current{font-weight:600}
+  .branch-table th[data-col]:hover{background:#eaecf0;color:#1a1a1a}
+  .branch-table th[data-col] .sort-ind{color:#0969da;font-size:.75rem}
 </style>
 </head>
 <body>
