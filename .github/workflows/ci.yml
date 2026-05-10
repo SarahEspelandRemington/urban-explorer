@@ -1587,9 +1587,12 @@ jobs:
               const deltaSection = deltaLines.length > 0
                 ? ['', ...deltaLines]
                 : [];
+              const successHeader = buildTimeSpike
+                ? '## ✅ All checks passed · ⏱️ Build time spike'
+                : '## ✅ All checks passed';
               const successBody = [
                 marker,
-                '## ✅ All checks passed',
+                successHeader,
                 ...deltaSection,
                 ...trendSection,
                 ...warningLines,
@@ -1691,9 +1694,12 @@ jobs:
             const failureDeltaSection = deltaLines.length > 0
               ? ['', ...deltaLines, '']
               : [''];
+            const failureHeader = buildTimeSpike
+              ? `## \u274c CI failed \u2014 ${failedNames} · ⏱️ Build time spike`
+              : `## \u274c CI failed \u2014 ${failedNames}`;
             const body = [
               marker,
-              `## \u274c CI failed \u2014 ${failedNames}`,
+              failureHeader,
               ...failureDeltaSection,
               ...trendSection,
               ...(trendSection.length > 0 ? [''] : []),
