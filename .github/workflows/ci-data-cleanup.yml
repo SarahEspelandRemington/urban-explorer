@@ -1,6 +1,7 @@
 name: CI Data Cleanup
 
-# Removes stale per-branch history files from the ci-data branch.
+# Removes stale per-branch history files from the ci-data branch and trims
+# oversized or outdated entries within active-branch history arrays.
 #
 # Two triggers keep the ci-data branch tidy:
 #
@@ -8,9 +9,13 @@ name: CI Data Cleanup
 #             warn-history and warn-history-base files so the branch is
 #             cleaned up in real time.
 #
-#   schedule — weekly safety net that removes files whose corresponding
-#              branches have already been deleted (e.g. before this workflow
-#              existed, or if the delete event was missed).
+#   schedule — weekly safety net that:
+#              1. Removes files whose corresponding branches have already been
+#                 deleted (e.g. before this workflow existed, or if the delete
+#                 event was missed).
+#              2. Trims any history array that contains entries older than 90
+#                 days or more than 20 entries, matching the cap enforced by
+#                 record-warn-history at write time.
 
 on:
   delete:
@@ -156,3 +161,90 @@ jobs:
 
           echo ""
           echo "Sweep complete. Deleted ${deleted_count} stale file(s)."
+
+      - name: Trim stale entries in active-branch history arrays
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Drop entries older than 90 days from every history array that is
+          # still on ci-data (i.e. whose branch was not removed above).
+          # Arrays are also capped at 20 entries to match the cap enforced by
+          # record-warn-history at write time.  Both guards together prevent
+          # ci-data from growing if an older workflow version omitted the cap or
+          # if a branch has been active for a very long time.
+          cutoff=$(date -u -d '90 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          echo "Pruning entries older than: ${cutoff} (90-day window, 20-entry cap)"
+
+          if ! gh api "repos/${REPO}/branches/ci-data" --silent 2>/dev/null; then
+            echo "ci-data branch does not exist — nothing to trim."
+            exit 0
+          fi
+
+          trimmed_files=0
+
+          for dir in warn-history warn-history-base; do
+            echo "--- Trimming ${dir}/ ---"
+
+            dir_listing=$(gh api "repos/${REPO}/contents/${dir}?ref=ci-data" 2>/dev/null || true)
+            if [ -z "$dir_listing" ]; then
+              echo "${dir}/: directory not found on ci-data — skipping."
+              continue
+            fi
+
+            while IFS=$'\t' read -r file_name file_sha; do
+              file_path="${dir}/${file_name}"
+
+              # Fetch and decode the file content.
+              raw=$(gh api "repos/${REPO}/contents/${file_path}?ref=ci-data" \
+                --jq '.content' 2>/dev/null || true)
+              if [ -z "$raw" ] || [ "$raw" = "null" ]; then
+                echo "${file_path}: could not fetch content — skipping."
+                continue
+              fi
+              decoded=$(printf '%s' "$raw" | base64 -d)
+
+              # Count existing entries.
+              original_count=$(printf '%s' "$decoded" | jq 'length' 2>/dev/null || echo "0")
+
+              # Drop entries older than 90 days (via .ts field) then cap to 20.
+              # Entries without a .ts field are kept so older schema versions are
+              # not silently discarded.
+              updated=$(printf '%s' "$decoded" | jq \
+                --arg cutoff "$cutoff" \
+                '[.[] | select((.ts? | . != null and . > $cutoff) or (.ts? | . == null))] | .[-20:]' \
+                2>/dev/null || true)
+
+              if [ -z "$updated" ]; then
+                echo "${file_path}: failed to parse JSON — skipping."
+                continue
+              fi
+
+              new_count=$(printf '%s' "$updated" | jq 'length' 2>/dev/null || echo "0")
+
+              if [ "$new_count" -eq "$original_count" ]; then
+                echo "${file_path}: ${original_count} entries, none pruned — OK."
+                continue
+              fi
+
+              pruned=$((original_count - new_count))
+              echo "${file_path}: pruning ${pruned} entries (${original_count} → ${new_count})."
+
+              content=$(printf '%s' "$updated" | base64 -w 0)
+              gh api "repos/${REPO}/contents/${file_path}" \
+                --method PUT \
+                --field "message=ci: trim ${file_path} (${pruned} stale entries removed) [skip ci]" \
+                --field "content=${content}" \
+                --field "sha=${file_sha}" \
+                --field "branch=ci-data" \
+                2>/dev/null \
+                && { echo "${file_path}: updated."; trimmed_files=$((trimmed_files + 1)); } \
+                || echo "::warning::Failed to update ${file_path} — will retry next week."
+
+            done < <(printf '%s' "$dir_listing" | jq -r '.[] | select(.type == "file" and (.name | endswith(".json"))) | [.name, .sha] | @tsv')
+          done
+
+          echo ""
+          echo "Trim complete. Updated ${trimmed_files} file(s)."
