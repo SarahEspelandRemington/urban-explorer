@@ -402,7 +402,14 @@ function computeChronicFiles(tableRuns, rankThreshold, runsThreshold) {
     const files = Array.isArray(e.topFiles) ? e.topFiles : [];
     return files
       .slice()
-      .sort((a, b) => (b.warnings ?? 0) - (a.warnings ?? 0))
+      .sort((a, b) => {
+        // Use the pre-merged "warnings" field when present; fall back to summing
+        // lint_warnings + tc_warnings so ranking stays correct if a future schema
+        // change renames or splits the merged field. Mirrors the jq hotspot query.
+        const aW = a.warnings ?? (a.lint_warnings ?? 0) + (a.tc_warnings ?? 0);
+        const bW = b.warnings ?? (b.lint_warnings ?? 0) + (b.tc_warnings ?? 0);
+        return bW - aW;
+      })
       .slice(0, rankThreshold)
       .map((f) => f.file)
       .filter(Boolean);

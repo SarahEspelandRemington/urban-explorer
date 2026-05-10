@@ -949,7 +949,10 @@ jobs:
             .[-$n:] |
             map(
               .topFiles // [] |
-              sort_by(-.warnings) |
+              # Sort by the pre-merged "warnings" field when present; fall back to
+              # summing lint_warnings + tc_warnings so the ranking stays correct if
+              # a future schema change renames or splits the merged field.
+              sort_by(-((.warnings) // ((.lint_warnings // 0) + (.tc_warnings // 0)))) |
               .[:$k] |
               [.[].file] |
               map(select(. != null and . != ""))
