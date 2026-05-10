@@ -136,7 +136,7 @@ building a custom dev client for real-device field testing.
 
 ## User preferences
 
-- _Populate as you build_
+- **Always push to GitHub at the end of every session** (or when the user asks). This account may be deleted, so GitHub is the source of truth. Use the GitHub API to push any changed files before closing out.
 
 ## Gotchas
 

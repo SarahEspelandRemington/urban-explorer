@@ -77,6 +77,15 @@ Through our sessions, the user has become comfortable with:
 - When something goes wrong, lead with what it means in practice ("The app
   won't load for anyone") before explaining the technical cause.
 
+## End-of-session rule
+
+Always push changed files to GitHub at the end of every session, or when the
+user asks. This Replit account may be deleted at any time — GitHub is the
+source of truth. Use the GitHub API (Bearer token from the github connection)
+to push changed files. The user's new personal Replit account pulls from
+GitHub with:
+  `git pull https://github.com/SarahEspelandRemington/urban-explorer.git main`
+
 ## Project-specific reminders
 
 - The user's deployed API URL is:
