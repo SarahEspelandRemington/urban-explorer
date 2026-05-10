@@ -1872,18 +1872,22 @@ jobs:
               --dir "/tmp/branch-histories/${safe}" 2>/dev/null || true
           done < <(jq -c '.[]' /tmp/branch-runs.json)
 
-          # Merge into a single JSON object: { "branchName": [history entries] }
+          # Merge into a single JSON object:
+          # { "branchName": { entries: [...], runUrl: "<gh-actions-url>" } }
           # Uses the same single-underscore sanitization as the download loop above.
           node -e "
             const fs = require('fs');
             const runs = JSON.parse(fs.readFileSync('/tmp/branch-runs.json','utf8'));
             const result = {};
             let loaded = 0;
+            const repo = process.env.GITHUB_REPOSITORY || '';
             for (const r of runs) {
               const safe = r.headBranch.replace(/\//g, '_');
               const p = '/tmp/branch-histories/' + safe + '/warn-history.json';
               try {
-                result[r.headBranch] = JSON.parse(fs.readFileSync(p,'utf8'));
+                const entries = JSON.parse(fs.readFileSync(p,'utf8'));
+                const runUrl = 'https://github.com/' + repo + '/actions/runs/' + r.databaseId;
+                result[r.headBranch] = { entries, runUrl };
                 loaded++;
               } catch (_) {}
             }

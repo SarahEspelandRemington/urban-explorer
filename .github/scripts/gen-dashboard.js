@@ -497,7 +497,7 @@ const SPARK_RUNS = 5; // number of recent runs to show per branch
  * @param {number} [h] - SVG height (defaults to SPARK_H)
  * @param {string} [color] - Stroke/fill color (defaults to SPARK_COLOR)
  */
-function buildSparkline(vals, w, h, color) {
+function buildSparkline(vals, runUrl, w, h, color) {
   const svgW = w != null ? w : SPARK_W;
   const svgH = h != null ? h : SPARK_H;
   const svgColor = color != null ? color : SPARK_COLOR;
@@ -540,15 +540,23 @@ function buildSparkline(vals, w, h, color) {
     `${sx(points.length - 1).toFixed(1)},${baseY}`,
   ].join(" ");
 
-  // Tooltip title for last point
-  const lastTip = fmtTime(points[points.length - 1]);
+  // Tooltip title for last point (include run URL if available)
+  const lastTip = runUrl
+    ? `${fmtTime(points[points.length - 1])} — ${escHtml(runUrl)}`
+    : fmtTime(points[points.length - 1]);
+
+  const endCx = sx(points.length - 1).toFixed(1);
+  const endCy = sy(points[points.length - 1]).toFixed(1);
+  const endDot = `<circle cx="${endCx}" cy="${endCy}" r="2.5" fill="${svgColor}"><title>${lastTip}</title></circle>`;
+  const endDotWrapped = runUrl
+    ? `<a href="${escHtml(runUrl)}" target="_blank" rel="noopener noreferrer">${endDot}</a>`
+    : endDot;
 
   return [
     `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">`,
     `<polygon points="${fillPts}" fill="${svgColor}" fill-opacity="0.12"/>`,
     `<polyline points="${polyPts}" fill="none" stroke="${svgColor}" stroke-width="1.8" stroke-linejoin="round"/>`,
-    // Endpoint dot with tooltip
-    `<circle cx="${sx(points.length - 1).toFixed(1)}" cy="${sy(points[points.length - 1]).toFixed(1)}" r="2.5" fill="${svgColor}"><title>${lastTip}</title></circle>`,
+    endDotWrapped,
     `</svg>`,
   ].join("");
 }
@@ -575,8 +583,19 @@ function buildBranchSection() {
 
   const rows = branchNames
     .map((br) => {
-      const entries = allBranches[br];
-      if (!Array.isArray(entries) || entries.length === 0) return null;
+      const branchData = allBranches[br];
+      // Support both old format (array) and new format ({ entries, runUrl })
+      const entries = Array.isArray(branchData)
+        ? branchData
+        : branchData && Array.isArray(branchData.entries)
+          ? branchData.entries
+          : null;
+      const runUrl =
+        !Array.isArray(branchData) && branchData && branchData.runUrl
+          ? branchData.runUrl
+          : null;
+
+      if (!entries || entries.length === 0) return null;
 
       const buildSeries = entries.map((e) =>
         e.build_s != null && e.build_s > 0 ? e.build_s : null,
@@ -593,9 +612,12 @@ function buildBranchSection() {
       const avgFmt = avg != null ? fmtTime(avg) : "\u2014";
 
       const isCurrent = br === branch;
-      const branchCode = isCurrent
+      const branchLabel = isCurrent
         ? `<code style="background:#ddf4dd;color:#1a7f37">${escHtml(br)}</code>`
         : `<code>${escHtml(br)}</code>`;
+      const branchLinked = runUrl
+        ? `<a href="${escHtml(runUrl)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none">${branchLabel}</a>`
+        : branchLabel;
 
       // Per-job breakdown: sparkline trend across recent runs + last value
       const JOB_SPARK_W = 80;
@@ -629,6 +651,7 @@ function buildBranchSection() {
               lastVal != null && lastVal > 0 ? fmtTime(lastVal) : "\u2014";
             const spark = buildSparkline(
               series,
+              null,
               JOB_SPARK_W,
               JOB_SPARK_H,
               JOB_SPARK_COLORS[j.key],
@@ -645,9 +668,9 @@ function buildBranchSection() {
         return `<div style="margin-top:6px;white-space:normal;display:flex;flex-wrap:wrap;gap:2px 0">${cells}</div>`;
       })();
 
-      const branchCell = `<details style="cursor:pointer"><summary style="list-style:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:.7rem;color:#888">&#9654;</span>${branchCode}</summary>${jobBreakdown}</details>`;
+      const branchCell = `<details style="cursor:pointer"><summary style="list-style:none;display:inline-flex;align-items:center;gap:6px"><span style="font-size:.7rem;color:#888">&#9654;</span>${branchLinked}</summary>${jobBreakdown}</details>`;
 
-      const sparkSvg = buildSparkline(buildSeries);
+      const sparkSvg = buildSparkline(buildSeries, runUrl);
 
       return [
         `<tr${isCurrent ? ' style="font-weight:600"' : ""}>`,
