@@ -269,23 +269,39 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
     };
   }, [target, currentLocation]);
 
+  const contextValue = useMemo(
+    () => ({
+      target,
+      audioPlace,
+      currentLocation,
+      distanceMeters,
+      bearingDegrees,
+      cardinal,
+      isAudioLoading,
+      audioError,
+      narration,
+      headTo,
+      listen,
+      cancel,
+    }),
+    [
+      target,
+      audioPlace,
+      currentLocation,
+      distanceMeters,
+      bearingDegrees,
+      cardinal,
+      isAudioLoading,
+      audioError,
+      narration,
+      headTo,
+      listen,
+      cancel,
+    ],
+  );
+
   return (
-    <HeadingContext.Provider
-      value={{
-        target,
-        audioPlace,
-        currentLocation,
-        distanceMeters,
-        bearingDegrees,
-        cardinal,
-        isAudioLoading,
-        audioError,
-        narration,
-        headTo,
-        listen,
-        cancel,
-      }}
-    >
+    <HeadingContext.Provider value={contextValue}>
       {children}
     </HeadingContext.Provider>
   );
