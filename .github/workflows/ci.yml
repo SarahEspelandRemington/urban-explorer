@@ -1578,11 +1578,11 @@ jobs:
             if [ "$cur" -gt "$allowed" ]; then
               spiked=true
               over_s=$(( cur - allowed ))
-              echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is ${inc_pct}% above the rolling average of $(fmt_time "$avg") (threshold: ${thr}%). Review recent changes for unexpected slowdowns." >&2
+              echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is ${inc_pct}% above the rolling average of $(fmt_time "$avg") (threshold: ${thr}% — ${thr_src}). Review recent changes for unexpected slowdowns." >&2
             elif [ "$abs_thr" -gt 0 ] && [ "$cur" -gt $(( avg + abs_thr )) ]; then
               spiked=true
               over_s=$(( cur - avg - abs_thr ))
-              echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is $(fmt_time $(( cur - avg ))) above the rolling average of $(fmt_time "$avg") (absolute threshold: ${abs_thr}s). Review recent changes for unexpected slowdowns." >&2
+              echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is $(fmt_time $(( cur - avg ))) above the rolling average of $(fmt_time "$avg") (absolute threshold: ${abs_thr}s — ${thr_src}). Review recent changes for unexpected slowdowns." >&2
             fi
             local sp_n sp_min sp_max high_variance=false
             sp_n=$(printf '%s' "$spread" | jq -r '.n // 0')
