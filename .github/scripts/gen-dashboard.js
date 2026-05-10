@@ -636,13 +636,24 @@ function buildSparkline(vals, runUrl, w, h, color) {
     `${sx(points.length - 1).toFixed(1)},${baseY}`,
   ].join(" ");
 
+  // Dots for intermediate points (all except the last) — tooltip only, no link
+  const lastIdx = points.length - 1;
+  const intermediateDots = points
+    .slice(0, lastIdx)
+    .map((v, i) => {
+      const cx = sx(i).toFixed(1);
+      const cy = sy(v).toFixed(1);
+      return `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${svgColor}"><title>${fmtTime(v)}</title></circle>`;
+    })
+    .join("");
+
   // Tooltip title for last point (include run URL if available)
   const lastTip = runUrl
-    ? `${fmtTime(points[points.length - 1])} — ${escHtml(runUrl)}`
-    : fmtTime(points[points.length - 1]);
+    ? `${fmtTime(points[lastIdx])} — ${escHtml(runUrl)}`
+    : fmtTime(points[lastIdx]);
 
-  const endCx = sx(points.length - 1).toFixed(1);
-  const endCy = sy(points[points.length - 1]).toFixed(1);
+  const endCx = sx(lastIdx).toFixed(1);
+  const endCy = sy(points[lastIdx]).toFixed(1);
   // Keep the tooltip on the dot for discoverability; the whole SVG is now the link.
   const endDot = `<circle cx="${endCx}" cy="${endCy}" r="2.5" fill="${svgColor}"><title>${lastTip}</title></circle>`;
 
@@ -651,6 +662,7 @@ function buildSparkline(vals, runUrl, w, h, color) {
     `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg"${svgStyle}>`,
     `<polygon points="${fillPts}" fill="${svgColor}" fill-opacity="0.12"/>`,
     `<polyline points="${polyPts}" fill="none" stroke="${svgColor}" stroke-width="1.8" stroke-linejoin="round"/>`,
+    intermediateDots,
     endDot,
     `</svg>`,
   ].join("");
