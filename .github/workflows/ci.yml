@@ -981,16 +981,36 @@ jobs:
           MAX_TC_TIME_SPIKE_PCT: ${{ vars.MAX_TC_TIME_SPIKE_PCT }}
           MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.MAX_FORMAT_TIME_SPIKE_PCT }}
           MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.MAX_BUILD_JOB_TIME_SPIKE_PCT }}
-          # ── All repository variables (JSON) for per-branch override lookup ─
-          # The step derives a branch prefix from the current branch name
-          # (uppercased, non-alphanumeric chars → underscore; e.g. "main" →
-          # "MAIN", "release/1.x" → "RELEASE_1_X") and looks up a prefixed
-          # override in ALL_VARS before falling back to the global variable.
-          # Example: setting MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT in the repo's
-          # Actions variables overrides MAX_BUILD_JOB_TIME_SPIKE_PCT for the
-          # main branch only, leaving all other branches on the global value.
-          # No workflow edits are required to support additional branches —
-          # just add the prefixed variable in the GitHub repository settings.
+          # ── Per-branch threshold overrides ────────────────────────────────
+          # Set the corresponding repository variable to override a global
+          # threshold for that branch only.  Supported branches:
+          #
+          #   main    → MAIN_MAX_LINT_TIME_SPIKE_PCT, MAIN_MAX_TC_TIME_SPIKE_PCT,
+          #             MAIN_MAX_FORMAT_TIME_SPIKE_PCT, MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT
+          #   develop → DEVELOP_MAX_LINT_TIME_SPIKE_PCT, DEVELOP_MAX_TC_TIME_SPIKE_PCT,
+          #             DEVELOP_MAX_FORMAT_TIME_SPIKE_PCT, DEVELOP_MAX_BUILD_JOB_TIME_SPIKE_PCT
+          #   release → RELEASE_MAX_LINT_TIME_SPIKE_PCT, RELEASE_MAX_TC_TIME_SPIKE_PCT,
+          #             RELEASE_MAX_FORMAT_TIME_SPIKE_PCT, RELEASE_MAX_BUILD_JOB_TIME_SPIKE_PCT
+          #
+          # Other branches are also supported: the step normalises the branch
+          # name to an uppercase prefix (non-alphanumeric → underscore, e.g.
+          # "release/1.x" → "RELEASE_1_X") and looks up the prefixed key in
+          # ALL_VARS before falling back to the global value.  No workflow
+          # edits are needed for branches beyond these three — just add the
+          # prefixed variable in the GitHub repository Actions settings.
+          MAIN_MAX_LINT_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_LINT_TIME_SPIKE_PCT }}
+          MAIN_MAX_TC_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_TC_TIME_SPIKE_PCT }}
+          MAIN_MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_FORMAT_TIME_SPIKE_PCT }}
+          MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT }}
+          DEVELOP_MAX_LINT_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_LINT_TIME_SPIKE_PCT }}
+          DEVELOP_MAX_TC_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_TC_TIME_SPIKE_PCT }}
+          DEVELOP_MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_FORMAT_TIME_SPIKE_PCT }}
+          DEVELOP_MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.DEVELOP_MAX_BUILD_JOB_TIME_SPIKE_PCT }}
+          RELEASE_MAX_LINT_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_LINT_TIME_SPIKE_PCT }}
+          RELEASE_MAX_TC_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_TC_TIME_SPIKE_PCT }}
+          RELEASE_MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_FORMAT_TIME_SPIKE_PCT }}
+          RELEASE_MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.RELEASE_MAX_BUILD_JOB_TIME_SPIKE_PCT }}
+          # ── All repository variables (JSON) for any other branch lookup ───
           ALL_VARS: ${{ toJson(vars) }}
         run: |
           # ── Current run per-job durations ──────────────────────────────────
@@ -1007,14 +1027,16 @@ jobs:
           # variable on cold runners; lint and build are slower and more stable.
           #
           # Per-branch overrides: the branch name is normalised to an uppercase
-          # prefix (e.g. "main" → "MAIN", "release/1.x" → "RELEASE_1_X") and
-          # the corresponding <PREFIX>_MAX_*_TIME_SPIKE_PCT key is looked up in
-          # ALL_VARS (the full repository variables JSON) first.  When a
-          # non-empty value is found there, it takes precedence over the global
+          # prefix (e.g. "main" → "MAIN", "develop" → "DEVELOP",
+          # "release/1.x" → "RELEASE_1_X") and the corresponding
+          # <PREFIX>_MAX_*_TIME_SPIKE_PCT key is looked up in ALL_VARS (the
+          # full repository variables JSON) first.  When a non-empty value is
+          # found there, it takes precedence over the global
           # MAX_*_TIME_SPIKE_PCT variable; otherwise the global value is used.
-          # This lets maintainers enforce a stricter limit on main while giving
-          # feature or experimental branches more breathing room — no workflow
-          # edits are needed, only a new repository variable.
+          # Explicit env mappings for main, develop, and release are declared
+          # in the step's env: block for discoverability.  Any other branch is
+          # also supported — no workflow edits are needed, only a new
+          # repository variable with the appropriate prefix.
           validate_threshold() {
             local val="$1" name="$2" default="$3"
             if [ -z "$val" ]; then
