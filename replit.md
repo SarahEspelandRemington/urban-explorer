@@ -29,6 +29,8 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `UPLOAD_MAX_FILE_SIZE`: (Optional) Hard cap in bytes for a single uploaded file (positive integer, default derived from UPLOAD_BODY_LIMIT = 10485760 = 10 MB). Per-endpoint `fileSizeOverride` still takes precedence.
 - `UPLOAD_FIELD_SIZE`: (Optional) Maximum byte size for a non-file field value in any multipart upload request (positive integer, default 1048576 = 1 MB).
 - `UPLOAD_STRICT_CONFIG`: (Optional) When set to `true` (case-insensitive), turns the startup warning about `UPLOAD_MAX_FILE_SIZE` exceeding `UPLOAD_BODY_LIMIT` into a hard failure (thrown `Error`). Intended for CI/CD pipelines that should reject misconfigured deployments before serving traffic. Default: `false` (warn-only).
+- `DASHBOARD_SLOW_JOB_WINDOW`: (Optional, CI dashboard) Look-back window in runs used by the "consistently slowest job" bottleneck indicator in `gen-dashboard.js` (positive integer, default 5). Invalid values log a warning and fall back to 5.
+- `DASHBOARD_SLOW_JOB_MIN_RUNS`: (Optional, CI dashboard) Minimum number of runs within the window in which a job must be the bottleneck before the trend indicator is shown (positive integer, default 3). Invalid values log a warning and fall back to 3.
 
 ## Stack
 

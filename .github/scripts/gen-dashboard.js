@@ -37,6 +37,22 @@ const buildSpikePct =
     0,
     parseInt(process.env.DASHBOARD_BUILD_SPIKE_PCT ?? "20", 10) || 20,
   ) / 100;
+
+function parseEnvPositiveInt(name, defaultVal) {
+  const raw = process.env[name];
+  if (raw == null || raw === "") return defaultVal;
+  const trimmed = raw.trim();
+  if (!/^[1-9]\d*$/.test(trimmed)) {
+    console.warn(
+      `[gen-dashboard] ${name}="${raw}" is not a positive integer — using default ${defaultVal}`,
+    );
+    return defaultVal;
+  }
+  return parseInt(trimmed, 10);
+}
+
+const slowJobWindow = parseEnvPositiveInt("DASHBOARD_SLOW_JOB_WINDOW", 5);
+const slowJobMinRuns = parseEnvPositiveInt("DASHBOARD_SLOW_JOB_MIN_RUNS", 3);
 const generatedAt = new Date().toUTCString();
 const n = history.length;
 
@@ -903,15 +919,16 @@ function buildBranchSection() {
         const slowestKey = slowestJob?.key ?? null;
 
         // Compute trend indicator: only shown when this job has been the
-        // bottleneck in >= 3 of the last 5 runs (transient spikes are ignored).
+        // bottleneck in >= slowJobMinRuns of the last slowJobWindow runs
+        // (transient spikes are ignored).
         let trendIndicator = "";
         if (slowestKey != null) {
           const jobKeys = jobs.map((j) => j.key);
-          const last5 = entries.slice(-5);
+          const lastN = entries.slice(-slowJobWindow);
           let consistentCount = 0;
           const timeHistory = [];
 
-          for (const e of last5) {
+          for (const e of lastN) {
             const jobVals = jobKeys.map((k) =>
               e[k] != null && e[k] > 0 ? e[k] : 0,
             );
@@ -922,12 +939,12 @@ function buildBranchSection() {
             if (keyVal > 0) timeHistory.push(keyVal);
           }
 
-          if (consistentCount >= 3 && timeHistory.length >= 2) {
+          if (consistentCount >= slowJobMinRuns && timeHistory.length >= 2) {
             const avgTime = Math.round(
               timeHistory.reduce((a, b) => a + b, 0) / timeHistory.length,
             );
             const timeDelta = maxVal - avgTime;
-            const runsLabel = `${last5.length}-run avg`;
+            const runsLabel = `${lastN.length}-run avg`;
             if (timeDelta > 2) {
               trendIndicator = `\u25b2\u202f+${fmtTime(timeDelta)} vs ${runsLabel}`;
             } else if (timeDelta < -2) {
@@ -965,7 +982,7 @@ function buildBranchSection() {
                 : "";
             const trendHtml =
               isSlowest && trendIndicator
-                ? `<span style="font-size:.68rem;color:#888;margin-left:3px" title="Slowest in ${Math.min(5, entries.length)} of last ${Math.min(5, entries.length)} runs">${trendIndicator}</span>`
+                ? `<span style="font-size:.68rem;color:#888;margin-left:3px" title="Slowest in ${Math.min(slowJobWindow, entries.length)} of last ${Math.min(slowJobWindow, entries.length)} runs">${trendIndicator}</span>`
                 : "";
             return (
               `<div style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;margin-bottom:3px">` +
