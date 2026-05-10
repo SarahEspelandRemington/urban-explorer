@@ -977,10 +977,22 @@ jobs:
       - name: Compare build time against history
         id: compare
         env:
+          # ── Global thresholds (apply to every branch unless overridden) ────
           MAX_LINT_TIME_SPIKE_PCT: ${{ vars.MAX_LINT_TIME_SPIKE_PCT }}
           MAX_TC_TIME_SPIKE_PCT: ${{ vars.MAX_TC_TIME_SPIKE_PCT }}
           MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.MAX_FORMAT_TIME_SPIKE_PCT }}
           MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.MAX_BUILD_JOB_TIME_SPIKE_PCT }}
+          # ── All repository variables (JSON) for per-branch override lookup ─
+          # The step derives a branch prefix from the current branch name
+          # (uppercased, non-alphanumeric chars → underscore; e.g. "main" →
+          # "MAIN", "release/1.x" → "RELEASE_1_X") and looks up a prefixed
+          # override in ALL_VARS before falling back to the global variable.
+          # Example: setting MAIN_MAX_BUILD_JOB_TIME_SPIKE_PCT in the repo's
+          # Actions variables overrides MAX_BUILD_JOB_TIME_SPIKE_PCT for the
+          # main branch only, leaving all other branches on the global value.
+          # No workflow edits are required to support additional branches —
+          # just add the prefixed variable in the GitHub repository settings.
+          ALL_VARS: ${{ toJson(vars) }}
         run: |
           # ── Current run per-job durations ──────────────────────────────────
           lint_s=$(jq -r '.duration_s // 0' /tmp/job-counts/lint-counts/lint-counts.json 2>/dev/null || echo "0")
@@ -994,6 +1006,16 @@ jobs:
           # Defaults: lint=30%, typecheck=25%, format=50%, build=25%.
           # Format gets a higher default because it is very fast and more
           # variable on cold runners; lint and build are slower and more stable.
+          #
+          # Per-branch overrides: the branch name is normalised to an uppercase
+          # prefix (e.g. "main" → "MAIN", "release/1.x" → "RELEASE_1_X") and
+          # the corresponding <PREFIX>_MAX_*_TIME_SPIKE_PCT key is looked up in
+          # ALL_VARS (the full repository variables JSON) first.  When a
+          # non-empty value is found there, it takes precedence over the global
+          # MAX_*_TIME_SPIKE_PCT variable; otherwise the global value is used.
+          # This lets maintainers enforce a stricter limit on main while giving
+          # feature or experimental branches more breathing room — no workflow
+          # edits are needed, only a new repository variable.
           validate_threshold() {
             local val="$1" name="$2" default="$3"
             if [ -z "$val" ]; then
@@ -1006,10 +1028,31 @@ jobs:
             fi
           }
 
-          lint_thr=$(validate_threshold "${MAX_LINT_TIME_SPIKE_PCT}"     "MAX_LINT_TIME_SPIKE_PCT"     "30")
-          tc_thr=$(validate_threshold   "${MAX_TC_TIME_SPIKE_PCT}"       "MAX_TC_TIME_SPIKE_PCT"       "25")
-          fmt_thr=$(validate_threshold  "${MAX_FORMAT_TIME_SPIKE_PCT}"   "MAX_FORMAT_TIME_SPIKE_PCT"   "50")
-          bld_thr=$(validate_threshold  "${MAX_BUILD_JOB_TIME_SPIKE_PCT}" "MAX_BUILD_JOB_TIME_SPIKE_PCT" "25")
+          # Derive the branch prefix: uppercase, non-alphanumeric → underscore.
+          branch_prefix=$(echo "${GITHUB_REF_NAME}" | tr '[:lower:]' '[:upper:]' | sed 's/[^A-Z0-9]/_/g')
+          echo "Branch prefix: ${branch_prefix}"
+
+          # resolve_threshold <global_var_name> <default>
+          # Looks up <PREFIX>_<global_var_name> in ALL_VARS (repo variables JSON)
+          # first; falls back to the global env var when the branch-specific key
+          # is absent or empty.
+          resolve_threshold() {
+            local global_name="$1" default="$2"
+            local branch_key="${branch_prefix}_${global_name}"
+            local branch_val
+            branch_val=$(echo "${ALL_VARS}" | jq -r --arg k "$branch_key" '.[$k] // empty' 2>/dev/null || true)
+            local global_val="${!global_name}"
+            if [ -n "$branch_val" ]; then
+              validate_threshold "$branch_val" "${branch_key} (branch override)" "$default"
+            else
+              validate_threshold "$global_val" "$global_name" "$default"
+            fi
+          }
+
+          lint_thr=$(resolve_threshold "MAX_LINT_TIME_SPIKE_PCT"      "30")
+          tc_thr=$(resolve_threshold   "MAX_TC_TIME_SPIKE_PCT"        "25")
+          fmt_thr=$(resolve_threshold  "MAX_FORMAT_TIME_SPIKE_PCT"    "50")
+          bld_thr=$(resolve_threshold  "MAX_BUILD_JOB_TIME_SPIKE_PCT" "25")
 
           echo "Thresholds: lint=${lint_thr}% tc=${tc_thr}% format=${fmt_thr}% build_job=${bld_thr}%"
           echo "History source: ${HISTORY_LABEL}"
