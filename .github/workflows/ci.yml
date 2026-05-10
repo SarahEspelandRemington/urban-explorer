@@ -1263,6 +1263,7 @@ jobs:
               echo "Comparison will be available after this branch accumulates build history."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "spike=false" >> "$GITHUB_OUTPUT"
+            echo "any_high_variance=false" >> "$GITHUB_OUTPUT"
             echo "avg_s=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -1276,11 +1277,11 @@ jobs:
           }
 
           # ── Per-job spike detection ─────────────────────────────────────────
-          # check_job <label> <current_s> <avg_s> <threshold_pct> <spread_json>
+          # check_job <label> <current_s> <avg_s> <threshold_pct> <spread_json> <spread_pct>
           # Prints a JSON object with the job's spike details to stdout.
           # Emits a ::warning annotation to stderr when a spike is detected.
           check_job() {
-            local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}"
+            local label="$1" cur="$2" avg="$3" thr="$4" spread="${5:-{\"min\":0,\"max\":0,\"n\":0}}" spct="${6:-80}"
             if [ "$avg" -le 0 ]; then
               printf '{"name":"%s","skipped":true}' "$label"
               return
@@ -1293,21 +1294,34 @@ jobs:
               over_s=$(( cur - allowed ))
               echo "::warning::${label} time spike on ${HISTORY_LABEL}: $(fmt_time "$cur") is ${inc_pct}% above the rolling average of $(fmt_time "$avg") (threshold: ${thr}%). Review recent changes for unexpected slowdowns." >&2
             fi
-            printf '{"name":"%s","skipped":false,"spiked":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"inc_pct":%d,"over_s":%d,"spread":%s}' \
-              "$label" "$spiked" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s" "$spread"
+            local sp_n sp_min sp_max high_variance=false
+            sp_n=$(printf '%s' "$spread" | jq -r '.n // 0')
+            sp_min=$(printf '%s' "$spread" | jq -r '.min // 0')
+            sp_max=$(printf '%s' "$spread" | jq -r '.max // 0')
+            if [ "$sp_n" -gt 0 ] && [ "$avg" -gt 0 ]; then
+              local spread_range=$(( sp_max - sp_min ))
+              if [ $(( spread_range * 100 )) -gt $(( avg * spct )) ]; then
+                high_variance=true
+              fi
+            fi
+            printf '{"name":"%s","skipped":false,"spiked":%s,"highVariance":%s,"cur":%d,"avg":%d,"allowed":%d,"thr":%d,"inc_pct":%d,"over_s":%d,"spread":%s}' \
+              "$label" "$spiked" "$high_variance" "$cur" "$avg" "$allowed" "$thr" "$inc_pct" "$over_s" "$spread"
           }
 
-          lint_detail=$(check_job "Lint"      "$lint_s"      "$avg_lint_s"      "$lint_thr" "$spread_lint")
-          tc_detail=$(check_job   "Typecheck" "$tc_s"        "$avg_tc_s"        "$tc_thr"   "$spread_tc")
-          fmt_detail=$(check_job  "Format"    "$format_s"    "$avg_format_s"    "$fmt_thr"  "$spread_format")
-          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr"  "$spread_build")
+          lint_detail=$(check_job "Lint"      "$lint_s"      "$avg_lint_s"      "$lint_thr" "$spread_lint"   "$spread_pct")
+          tc_detail=$(check_job   "Typecheck" "$tc_s"        "$avg_tc_s"        "$tc_thr"   "$spread_tc"     "$spread_pct")
+          fmt_detail=$(check_job  "Format"    "$format_s"    "$avg_format_s"    "$fmt_thr"  "$spread_format" "$spread_pct")
+          bld_detail=$(check_job  "Build"     "$build_job_s" "$avg_build_job_s" "$bld_thr"  "$spread_build"  "$spread_pct")
 
-          # Determine overall spike flag.
+          # Determine overall spike and high-variance flags.
           any_spike=false
+          any_high_variance=false
           for d in "$lint_detail" "$tc_detail" "$fmt_detail" "$bld_detail"; do
             if echo "$d" | grep -q '"spiked":true'; then
               any_spike=true
-              break
+            fi
+            if echo "$d" | grep -q '"highVariance":true'; then
+              any_high_variance=true
             fi
           done
 
@@ -1395,6 +1409,7 @@ jobs:
           details_b64=$(printf '%s' "$details_json" | base64 -w 0)
           {
             echo "spike=${any_spike}"
+            echo "any_high_variance=${any_high_variance}"
             echo "avg_s=${total_avg_s}"
             echo "job_details_b64=${details_b64}"
           } >> "$GITHUB_OUTPUT"
