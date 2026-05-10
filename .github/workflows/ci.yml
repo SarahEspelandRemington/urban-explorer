@@ -1057,6 +1057,10 @@ jobs:
           # Looks up <PREFIX>_<global_var_name> in ALL_VARS (repo variables JSON)
           # first; falls back to the global env var when the branch-specific key
           # is absent or empty.
+          # Side-effect: when a branch override is active, appends one line to
+          # /tmp/threshold_overrides in the form "KEY=value (global: value)"
+          # so the step summary can surface which overrides were in effect.
+          > /tmp/threshold_overrides
           resolve_threshold() {
             local global_name="$1" default="$2"
             local branch_key="${branch_prefix}_${global_name}"
@@ -1064,7 +1068,11 @@ jobs:
             branch_val=$(echo "${ALL_VARS}" | jq -r --arg k "$branch_key" '.[$k] // empty' 2>/dev/null || true)
             local global_val="${!global_name}"
             if [ -n "$branch_val" ]; then
-              validate_threshold "$branch_val" "${branch_key} (branch override)" "$default"
+              local effective
+              effective=$(validate_threshold "$branch_val" "${branch_key} (branch override)" "$default")
+              local global_display="${global_val:-${default}}"
+              printf '%s=%s (global: %s)\n' "${branch_key}" "${effective}" "${global_display}" >> /tmp/threshold_overrides
+              echo "$effective"
             else
               validate_threshold "$global_val" "$global_name" "$default"
             fi
@@ -1242,6 +1250,14 @@ jobs:
               echo "| **Overall** | — | — | — | — | ✅ All jobs within threshold |"
             fi
             echo ""
+            if [ -s /tmp/threshold_overrides ]; then
+              echo "_Branch threshold overrides active:_"
+              echo ""
+              while IFS= read -r override_line; do
+                echo "- \`${override_line}\`"
+              done < /tmp/threshold_overrides
+              echo ""
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
           # ── Emit outputs ────────────────────────────────────────────────────
