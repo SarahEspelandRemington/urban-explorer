@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useColorScheme } from "react-native";
 
 import colors from "@/constants/colors";
@@ -13,10 +14,14 @@ import colors from "@/constants/colors";
  * When a sibling web artifact's dark tokens are synced into a `dark`
  * key, this hook will automatically switch palettes based on the
  * device's appearance setting.
+ *
+ * The returned object is memoized — its reference is stable between
+ * renders so that components and other hooks that take it as a dep
+ * are not re-evaluated on every render of their parent.
  */
 export function useColors() {
   const scheme = useColorScheme();
   const palette =
     scheme === "dark" && "dark" in colors ? colors.dark : colors.light;
-  return { ...palette, radius: colors.radius };
+  return useMemo(() => ({ ...palette, radius: colors.radius }), [palette]);
 }
