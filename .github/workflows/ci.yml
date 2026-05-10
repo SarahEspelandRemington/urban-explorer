@@ -1242,6 +1242,9 @@ jobs:
     # continue-on-error keeps transient GitHub API failures non-fatal.
     if: always() && (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false))
     continue-on-error: true
+    permissions:
+      contents: write
+      actions: read
     steps:
       - name: Download warn-history artifact
         env:
@@ -1271,18 +1274,68 @@ jobs:
           path: ci-dashboard.html
           retention-days: 90
 
+      - name: Deploy dashboard to GitHub Pages
+        # Only publish on default-branch pushes so feature-branch or PR data
+        # never overwrites the canonical live dashboard. Fork PRs are already
+        # excluded by the job-level `if`.
+        if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch the gh-pages branch if it already exists.
+          git fetch origin gh-pages 2>/dev/null || true
+
+          # Set up an isolated worktree so we don't disturb the main checkout.
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git worktree add /tmp/gh-pages origin/gh-pages
+          else
+            # First-time: create an orphan branch with no history.
+            git worktree add --orphan -b gh-pages /tmp/gh-pages
+          fi
+
+          cp ci-dashboard.html /tmp/gh-pages/ci-dashboard.html
+          cd /tmp/gh-pages
+          git add ci-dashboard.html
+
+          # Skip the push when nothing changed (e.g. a rerun with identical history).
+          if git diff --cached --quiet; then
+            echo "Dashboard unchanged — skipping commit."
+            exit 0
+          fi
+
+          git commit -m "chore: update CI dashboard [skip ci]"
+          git push origin HEAD:gh-pages
+
       - name: Link dashboard from job summary
         run: |
           run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           branch="${{ github.head_ref || github.ref_name }}"
           entry_count=$(jq 'length' /tmp/warn-history/warn-history.json 2>/dev/null || echo "0")
+          event_name="${{ github.event_name }}"
+          git_ref="${{ github.ref }}"
+          default_branch="${{ github.event.repository.default_branch }}"
+          owner_lc=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          repo_name=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          pages_url="https://${owner_lc}.github.io/${repo_name}/ci-dashboard.html"
+          is_default_push=false
+          if [ "$event_name" = "push" ] && [ "$git_ref" = "refs/heads/${default_branch}" ]; then
+            is_default_push=true
+          fi
           {
             echo "## 📊 CI Dashboard"
             echo ""
-            echo "A standalone HTML dashboard has been uploaded as the **ci-dashboard** artifact for this run."
             echo "It shows build time alongside lint and TypeScript warning counts across the last ${entry_count} run(s) on \`${branch}\`."
             echo ""
-            echo "**Download:** [ci-dashboard artifact](${run_url}#artifacts) *(available on the Artifacts section of this run page)*"
+            if [ "$is_default_push" = "true" ]; then
+              echo "**Live dashboard:** [${pages_url}](${pages_url}) *(GitHub Pages — updated by this run)*"
+              echo ""
+              echo "**This run's artifact:** [ci-dashboard artifact](${run_url}#artifacts)"
+            else
+              echo "**Download:** [ci-dashboard artifact](${run_url}#artifacts) *(available on the Artifacts section of this run page)*"
+              echo ""
+              echo "Live dashboard (default branch): [${pages_url}](${pages_url})"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   report:
