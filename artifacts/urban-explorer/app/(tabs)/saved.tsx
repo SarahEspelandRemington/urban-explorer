@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import {
+  Alert,
   Animated as RNAnimated,
   FlatList,
   Platform,
@@ -145,6 +146,54 @@ export default function SavedScreen() {
     setToastVisible(false);
     setTimeout(() => setToastVisible(true), 10);
   }, []);
+
+  // Stable renderItem reference for FlatList — prevents the entire list from
+  // re-rendering when an unrelated piece of parent state (toasts, modals,
+  // headers) changes.
+  const renderSavedItem = useCallback(
+    ({
+      item,
+      index,
+    }: {
+      item: (typeof savedPlaces)[number];
+      index: number;
+    }) => {
+      const isExpanded = expandedId === item.id;
+      return (
+        <SwipeToDelete
+          onDelete={() => {
+            if (Platform.OS !== "web")
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            removePlace(item.id);
+          }}
+          label={t.saved.swipeToDelete}
+          colors={colors}
+        >
+          <Pressable
+            onLongPress={() => setEditingNoteId(item.id)}
+            delayLongPress={500}
+          >
+            <PlaceCard
+              place={item}
+              index={index}
+              expanded={isExpanded}
+              onToggleExpand={() => setExpandedId(isExpanded ? null : item.id)}
+              onRate={handlePlaceRated}
+              onSaveConfirm={handleSaveConfirm}
+            />
+          </Pressable>
+        </SwipeToDelete>
+      );
+    },
+    [
+      expandedId,
+      removePlace,
+      t.saved.swipeToDelete,
+      colors,
+      handlePlaceRated,
+      handleSaveConfirm,
+    ],
+  );
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
@@ -285,7 +334,13 @@ export default function SavedScreen() {
           </Pressable>
 
           <Pressable
-            onPress={() => setSortMode("nearest")}
+            onPress={() => {
+              if (!userLocation) {
+                Alert.alert(t.saved.sortNearest, t.saved.sortNearestNoLocation);
+                return;
+              }
+              setSortMode("nearest");
+            }}
             style={[
               styles.chip,
               {
@@ -293,12 +348,11 @@ export default function SavedScreen() {
                   sortMode === "nearest" ? colors.primary : colors.muted,
                 borderColor:
                   sortMode === "nearest" ? colors.primary : colors.border,
-                opacity: !userLocation ? 0.45 : 1,
+                opacity: !userLocation ? 0.5 : 1,
               },
             ]}
             accessibilityRole="button"
             accessibilityState={{ selected: sortMode === "nearest" }}
-            disabled={!userLocation}
           >
             <Feather
               name="navigation"
@@ -322,15 +376,15 @@ export default function SavedScreen() {
             >
               {t.saved.sortNearest}
             </Text>
+            {!userLocation && (
+              <Feather
+                name="info"
+                size={10}
+                color={colors.mutedForeground}
+                style={{ marginLeft: 1, opacity: 0.7 }}
+              />
+            )}
           </Pressable>
-
-          {!userLocation && (
-            <Text
-              style={[styles.noLocationHint, { color: colors.mutedForeground }]}
-            >
-              {t.saved.sortNearestNoLocation}
-            </Text>
-          )}
 
           {/* Separator */}
           <View
@@ -436,41 +490,16 @@ export default function SavedScreen() {
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => {
-          const isExpanded = expandedId === item.id;
-          return (
-            <SwipeToDelete
-              onDelete={() => {
-                if (Platform.OS !== "web")
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                removePlace(item.id);
-              }}
-              label={t.saved.swipeToDelete}
-              colors={colors}
-            >
-              <Pressable
-                onLongPress={() => setEditingNoteId(item.id)}
-                delayLongPress={500}
-              >
-                <PlaceCard
-                  place={item}
-                  index={index}
-                  expanded={isExpanded}
-                  onToggleExpand={() =>
-                    setExpandedId(isExpanded ? null : item.id)
-                  }
-                  onRate={handlePlaceRated}
-                  onSaveConfirm={handleSaveConfirm}
-                />
-              </Pressable>
-            </SwipeToDelete>
-          );
-        }}
+        renderItem={renderSavedItem}
         contentContainerStyle={[
           styles.list,
           { paddingBottom: insets.bottom + webBottomInset + 90 },
         ]}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        windowSize={5}
+        maxToRenderPerBatch={6}
+        initialNumToRender={8}
         ListHeaderComponent={
           showRatingPaceWarning ? (
             <Animated.View
@@ -766,6 +795,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   emptyContainer: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 120,
