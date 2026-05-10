@@ -1321,6 +1321,108 @@ jobs:
               });
             }
 
+      - name: Alert Slack on build time spike
+        if: >-
+          always() &&
+          steps.compare.outputs.spike == 'true' &&
+          vars.BUILD_TIME_GATE_BLOCK_MERGE == 'true'
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_BUILD_ALERT_WEBHOOK }}
+          JOB_DETAILS_B64: ${{ steps.compare.outputs.job_details_b64 }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_REF: ${{ github.head_ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then
+            echo "SLACK_BUILD_ALERT_WEBHOOK is not set — skipping Slack alert."
+            exit 0
+          fi
+
+          # Decode per-job details from the base64 output.
+          details=$(printf '%s' "$JOB_DETAILS_B64" | base64 -d 2>/dev/null || echo "[]")
+
+          fmt_time() {
+            local s=$1
+            local min=$(( s / 60 ))
+            local sec=$(( s % 60 ))
+            if [ "$min" -gt 0 ]; then echo "${min}m ${sec}s"; else echo "${sec}s"; fi
+          }
+
+          # Build a plain-text table suitable for a Slack code block.
+          table="Job           | Base avg | Current  | Allowed       | Status"$'\n'
+          table+="--------------|----------|----------|---------------|-------"
+          while IFS= read -r job; do
+            skipped=$(printf '%s' "$job" | jq -r '.skipped')
+            [ "$skipped" = "true" ] && continue
+            name=$(printf '%s' "$job"    | jq -r '.name')
+            spiked=$(printf '%s' "$job"  | jq -r '.spiked')
+            cur=$(printf '%s' "$job"     | jq -r '.cur')
+            avg=$(printf '%s' "$job"     | jq -r '.avg')
+            allowed=$(printf '%s' "$job" | jq -r '.allowed')
+            thr=$(printf '%s' "$job"     | jq -r '.thr')
+            inc_pct=$(printf '%s' "$job" | jq -r '.inc_pct')
+            over_s=$(printf '%s' "$job"  | jq -r '.over_s')
+            cur_fmt=$(fmt_time "$cur")
+            avg_fmt=$(fmt_time "$avg")
+            allowed_fmt=$(fmt_time "$allowed")
+            if [ "$spiked" = "true" ]; then
+              status="SPIKE +${inc_pct}% (${over_s}s over)"
+            elif [ "$cur" -le "$avg" ]; then
+              status="OK (on par or faster)"
+            else
+              status="OK +${inc_pct}% (within threshold)"
+            fi
+            table+=$'\n'"${name}           | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ${status}"
+          done < <(printf '%s' "$details" | jq -c '.[]')
+
+          run_url="https://github.com/${REPO}/actions/runs/${RUN_ID}"
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            context_text="PR #${PR_NUMBER} (branch: \`${HEAD_REF}\`)"
+          else
+            context_text="Push to \`${REF_NAME}\`"
+          fi
+
+          # Build and post the Slack payload via incoming webhook.
+          payload=$(jq -n \
+            --arg ctx "$context_text" \
+            --arg tbl "$table" \
+            --arg url "$run_url" \
+            '{
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {"type": "plain_text", "text": ":warning: Build time spike is blocking a PR merge", "emoji": true}
+                },
+                {
+                  "type": "section",
+                  "text": {"type": "mrkdwn", "text": ("*" + $ctx + "* triggered a build time spike that is blocking merge.\n\nReview recent changes for unexpected build slowdowns.")}
+                },
+                {
+                  "type": "section",
+                  "text": {"type": "mrkdwn", "text": ("```" + $tbl + "```")}
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {"type": "plain_text", "text": "View Workflow Run", "emoji": false},
+                      "url": $url
+                    }
+                  ]
+                }
+              ]
+            }')
+
+          curl -fsSL -X POST \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "$SLACK_WEBHOOK"
+
   record-warn-history-base:
     name: Record base branch warning history
     runs-on: ubuntu-latest
