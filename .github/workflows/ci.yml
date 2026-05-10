@@ -781,6 +781,15 @@ jobs:
           lint_vals=$(echo "$last5" | jq -r '[.[].lint | select(. != null)] | map(tostring) | join(" → ")')
           tc_vals=$(echo "$last5"   | jq -r '[.[].tc   | select(. != null)] | map(tostring) | join(" → ")')
           format_vals=$(echo "$last5" | jq -r '[.[].format // 0] | map(tostring) | join(" → ")')
+          # Install time sparkline: format each entry as Xm Ys; omit nulls and zeros.
+          install_s_vals=$(echo "$last5" | jq -r '
+            [.[] | .install_s // 0 | select(. > 0) |
+              (. / 60 | floor) as $min |
+              (. % 60) as $sec |
+              if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
+              else ($sec | tostring) + "s" end
+            ] | join(" → ")
+          ')
           # Build time sparkline: format each entry as Xm Ys; omit nulls and zeros.
           build_s_vals=$(echo "$last5" | jq -r '
             [.[] | .build_s // 0 | select(. > 0) |
@@ -797,6 +806,8 @@ jobs:
           tc_prev=$(echo "$last5"   | jq '.[-2].tc')
           format_last=$(echo "$last5" | jq '.[-1].format // 0')
           format_prev=$(echo "$last5" | jq '.[-2].format // 0')
+          install_s_last=$(echo "$last5" | jq '.[-1].install_s // 0')
+          install_s_prev=$(echo "$last5" | jq '.[-2].install_s // 0')
           build_s_last=$(echo "$last5" | jq '.[-1].build_s // 0')
           build_s_prev=$(echo "$last5" | jq '.[-2].build_s // 0')
 
@@ -819,6 +830,13 @@ jobs:
           elif [ "$format_last" -lt "$format_prev" ]; then format_arrow=" ↓"
           fi
 
+          install_s_arrow=""
+          if [ "$install_s_last" -gt 0 ] && [ "$install_s_prev" -gt 0 ]; then
+            if   [ "$install_s_last" -gt "$install_s_prev" ]; then install_s_arrow=" ↑"
+            elif [ "$install_s_last" -lt "$install_s_prev" ]; then install_s_arrow=" ↓"
+            fi
+          fi
+
           build_s_arrow=""
           if [ "$build_s_last" -gt 0 ] && [ "$build_s_prev" -gt 0 ]; then
             if   [ "$build_s_last" -gt "$build_s_prev" ]; then build_s_arrow=" ↑"
@@ -827,7 +845,7 @@ jobs:
           fi
 
           {
-            echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`  ·  Build: \`${build_s_vals}${build_s_arrow}\`"
+            echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`  ·  Install: \`${install_s_vals}${install_s_arrow}\`  ·  Build: \`${build_s_vals}${build_s_arrow}\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -839,8 +857,8 @@ jobs:
             {
               echo "<details><summary>⏱️ Per-job build time breakdown</summary>"
               echo ""
-              echo "| SHA | Lint | TC | Fmt | Build |"
-              echo "|-----|------|----|-----|-------|"
+              echo "| SHA | Install | Lint | TC | Fmt | Build |"
+              echo "|-----|---------|------|----|-----|-------|"
             } >> "$GITHUB_STEP_SUMMARY"
 
             echo "$last5" | jq -r '
@@ -855,7 +873,7 @@ jobs:
                   if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
                   else ($sec | tostring) + "s" end
                 end;
-              "| `\(.shortSha)` | \(fmt(.lint_s)) | \(fmt(.tc_s)) | \(fmt(.format_s)) | \(fmt(.build_job_s)) |"
+              "| `\(.shortSha)` | \(fmt(.install_s)) | \(fmt(.lint_s)) | \(fmt(.tc_s)) | \(fmt(.format_s)) | \(fmt(.build_job_s)) |"
             ' >> "$GITHUB_STEP_SUMMARY"
 
             {
