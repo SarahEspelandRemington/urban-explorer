@@ -1010,6 +1010,7 @@ jobs:
           MAX_TC_TIME_SPIKE_PCT: ${{ vars.MAX_TC_TIME_SPIKE_PCT }}
           MAX_FORMAT_TIME_SPIKE_PCT: ${{ vars.MAX_FORMAT_TIME_SPIKE_PCT }}
           MAX_BUILD_JOB_TIME_SPIKE_PCT: ${{ vars.MAX_BUILD_JOB_TIME_SPIKE_PCT }}
+          MAX_SPREAD_PCT: ${{ vars.MAX_SPREAD_PCT }}
           # ── Per-branch threshold overrides ────────────────────────────────
           # Set the corresponding repository variable to override a global
           # threshold for that branch only.  Supported branches:
@@ -1111,8 +1112,9 @@ jobs:
           tc_thr=$(resolve_threshold   "MAX_TC_TIME_SPIKE_PCT"        "25")
           fmt_thr=$(resolve_threshold  "MAX_FORMAT_TIME_SPIKE_PCT"    "50")
           bld_thr=$(resolve_threshold  "MAX_BUILD_JOB_TIME_SPIKE_PCT" "25")
+          spread_pct=$(resolve_threshold "MAX_SPREAD_PCT"             "80")
 
-          echo "Thresholds: lint=${lint_thr}% tc=${tc_thr}% format=${fmt_thr}% build_job=${bld_thr}%"
+          echo "Thresholds: lint=${lint_thr}% tc=${tc_thr}% format=${fmt_thr}% build_job=${bld_thr}% spread=${spread_pct}%"
           echo "History source: ${HISTORY_LABEL}"
 
           # ── Per-job rolling averages ─────────────────────────────────────────
@@ -1253,12 +1255,20 @@ jobs:
             sp_min=$(echo "$d" | jq -r '.spread.min // 0')
             sp_max=$(echo "$d" | jq -r '.spread.max // 0')
             sp_n=$(echo "$d" | jq -r '.spread.n // 0')
-            local cur_fmt avg_fmt allowed_fmt spread_fmt
+            local cur_fmt avg_fmt allowed_fmt spread_fmt spread_range high_var
             cur_fmt=$(fmt_time "$cur")
             avg_fmt=$(fmt_time "$avg")
             allowed_fmt=$(fmt_time "$allowed")
+            high_var=false
             if [ "$sp_n" -gt 0 ]; then
+              spread_range=$(( sp_max - sp_min ))
+              if [ "$avg" -gt 0 ] && [ $(( spread_range * 100 )) -gt $(( avg * spread_pct )) ]; then
+                high_var=true
+              fi
               spread_fmt="$(fmt_time "$sp_min") – $(fmt_time "$sp_max") (${sp_n} runs)"
+              if [ "$high_var" = "true" ]; then
+                spread_fmt="${spread_fmt} ⚠️ high variance"
+              fi
             else
               spread_fmt="—"
             fi
