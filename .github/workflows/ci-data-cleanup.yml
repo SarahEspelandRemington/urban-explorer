@@ -1,0 +1,158 @@
+name: CI Data Cleanup
+
+# Removes stale per-branch history files from the ci-data branch.
+#
+# Two triggers keep the ci-data branch tidy:
+#
+#   delete  — fires the moment a branch is deleted; immediately removes its
+#             warn-history and warn-history-base files so the branch is
+#             cleaned up in real time.
+#
+#   schedule — weekly safety net that removes files whose corresponding
+#              branches have already been deleted (e.g. before this workflow
+#              existed, or if the delete event was missed).
+
+on:
+  delete:
+  schedule:
+    - cron: "17 3 * * 0" # Every Sunday at 03:17 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Triggered by a branch-deletion event ─────────────────────────────────
+  cleanup-on-delete:
+    name: Remove history files for deleted branch
+    runs-on: ubuntu-latest
+    # Only act on branch deletions, not tag deletions.
+    if: github.event_name == 'delete' && github.event.ref_type == 'branch'
+    steps:
+      - name: Delete warn-history files for deleted branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          deleted_branch="${{ github.event.ref }}"
+          branch_slug=$(printf '%s' "$deleted_branch" | tr '/' '_')
+
+          echo "Branch deleted: ${deleted_branch} (slug: ${branch_slug})"
+
+          # Ensure ci-data branch exists before attempting deletes.
+          if ! gh api "repos/${REPO}/branches/ci-data" --silent 2>/dev/null; then
+            echo "ci-data branch does not exist — nothing to clean up."
+            exit 0
+          fi
+
+          for dir in warn-history warn-history-base; do
+            file_path="${dir}/${branch_slug}.json"
+
+            # Fetch the current SHA of the file (required for the DELETE API).
+            file_meta=$(gh api "repos/${REPO}/contents/${file_path}?ref=ci-data" 2>/dev/null || true)
+
+            if [ -z "$file_meta" ]; then
+              echo "${file_path}: not found on ci-data — skipping."
+              continue
+            fi
+
+            file_sha=$(printf '%s' "$file_meta" | jq -r '.sha // empty')
+
+            if [ -z "$file_sha" ]; then
+              echo "${file_path}: could not read SHA — skipping."
+              continue
+            fi
+
+            commit_msg="ci: remove ${file_path} for deleted branch '${deleted_branch}' [skip ci]"
+
+            gh api --method DELETE "repos/${REPO}/contents/${file_path}" \
+              --field "message=${commit_msg}" \
+              --field "sha=${file_sha}" \
+              --field "branch=ci-data" \
+              2>/dev/null \
+              && echo "${file_path}: deleted." \
+              || echo "::warning::Failed to delete ${file_path} — it may have already been removed."
+          done
+
+  # ── Weekly sweep: remove files for any branch no longer in the repo ───────
+  cleanup-stale-weekly:
+    name: Weekly sweep of stale history files
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Sweep stale warn-history files from ci-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # ── 1. Check that ci-data exists ───────────────────────────────────
+          if ! gh api "repos/${REPO}/branches/ci-data" --silent 2>/dev/null; then
+            echo "ci-data branch does not exist — nothing to clean up."
+            exit 0
+          fi
+
+          # ── 2. Collect all branch slugs that are currently active ──────────
+          # Paginate through every branch (100 per page) and slugify each name.
+          echo "Fetching all active branches…"
+          active_slugs=()
+          page=1
+          while true; do
+            batch=$(gh api "repos/${REPO}/branches?per_page=100&page=${page}" \
+              --jq '.[].name' 2>/dev/null || true)
+            [ -z "$batch" ] && break
+            while IFS= read -r branch_name; do
+              slug=$(printf '%s' "$branch_name" | tr '/' '_')
+              active_slugs+=("$slug")
+            done <<< "$batch"
+            # If fewer than 100 results came back, we've reached the last page.
+            count=$(printf '%s\n' "$batch" | wc -l)
+            [ "$count" -lt 100 ] && break
+            page=$((page + 1))
+          done
+          echo "Active branch slugs found: ${#active_slugs[@]}"
+
+          # Build a quick-lookup string (newline-delimited) for grep.
+          active_list=$(printf '%s\n' "${active_slugs[@]}")
+
+          deleted_count=0
+
+          # ── 3. Sweep each history directory ───────────────────────────────
+          for dir in warn-history warn-history-base; do
+            echo "--- Checking ${dir}/ ---"
+
+            # List files in the directory; tolerate a missing directory (404).
+            dir_listing=$(gh api "repos/${REPO}/contents/${dir}?ref=ci-data" 2>/dev/null || true)
+
+            if [ -z "$dir_listing" ]; then
+              echo "${dir}/: directory not found on ci-data — skipping."
+              continue
+            fi
+
+            # Extract name and sha for every .json file in the directory.
+            while IFS=$'\t' read -r file_name file_sha; do
+              # Strip the .json extension to get the slug.
+              file_slug="${file_name%.json}"
+
+              # Check whether this slug matches any active branch.
+              if printf '%s\n' "$active_list" | grep -qxF "$file_slug"; then
+                echo "${dir}/${file_name}: branch is active — keeping."
+                continue
+              fi
+
+              echo "${dir}/${file_name}: no matching active branch — deleting."
+              commit_msg="ci: remove ${dir}/${file_name} (stale — branch no longer exists) [skip ci]"
+
+              gh api --method DELETE "repos/${REPO}/contents/${dir}/${file_name}" \
+                --field "message=${commit_msg}" \
+                --field "sha=${file_sha}" \
+                --field "branch=ci-data" \
+                2>/dev/null \
+                && { echo "${dir}/${file_name}: deleted."; deleted_count=$((deleted_count + 1)); } \
+                || echo "::warning::Failed to delete ${dir}/${file_name}."
+
+            done < <(printf '%s' "$dir_listing" | jq -r '.[] | select(.type == "file" and (.name | endswith(".json"))) | [.name, .sha] | @tsv')
+          done
+
+          echo ""
+          echo "Sweep complete. Deleted ${deleted_count} stale file(s)."
