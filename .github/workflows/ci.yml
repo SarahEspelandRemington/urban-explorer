@@ -715,12 +715,41 @@ jobs:
             > /tmp/time-counts.json
 
           history=$(cat /tmp/warn-history/warn-history.json)
+
+          # Compute min/max spread from existing history for each per-job field.
+          # These are embedded into the new entry so that spread_for_field can
+          # use pre-computed values when raw samples from older entries are pruned.
+          _compute_spread() {
+            local field="$1"
+            printf '%s\n' "$history" | jq -c --arg f "$field" '
+              [.[] | select(.[$f] != null and (.[$f]|type)=="number" and .[$f] > 0) | .[$f]] |
+              if length == 0 then {"min":0,"max":0}
+              else {"min":(min|round),"max":(max|round)} end
+            ' 2>/dev/null || echo '{"min":0,"max":0}'
+          }
+          lint_spread=$(_compute_spread "lint_s")
+          tc_spread=$(_compute_spread "tc_s")
+          format_spread=$(_compute_spread "format_s")
+          build_job_spread=$(_compute_spread "build_job_s")
+
+          lint_min_s=$(printf '%s' "$lint_spread" | jq '.min')
+          lint_max_s=$(printf '%s' "$lint_spread" | jq '.max')
+          tc_min_s=$(printf '%s' "$tc_spread" | jq '.min')
+          tc_max_s=$(printf '%s' "$tc_spread" | jq '.max')
+          format_min_s=$(printf '%s' "$format_spread" | jq '.min')
+          format_max_s=$(printf '%s' "$format_spread" | jq '.max')
+          build_job_min_s=$(printf '%s' "$build_job_spread" | jq '.min')
+          build_job_max_s=$(printf '%s' "$build_job_spread" | jq '.max')
+
           # build_s  = total (lint + tc + format + build step) — kept for backward
           #            compat with build-time-gate which reads this field.
           # build_job_s = only the build step; distinguishes from the total.
           # build_spike is initialised to false here; build-time-gate patches it
           #              to true when the PR build time exceeds the threshold.
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
+          # *_min_s / *_max_s = pre-computed spread from history at record time,
+          #              allowing spread_for_field to fall back to these when raw
+          #              samples are unavailable (e.g. after history is pruned).
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"install_s\":${install_s},\"lint_s\":${lint_s},\"lint_min_s\":${lint_min_s},\"lint_max_s\":${lint_max_s},\"tc_s\":${tc_s},\"tc_min_s\":${tc_min_s},\"tc_max_s\":${tc_max_s},\"format_s\":${format_s},\"format_min_s\":${format_min_s},\"format_max_s\":${format_max_s},\"build_job_s\":${build_s},\"build_job_min_s\":${build_job_min_s},\"build_job_max_s\":${build_job_max_s},\"build_s\":${total_build_s},\"build_spike\":false}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           # Cap = 20. On push events, build-time-gate reads this same file and
           # excludes the current run's SHA from the rolling average, so the
@@ -1105,12 +1134,28 @@ jobs:
 
           # Returns a compact JSON object {"min":X,"max":Y,"n":N} for the field,
           # using the same SHA-exclusion filter as avg_for_field.
+          # When no raw samples are available (n=0), falls back to the pre-computed
+          # *_min_s / *_max_s values stored in the most recent history entry that
+          # has them (recorded by record-warn-history). In that case "n" is 0 so
+          # callers can distinguish live-computed from pre-computed spread.
           spread_for_field() {
             local field="$1"
-            jq --arg f "$field" --arg sha "$CURRENT_SHA" '
-              [.[] | select(.[$f] != null and (.[$f] | type) == "number" and .[$f] > 0 and .sha != $sha) | .[$f]] |
-              if length == 0 then {"min":0,"max":0,"n":0}
-              else {"min":(min | round),"max":(max | round),"n":length} end
+            # Derive the pre-computed field name prefix: "lint_s" -> "lint", etc.
+            local prefix="${field%_s}"
+            jq --arg f "$field" --arg sha "$CURRENT_SHA" \
+               --arg pre_min "${prefix}_min_s" --arg pre_max "${prefix}_max_s" '
+              [.[] | select(.[$f] != null and (.[$f] | type) == "number" and .[$f] > 0 and .sha != $sha) | .[$f]] as $vals |
+              if ($vals | length) > 0 then
+                {"min":($vals | min | round),"max":($vals | max | round),"n":($vals | length)}
+              else
+                ([ .[] | select(
+                    .[$pre_min] != null and (.[$pre_min] | type) == "number" and .[$pre_min] > 0
+                    and .[$pre_max] != null and (.[$pre_max] | type) == "number"
+                  ) ] | last) as $pre |
+                if $pre != null then
+                  {"min":($pre[$pre_min] | round),"max":($pre[$pre_max] | round),"n":0}
+                else {"min":0,"max":0,"n":0} end
+              end
             ' /tmp/warn-history-base/warn-history-base.json 2>/dev/null || echo '{"min":0,"max":0,"n":0}'
           }
 
