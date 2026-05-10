@@ -8,6 +8,7 @@ import {
   BORING_BUILDING_TYPES_FILE_ENV,
   LLM_CACHE_MAX_SIZE,
   LLM_CACHE_TTL_MS,
+  OSM_CACHE_MAX_SIZE,
   OSM_CACHE_TTL_MS,
   OSM_SUGGESTIONS_CACHE_MAX_SIZE,
   OSM_SUGGESTIONS_CACHE_TTL_MS,
@@ -464,11 +465,15 @@ async function fetchNearbyOSMPlaces(
 (
   nwr["historic"](around:${r},${lat},${lng});
   nwr["heritage"](around:${r},${lat},${lng});
+  nwr["ruins"](around:${r},${lat},${lng});
   nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](around:${r},${lat},${lng});
   nwr["name"]["building"](around:${r},${lat},${lng});
   nwr["name"]["amenity"~"^(place_of_worship|library|theatre|cinema|arts_centre|pub|bar|bank|post_office|police|fire_station|school|college|university|marketplace|townhall|courthouse|prison|hospital|community_centre|social_facility)$"](around:${r},${lat},${lng});
   nwr["name"]["man_made"~"^(water_tower|chimney|bridge|lighthouse|monument|tower|pier|reservoir_covered|storage_tank|gasometer)$"](around:${r},${lat},${lng});
   nwr["name"]["landuse"~"^(religious|cemetery|industrial|railway)$"](around:${r},${lat},${lng});
+  nwr["name"]["railway"~"^(station|halt|tram_stop|subway_entrance|disused_station)$"](around:${r},${lat},${lng});
+  nwr["name"]["disused:amenity"](around:${r},${lat},${lng});
+  nwr["name"]["demolished:building"](around:${r},${lat},${lng});
   nwr["memorial"](around:${r},${lat},${lng});
 );
 out center body 40;
@@ -529,6 +534,10 @@ out center body 40;
     }
 
     const finalResults = results.slice(0, 40);
+    if (osmCache.size >= OSM_CACHE_MAX_SIZE) {
+      const oldest = osmCache.keys().next().value;
+      if (oldest) osmCache.delete(oldest);
+    }
     osmCache.set(`${lat},${lng}`, {
       places: finalResults,
       timestamp: Date.now(),
@@ -588,7 +597,7 @@ function formatOSMContext(
     return `  ${i + 1}. "${name}" [${sanitizeOSMText(p.type, 30)}] at ${p.lat.toFixed(5)},${p.lon.toFixed(5)} — ${dist}m away${extra}`;
   });
 
-  return `\n\nREAL PLACES FROM MAP DATA (OpenStreetMap) near these coordinates:\n${lines.join("\n")}\n\nIMPORTANT: You MUST use these real places as your primary source. For each place from the map data, use the EXACT name and coordinates provided — do not rename them or move them. Add your historical knowledge to these verified locations. You may also include 1-2 additional places you know about that are not in the map data, but mark those with confidence "medium" or "low". Places from the map data should be confidence "high" since their existence is verified.`;
+  return `\n\nREAL PLACES FROM MAP DATA (OpenStreetMap) near these coordinates:\n${lines.join("\n")}\n\nIMPORTANT: Use OSM entries as verified anchors — exact name and coordinates must be preserved. Add your historical knowledge on top. Up to half your returned places may come from your own knowledge (demolished buildings, former uses, buried infrastructure, organisations that no longer exist) if OSM doesn't fill the quota — mark those confidence "medium" or "low". Do not force an OSM entry that has no interesting story. Places confirmed by OSM data should be confidence "high".`;
 }
 
 function haversineDistance(
@@ -993,7 +1002,10 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
  * Negative results (null) are also persisted so repeated missing-photo lookups
  * skip the network entirely after the first attempt.
  */
-async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
+async function fetchWikipediaPhoto(
+  placeName: string,
+  externalSignal?: AbortSignal,
+): Promise<string | null> {
   const cacheKey = placeName.toLowerCase().trim();
 
   // --- L1: in-process cache ---
@@ -1035,13 +1047,16 @@ async function fetchWikipediaPhoto(placeName: string): Promise<string | null> {
   // --- Live fetch from Wikipedia ---
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 3000);
+  const fetchSignal = externalSignal
+    ? AbortSignal.any([controller.signal, externalSignal])
+    : controller.signal;
 
   let photoUrl: string | null = null;
   try {
     const encoded = encodeURIComponent(placeName.replace(/ /g, "_"));
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
     const resp = await fetch(url, {
-      signal: controller.signal,
+      signal: fetchSignal,
       headers: {
         "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
         Accept: "application/json",
@@ -1088,18 +1103,21 @@ async function fetchPhotosForPlaces(places: any[]): Promise<void> {
   // (see /explore/discover above) automatically backfills any places that
   // returned without artwork on the next request for the same area.
   const WALL_TIMEOUT_MS = 1500;
+  const shared = new AbortController();
+  const wallTimer = setTimeout(() => shared.abort(), WALL_TIMEOUT_MS);
   try {
-    await Promise.race([
-      Promise.all(
-        places.map(async (p) => {
-          const url = await fetchWikipediaPhoto(p.name);
-          if (url) p.photoUrl = url;
-        }),
-      ),
-      new Promise<void>((resolve) => setTimeout(resolve, WALL_TIMEOUT_MS)),
-    ]);
+    await Promise.all(
+      places.map(async (p) => {
+        if (shared.signal.aborted) return;
+        const url = await fetchWikipediaPhoto(p.name, shared.signal);
+        if (url) p.photoUrl = url;
+      }),
+    );
   } catch {
     // Photo fetch is best-effort — never break discovery.
+  } finally {
+    clearTimeout(wallTimer);
+    shared.abort();
   }
 }
 
@@ -1196,8 +1214,14 @@ router.post("/explore/discover", async (req, res) => {
     return;
   }
 
-  const { latitude, longitude, radius, mode, includeBuildingTypes } =
-    parsed.data;
+  const {
+    latitude,
+    longitude,
+    radius,
+    mode,
+    includeBuildingTypes,
+    addressHint,
+  } = parsed.data;
   const isQuick = mode === "quick";
   const requestedRadius = radius ?? (isQuick ? 500 : 300);
   const searchRadius = Math.max(50, Math.min(1000, requestedRadius));
@@ -1223,7 +1247,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v11:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v15:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1310,7 +1334,7 @@ router.post("/explore/discover", async (req, res) => {
   const brainstormPromise: Promise<string> = (async () => {
     if (isQuick) return "";
     try {
-      const BRAINSTORM_TIMEOUT_MS = 9000;
+      const BRAINSTORM_TIMEOUT_MS = 13000;
       const brainstormAbort = new AbortController();
       const brainstormTimer = setTimeout(
         () => brainstormAbort.abort(),
@@ -1319,17 +1343,17 @@ router.post("/explore/discover", async (req, res) => {
       try {
         const brainstormResponse = await openai.chat.completions.create(
           {
-            model: "gpt-4.1-nano",
-            max_completion_tokens: 900,
+            model: "gpt-4.1-mini",
+            max_completion_tokens: 1400,
             messages: [
               {
                 role: "system",
                 content:
-                  "You are a hyper-local urban historian with encyclopedic knowledge of streets, buildings, and blocks. When given GPS coordinates, brainstorm freely — without worrying about format — everything you know about the immediate surroundings: historical occupants, architectural details, former uses, local figures, infrastructure oddities, buried waterways, ghost signs, community organizations, scandals, events, transitions. Include obscure and surprising facts. Name names and dates when you know them. This is an internal brainstorm; quality and specificity matter more than completeness.\n\nCRITICAL: Never invent street names. If you are unsure of an exact address, refer to the nearest known intersection or cross-streets instead. A place anchored to a real intersection is always better than one with a fabricated street name.",
+                  "You are a hyper-local urban historian with encyclopedic knowledge of streets, buildings, and blocks. When given GPS coordinates, brainstorm freely — without worrying about format — everything you know about the immediate surroundings: historical occupants, architectural details, former uses, local figures, infrastructure oddities, buried waterways, ghost signs, community organizations, scandals, events, transitions. Include obscure and surprising facts. Name names and dates when you know them. This is an internal brainstorm; quality and specificity matter more than completeness.\n\nWork through the area in ERAS — name at least one specific building, person, or event per era where you can: (1) pre-1900 — original land use, early industry, immigrant communities, street-grid changes; (2) 1900–1940 — tenement era, industrial peak, Prohibition speakeasies, Great Migration, labor organizing, political machines; (3) 1940–1970 — urban renewal demolitions, ethnic succession, postwar boom or decline, highway construction, redlining effects; (4) 1970–present — disinvestment, community organizing, gentrification waves, notable demolitions or salvage.\n\nCRITICAL: Never invent street names. If you are unsure of an exact address, refer to the nearest known intersection or cross-streets instead. A place anchored to a real intersection is always better than one with a fabricated street name.",
               },
               {
                 role: "user",
-                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?`,
+                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude}${addressHint ? ` (${addressHint})` : ""} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?`,
               },
             ],
           },
@@ -1367,7 +1391,9 @@ Given GPS coordinates, identify real places within roughly ${radiusFeet} feet ($
 
 PRIORITIZE (in order): specific buildings and their hidden histories; architectural details passersby miss (ghost signs, terra cotta, unusual ironwork, cornerstones); former uses (speakeasies, union halls, boarding houses, vaudeville theaters, immigrant social clubs); local stories with names and dates; odd infrastructure (hitching posts, trolley tracks, sealed subway entrances, vault sidewalks, buried waterways); community power — ethnic mutual aid societies, gang territories, labor organizing halls, political machine clubhouses, named figures who shaped a specific block. Multi-era buildings whose use-transitions reveal social history are especially valuable.
 
-AVOID: famous tourist landmarks (Statue of Liberty, Empire State Building as a skyscraper, Times Square as spectacle); generic descriptions ("rich history," "many changes over the years"); neighborhood-wide claims without a specific anchor. Every place must anchor to one building, corner, wall, or doorway.
+AVOID: famous tourist landmarks (Statue of Liberty, Empire State Building as a skyscraper, Times Square as spectacle); anything that would appear as the primary subject of a travel blog, Yelp top-10, or Wikipedia disambiguation page — favour what lives in footnotes, local newspaper archives, and academic dissertations; generic descriptions ("rich history," "many changes over the years"); neighbourhood-wide claims without a specific anchor. Every place must anchor to one building, corner, wall, or doorway.
+
+TARGET: a place the user could walk past 100 times without knowing its significance. If it would headline any popular tourist guide, choose something more obscure.
 
 SPECIFICITY RULES — every fact must include at least one: specific year/decade, person's name, verifiable detail, or concrete event. BAD: "This building has a rich history." GOOD: "The Italianate cornice was added in 1887 when dry-goods merchant Samuel Hewitt converted the ground floor from a livery stable." Social history needs an address: BAD: "The Westies controlled Hell's Kitchen." GOOD: "596 10th Ave was the Westies' base — Jimmy Coonan ran the crew from this corner through the late 1970s."
 
@@ -1485,10 +1511,6 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     setLLMCache(discoverCacheKey, data);
   }
 
-  if (Array.isArray(data.places) && data.places.length > 0) {
-    const ratingsMap = await fetchRatingsMap(data.places);
-    applyRatingSortWithMap(data.places, ratingsMap);
-  }
   res.json(data);
 
   // Background: run Nominatim verification and silently update the cache so the
@@ -1533,7 +1555,7 @@ router.post("/explore/suggest-locations", async (req, res) => {
   }
 
   const nearTrimmed = (nearLocation ?? "").trim().slice(0, 200);
-  const suggestCacheKey = `suggest:v11:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
+  const suggestCacheKey = `suggest:v12:${query.trim().toLowerCase()}|near:${nearTrimmed.toLowerCase()}`;
   const cachedSuggest = getLLMCache(suggestCacheKey);
   if (cachedSuggest) {
     res.json(cachedSuggest);
@@ -1911,7 +1933,7 @@ router.post("/explore/investigate-address", async (req, res) => {
 
   // Cache key: normalized address + coord bucket. Investigations are deterministic
   // per-building so a longer TTL is fine; share the LLM cache.
-  const investigateCacheKey = `investigate:v6:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const investigateCacheKey = `investigate:v7:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
   const cached = getLLMCache(investigateCacheKey);
   if (cached) {
     res.json(cached);
@@ -3466,7 +3488,7 @@ const ratePlaceDeviceLimiter = rateLimit({
   },
   keyGenerator: (req) => {
     const deviceId = req.headers["x-device-id"] as string;
-    return `device:${deviceId.trim()}`;
+    return `device:${deviceId.trim().slice(0, 128)}`;
   },
   validate: { keyGeneratorIpFallback: false },
   store: new PgRateLimitStore(),
@@ -3560,6 +3582,7 @@ router.post(
         });
     }
 
+    invalidateRatingsResponseCache();
     res.json({ ok: true, placeId, up: updated.up, down: updated.down });
   },
 );
@@ -3594,7 +3617,32 @@ router.get("/explore/user-ratings", async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /explore/ratings — retrieve aggregate rating data (sorted by net score)
 // ---------------------------------------------------------------------------
+// Short-TTL in-memory cache for the aggregate ratings list.  This endpoint
+// scans the entire place_ratings table and sorts in JS, so under load it can
+// block the event loop.  A 60s TTL gives the cache near-realtime feel while
+// shielding the DB from repeated unauthenticated scans.  Writes via
+// /explore/rate-place invalidate this cache so user-visible changes
+// propagate immediately to other clients.
+const RATINGS_RESPONSE_TTL_MS = 60_000;
+let ratingsResponseCache: {
+  payload: { ratings: unknown[]; total: number };
+  timestamp: number;
+} | null = null;
+
+function invalidateRatingsResponseCache(): void {
+  ratingsResponseCache = null;
+}
+
 router.get("/explore/ratings", async (_req, res) => {
+  const now = Date.now();
+  if (
+    ratingsResponseCache &&
+    now - ratingsResponseCache.timestamp < RATINGS_RESPONSE_TTL_MS
+  ) {
+    res.json(ratingsResponseCache.payload);
+    return;
+  }
+
   const rows = await db.select().from(placeRatings);
   const entries = rows
     .map((e) => ({
@@ -3604,7 +3652,9 @@ router.get("/explore/ratings", async (_req, res) => {
     }))
     .sort((a, b) => b.netScore - a.netScore);
 
-  res.json({ ratings: entries, total: entries.length });
+  const payload = { ratings: entries, total: entries.length };
+  ratingsResponseCache = { payload, timestamp: now };
+  res.json(payload);
 });
 
 // ---------------------------------------------------------------------------
