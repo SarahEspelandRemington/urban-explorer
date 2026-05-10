@@ -174,8 +174,9 @@ const svg = [
 const tableRows = [...history]
   .reverse()
   .map((e) => {
-    const buildTime =
+    let buildTime =
       e.build_s != null && e.build_s > 0 ? fmtTime(e.build_s) : "\u2014";
+    if (e.build_spike === true) buildTime += " \u26a0\ufe0f";
     return [
       "<tr>",
       `<td><code>${e.shortSha}</code></td>`,

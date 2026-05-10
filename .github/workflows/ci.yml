@@ -718,7 +718,9 @@ jobs:
           # build_s  = total (lint + tc + format + build step) — kept for backward
           #            compat with build-time-gate which reads this field.
           # build_job_s = only the build step; distinguishes from the total.
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s}}"
+          # build_spike is initialised to false here; build-time-gate patches it
+          #              to true when the PR build time exceeds the threshold.
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history/warn-history.json
@@ -763,7 +765,8 @@ jobs:
                 (.build_s % 60) as $sec |
                 if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
                 else ($sec | tostring) + "s" end)
-             end) as $build_time |
+             end) as $build_time_raw |
+            (if .build_spike == true then $build_time_raw + " ⚠️" else $build_time_raw end) as $build_time |
             "| `\(.shortSha)` | \($date) | \(if .lint == null then "—" else (.lint | tostring) end) | \(if .tc == null then "—" else (.tc | tostring) end) | \(.format // 0) | \($build_time) |"
           ' >> "$GITHUB_STEP_SUMMARY"
 
@@ -1065,6 +1068,44 @@ jobs:
             } >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Patch build_spike into warn-history artifact
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPIKE: ${{ steps.compare.outputs.spike }}
+        run: |
+          mkdir -p /tmp/warn-history-patch
+          gh run download "${{ github.run_id }}" \
+            --repo "${{ github.repository }}" \
+            --name warn-history \
+            --dir /tmp/warn-history-patch 2>/dev/null || true
+
+          if [ ! -f /tmp/warn-history-patch/warn-history.json ]; then
+            echo "warn-history artifact not found — skipping patch."
+            exit 0
+          fi
+
+          spike_val="false"
+          if [ "${SPIKE}" = "true" ]; then spike_val="true"; fi
+
+          sha="${{ github.sha }}"
+          jq --arg sha "$sha" --argjson spike "$spike_val" \
+            'map(if .sha == $sha then . + {"build_spike": $spike} else . end)' \
+            /tmp/warn-history-patch/warn-history.json \
+            > /tmp/warn-history-patch/warn-history-patched.json
+
+          mv /tmp/warn-history-patch/warn-history-patched.json \
+             /tmp/warn-history-patch/warn-history.json
+
+      - name: Upload patched warn-history artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: warn-history
+          path: /tmp/warn-history-patch/warn-history.json
+          overwrite: true
+          retention-days: 90
+
       - name: Post build time spike comment
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
@@ -1242,7 +1283,9 @@ jobs:
           # build_s  = total (lint + tc + format + build step) — kept for backward
           #            compat with build-time-gate which reads this field.
           # build_job_s = only the build step; distinguishes from the total.
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s}}"
+          # build_spike is always false for push-to-base entries; spike detection
+          #              only runs for PRs.
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s},\"build_spike\":false}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history-base/warn-history-base.json
@@ -1581,6 +1624,7 @@ jobs:
                   const sec = buildS % 60;
                   buildTime = min > 0 ? `${min}m ${sec}s` : `${sec}s`;
                 }
+                if (entry.build_spike === true) buildTime += ' ⚠️';
                 return `| ${shaLabel} | ${date} | ${lintCell} | ${tcCell} | ${formatCount} | ${buildTime} |`;
               });
 
