@@ -29,4 +29,10 @@ export const modules: ModuleMap = {
     import("../components/mockups/style-directions/UrbanGlow.tsx"),
   "./components/mockups/style-directions/WarmEmber.tsx": () =>
     import("../components/mockups/style-directions/WarmEmber.tsx"),
+  "./components/mockups/header-redesign/LabeledActions.tsx": () =>
+    import("../components/mockups/header-redesign/LabeledActions.tsx"),
+  "./components/mockups/header-redesign/SimplifiedBar.tsx": () =>
+    import("../components/mockups/header-redesign/SimplifiedBar.tsx"),
+  "./components/mockups/header-redesign/WalkFirst.tsx": () =>
+    import("../components/mockups/header-redesign/WalkFirst.tsx"),
 };
