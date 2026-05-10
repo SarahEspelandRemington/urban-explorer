@@ -2081,6 +2081,7 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_BUILD_ALERT_WEBHOOK }}
           ANY_HIGH_VARIANCE: ${{ steps.compare.outputs.any_high_variance }}
           JOB_DETAILS_B64: ${{ steps.compare.outputs.job_details_b64 }}
+          SPREAD_SRC: ${{ steps.compare.outputs.spread_src }}
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.repository }}
           EVENT_NAME: ${{ github.event_name }}
@@ -2144,6 +2145,9 @@ jobs:
             table+=$'\n'"${name}           | ${avg_fmt} | ${cur_fmt} | ${allowed_fmt} (+${thr}%) | ${status}"
             thr_sources+="${name}: ${thr_src}"$'\n'
           done < <(printf '%s' "$details" | jq -c '.[]')
+
+          spread_src_label="${SPREAD_SRC:-built-in default}"
+          thr_sources+="Spread variance: ${spread_src_label}"$'\n'
 
           run_url="https://github.com/${REPO}/actions/runs/${RUN_ID}"
 
