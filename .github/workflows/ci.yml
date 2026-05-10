@@ -715,7 +715,10 @@ jobs:
             > /tmp/time-counts.json
 
           history=$(cat /tmp/warn-history/warn-history.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"build_s\":${total_build_s}}"
+          # build_s  = total (lint + tc + format + build step) — kept for backward
+          #            compat with build-time-gate which reads this field.
+          # build_job_s = only the build step; distinguishes from the total.
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history/warn-history.json
@@ -821,6 +824,40 @@ jobs:
             echo "Lint: \`${lint_vals}${lint_arrow}\`  ·  TS: \`${tc_vals}${tc_arrow}\`  ·  Format: \`${format_vals}${format_arrow}\`  ·  Build: \`${build_s_vals}${build_s_arrow}\`"
             echo ""
           } >> "$GITHUB_STEP_SUMMARY"
+
+          # Per-job build time breakdown scoped to the same last-5 entries shown
+          # in the main trend table. Only rendered when at least one of those
+          # entries has per-job fields; old entries without them are skipped.
+          has_breakdown=$(echo "$last5" | jq '[.[] | select(.lint_s != null)] | length')
+          if [ "$has_breakdown" -gt 0 ]; then
+            {
+              echo "<details><summary>⏱️ Per-job build time breakdown</summary>"
+              echo ""
+              echo "| SHA | Lint | TC | Fmt | Build |"
+              echo "|-----|------|----|-----|-------|"
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            echo "$last5" | jq -r '
+              .[] |
+              select(.lint_s != null) |
+              def fmt(s):
+                if s == null then "—"
+                elif s == 0 then "0s"
+                else
+                  (s / 60 | floor) as $min |
+                  (s % 60) as $sec |
+                  if $min > 0 then ($min | tostring) + "m " + ($sec | tostring) + "s"
+                  else ($sec | tostring) + "s" end
+                end;
+              "| `\(.shortSha)` | \(fmt(.lint_s)) | \(fmt(.tc_s)) | \(fmt(.format_s)) | \(fmt(.build_job_s)) |"
+            ' >> "$GITHUB_STEP_SUMMARY"
+
+            {
+              echo ""
+              echo "</details>"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload warn-history artifact
         uses: actions/upload-artifact@v4
@@ -1149,7 +1186,10 @@ jobs:
           total_build_s=$((lint_s + tc_s + format_s + build_s))
 
           history=$(cat /tmp/warn-history-base/warn-history-base.json)
-          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"build_s\":${total_build_s}}"
+          # build_s  = total (lint + tc + format + build step) — kept for backward
+          #            compat with build-time-gate which reads this field.
+          # build_job_s = only the build step; distinguishes from the total.
+          new_entry="{\"sha\":\"${sha}\",\"shortSha\":\"${short_sha}\",\"ts\":\"${ts}\",\"lint\":${lint_json},\"tc\":${tc_json},\"format\":${format_json},\"lint_s\":${lint_s},\"tc_s\":${tc_s},\"format_s\":${format_s},\"build_job_s\":${build_s},\"build_s\":${total_build_s}}"
           # Append new entry and keep only the last 20 to avoid unbounded growth.
           updated=$(printf '%s\n' "$history" | jq --argjson entry "$new_entry" '. + [$entry] | .[-20:]')
           echo "$updated" > /tmp/warn-history-base/warn-history-base.json
@@ -1349,6 +1389,35 @@ jobs:
               })();
               const n = last5.length;
 
+              // Per-job breakdown: only include rows for entries that have the
+              // per-job fields (lint_s, tc_s, format_s, build_job_s). Old entries
+              // without these fields are silently skipped (backward compat).
+              const fmtTime = (s) => {
+                if (s == null) return '—';
+                if (s === 0) return '0s';
+                const min = Math.floor(s / 60);
+                const sec = s % 60;
+                return min > 0 ? `${min}m ${sec}s` : `${sec}s`;
+              };
+              const breakdownEntries = last5.filter((e) => e.lint_s != null);
+              const breakdownRows = breakdownEntries.map((e) => {
+                const isCurrent = e.sha === currentSha;
+                const shaLabel = isCurrent
+                  ? `\`${e.shortSha}\` *(now)*`
+                  : `\`${e.shortSha}\``;
+                return `| ${shaLabel} | ${fmtTime(e.lint_s)} | ${fmtTime(e.tc_s)} | ${fmtTime(e.format_s)} | ${fmtTime(e.build_job_s)} |`;
+              });
+              const breakdownSection = breakdownRows.length > 0 ? [
+                '',
+                '<details><summary>⏱️ Per-job build time breakdown</summary>',
+                '',
+                '| SHA | Lint | TC | Fmt | Build |',
+                '|-----|------|----|-----|-------|',
+                ...breakdownRows,
+                '',
+                '</details>',
+              ] : [];
+
               return [
                 '',
                 `<details><summary>📈 Warning trend (last ${n} push${n !== 1 ? 'es' : ''} on this branch)</summary>`,
@@ -1358,6 +1427,7 @@ jobs:
                 ...rows,
                 '',
                 `Lint: \`${lintLine}\`  ·  TS: \`${tcLine}\`  ·  Format: \`${formatLine}\`  ·  Build: \`${buildLine}\``,
+                ...breakdownSection,
                 '',
                 '</details>',
               ];
