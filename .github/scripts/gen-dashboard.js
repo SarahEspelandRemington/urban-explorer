@@ -605,18 +605,21 @@ function buildSparkline(vals, runUrl, w, h, color) {
 
   const endCx = sx(points.length - 1).toFixed(1);
   const endCy = sy(points[points.length - 1]).toFixed(1);
+  // Keep the tooltip on the dot for discoverability; the whole SVG is now the link.
   const endDot = `<circle cx="${endCx}" cy="${endCy}" r="2.5" fill="${svgColor}"><title>${lastTip}</title></circle>`;
-  const endDotWrapped = runUrl
-    ? `<a href="${escHtml(runUrl)}" target="_blank" rel="noopener noreferrer">${endDot}</a>`
-    : endDot;
 
-  return [
-    `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">`,
+  const svgStyle = runUrl ? ` style="cursor:pointer"` : "";
+  const svgInner = [
+    `<svg viewBox="0 0 ${svgW} ${svgH}" width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg"${svgStyle}>`,
     `<polygon points="${fillPts}" fill="${svgColor}" fill-opacity="0.12"/>`,
     `<polyline points="${polyPts}" fill="none" stroke="${svgColor}" stroke-width="1.8" stroke-linejoin="round"/>`,
-    endDotWrapped,
+    endDot,
     `</svg>`,
   ].join("");
+
+  return runUrl
+    ? `<a href="${escHtml(runUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;line-height:0">${svgInner}</a>`
+    : svgInner;
 }
 
 /**
