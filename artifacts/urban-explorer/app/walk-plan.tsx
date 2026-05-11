@@ -209,7 +209,10 @@ export default function WalkPlanScreen() {
 
       setPhase("fetching");
 
-      const places = await walk.fetchPlacesAlongRoute(geometry);
+      // Use a wider corridor (150m) and higher cap (20) for the planning view
+      // so the user sees a full menu of nearby interesting places. Active
+      // narration during the walk still uses the tighter density-mode corridor.
+      const places = await walk.fetchPlacesAlongRoute(geometry, 20, 150);
       setPrefetchedPlaces(places);
       setPhase("ready");
     } catch {

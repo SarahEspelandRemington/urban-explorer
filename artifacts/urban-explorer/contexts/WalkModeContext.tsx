@@ -131,6 +131,7 @@ interface WalkModeContextType {
   fetchPlacesAlongRoute: (
     geometry: number[][],
     maxPlaces?: number,
+    corridorOverride?: number,
   ) => Promise<WalkPlace[]>;
   enabledBuildingGroups: Set<BuildingGroupKey>;
   setEnabledBuildingGroups: (groups: Set<BuildingGroupKey>) => void;
@@ -777,7 +778,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const fetchPlacesAlongRoute = useCallback(
-    async (geometry: number[][], maxPlaces?: number): Promise<WalkPlace[]> => {
+    async (
+      geometry: number[][],
+      maxPlaces?: number,
+      corridorOverride?: number,
+    ): Promise<WalkPlace[]> => {
       const cfg = DENSITY_CONFIG[densityRef.current];
       try {
         const res = await fetch(`${API_BASE}/api/explore/places-along-route`, {
@@ -789,7 +794,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({
             geometry,
             ...(maxPlaces !== undefined ? { maxPlaces } : {}),
-            corridorMeters: cfg.corridorMeters,
+            corridorMeters: corridorOverride ?? cfg.corridorMeters,
           }),
         });
         if (!res.ok) return [];
