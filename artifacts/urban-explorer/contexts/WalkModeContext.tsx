@@ -1,6 +1,7 @@
 import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
+import * as Speech from "expo-speech";
 import * as TaskManager from "expo-task-manager";
 import React, {
   createContext,
@@ -19,6 +20,7 @@ import {
   unlockWebSpeech,
   useNarration,
 } from "@/hooks/useNarration";
+import { API_BASE } from "@/lib/apiBase";
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
 import { fetchNarrationPayload as fetchNarrationPayloadUtil } from "@/lib/fetchNarrationPayload";
@@ -86,6 +88,39 @@ type NarrationPayload =
   | { kind: "audio"; audioUri: string; cleanup?: () => void }
   | { kind: "text"; text: string };
 
+export interface RouteStep {
+  instruction: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  location: [number, number]; // [latitude, longitude] of the maneuver point
+  maneuverType: string;
+}
+
+export interface RouteContext {
+  steps: RouteStep[];
+  geometry?: number[][];
+  distanceMeters?: number;
+  durationSeconds?: number;
+}
+
+// State exposed for the live "next turn" UI on the Walk Mode screen.
+export interface NextTurn {
+  step: RouteStep;
+  index: number; // index into routeSteps
+  distanceMeters: number; // straight-line distance from user to maneuver point
+}
+
+// Distance threshold (m) at which we speak the turn cue once. The user wanted
+// audible cues "interleaved" with the historical narration; firing at ~30 m
+// gives a natural lead time for a walking pace (~20 s warning at 1.5 m/s).
+const TURN_CUE_DISTANCE_M = 30;
+// Once a step has been announced we never re-announce it, even if the user
+// briefly walks away and back. The next ahead-of-them step takes over.
+//
+// We also short-circuit "depart" steps because the planning view already
+// shows the starting heading — we don't need to immediately speak it the
+// moment the walk starts.
+
 export interface WalkPlace {
   id: string;
   name: string;
@@ -112,7 +147,21 @@ interface WalkStats {
 
 interface WalkModeContextType {
   isWalking: boolean;
-  startWalk: (initialPlaces?: WalkPlace[]) => Promise<boolean>;
+  startWalk: (
+    initialPlaces?: WalkPlace[],
+    routeContext?: RouteContext,
+  ) => Promise<boolean>;
+  /**
+   * Turn-by-turn steps for the active walk, in order. Empty when the user
+   * started a free-roam walk without planning a route.
+   */
+  routeSteps: RouteStep[];
+  /**
+   * The next un-passed maneuver, with the live distance from the user. Null
+   * when there is no active route, when the user has passed the final step,
+   * or before the first GPS fix arrives.
+   */
+  nextTurn: NextTurn | null;
   stopWalk: () => void;
   currentLocation: { latitude: number; longitude: number } | null;
   nearbyPlaces: WalkPlace[];
@@ -154,7 +203,9 @@ interface WalkModeContextType {
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+// API_BASE is imported from @/lib/apiBase — single source of truth shared
+// with the rest of the mobile app. Prefers EXPO_PUBLIC_API_URL (the published
+// autoscale deployment) and falls back to the dev workspace domain.
 
 // In Expo Go the native modules are the SDK-bundled versions and may not match
 // the JS package versions installed in this project. Skip the native audio path
@@ -364,6 +415,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const replayBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  // Turn-by-turn route state for the active walk. Held in a ref for the GPS
+  // tick (which runs in the background and can't take a re-render dependency)
+  // and mirrored to React state for the UI banner.
+  const routeStepsRef = useRef<RouteStep[]>([]);
+  const announcedStepsRef = useRef<Set<number>>(new Set());
+  const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
+  const [nextTurn, setNextTurn] = useState<NextTurn | null>(null);
+
   const [enabledBuildingGroups, setEnabledBuildingGroupsState] = useState<
     Set<BuildingGroupKey>
   >(new Set());
@@ -1199,6 +1258,79 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // location callbacks keep firing — so each fresh sample is our most
       // reliable "tick" in that state.
       maybeNarrateRef.current?.({ latitude, longitude });
+
+      // --- Turn-by-turn cue scheduling -----------------------------------
+      // Find the next un-announced step (skipping the "depart" pseudo-step).
+      // Track its live distance for the UI banner, and speak the cue once when
+      // the user gets within TURN_CUE_DISTANCE_M. This runs after the narration
+      // tick so the historical narration still gets first crack at the queue.
+      const steps = routeStepsRef.current;
+      if (steps.length > 0) {
+        // Progress-based step advancement: of all the un-announced steps,
+        // find the one we're currently closest to. If an *earlier* un-announced
+        // step is farther away, the user has likely already walked past it
+        // (or skipped it on a re-route) — silently mark those passed-by steps
+        // as announced so the cue logic doesn't get stuck cueing a turn the
+        // user is actively walking away from. Without this, missing the very
+        // first turn would freeze guidance for the rest of the walk.
+        let nearestIdx = -1;
+        let nearestDist = Infinity;
+        for (let i = 0; i < steps.length; i++) {
+          if (announcedStepsRef.current.has(i)) continue;
+          const s = steps[i];
+          // Skip the initial "depart" step — its job is just to set the
+          // starting heading, not to announce a turn.
+          if (s.maneuverType === "depart") {
+            announcedStepsRef.current.add(i);
+            continue;
+          }
+          const [stepLat, stepLng] = s.location;
+          const d = haversineMeters(latitude, longitude, stepLat, stepLng);
+          if (d < nearestDist) {
+            nearestDist = d;
+            nearestIdx = i;
+          }
+        }
+        // Mark every still-un-announced step before the nearest one as passed.
+        // Distance is straight-line haversine, not along-route; in dense grids
+        // that's a known approximation but it's good enough to keep the
+        // banner advancing in the right direction.
+        if (nearestIdx >= 0) {
+          for (let i = 0; i < nearestIdx; i++) {
+            if (!announcedStepsRef.current.has(i)) {
+              announcedStepsRef.current.add(i);
+            }
+          }
+        }
+        const candidate: NextTurn | null =
+          nearestIdx >= 0
+            ? {
+                step: steps[nearestIdx],
+                index: nearestIdx,
+                distanceMeters: nearestDist,
+              }
+            : null;
+        setNextTurn(candidate);
+        if (candidate && candidate.distanceMeters <= TURN_CUE_DISTANCE_M) {
+          announcedStepsRef.current.add(candidate.index);
+          try {
+            // Short utterance, fire-and-forget. On native this plays through
+            // expo-speech (a separate audio channel from the narration MP3
+            // player), so it overlays the current story by design — the user
+            // explicitly asked for cues "interleaved" with the narration.
+            Speech.speak(candidate.step.instruction, { rate: 1.0 });
+          } catch {}
+          if (Platform.OS !== "web") {
+            try {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            } catch {}
+          }
+          addWalkBreadcrumb("turn cue spoken", {
+            stepIndex: candidate.index,
+            maneuverType: candidate.step.maneuverType,
+          });
+        }
+      }
     },
     [applyDensity, fetchNearbyPlaces],
   );
@@ -1288,7 +1420,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   }, [isWalking]);
 
   const startWalk = useCallback(
-    async (initialPlaces?: WalkPlace[]): Promise<boolean> => {
+    async (
+      initialPlaces?: WalkPlace[],
+      routeContext?: RouteContext,
+    ): Promise<boolean> => {
       // Guard against double-tap or re-entry before the walk is fully set up.
       if (isWalkingRef.current || isStartingRef.current) return false;
       isStartingRef.current = true;
@@ -1387,6 +1522,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // without waiting for the first GPS-driven discover call to complete.
         placesRef.current = initialPlaces?.length ? [...initialPlaces] : [];
         setNearbyPlaces(initialPlaces?.length ? [...initialPlaces] : []);
+        // Seed turn-by-turn route state. Cleared if no route was planned so a
+        // free-roam walk after a planned one doesn't surface stale steps.
+        const seededSteps = routeContext?.steps ?? [];
+        routeStepsRef.current = seededSteps;
+        announcedStepsRef.current = new Set();
+        setRouteSteps(seededSteps);
+        setNextTurn(null);
         lastFetchRef.current = null;
         prevLocationRef.current = null;
         deviceHeadingRef.current = null;
@@ -1591,6 +1733,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (stalePrefetchPoolRef.current) {
       disposeStalePrefetchPool(stalePrefetchPoolRef.current);
     }
+    // Clear turn-by-turn state so the planning view's banner / list don't
+    // show stale steps the next time the screen mounts.
+    routeStepsRef.current = [];
+    announcedStepsRef.current = new Set();
+    setRouteSteps([]);
+    setNextTurn(null);
     if (watchRef.current) {
       try {
         watchRef.current.remove();
@@ -1642,6 +1790,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       prefetchStats,
       showPrefetchStats,
       setShowPrefetchStats,
+      routeSteps,
+      nextTurn,
     }),
     [
       isWalking,
@@ -1663,6 +1813,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       prefetchStats,
       showPrefetchStats,
       setShowPrefetchStats,
+      routeSteps,
+      nextTurn,
     ],
   );
 

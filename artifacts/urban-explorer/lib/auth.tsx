@@ -37,6 +37,9 @@ const AuthContext = createContext<AuthContextValue>({
 });
 
 function getApiBaseUrl(): string {
+  // Kept inline (rather than importing getApiBase) because this module is
+  // also reachable from very early bootstrap paths where lazy-evaluating
+  // env at call time matters. Behaviour matches lib/apiBase.ts exactly.
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }

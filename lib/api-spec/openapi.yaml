@@ -768,10 +768,40 @@ components:
           type: number
         durationSeconds:
           type: number
+        steps:
+          type: array
+          description: "Sequential turn-by-turn maneuvers along the route. Each step's location is the [latitude, longitude] of the maneuver point (i.e. where the turn happens). distanceMeters is the distance covered FROM that maneuver point TO the next step (or 0 for the final 'arrive' step)."
+          items:
+            type: object
+            properties:
+              instruction:
+                type: string
+                description: "Short human-readable cue, e.g. 'Left turn onto W 25th St', 'Continue onto 8th Ave', 'Arrive at your destination'"
+              distanceMeters:
+                type: number
+              durationSeconds:
+                type: number
+              location:
+                type: array
+                description: "[latitude, longitude] of the maneuver point"
+                items:
+                  type: number
+                minItems: 2
+                maxItems: 2
+              maneuverType:
+                type: string
+                description: "Raw OSRM maneuver type (depart, turn, continue, arrive, roundabout, etc.) for client-side iconography"
+            required:
+              - instruction
+              - distanceMeters
+              - durationSeconds
+              - location
+              - maneuverType
       required:
         - geometry
         - distanceMeters
         - durationSeconds
+        - steps
     PlacesAlongRouteRequest:
       type: object
       properties:

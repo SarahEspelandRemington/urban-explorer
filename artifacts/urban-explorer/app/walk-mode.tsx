@@ -222,6 +222,69 @@ export default function WalkModeScreen() {
         </View>
       </View>
 
+      {walk.nextTurn && (
+        <Animated.View
+          entering={FadeInDown.duration(180)}
+          exiting={FadeOut.duration(150)}
+          style={[
+            styles.nextTurnBanner,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+          accessibilityRole="text"
+          accessibilityLabel={`${t.walkMode.nextTurn}: ${walk.nextTurn.step.instruction}, ${Math.round(walk.nextTurn.distanceMeters)} meters`}
+        >
+          <View
+            style={[
+              styles.nextTurnIcon,
+              { backgroundColor: colors.primary + "22" },
+            ]}
+          >
+            <Feather
+              name={
+                walk.nextTurn.step.maneuverType === "arrive"
+                  ? "flag"
+                  : walk.nextTurn.step.instruction
+                        .toLowerCase()
+                        .startsWith("turn left") ||
+                      walk.nextTurn.step.instruction
+                        .toLowerCase()
+                        .startsWith("left")
+                    ? "corner-up-left"
+                    : walk.nextTurn.step.instruction
+                          .toLowerCase()
+                          .startsWith("turn right") ||
+                        walk.nextTurn.step.instruction
+                          .toLowerCase()
+                          .startsWith("right")
+                      ? "corner-up-right"
+                      : "arrow-up"
+              }
+              size={18}
+              color={colors.primary}
+            />
+          </View>
+          <View style={styles.nextTurnText}>
+            <Text
+              style={[styles.nextTurnLabel, { color: colors.mutedForeground }]}
+            >
+              {t.walkMode.nextTurn}
+            </Text>
+            <Text
+              style={[styles.nextTurnInstruction, { color: colors.foreground }]}
+              numberOfLines={2}
+            >
+              {walk.nextTurn.step.instruction}
+            </Text>
+          </View>
+          <Text style={[styles.nextTurnDistance, { color: colors.foreground }]}>
+            {Math.round(walk.nextTurn.distanceMeters)} m
+          </Text>
+        </Animated.View>
+      )}
+
       <Modal
         visible={settingsVisible}
         transparent
@@ -627,6 +690,43 @@ const styles = StyleSheet.create({
   walkingIndicator: { flexDirection: "row", alignItems: "center", gap: 6 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   walkingText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  nextTurnBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  nextTurnIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  nextTurnText: { flex: 1 },
+  nextTurnLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  nextTurnInstruction: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: -0.2,
+    marginTop: 1,
+  },
+  nextTurnDistance: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.3,
+  },
   densityToggle: {
     flexDirection: "row",
     borderRadius: 20,

@@ -115,6 +115,7 @@ export interface Strings {
     endWalkAccessibility: string;
     fewerResultsAccessibility: string;
     moreResultsAccessibility: string;
+    nextTurn: string;
     buildingFiltersAccessibility: string;
     resumeAccessibility: string;
     pauseAccessibility: string;
@@ -141,6 +142,8 @@ export interface Strings {
     previewLabel: string;
     emptyRouteNote: string;
     changeRoute: string;
+    directionsLabel: string;
+    arriveAtDestination: string;
   };
   placeDetail: {
     quickFacts: string;
@@ -394,6 +397,7 @@ const en: Strings = {
     endWalkAccessibility: "End walk",
     fewerResultsAccessibility: "Fewer results",
     moreResultsAccessibility: "More results",
+    nextTurn: "Next turn",
     buildingFiltersAccessibility: "Building filters",
     resumeAccessibility: "Resume",
     pauseAccessibility: "Pause",
@@ -422,6 +426,8 @@ const en: Strings = {
     emptyRouteNote:
       "No stops were pre-loaded — GPS discovery will find stories as you walk.",
     changeRoute: "Change route",
+    directionsLabel: "Directions",
+    arriveAtDestination: "Arrive at your destination",
   },
   placeDetail: {
     quickFacts: "Quick Facts",
@@ -707,6 +713,7 @@ const es: Strings = {
     endWalkAccessibility: "Terminar caminata",
     fewerResultsAccessibility: "Menos resultados",
     moreResultsAccessibility: "Más resultados",
+    nextTurn: "Próxima vuelta",
     buildingFiltersAccessibility: "Filtros de edificios",
     resumeAccessibility: "Reanudar",
     pauseAccessibility: "Pausar",
@@ -734,6 +741,8 @@ const es: Strings = {
     emptyRouteNote:
       "No se precargaron paradas — el GPS encontrará historias mientras caminas.",
     changeRoute: "Cambiar ruta",
+    directionsLabel: "Indicaciones",
+    arriveAtDestination: "Llegar a tu destino",
   },
   placeDetail: {
     quickFacts: "Datos rápidos",
@@ -1022,6 +1031,7 @@ const fr: Strings = {
     endWalkAccessibility: "Terminer la marche",
     fewerResultsAccessibility: "Moins de résultats",
     moreResultsAccessibility: "Plus de résultats",
+    nextTurn: "Prochain virage",
     buildingFiltersAccessibility: "Filtres de bâtiments",
     resumeAccessibility: "Reprendre",
     pauseAccessibility: "Pause",
@@ -1051,6 +1061,8 @@ const fr: Strings = {
     emptyRouteNote:
       "Aucun arrêt pré-chargé — le GPS trouvera des histoires pendant votre marche.",
     changeRoute: "Changer d'itinéraire",
+    directionsLabel: "Itinéraire",
+    arriveAtDestination: "Arrivée à destination",
   },
   placeDetail: {
     quickFacts: "Faits rapides",
@@ -1337,6 +1349,7 @@ const de: Strings = {
     endWalkAccessibility: "Spaziergang beenden",
     fewerResultsAccessibility: "Weniger Ergebnisse",
     moreResultsAccessibility: "Mehr Ergebnisse",
+    nextTurn: "Nächste Abbiegung",
     buildingFiltersAccessibility: "Gebäudefilter",
     resumeAccessibility: "Fortsetzen",
     pauseAccessibility: "Pause",
@@ -1361,6 +1374,8 @@ const de: Strings = {
     noRoute: "Keine Fußgängerroute zwischen diesen Punkten gefunden.",
     routeError: "Route konnte nicht gefunden werden. Adressen prüfen.",
     geocodeError: "Adresse konnte nicht gefunden werden. Präziser eingeben.",
+    directionsLabel: "Wegbeschreibung",
+    arriveAtDestination: "Am Ziel ankommen",
     previewLabel: "Entlang Ihrer Route",
     emptyRouteNote:
       "Keine Haltestellen vorgeladen — GPS findet Geschichten während Sie laufen.",
@@ -1652,6 +1667,7 @@ const it: Strings = {
     endWalkAccessibility: "Termina camminata",
     fewerResultsAccessibility: "Meno risultati",
     moreResultsAccessibility: "Più risultati",
+    nextTurn: "Prossima svolta",
     buildingFiltersAccessibility: "Filtri edifici",
     resumeAccessibility: "Riprendi",
     pauseAccessibility: "Pausa",
@@ -1679,6 +1695,8 @@ const it: Strings = {
     previewLabel: "Lungo il tuo percorso",
     emptyRouteNote:
       "Nessuna tappa precaricata — il GPS troverà storie durante la passeggiata.",
+    directionsLabel: "Indicazioni",
+    arriveAtDestination: "Arriva a destinazione",
     changeRoute: "Cambia percorso",
   },
   placeDetail: {
@@ -1965,6 +1983,7 @@ const pt: Strings = {
     endWalkAccessibility: "Terminar caminhada",
     fewerResultsAccessibility: "Menos resultados",
     moreResultsAccessibility: "Mais resultados",
+    nextTurn: "Próxima curva",
     buildingFiltersAccessibility: "Filtros de edifícios",
     resumeAccessibility: "Retomar",
     pauseAccessibility: "Pausar",
@@ -1993,6 +2012,8 @@ const pt: Strings = {
     previewLabel: "Ao longo da sua rota",
     emptyRouteNote:
       "Nenhuma parada pré-carregada — o GPS encontrará histórias enquanto você caminha.",
+    directionsLabel: "Direções",
+    arriveAtDestination: "Chegar ao destino",
     changeRoute: "Mudar rota",
   },
   placeDetail: {
@@ -2277,6 +2298,7 @@ const nl: Strings = {
     endWalkAccessibility: "Wandeling beëindigen",
     fewerResultsAccessibility: "Minder resultaten",
     moreResultsAccessibility: "Meer resultaten",
+    nextTurn: "Volgende afslag",
     buildingFiltersAccessibility: "Gebouwfilters",
     resumeAccessibility: "Hervatten",
     pauseAccessibility: "Pauzeren",
@@ -2304,6 +2326,8 @@ const nl: Strings = {
     previewLabel: "Langs uw route",
     emptyRouteNote:
       "Geen stops voorgeladen — GPS vindt verhalen terwijl u loopt.",
+    directionsLabel: "Routebeschrijving",
+    arriveAtDestination: "Aankomen op bestemming",
     changeRoute: "Route wijzigen",
   },
   placeDetail: {
@@ -2587,6 +2611,7 @@ const ja: Strings = {
     endWalkAccessibility: "ウォーキング終了",
     fewerResultsAccessibility: "表示を減らす",
     moreResultsAccessibility: "表示を増やす",
+    nextTurn: "次の曲がり角",
     buildingFiltersAccessibility: "建物フィルター",
     resumeAccessibility: "再開",
     pauseAccessibility: "一時停止",
@@ -2613,6 +2638,8 @@ const ja: Strings = {
     previewLabel: "ルート沿い",
     emptyRouteNote:
       "ストップは事前に読み込まれませんでした — 歩きながらGPSが物語を見つけます。",
+    directionsLabel: "道順",
+    arriveAtDestination: "目的地に到着",
     changeRoute: "ルートを変更",
   },
   placeDetail: {
@@ -2891,6 +2918,7 @@ const ko: Strings = {
     endWalkAccessibility: "걷기 종료",
     fewerResultsAccessibility: "결과 줄이기",
     moreResultsAccessibility: "결과 늘리기",
+    nextTurn: "다음 회전",
     buildingFiltersAccessibility: "건물 필터",
     resumeAccessibility: "다시 재생",
     pauseAccessibility: "일시정지",
@@ -2917,6 +2945,8 @@ const ko: Strings = {
     previewLabel: "경로를 따라",
     emptyRouteNote:
       "정류장이 사전 로드되지 않았습니다 — GPS가 걸으면서 이야기를 찾습니다.",
+    directionsLabel: "길 안내",
+    arriveAtDestination: "목적지 도착",
     changeRoute: "경로 변경",
   },
   placeDetail: {
@@ -3189,6 +3219,7 @@ const zh: Strings = {
     endWalkAccessibility: "结束步行",
     fewerResultsAccessibility: "减少结果",
     moreResultsAccessibility: "增加结果",
+    nextTurn: "下一个转弯",
     buildingFiltersAccessibility: "建筑过滤",
     resumeAccessibility: "继续",
     pauseAccessibility: "暂停",
@@ -3214,6 +3245,8 @@ const zh: Strings = {
     geocodeError: "无法找到该地址。请更具体地输入。",
     previewLabel: "沿途",
     emptyRouteNote: "未预加载站点 — GPS将在您步行时发现故事。",
+    directionsLabel: "路线指引",
+    arriveAtDestination: "到达目的地",
     changeRoute: "更改路线",
   },
   placeDetail: {
