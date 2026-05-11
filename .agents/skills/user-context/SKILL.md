@@ -84,7 +84,7 @@ user asks. This Replit account may be deleted at any time — GitHub is the
 source of truth. Use the GitHub API (Bearer token from the github connection)
 to push changed files. The user's new personal Replit account pulls from
 GitHub with:
-  `git pull https://github.com/SarahEspelandRemington/urban-explorer.git main`
+`git pull https://github.com/SarahEspelandRemington/urban-explorer.git main`
 
 ## Project-specific reminders
 
