@@ -28,7 +28,13 @@ import { LocaleProvider } from "@/contexts/LocaleContext";
 import { UserRatingsProvider } from "@/contexts/UserRatingsContext";
 import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+// Prefer EXPO_PUBLIC_API_URL (production) when present, fall back to the dev
+// workspace URL. This lets the phone keep working against the published API
+// even when the dev workspace is asleep.
+setBaseUrl(
+  process.env.EXPO_PUBLIC_API_URL ||
+    `https://${process.env.EXPO_PUBLIC_DOMAIN}`,
+);
 setAuthTokenGetter(getApiToken);
 
 SplashScreen.preventAutoHideAsync();
@@ -143,7 +149,7 @@ function RootLayout() {
                 <DiscoveryProvider>
                   <WalkModeProvider>
                     <HeadingProvider>
-                      <GestureHandlerRootView>
+                      <GestureHandlerRootView style={{ flex: 1 }}>
                         <KeyboardProvider>
                           <RootLayoutNav />
                           <HeadingBanner />
