@@ -2865,19 +2865,77 @@ const OSRM_PROVIDERS = [
 ] as const;
 const PROVIDER_TIMEOUT_MS = 4500;
 
+interface OsrmStep {
+  distance: number;
+  duration: number;
+  name?: string;
+  maneuver: {
+    location: [number, number]; // [lng, lat]
+    type?: string;
+    modifier?: string;
+  };
+}
+
+interface OsrmLeg {
+  steps?: OsrmStep[];
+}
+
 interface OsrmResponse {
   routes?: Array<{
     geometry: { coordinates: [number, number][] };
     distance: number;
     duration: number;
+    legs?: OsrmLeg[];
   }>;
+}
+
+// Convert an OSRM maneuver into a short, human-readable instruction string.
+// OSRM does NOT supply natural-language instructions itself — only the
+// structured maneuver type/modifier and the street name — so we synthesize a
+// short cue here suitable for both visual display and TTS.
+function osrmStepToInstruction(step: OsrmStep): string {
+  const type = step.maneuver.type || "";
+  const mod = step.maneuver.modifier || "";
+  const name = (step.name || "").trim();
+  const onto = name ? ` onto ${name}` : "";
+
+  switch (type) {
+    case "depart":
+      return name ? `Head out on ${name}` : "Head out";
+    case "arrive":
+      return "Arrive at your destination";
+    case "turn":
+    case "end of road":
+    case "fork":
+    case "merge":
+    case "on ramp":
+    case "off ramp":
+    case "continue":
+      return mod
+        ? `${capitalize(mod)} turn${onto}`
+        : name
+          ? `Continue onto ${name}`
+          : "Continue";
+    case "new name":
+      return name ? `Continue onto ${name}` : "Continue";
+    case "roundabout":
+    case "rotary":
+      return name ? `Take the roundabout${onto}` : "Take the roundabout";
+    default:
+      if (mod) return `${capitalize(mod)}${onto}`;
+      return name ? `Continue onto ${name}` : "Continue";
+  }
+}
+
+function capitalize(s: string): string {
+  return s ? s[0].toUpperCase() + s.slice(1) : s;
 }
 
 async function fetchRouteFromProvider(
   base: string,
   coords: string,
 ): Promise<OsrmResponse | null> {
-  const url = `${base}/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+  const url = `${base}/route/v1/foot/${coords}?overview=full&geometries=geojson&steps=true`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
   try {
@@ -2952,11 +3010,42 @@ router.post("/explore/route", async (req, res) => {
     ([lng, lat]) => [lat, lng] as [number, number],
   );
 
+  // Flatten OSRM legs into a single sequential list of turn-by-turn steps so
+  // the client can render a directions list and fire turn cues as the user
+  // walks. The OSRM "arrive" step at the end of every leg has zero distance
+  // and is informational; we keep it for the final leg only.
+  const allLegs = route.legs ?? [];
+  const steps: Array<{
+    instruction: string;
+    distanceMeters: number;
+    durationSeconds: number;
+    location: [number, number];
+    maneuverType: string;
+  }> = [];
+  for (let li = 0; li < allLegs.length; li++) {
+    const legSteps = allLegs[li].steps ?? [];
+    for (const s of legSteps) {
+      const isArrive = s.maneuver.type === "arrive";
+      // Drop intermediate-leg "arrive" markers (waypoint pass-throughs); only
+      // keep the very final arrival step.
+      if (isArrive && li !== allLegs.length - 1) continue;
+      const [lng, lat] = s.maneuver.location;
+      steps.push({
+        instruction: osrmStepToInstruction(s),
+        distanceMeters: Math.round(s.distance),
+        durationSeconds: Math.round(s.duration),
+        location: [lat, lng],
+        maneuverType: s.maneuver.type ?? "continue",
+      });
+    }
+  }
+
   res.setHeader("X-Routing-Provider", providerUsed ?? "unknown");
   res.json({
     geometry,
     distanceMeters: route.distance,
     durationSeconds: route.duration,
+    steps,
   });
 });
 
@@ -3209,7 +3298,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v16:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v17:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     res.json(cached);

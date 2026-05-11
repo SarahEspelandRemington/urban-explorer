@@ -251,11 +251,28 @@ export interface RouteRequest {
   waypoints?: LatLng[];
 }
 
+export type RouteResponseStepsItem = {
+  /** Short human-readable cue, e.g. 'Left turn onto W 25th St', 'Continue onto 8th Ave', 'Arrive at your destination' */
+  instruction: string;
+  distanceMeters: number;
+  durationSeconds: number;
+  /**
+   * [latitude, longitude] of the maneuver point
+   * @minItems 2
+   * @maxItems 2
+   */
+  location: number[];
+  /** Raw OSRM maneuver type (depart, turn, continue, arrive, roundabout, etc.) for client-side iconography */
+  maneuverType: string;
+};
+
 export interface RouteResponse {
   /** Route polyline as ordered [latitude, longitude] pairs */
   geometry: number[][];
   distanceMeters: number;
   durationSeconds: number;
+  /** Sequential turn-by-turn maneuvers along the route. Each step's location is the [latitude, longitude] of the maneuver point (i.e. where the turn happens). distanceMeters is the distance covered FROM that maneuver point TO the next step (or 0 for the final 'arrive' step). */
+  steps: RouteResponseStepsItem[];
 }
 
 export interface PlacesAlongRouteRequest {

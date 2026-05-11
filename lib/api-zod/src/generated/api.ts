@@ -366,12 +366,40 @@ export const GetRouteBody = zod.object({
     ),
 });
 
+export const getRouteResponseStepsItemLocationMin = 2;
+export const getRouteResponseStepsItemLocationMax = 2;
+
 export const GetRouteResponse = zod.object({
   geometry: zod
     .array(zod.array(zod.number()))
     .describe("Route polyline as ordered [latitude, longitude] pairs"),
   distanceMeters: zod.number(),
   durationSeconds: zod.number(),
+  steps: zod
+    .array(
+      zod.object({
+        instruction: zod
+          .string()
+          .describe(
+            "Short human-readable cue, e.g. 'Left turn onto W 25th St', 'Continue onto 8th Ave', 'Arrive at your destination'",
+          ),
+        distanceMeters: zod.number(),
+        durationSeconds: zod.number(),
+        location: zod
+          .array(zod.number())
+          .min(getRouteResponseStepsItemLocationMin)
+          .max(getRouteResponseStepsItemLocationMax)
+          .describe("[latitude, longitude] of the maneuver point"),
+        maneuverType: zod
+          .string()
+          .describe(
+            "Raw OSRM maneuver type (depart, turn, continue, arrive, roundabout, etc.) for client-side iconography",
+          ),
+      }),
+    )
+    .describe(
+      "Sequential turn-by-turn maneuvers along the route. Each step's location is the [latitude, longitude] of the maneuver point (i.e. where the turn happens). distanceMeters is the distance covered FROM that maneuver point TO the next step (or 0 for the final 'arrive' step).",
+    ),
 });
 
 /**

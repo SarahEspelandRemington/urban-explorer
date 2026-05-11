@@ -16,13 +16,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddressInput } from "@/components/AddressInput";
 import { useT } from "@/contexts/LocaleContext";
-import { useWalkMode, type WalkPlace } from "@/contexts/WalkModeContext";
+import {
+  useWalkMode,
+  type RouteStep,
+  type WalkPlace,
+} from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
+import { API_BASE } from "@/lib/apiBase";
 import { authHeaders } from "@/lib/apiToken";
+import { fetchNarrationPayload } from "@/lib/fetchNarrationPayload";
 import { saveRecentRoute } from "@/lib/recentRoutes";
+import Constants from "expo-constants";
 
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 interface Coords {
   latitude: number;
@@ -71,6 +78,31 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+function maneuverIcon(
+  type: string,
+  modifier?: string,
+): React.ComponentProps<typeof Feather>["name"] {
+  if (type === "depart") return "navigation";
+  if (type === "arrive") return "flag";
+  if (type === "roundabout" || type === "rotary") return "refresh-cw";
+  // Modifier may be embedded in the instruction string; we infer left/right from
+  // the maneuver type itself when available. OSRM puts left/right in modifier.
+  const m = (modifier ?? "").toLowerCase();
+  if (m.includes("left")) return "corner-up-left";
+  if (m.includes("right")) return "corner-up-right";
+  return "arrow-up";
+}
+
+// Best-effort heuristic: the OSRM modifier was rolled into the instruction
+// text by the server, so we sniff the first word for "Left"/"Right" to pick
+// the right icon without changing the API contract.
+function instructionToIconName(
+  step: RouteStep,
+): React.ComponentProps<typeof Feather>["name"] {
+  const first = step.instruction.split(/\s+/)[0]?.toLowerCase() ?? "";
+  return maneuverIcon(step.maneuverType, first);
+}
+
 export default function WalkPlanScreen() {
   const colors = useColors();
   const t = useT();
@@ -99,6 +131,8 @@ export default function WalkPlanScreen() {
     distanceMeters: number;
     durationSeconds: number;
   } | null>(null);
+  const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
+  const routeGeometryRef = useRef<number[][]>([]);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
@@ -143,6 +177,8 @@ export default function WalkPlanScreen() {
     setErrorMsg("");
     setPrefetchedPlaces([]);
     setRouteMeta(null);
+    setRouteSteps([]);
+    routeGeometryRef.current = [];
 
     try {
       const hdrs = await authHeaders();
@@ -202,10 +238,15 @@ export default function WalkPlanScreen() {
 
       const routeData = await routeRes.json();
       const geometry: number[][] = routeData.geometry;
+      routeGeometryRef.current = geometry;
       setRouteMeta({
         distanceMeters: routeData.distanceMeters ?? 0,
         durationSeconds: routeData.durationSeconds ?? 0,
       });
+      const steps: RouteStep[] = Array.isArray(routeData.steps)
+        ? (routeData.steps as RouteStep[])
+        : [];
+      setRouteSteps(steps);
 
       setPhase("fetching");
 
@@ -215,6 +256,40 @@ export default function WalkPlanScreen() {
       const places = await walk.fetchPlacesAlongRoute(geometry, 20, 150);
       setPrefetchedPlaces(places);
       setPhase("ready");
+
+      // --- Fire-and-forget narration prefetch -----------------------------
+      // Warm the server-side LLM (and on native, the audio) caches for the
+      // first handful of places so they play instantly when the user reaches
+      // them, instead of stalling for a 3-5 s OpenAI call mid-walk. We hit at
+      // most 6 places to bound cost — anything farther is unlikely to be
+      // narrated in a single walk anyway. Errors are intentionally swallowed:
+      // a failed prefetch just means the place falls back to on-demand
+      // generation, which is the existing behaviour.
+      const PREFETCH_LIMIT = 6;
+      const toPrefetch = places.slice(0, PREFETCH_LIMIT);
+      void Promise.allSettled(
+        toPrefetch.map((p) =>
+          fetchNarrationPayload(
+            {
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              summary: p.summary,
+              facts: p.facts,
+            },
+            { apiBase: API_BASE, isExpoGo: IS_EXPO_GO },
+          ).then((payload) => {
+            // Discard any audio temp file we may have written here — the walk
+            // session does its own prefetch / file management once started, so
+            // the only purpose of this call was to warm the server cache.
+            if (payload?.kind === "audio") {
+              try {
+                payload.cleanup?.();
+              } catch {}
+            }
+          }),
+        ),
+      );
     } catch {
       setErrorMsg(t.walkPlan.routeError);
       setPhase("error");
@@ -232,7 +307,12 @@ export default function WalkPlanScreen() {
       distanceMeters: routeMeta?.distanceMeters,
       durationSeconds: routeMeta?.durationSeconds,
     });
-    const started = await walk.startWalk(prefetchedPlaces);
+    const started = await walk.startWalk(prefetchedPlaces, {
+      steps: routeSteps,
+      geometry: routeGeometryRef.current,
+      distanceMeters: routeMeta?.distanceMeters,
+      durationSeconds: routeMeta?.durationSeconds,
+    });
     if (started) {
       router.push("/walk-mode");
     }
@@ -559,12 +639,85 @@ export default function WalkPlanScreen() {
               </View>
             )}
 
+            {routeSteps.length > 0 && (
+              <View>
+                <Text
+                  style={[
+                    styles.stopsLabel,
+                    { color: colors.mutedForeground, marginTop: 4 },
+                  ]}
+                >
+                  {t.walkPlan.directionsLabel}
+                </Text>
+                <View
+                  style={[
+                    styles.directionsList,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  {routeSteps.map((step, i) => {
+                    const isLast = i === routeSteps.length - 1;
+                    return (
+                      <View
+                        key={`${step.maneuverType}-${i}`}
+                        style={[
+                          styles.directionRow,
+                          !isLast && {
+                            borderBottomColor: colors.border,
+                            borderBottomWidth: StyleSheet.hairlineWidth,
+                          },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.directionIcon,
+                            { backgroundColor: colors.muted },
+                          ]}
+                        >
+                          <Feather
+                            name={instructionToIconName(step)}
+                            size={14}
+                            color={colors.foreground}
+                          />
+                        </View>
+                        <View style={styles.directionInfo}>
+                          <Text
+                            style={[
+                              styles.directionText,
+                              { color: colors.foreground },
+                            ]}
+                          >
+                            {step.instruction}
+                          </Text>
+                          {step.distanceMeters > 0 && (
+                            <Text
+                              style={[
+                                styles.directionMeta,
+                                { color: colors.mutedForeground },
+                              ]}
+                            >
+                              {formatDistance(step.distanceMeters)}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
             <View style={styles.startButtonRow}>
               <Pressable
                 onPress={() => {
                   setPhase("input");
                   setPrefetchedPlaces([]);
                   setRouteMeta(null);
+                  setRouteSteps([]);
+                  routeGeometryRef.current = [];
                 }}
                 style={({ pressed }) => [
                   styles.secondaryButton,
@@ -798,6 +951,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     lineHeight: 18,
+  },
+  directionsList: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+    marginBottom: 14,
+  },
+  directionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  directionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  directionInfo: {
+    flex: 1,
+  },
+  directionText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: -0.2,
+    lineHeight: 18,
+  },
+  directionMeta: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 2,
   },
   startButtonRow: {
     flexDirection: "row",
