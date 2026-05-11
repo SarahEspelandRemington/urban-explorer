@@ -12,6 +12,9 @@ const ISSUER_URL =
   process.env.EXPO_PUBLIC_ISSUER_URL ?? "https://replit.com/oidc";
 
 function getApiBaseUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
   if (process.env.EXPO_PUBLIC_DOMAIN) {
     return `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
   }
