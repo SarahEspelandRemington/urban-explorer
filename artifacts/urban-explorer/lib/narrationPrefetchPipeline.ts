@@ -446,9 +446,9 @@ export function consumePrefetchedNarration<P extends PrefetchPlaceLike>(
   if (stalePool) {
     const revived = reviveStalePrefetchedEntry(stalePool, requestedPlaceId);
     if (revived) {
-      // The mismatched live entry (if any) is still potentially useful —
-      // park it so a follow-up re-pick can replay it too.
-      if (prefetched) parkStalePrefetchedEntry(stalePool, prefetched);
+      // The mismatched live entry (if any) was already parked above — a second
+      // park would call runAudioCleanup on the just-parked slot and delete its
+      // audio temp file, corrupting the payload for any subsequent replay.
       emit(onEvent, "HIT");
       return { kind: "hit", source: "staleReplay", entry: revived };
     }
