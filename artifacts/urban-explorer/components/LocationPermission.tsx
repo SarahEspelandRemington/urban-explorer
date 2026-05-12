@@ -121,491 +121,527 @@ export function LocationPermission({
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <Animated.View
-        style={styles.content}
-        entering={Platform.OS !== "web" ? FadeInDown.duration(300) : undefined}
-        exiting={Platform.OS !== "web" ? FadeOutUp.duration(300) : undefined}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[
-            styles.iconCircle,
-            { backgroundColor: colors.primary + "18" },
-          ]}
-        >
-          <Feather name="map-pin" size={36} color={colors.primary} />
-        </View>
-        <Animated.Text
-          key={showSearch ? "title-search" : "title-enable"}
-          style={[styles.title, { color: colors.foreground }]}
+        <Animated.View
+          style={styles.content}
           entering={
-            Platform.OS !== "web" ? FadeInDown.duration(200) : undefined
+            Platform.OS !== "web" ? FadeInDown.duration(300) : undefined
           }
-          exiting={Platform.OS !== "web" ? FadeOutUp.duration(160) : undefined}
+          exiting={Platform.OS !== "web" ? FadeOutUp.duration(300) : undefined}
         >
-          {showSearch
-            ? t.locationPermission.titleSearch
-            : t.locationPermission.titleEnable}
-        </Animated.Text>
-        <Animated.Text
-          key={showSearch ? "desc-search" : "desc-enable"}
-          style={[styles.description, { color: colors.mutedForeground }]}
-          entering={
-            Platform.OS !== "web" ? FadeInDown.duration(200) : undefined
-          }
-          exiting={Platform.OS !== "web" ? FadeOutUp.duration(160) : undefined}
-        >
-          {showSearch
-            ? t.locationPermission.descriptionSearch
-            : t.locationPermission.descriptionEnable}
-        </Animated.Text>
-
-        {showSearch ? (
-          <Animated.View
-            key="search-section"
-            style={styles.searchSection}
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: colors.primary + "18" },
+            ]}
+          >
+            <Feather name="map-pin" size={36} color={colors.primary} />
+          </View>
+          <Animated.Text
+            key={showSearch ? "title-search" : "title-enable"}
+            style={[styles.title, { color: colors.foreground }]}
             entering={
-              Platform.OS !== "web" ? FadeInDown.duration(220) : undefined
+              Platform.OS !== "web" ? FadeInDown.duration(200) : undefined
             }
             exiting={
-              Platform.OS !== "web" ? FadeOutUp.duration(180) : undefined
+              Platform.OS !== "web" ? FadeOutUp.duration(160) : undefined
             }
           >
-            <View style={styles.inputWrapper}>
-              <View
-                style={[
-                  styles.inputContainer,
-                  {
-                    backgroundColor: colors.muted,
-                    borderColor: colors.border,
-                    borderBottomLeftRadius: showSuggestions ? 0 : 12,
-                    borderBottomRightRadius: showSuggestions ? 0 : 12,
-                  },
-                ]}
-              >
-                <Feather
-                  name="search"
-                  size={18}
-                  color={colors.mutedForeground}
-                />
-                <TextInput
-                  style={[styles.input, { color: colors.foreground }]}
-                  placeholder={t.locationPermission.placeholder}
-                  placeholderTextColor={colors.mutedForeground}
-                  value={query}
-                  onChangeText={handleQueryChange}
-                  onSubmitEditing={handleSearch}
-                  returnKeyType="search"
-                  autoFocus
-                  editable={!isGeocoding}
-                />
-                {suggestMutation.isPending && (
-                  <ActivityIndicator
-                    size="small"
-                    color={colors.mutedForeground}
-                  />
-                )}
-                {query.length > 0 &&
-                  !isGeocoding &&
-                  !suggestMutation.isPending && (
-                    <Pressable
-                      onPress={() => {
-                        setQuery("");
-                        setSuggestions([]);
-                        setShowSuggestions(false);
-                      }}
-                      hitSlop={8}
-                    >
-                      <Feather
-                        name="x"
-                        size={16}
-                        color={colors.mutedForeground}
-                      />
-                    </Pressable>
-                  )}
-              </View>
+            {showSearch
+              ? t.locationPermission.titleSearch
+              : t.locationPermission.titleEnable}
+          </Animated.Text>
+          <Animated.Text
+            key={showSearch ? "desc-search" : "desc-enable"}
+            style={[styles.description, { color: colors.mutedForeground }]}
+            entering={
+              Platform.OS !== "web" ? FadeInDown.duration(200) : undefined
+            }
+            exiting={
+              Platform.OS !== "web" ? FadeOutUp.duration(160) : undefined
+            }
+          >
+            {showSearch
+              ? t.locationPermission.descriptionSearch
+              : t.locationPermission.descriptionEnable}
+          </Animated.Text>
 
-              {showSuggestions && suggestions.length > 0 && (
-                <ScrollView
-                  style={[
-                    styles.suggestionsContainer,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  keyboardShouldPersistTaps="handled"
-                  nestedScrollEnabled
-                >
-                  {suggestions.map((suggestion, index) => (
-                    <Pressable
-                      key={`${suggestion.name}-${index}`}
-                      onPress={() => handleSelectSuggestion(suggestion)}
-                      style={({ pressed }) => [
-                        styles.suggestionItem,
-                        {
-                          backgroundColor: pressed
-                            ? colors.muted
-                            : "transparent",
-                          borderTopWidth:
-                            index > 0 ? StyleSheet.hairlineWidth : 0,
-                          borderTopColor: colors.border,
-                        },
-                      ]}
-                    >
-                      <Feather
-                        name="map-pin"
-                        size={14}
-                        color={colors.primary}
-                        style={styles.suggestionIcon}
-                      />
-                      <View style={styles.suggestionText}>
-                        <Text
-                          style={[
-                            styles.suggestionName,
-                            { color: colors.foreground },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {suggestion.name}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.suggestionDesc,
-                            { color: colors.mutedForeground },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {suggestion.description}
-                        </Text>
-                      </View>
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-
-            {geocodeError && (
-              <Text style={[styles.errorText, { color: colors.destructive }]}>
-                {geocodeError}
-              </Text>
-            )}
-
-            <Pressable
-              onPress={handleSearch}
-              disabled={!query.trim() || isGeocoding}
-              style={({ pressed }) => [
-                styles.button,
-                {
-                  backgroundColor: colors.primary,
-                  opacity:
-                    !query.trim() || isGeocoding ? 0.5 : pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={
-                isGeocoding ? "Finding location" : "Explore this location"
+          {showSearch ? (
+            <Animated.View
+              key="search-section"
+              style={styles.searchSection}
+              entering={
+                Platform.OS !== "web" ? FadeInDown.duration(220) : undefined
               }
-              accessibilityState={{ disabled: !query.trim() || isGeocoding }}
+              exiting={
+                Platform.OS !== "web" ? FadeOutUp.duration(180) : undefined
+              }
             >
-              {isGeocoding ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primaryForeground}
-                />
-              ) : (
-                <Feather
-                  name="compass"
-                  size={18}
-                  color={colors.primaryForeground}
-                />
-              )}
-              <Text
-                style={[styles.buttonText, { color: colors.primaryForeground }]}
-              >
-                {isGeocoding
-                  ? t.locationPermission.finding
-                  : t.locationPermission.exploreThis}
-              </Text>
-            </Pressable>
-
-            {showBackButton ? (
-              <Pressable
-                onPress={() => {
-                  setSuggestions([]);
-                  setShowSuggestions(false);
-                  onBack?.();
-                }}
-                style={({ pressed }) => [
-                  styles.switchLink,
-                  { opacity: pressed ? 0.6 : 1 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Back to results"
-              >
-                <Feather name="arrow-left" size={14} color={colors.primary} />
-                <Text style={[styles.switchText, { color: colors.primary }]}>
-                  {t.locationPermission.backToResults}
-                </Text>
-              </Pressable>
-            ) : (
-              <Pressable
-                onPress={() => {
-                  setShowSearch(false);
-                  setSuggestions([]);
-                  setShowSuggestions(false);
-                }}
-                style={({ pressed }) => [
-                  styles.switchLink,
-                  { opacity: pressed ? 0.6 : 1 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Use my current location instead"
-              >
-                <Feather name="navigation" size={14} color={colors.primary} />
-                <Text style={[styles.switchText, { color: colors.primary }]}>
-                  {t.locationPermission.useCurrentInstead}
-                </Text>
-              </Pressable>
-            )}
-          </Animated.View>
-        ) : (
-          <Animated.View
-            key="buttons-section"
-            style={styles.buttonsSection}
-            entering={
-              Platform.OS !== "web" ? FadeInDown.duration(220) : undefined
-            }
-            exiting={
-              Platform.OS !== "web" ? FadeOutUp.duration(180) : undefined
-            }
-          >
-            {denied ? (
-              Platform.OS !== "web" ? (
-                <Pressable
-                  onPress={() => {
-                    try {
-                      Linking.openSettings();
-                    } catch {}
-                  }}
-                  style={({ pressed }) => [
-                    styles.button,
+              <View style={styles.inputWrapper}>
+                <View
+                  style={[
+                    styles.inputContainer,
                     {
-                      backgroundColor: colors.primary,
-                      opacity: pressed ? 0.85 : 1,
+                      backgroundColor: colors.muted,
+                      borderColor: colors.border,
+                      borderBottomLeftRadius: showSuggestions ? 0 : 12,
+                      borderBottomRightRadius: showSuggestions ? 0 : 12,
                     },
                   ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open device settings to enable location"
                 >
                   <Feather
-                    name="settings"
+                    name="search"
                     size={18}
-                    color={colors.primaryForeground}
+                    color={colors.mutedForeground}
                   />
-                  <Text
+                  <TextInput
+                    style={[styles.input, { color: colors.foreground }]}
+                    placeholder={t.locationPermission.placeholder}
+                    placeholderTextColor={colors.mutedForeground}
+                    value={query}
+                    onChangeText={handleQueryChange}
+                    onSubmitEditing={handleSearch}
+                    returnKeyType="search"
+                    autoFocus
+                    editable={!isGeocoding}
+                  />
+                  {suggestMutation.isPending && (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.mutedForeground}
+                    />
+                  )}
+                  {query.length > 0 &&
+                    !isGeocoding &&
+                    !suggestMutation.isPending && (
+                      <Pressable
+                        onPress={() => {
+                          setQuery("");
+                          setSuggestions([]);
+                          setShowSuggestions(false);
+                        }}
+                        hitSlop={8}
+                      >
+                        <Feather
+                          name="x"
+                          size={16}
+                          color={colors.mutedForeground}
+                        />
+                      </Pressable>
+                    )}
+                </View>
+
+                {showSuggestions && suggestions.length > 0 && (
+                  <ScrollView
                     style={[
-                      styles.buttonText,
-                      { color: colors.primaryForeground },
+                      styles.suggestionsContainer,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.border,
+                      },
                     ]}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled
                   >
-                    {t.locationPermission.openSettings}
-                  </Text>
-                </Pressable>
-              ) : (
+                    {suggestions.map((suggestion, index) => (
+                      <Pressable
+                        key={`${suggestion.name}-${index}`}
+                        onPress={() => handleSelectSuggestion(suggestion)}
+                        style={({ pressed }) => [
+                          styles.suggestionItem,
+                          {
+                            backgroundColor: pressed
+                              ? colors.muted
+                              : "transparent",
+                            borderTopWidth:
+                              index > 0 ? StyleSheet.hairlineWidth : 0,
+                            borderTopColor: colors.border,
+                          },
+                        ]}
+                      >
+                        <Feather
+                          name="map-pin"
+                          size={14}
+                          color={colors.primary}
+                          style={styles.suggestionIcon}
+                        />
+                        <View style={styles.suggestionText}>
+                          <Text
+                            style={[
+                              styles.suggestionName,
+                              { color: colors.foreground },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {suggestion.name}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.suggestionDesc,
+                              { color: colors.mutedForeground },
+                            ]}
+                            numberOfLines={1}
+                          >
+                            {suggestion.description}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+
+              {geocodeError && (
                 <Text
-                  style={[styles.deniedText, { color: colors.mutedForeground }]}
+                  style={[styles.errorText, { color: colors.destructive }]}
                 >
-                  {t.locationPermission.deniedWeb}
+                  {geocodeError}
                 </Text>
-              )
-            ) : (
+              )}
+
               <Pressable
-                onPress={requestPermission}
+                onPress={handleSearch}
+                disabled={!query.trim() || isGeocoding}
                 style={({ pressed }) => [
                   styles.button,
                   {
                     backgroundColor: colors.primary,
-                    opacity: pressed ? 0.85 : 1,
+                    opacity:
+                      !query.trim() || isGeocoding ? 0.5 : pressed ? 0.85 : 1,
                   },
                 ]}
                 accessibilityRole="button"
-                accessibilityLabel="Allow location access"
-                accessibilityHint="Grants the app permission to use your GPS location"
+                accessibilityLabel={
+                  isGeocoding ? "Finding location" : "Explore this location"
+                }
+                accessibilityState={{ disabled: !query.trim() || isGeocoding }}
               >
-                <Feather
-                  name="navigation"
-                  size={18}
-                  color={colors.primaryForeground}
-                />
+                {isGeocoding ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.primaryForeground}
+                  />
+                ) : (
+                  <Feather
+                    name="compass"
+                    size={18}
+                    color={colors.primaryForeground}
+                  />
+                )}
                 <Text
                   style={[
                     styles.buttonText,
                     { color: colors.primaryForeground },
                   ]}
                 >
-                  {t.locationPermission.allow}
+                  {isGeocoding
+                    ? t.locationPermission.finding
+                    : t.locationPermission.exploreThis}
                 </Text>
               </Pressable>
-            )}
 
-            <View style={styles.dividerRow}>
-              <View
-                style={[styles.dividerLine, { backgroundColor: colors.border }]}
-              />
-              <Text
-                style={[styles.dividerText, { color: colors.mutedForeground }]}
-              >
-                {t.common.or}
-              </Text>
-              <View
-                style={[styles.dividerLine, { backgroundColor: colors.border }]}
-              />
-            </View>
-
-            <Pressable
-              onPress={() => setShowSearch(true)}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                {
-                  borderColor: colors.primary,
-                  backgroundColor: "transparent",
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Search by location"
-              accessibilityHint="Enter a city or address to explore manually"
-            >
-              <Feather name="search" size={18} color={colors.primary} />
-              <Text
-                style={[styles.secondaryButtonText, { color: colors.primary }]}
-              >
-                {t.locationPermission.searchByLocation}
-              </Text>
-            </Pressable>
-
-            {onWalkMode && (
-              <>
-                <View style={styles.dividerRow}>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
-                  <Text
-                    style={[
-                      styles.dividerText,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {t.common.or}
-                  </Text>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
-                </View>
-
+              {showBackButton ? (
                 <Pressable
                   onPress={() => {
-                    unlockWebSpeech();
-                    onWalkMode?.();
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                    onBack?.();
                   }}
                   style={({ pressed }) => [
-                    styles.walkButton,
-                    {
-                      backgroundColor: colors.primary,
-                      opacity: pressed ? 0.85 : 1,
-                    },
+                    styles.switchLink,
+                    { opacity: pressed ? 0.6 : 1 },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Start Walking"
-                  accessibilityHint="Start walking with audio narration of nearby places"
+                  accessibilityLabel="Back to results"
                 >
                   <Feather
-                    name="headphones"
-                    size={18}
-                    color={colors.primaryForeground}
+                    name="arrow-left"
+                    size={14}
+                    color={colors.primary}
                   />
-                  <View style={styles.walkButtonText}>
+                  <Text
+                    style={[styles.switchText, { color: colors.primary }]}
+                  >
+                    {t.locationPermission.backToResults}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() => {
+                    setShowSearch(false);
+                    setSuggestions([]);
+                    setShowSuggestions(false);
+                  }}
+                  style={({ pressed }) => [
+                    styles.switchLink,
+                    { opacity: pressed ? 0.6 : 1 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Use my current location instead"
+                >
+                  <Feather
+                    name="navigation"
+                    size={14}
+                    color={colors.primary}
+                  />
+                  <Text
+                    style={[styles.switchText, { color: colors.primary }]}
+                  >
+                    {t.locationPermission.useCurrentInstead}
+                  </Text>
+                </Pressable>
+              )}
+            </Animated.View>
+          ) : (
+            <Animated.View
+              key="buttons-section"
+              style={styles.buttonsSection}
+              entering={
+                Platform.OS !== "web" ? FadeInDown.duration(220) : undefined
+              }
+              exiting={
+                Platform.OS !== "web" ? FadeOutUp.duration(180) : undefined
+              }
+            >
+              {/* EXPLORE card */}
+              <View
+                style={[
+                  styles.modeCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.modeLabel, { color: colors.mutedForeground }]}
+                >
+                  {t.tabs.explore}
+                </Text>
+                <Text
+                  style={[styles.modeHeadline, { color: colors.foreground }]}
+                >
+                  {t.locationPermission.exploreHeadline}
+                </Text>
+                <Text
+                  style={[
+                    styles.modeBody,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {t.locationPermission.exploreBody}
+                </Text>
+                <View style={styles.modeActions}>
+                  <Pressable
+                    onPress={() => setShowSearch(true)}
+                    style={({ pressed }) => [
+                      styles.cardButton,
+                      {
+                        backgroundColor: colors.primary,
+                        opacity: pressed ? 0.85 : 1,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search by location"
+                    accessibilityHint="Enter a city or address to explore manually"
+                  >
+                    <Feather
+                      name="search"
+                      size={16}
+                      color={colors.primaryForeground}
+                    />
                     <Text
                       style={[
-                        styles.buttonText,
+                        styles.cardButtonText,
                         { color: colors.primaryForeground },
                       ]}
                     >
-                      {t.locationPermission.startWalking}
+                      {t.locationPermission.searchByLocation}
                     </Text>
-                    <Text
-                      style={[
-                        styles.walkSubtext,
-                        { color: colors.primaryForeground + "bb" },
-                      ]}
-                    >
-                      {t.locationPermission.walkSubtext}
-                    </Text>
-                  </View>
-                </Pressable>
-              </>
-            )}
+                  </Pressable>
 
-            {onWalkPlan && (
-              <>
-                <View style={styles.dividerRow}>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
+                  {denied ? (
+                    Platform.OS !== "web" ? (
+                      <Pressable
+                        onPress={() => {
+                          try {
+                            Linking.openSettings();
+                          } catch {}
+                        }}
+                        style={({ pressed }) => [
+                          styles.cardButtonGhost,
+                          {
+                            borderColor: colors.border,
+                            opacity: pressed ? 0.85 : 1,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open device settings to enable location"
+                      >
+                        <Feather
+                          name="settings"
+                          size={16}
+                          color={colors.foreground}
+                        />
+                        <Text
+                          style={[
+                            styles.cardButtonGhostText,
+                            { color: colors.foreground },
+                          ]}
+                        >
+                          {t.locationPermission.openSettings}
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.deniedText,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {t.locationPermission.deniedWeb}
+                      </Text>
+                    )
+                  ) : (
+                    <Pressable
+                      onPress={requestPermission}
+                      style={({ pressed }) => [
+                        styles.cardButtonGhost,
+                        {
+                          borderColor: colors.border,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Allow location access"
+                      accessibilityHint="Grants the app permission to use your GPS location"
+                    >
+                      <Feather
+                        name="navigation"
+                        size={16}
+                        color={colors.foreground}
+                      />
+                      <Text
+                        style={[
+                          styles.cardButtonGhostText,
+                          { color: colors.foreground },
+                        ]}
+                      >
+                        {t.locationPermission.allow}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </View>
+
+              {/* WALK card */}
+              {onWalkMode && (
+                <View
+                  style={[
+                    styles.modeCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
                   <Text
                     style={[
-                      styles.dividerText,
+                      styles.modeLabel,
                       { color: colors.mutedForeground },
                     ]}
                   >
-                    {t.common.or}
+                    {t.tabs.walk}
                   </Text>
-                  <View
-                    style={[
-                      styles.dividerLine,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
-                </View>
-
-                <Pressable
-                  onPress={onWalkPlan}
-                  style={({ pressed }) => [
-                    styles.secondaryButton,
-                    {
-                      borderColor: colors.primary,
-                      backgroundColor: "transparent",
-                      opacity: pressed ? 0.85 : 1,
-                    },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Plan a Walk"
-                  accessibilityHint="Pre-fetch stops along a planned route before walking"
-                >
-                  <Feather name="map" size={18} color={colors.primary} />
                   <Text
                     style={[
-                      styles.secondaryButtonText,
-                      { color: colors.primary },
+                      styles.modeHeadline,
+                      { color: colors.foreground },
                     ]}
                   >
-                    {t.walkPlan.title}
+                    {t.locationPermission.walkHeadline}
                   </Text>
-                </Pressable>
-              </>
-            )}
-          </Animated.View>
-        )}
-      </Animated.View>
+                  <Text
+                    style={[
+                      styles.modeBody,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {t.locationPermission.walkBody}
+                  </Text>
+                  <View style={styles.modeActions}>
+                    <Pressable
+                      onPress={() => {
+                        unlockWebSpeech();
+                        onWalkMode?.();
+                      }}
+                      style={({ pressed }) => [
+                        styles.cardButton,
+                        {
+                          backgroundColor: colors.primary,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Start Walking"
+                      accessibilityHint="Start walking with audio narration of nearby places"
+                    >
+                      <Feather
+                        name="headphones"
+                        size={16}
+                        color={colors.primaryForeground}
+                      />
+                      <Text
+                        style={[
+                          styles.cardButtonText,
+                          { color: colors.primaryForeground },
+                        ]}
+                      >
+                        {t.locationPermission.startWalking}
+                      </Text>
+                    </Pressable>
+
+                    {onWalkPlan && (
+                      <Pressable
+                        onPress={onWalkPlan}
+                        style={({ pressed }) => [
+                          styles.cardButtonGhost,
+                          {
+                            borderColor: colors.border,
+                            opacity: pressed ? 0.85 : 1,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel="Plan a Walk"
+                        accessibilityHint="Pre-fetch stops along a planned route before walking"
+                      >
+                        <Feather
+                          name="map"
+                          size={16}
+                          color={colors.foreground}
+                        />
+                        <Text
+                          style={[
+                            styles.cardButtonGhostText,
+                            { color: colors.foreground },
+                          ]}
+                        >
+                          {t.walkPlan.title}
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              )}
+            </Animated.View>
+          )}
+        </Animated.View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -614,12 +650,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
+  scroll: {
     flex: 1,
-    alignItems: "center",
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 32,
-    gap: 16,
+    paddingVertical: 40,
+  },
+  content: {
+    alignItems: "center",
+    paddingHorizontal: 28,
+    gap: 14,
   },
   iconCircle: {
     width: 72,
@@ -627,7 +669,7 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 4,
   },
   title: {
     fontSize: 22,
@@ -642,9 +684,67 @@ const styles = StyleSheet.create({
   },
   buttonsSection: {
     width: "100%",
-    alignItems: "center",
-    gap: 16,
+    gap: 12,
     marginTop: 8,
+  },
+  modeCard: {
+    width: "100%",
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 16,
+    gap: 4,
+  },
+  modeLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  modeHeadline: {
+    fontSize: 17,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.3,
+    lineHeight: 24,
+  },
+  modeBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 19,
+    marginTop: 2,
+  },
+  modeActions: {
+    gap: 10,
+    marginTop: 16,
+  },
+  cardButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 10,
+    justifyContent: "center",
+  },
+  cardButtonText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  cardButtonGhost: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    justifyContent: "center",
+  },
+  cardButtonGhostText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
   searchSection: {
     width: "100%",
@@ -669,52 +769,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
-  },
-  secondaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    width: "100%",
-    justifyContent: "center",
-  },
-  walkButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: "100%",
-  },
-  walkButtonText: {
-    flex: 1,
-  },
-  walkSubtext: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
-  },
-  secondaryButtonText: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    width: "100%",
-  },
-  dividerLine: {
-    flex: 1,
-    height: StyleSheet.hairlineWidth,
-  },
-  dividerText: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
   },
   inputContainer: {
     flexDirection: "row",
