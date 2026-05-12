@@ -1,4 +1,5 @@
 import "@/lib/coldStart"; // first import → records bundleStart timestamp
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -98,6 +99,10 @@ function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    // Vector-icon fonts must be loaded explicitly in a custom dev client;
+    // they are not auto-registered by @expo/vector-icons at runtime.
+    ...Feather.font,
+    ...MaterialCommunityIcons.font,
   });
 
   useEffect(() => {
