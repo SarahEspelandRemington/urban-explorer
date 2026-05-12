@@ -100,6 +100,7 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const narration = useNarration();
   const fetchTokenRef = useRef(0);
+  const fetchAbortRef = useRef<AbortController | null>(null);
   const pathname = usePathname();
 
   // Start/stop GPS watch based on whether we have a target.
@@ -155,6 +156,12 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
   const fetchAndSpeak = useCallback(
     async (place: HeadingTarget) => {
       const myToken = ++fetchTokenRef.current;
+      // Abort any prior in-flight request before starting a new one.
+      fetchAbortRef.current?.abort();
+      const abortCtrl = new AbortController();
+      fetchAbortRef.current = abortCtrl;
+      const timeoutId = setTimeout(() => abortCtrl.abort(), 20_000);
+
       setAudioPlace(place);
       setIsAudioLoading(true);
       setAudioError(null);
@@ -176,7 +183,9 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
                 ? place.facts[0]
                 : undefined,
           }),
+          signal: abortCtrl.signal,
         });
+        clearTimeout(timeoutId);
         if (myToken !== fetchTokenRef.current) return;
         if (!res.ok) {
           setAudioError("Couldn't load the deep dive. Try again.");
@@ -191,10 +200,12 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
           setAudioError("Couldn't generate the deep dive. Try again.");
         }
       } catch {
+        clearTimeout(timeoutId);
         if (myToken === fetchTokenRef.current) {
           setAudioError("Network problem fetching audio. Try again.");
         }
       } finally {
+        clearTimeout(timeoutId);
         if (myToken === fetchTokenRef.current) setIsAudioLoading(false);
       }
     },
@@ -226,6 +237,8 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
 
   const cancel = useCallback(() => {
     fetchTokenRef.current++;
+    fetchAbortRef.current?.abort();
+    fetchAbortRef.current = null;
     narration.stop();
     setTarget(null);
     setAudioPlace(null);

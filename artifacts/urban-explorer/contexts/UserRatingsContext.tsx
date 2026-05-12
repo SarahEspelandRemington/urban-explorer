@@ -67,6 +67,10 @@ export function UserRatingsProvider({
     // the screen, so blocking the JS bridge with this fetch during the splash
     // window measurably delays time-to-first-paint on cold start.
     let cancelled = false;
+    const abortCtrl = new AbortController();
+    // Snapshot userId at effect-creation time so post-await guards can detect
+    // a user switch that happened while the fetch was in-flight.
+    const requestUserId = userId;
     const handle = InteractionManager.runAfterInteractions(() => {
       if (cancelled) return;
       void loadRatings();
@@ -74,12 +78,14 @@ export function UserRatingsProvider({
 
     return () => {
       cancelled = true;
+      abortCtrl.abort();
       handle.cancel();
     };
 
     async function loadRatings() {
       try {
         const token = await getApiToken();
+        if (cancelled) return;
         if (!token) {
           setIsLoaded(true);
           return;
@@ -87,7 +93,9 @@ export function UserRatingsProvider({
 
         const res = await fetch(`${API_BASE}/api/explore/user-ratings`, {
           headers: { Authorization: `Bearer ${token}` },
+          signal: abortCtrl.signal,
         });
+        if (cancelled) return;
         if (!res.ok) {
           setIsLoaded(true);
           return;
@@ -96,6 +104,8 @@ export function UserRatingsProvider({
         const data = (await res.json()) as {
           ratings: Record<string, RatingValue>;
         };
+        // Guard: user switched while res.json() was running.
+        if (cancelled || requestUserId !== userId) return;
         if (!data.ratings) {
           setIsLoaded(true);
           return;
@@ -108,7 +118,7 @@ export function UserRatingsProvider({
           if (rating === "up" || rating === "down") {
             map.set(placeId, rating);
             storageWrites.push(
-              AsyncStorage.setItem(storageKey(userId, placeId), rating),
+              AsyncStorage.setItem(storageKey(requestUserId, placeId), rating),
             );
           }
         }
