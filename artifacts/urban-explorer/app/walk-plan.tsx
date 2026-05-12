@@ -77,6 +77,21 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km`;
 }
 
+function isValidRouteStep(s: unknown): s is RouteStep {
+  if (!s || typeof s !== "object") return false;
+  const step = s as Record<string, unknown>;
+  return (
+    typeof step.instruction === "string" &&
+    typeof step.maneuverType === "string" &&
+    typeof step.distanceMeters === "number" &&
+    typeof step.durationSeconds === "number" &&
+    Array.isArray(step.location) &&
+    step.location.length === 2 &&
+    typeof (step.location as unknown[])[0] === "number" &&
+    typeof (step.location as unknown[])[1] === "number"
+  );
+}
+
 export default function WalkPlanScreen() {
   const colors = useColors();
   const t = useT();
@@ -180,17 +195,28 @@ export default function WalkPlanScreen() {
         endCoordsRef.current = endCoords;
       }
 
-      const routeRes = await fetch(`${API_BASE}/api/explore/route`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...hdrs },
-        body: JSON.stringify({
-          start: {
-            latitude: startCoords.latitude,
-            longitude: startCoords.longitude,
-          },
-          end: { latitude: endCoords.latitude, longitude: endCoords.longitude },
-        }),
-      });
+      const routeAbort = new AbortController();
+      const routeTimeout = setTimeout(() => routeAbort.abort(), 15_000);
+      let routeRes: Response;
+      try {
+        routeRes = await fetch(`${API_BASE}/api/explore/route`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...hdrs },
+          body: JSON.stringify({
+            start: {
+              latitude: startCoords.latitude,
+              longitude: startCoords.longitude,
+            },
+            end: {
+              latitude: endCoords.latitude,
+              longitude: endCoords.longitude,
+            },
+          }),
+          signal: routeAbort.signal,
+        });
+      } finally {
+        clearTimeout(routeTimeout);
+      }
 
       if (!routeRes.ok) {
         const data: unknown = await routeRes.json().catch(() => ({}));
@@ -218,7 +244,7 @@ export default function WalkPlanScreen() {
         durationSeconds: routeData.durationSeconds ?? 0,
       });
       const steps: RouteStep[] = Array.isArray(routeData.steps)
-        ? (routeData.steps as RouteStep[])
+        ? (routeData.steps as unknown[]).filter(isValidRouteStep)
         : [];
       setRouteSteps(steps);
 
