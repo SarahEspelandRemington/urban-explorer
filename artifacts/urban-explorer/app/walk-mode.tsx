@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WalkModeMap } from "@/components/WalkModeMap";
 import { useT } from "@/contexts/LocaleContext";
 import { useWalkMode, type WalkDensity } from "@/contexts/WalkModeContext";
+import { stepIcon } from "@/lib/maneuverIcon";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import {
@@ -243,25 +244,7 @@ export default function WalkModeScreen() {
             ]}
           >
             <Feather
-              name={
-                walk.nextTurn.step.maneuverType === "arrive"
-                  ? "flag"
-                  : walk.nextTurn.step.instruction
-                        .toLowerCase()
-                        .startsWith("turn left") ||
-                      walk.nextTurn.step.instruction
-                        .toLowerCase()
-                        .startsWith("left")
-                    ? "corner-up-left"
-                    : walk.nextTurn.step.instruction
-                          .toLowerCase()
-                          .startsWith("turn right") ||
-                        walk.nextTurn.step.instruction
-                          .toLowerCase()
-                          .startsWith("right")
-                      ? "corner-up-right"
-                      : "arrow-up"
-              }
+              name={stepIcon(walk.nextTurn.step)}
               size={18}
               color={colors.primary}
             />

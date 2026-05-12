@@ -28,6 +28,7 @@ import { authHeaders } from "@/lib/apiToken";
 import { fetchNarrationPayload } from "@/lib/fetchNarrationPayload";
 import { saveRecentRoute } from "@/lib/recentRoutes";
 import { IS_EXPO_GO } from "@/lib/expoEnv";
+import { stepIcon } from "@/lib/maneuverIcon";
 
 interface Coords {
   latitude: number;
@@ -74,31 +75,6 @@ function formatDuration(secs: number): string {
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
   return `${(meters / 1000).toFixed(1)} km`;
-}
-
-function maneuverIcon(
-  type: string,
-  modifier?: string,
-): React.ComponentProps<typeof Feather>["name"] {
-  if (type === "depart") return "navigation";
-  if (type === "arrive") return "flag";
-  if (type === "roundabout" || type === "rotary") return "refresh-cw";
-  // Modifier may be embedded in the instruction string; we infer left/right from
-  // the maneuver type itself when available. OSRM puts left/right in modifier.
-  const m = (modifier ?? "").toLowerCase();
-  if (m.includes("left")) return "corner-up-left";
-  if (m.includes("right")) return "corner-up-right";
-  return "arrow-up";
-}
-
-// Best-effort heuristic: the OSRM modifier was rolled into the instruction
-// text by the server, so we sniff the first word for "Left"/"Right" to pick
-// the right icon without changing the API contract.
-function instructionToIconName(
-  step: RouteStep,
-): React.ComponentProps<typeof Feather>["name"] {
-  const first = step.instruction.split(/\s+/)[0]?.toLowerCase() ?? "";
-  return maneuverIcon(step.maneuverType, first);
 }
 
 export default function WalkPlanScreen() {
@@ -676,7 +652,7 @@ export default function WalkPlanScreen() {
                           ]}
                         >
                           <Feather
-                            name={instructionToIconName(step)}
+                            name={stepIcon(step)}
                             size={14}
                             color={colors.foreground}
                           />
