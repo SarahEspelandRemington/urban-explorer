@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { API_BASE } from "@/lib/apiBase";
+
 const FALLBACK_LIMIT = 20;
 const FALLBACK_WINDOW_MS = 15 * 60 * 1000;
 const WARNING_FRACTION = 0.25;
 const AUTO_HIDE_MS = 30 * 1000;
-
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 interface RateLimitConfig {
   windowMs: number;

@@ -9,6 +9,7 @@ import React, {
   useState,
 } from "react";
 import { InteractionManager } from "react-native";
+import { API_BASE } from "@/lib/apiBase";
 import { useAuth } from "@/lib/auth";
 import { getApiToken } from "@/lib/apiToken";
 
@@ -29,13 +30,6 @@ const UserRatingsContext = createContext<UserRatingsContextType>({
   setLocalRating: () => {},
   getRating: () => null,
 });
-
-function getApiBaseUrl(): string {
-  if (process.env.EXPO_PUBLIC_DOMAIN) {
-    return `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-  }
-  return "";
-}
 
 export function storageKey(userId: string | null, placeId: string): string {
   return userId
@@ -91,8 +85,7 @@ export function UserRatingsProvider({
           return;
         }
 
-        const apiBase = getApiBaseUrl();
-        const res = await fetch(`${apiBase}/api/explore/user-ratings`, {
+        const res = await fetch(`${API_BASE}/api/explore/user-ratings`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {

@@ -12,9 +12,8 @@ import {
 } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { API_BASE } from "@/lib/apiBase";
 import { authHeaders } from "@/lib/apiToken";
-
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 interface Suggestion {
   name: string;

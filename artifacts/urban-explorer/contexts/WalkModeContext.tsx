@@ -1,4 +1,4 @@
-import Constants from "expo-constants";
+import { IS_EXPO_GO } from "@/lib/expoEnv";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import * as Speech from "expo-speech";
@@ -204,14 +204,10 @@ interface WalkModeContextType {
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
 
 // API_BASE is imported from @/lib/apiBase — single source of truth shared
-// with the rest of the mobile app. Prefers EXPO_PUBLIC_API_URL (the published
+// with the rest of the mobile app. Uses EXPO_PUBLIC_API_URL (the published
 // autoscale deployment) and falls back to the dev workspace domain.
 
-// In Expo Go the native modules are the SDK-bundled versions and may not match
-// the JS package versions installed in this project. Skip the native audio path
-// (expo-file-system write + expo-audio player) to avoid native bridge crashes;
-// the text / expo-speech fallback works fine in Expo Go.
-const IS_EXPO_GO = Constants.appOwnership === "expo";
+// IS_EXPO_GO is imported from @/lib/expoEnv — single definition for the whole app.
 
 // Density tuning
 const DENSITY_CONFIG: Record<

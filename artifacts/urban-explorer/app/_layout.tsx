@@ -7,6 +7,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+import { API_BASE } from "@/lib/apiBase";
 import { getApiToken } from "@/lib/apiToken";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -28,13 +29,7 @@ import { LocaleProvider } from "@/contexts/LocaleContext";
 import { UserRatingsProvider } from "@/contexts/UserRatingsContext";
 import { WalkModeProvider } from "@/contexts/WalkModeContext";
 
-// Prefer EXPO_PUBLIC_API_URL (production) when present, fall back to the dev
-// workspace URL. This lets the phone keep working against the published API
-// even when the dev workspace is asleep.
-setBaseUrl(
-  process.env.EXPO_PUBLIC_API_URL ||
-    `https://${process.env.EXPO_PUBLIC_DOMAIN}`,
-);
+setBaseUrl(API_BASE);
 setAuthTokenGetter(getApiToken);
 
 SplashScreen.preventAutoHideAsync();

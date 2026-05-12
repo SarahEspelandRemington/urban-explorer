@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Constants from "expo-constants";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
@@ -10,9 +9,9 @@ import {
   Text,
   View,
 } from "react-native";
+import Constants from "expo-constants";
+import { IS_EXPO_GO } from "../lib/expoEnv";
 import { captureMessage, hasDsn } from "../lib/sentry";
-
-const IS_EXPO_GO = Constants.appOwnership === "expo";
 
 // Versioned key — bump the suffix if we ever want to force the banner to
 // re-appear (e.g. to surface a new dev-only notice).

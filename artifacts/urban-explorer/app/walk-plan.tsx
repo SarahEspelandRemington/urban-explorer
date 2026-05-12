@@ -27,9 +27,7 @@ import { API_BASE } from "@/lib/apiBase";
 import { authHeaders } from "@/lib/apiToken";
 import { fetchNarrationPayload } from "@/lib/fetchNarrationPayload";
 import { saveRecentRoute } from "@/lib/recentRoutes";
-import Constants from "expo-constants";
-
-const IS_EXPO_GO = Constants.appOwnership === "expo";
+import { IS_EXPO_GO } from "@/lib/expoEnv";
 
 interface Coords {
   latitude: number;

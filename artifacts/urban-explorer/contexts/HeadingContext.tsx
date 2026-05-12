@@ -13,6 +13,7 @@ import React, {
 import { Platform } from "react-native";
 
 import { unlockWebSpeech, useNarration } from "@/hooks/useNarration";
+import { API_BASE } from "@/lib/apiBase";
 import { authHeaders } from "@/lib/apiToken";
 
 export interface HeadingTarget {
@@ -45,8 +46,6 @@ interface HeadingContextType {
 }
 
 const HeadingContext = createContext<HeadingContextType | null>(null);
-
-const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
 function haversineMeters(
   lat1: number,
