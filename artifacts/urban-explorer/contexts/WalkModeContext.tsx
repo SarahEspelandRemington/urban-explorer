@@ -1598,8 +1598,21 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             : Location.Accuracy.BestForNavigation;
 
         try {
-          const loc = await Location.getCurrentPositionAsync({ accuracy });
-          handleLocationUpdate(loc);
+          // Race the first fix against an 8-second wall clock so a slow GPS
+          // fix never blocks the watch subscription from starting. The watch
+          // will deliver the first real location update whenever the hardware
+          // gets a lock; this just keeps startWalk from hanging in the
+          // meantime and is purely a best-effort warm start.
+          const loc = await Promise.race([
+            Location.getCurrentPositionAsync({ accuracy }),
+            new Promise<never>((_, reject) =>
+              setTimeout(
+                () => reject(new Error("GPS first-fix timeout")),
+                8_000,
+              ),
+            ),
+          ]);
+          if (isWalkingRef.current) handleLocationUpdate(loc);
         } catch {}
 
         if (Platform.OS === "web") {
