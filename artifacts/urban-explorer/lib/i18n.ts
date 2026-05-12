@@ -456,7 +456,7 @@ const en: Strings = {
     descriptionSearch:
       "Enter a city, neighborhood, intersection, or address to explore.",
     descriptionEnable:
-      "Urban Explorer needs your location to discover interesting buildings and historical sites near you.",
+      "Urban Explorer uses your location to surface stories and places nearby.",
     placeholder: "e.g. Greenwich Village, NYC",
     finding: "Finding location...",
     exploreThis: "Explore This Location",
@@ -776,7 +776,7 @@ const es: Strings = {
     descriptionSearch:
       "Introduce una ciudad, barrio, intersección o dirección para explorar.",
     descriptionEnable:
-      "Urban Explorer necesita tu ubicación para descubrir edificios y sitios históricos interesantes cerca de ti.",
+      "Urban Explorer usa tu ubicación para mostrarte historias y lugares cercanos.",
     placeholder: "p. ej. Greenwich Village, NYC",
     finding: "Buscando ubicación...",
     exploreThis: "Explorar esta ubicación",
@@ -1101,7 +1101,7 @@ const fr: Strings = {
     descriptionSearch:
       "Entrez une ville, un quartier, un croisement ou une adresse.",
     descriptionEnable:
-      "Urban Explorer a besoin de votre position pour trouver des bâtiments intéressants et des sites historiques près de vous.",
+      "Urban Explorer utilise votre position pour faire remonter des histoires et des lieux à proximité.",
     placeholder: "ex. Greenwich Village, NYC",
     finding: "Recherche du lieu...",
     exploreThis: "Explorer ce lieu",
@@ -1424,7 +1424,7 @@ const de: Strings = {
     descriptionSearch:
       "Gib eine Stadt, ein Viertel, eine Kreuzung oder Adresse ein.",
     descriptionEnable:
-      "Urban Explorer braucht deinen Standort, um interessante Gebäude und historische Orte in deiner Nähe zu finden.",
+      "Urban Explorer nutzt deinen Standort, um Geschichten und Orte in der Nähe anzuzeigen.",
     placeholder: "z. B. Greenwich Village, NYC",
     finding: "Suche Standort...",
     exploreThis: "Diesen Ort erkunden",
@@ -1747,7 +1747,7 @@ const it: Strings = {
     descriptionSearch:
       "Inserisci una città, quartiere, incrocio o indirizzo da esplorare.",
     descriptionEnable:
-      "Urban Explorer ha bisogno della tua posizione per scoprire edifici e siti storici interessanti vicini a te.",
+      "Urban Explorer usa la tua posizione per mostrare storie e luoghi nelle vicinanze.",
     placeholder: "es. Greenwich Village, NYC",
     finding: "Ricerca posizione...",
     exploreThis: "Esplora questo luogo",
@@ -2069,7 +2069,7 @@ const pt: Strings = {
     descriptionSearch:
       "Digite uma cidade, bairro, cruzamento ou endereço para explorar.",
     descriptionEnable:
-      "O Urban Explorer precisa da sua localização para descobrir prédios e locais históricos interessantes perto de você.",
+      "O Urban Explorer usa sua localização para mostrar histórias e lugares próximos.",
     placeholder: "ex. Greenwich Village, NYC",
     finding: "Buscando localização...",
     exploreThis: "Explorar este local",
@@ -2388,7 +2388,7 @@ const nl: Strings = {
     descriptionSearch:
       "Voer een stad, buurt, kruising of adres in om te verkennen.",
     descriptionEnable:
-      "Urban Explorer heeft je locatie nodig om interessante gebouwen en historische plekken in de buurt te vinden.",
+      "Urban Explorer gebruikt je locatie om verhalen en plekken in de buurt te tonen.",
     placeholder: "bijv. Greenwich Village, NYC",
     finding: "Locatie zoeken...",
     exploreThis: "Verken deze locatie",
@@ -2705,7 +2705,7 @@ const ja: Strings = {
     descriptionSearch:
       "都市、地区、交差点、または住所を入力して探索してください。",
     descriptionEnable:
-      "Urban Explorer が周辺の興味深い建物や歴史的な場所を発見するために、位置情報が必要です。",
+      "Urban Explorerはあなたの位置情報を使用して、近くのストーリーや場所を表示します。",
     placeholder: "例：Greenwich Village, NYC",
     finding: "場所を検索中...",
     exploreThis: "この場所を探索",
@@ -3016,7 +3016,7 @@ const ko: Strings = {
     titleEnable: "위치 사용",
     descriptionSearch: "도시, 동네, 교차로 또는 주소를 입력해 탐험하세요.",
     descriptionEnable:
-      "Urban Explorer가 주변의 흥미로운 건물과 역사적 장소를 찾기 위해 위치 정보가 필요합니다.",
+      "Urban Explorer는 위치 정보를 사용해 근처 이야기와 장소를 보여드립니다.",
     placeholder: "예: Greenwich Village, NYC",
     finding: "위치 찾는 중...",
     exploreThis: "이 위치 탐험",
@@ -3320,7 +3320,7 @@ const zh: Strings = {
     titleEnable: "启用定位",
     descriptionSearch: "输入城市、街区、路口或地址来探索。",
     descriptionEnable:
-      "Urban Explorer 需要你的位置来发现附近有趣的建筑和历史遗迹。",
+      "Urban Explorer使用您的位置来呈现附近的故事和地点。",
     placeholder: "如：Greenwich Village, NYC",
     finding: "正在查找位置...",
     exploreThis: "探索此位置",
