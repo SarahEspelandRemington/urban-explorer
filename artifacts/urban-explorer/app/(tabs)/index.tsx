@@ -357,6 +357,10 @@ export default function ExploreScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  // Tracks the GPS accuracy (meters) that was in effect when the last
+  // discovery fired. Used to decide whether an incoming higher-accuracy fix
+  // warrants a re-discovery at the corrected position.
+  const lastDiscoverAccuracyRef = useRef<number | null>(null);
   const [driftMeters, setDriftMeters] = useState(0);
 
   // Continuously watch GPS so the location stays fresh as the user walks.
@@ -420,6 +424,10 @@ export default function ExploreScreen() {
       const requestId = ++discoverRequestRef.current;
       const r = radiusOverride ?? searchRadius;
       lastDiscoverCoordsRef.current = { latitude: lat, longitude: lng };
+      lastDiscoverAccuracyRef.current =
+        typeof accuracy === "number" && Number.isFinite(accuracy)
+          ? accuracy
+          : null;
       lastSetDriftRef.current = 0;
       setDriftMeters(0);
       setExpandedId(null);
@@ -567,20 +575,42 @@ export default function ExploreScreen() {
   );
 
   useEffect(() => {
-    if (
-      location &&
-      !manualCoords &&
-      !discoverMutation.data &&
-      !discoverMutation.isPending
-    ) {
-      discoverAt(
-        location.coords.latitude,
-        location.coords.longitude,
-        location.coords.accuracy,
-      );
+    if (!location || manualCoords || discoverMutation.isPending) return;
+
+    const { latitude, longitude, accuracy } = location.coords;
+
+    if (!discoverMutation.data) {
+      // First discovery — no prior results yet.
+      discoverAt(latitude, longitude, accuracy);
+      return;
     }
-    // Only re-run on `location` change. Adding mutation state would cause an
-    // infinite loop because discoverAt() sets discoverMutation.data itself.
+
+    // Accuracy-upgrade re-discovery: if the initial discovery was triggered
+    // from a stale cached GPS fix (accuracy > 100 m) and we now have a fresh
+    // high-accuracy lock (≤ 50 m) that places the user more than 80 m away
+    // from where we discovered, silently re-run discovery at the correct spot.
+    // This fires at most once per session: after re-discovery, lastDiscoverAccuracy
+    // will be ≤ 50, so the condition can't trigger again.
+    const lastCoords = lastDiscoverCoordsRef.current;
+    const lastAcc = lastDiscoverAccuracyRef.current;
+    if (
+      lastCoords !== null &&
+      typeof lastAcc === "number" &&
+      lastAcc > 100 &&
+      typeof accuracy === "number" &&
+      accuracy <= 50 &&
+      haversineMeters(
+        latitude,
+        longitude,
+        lastCoords.latitude,
+        lastCoords.longitude,
+      ) > 80
+    ) {
+      discoverAt(latitude, longitude, accuracy);
+    }
+
+    // Only re-run when `location` changes. Adding discoverMutation state would
+    // cause an infinite loop since discoverAt() mutates it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
@@ -1493,6 +1523,7 @@ const styles = StyleSheet.create({
   },
 
   emptyContainer: {
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
     paddingTop: 100,
