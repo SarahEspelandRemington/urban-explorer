@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -106,12 +107,64 @@ export default function WalkPlanScreen() {
   const [startText, setStartText] = useState(params.prefillStart ?? "");
   const [endText, setEndText] = useState(params.prefillEnd ?? "");
 
+  const startCoordsRef = useRef<Coords | null>(null);
+  const endCoordsRef = useRef<Coords | null>(null);
+
   useEffect(() => {
     if (params.prefillStart) setStartText(params.prefillStart);
     if (params.prefillEnd) setEndText(params.prefillEnd);
   }, [params.prefillStart, params.prefillEnd]);
-  const startCoordsRef = useRef<Coords | null>(null);
-  const endCoordsRef = useRef<Coords | null>(null);
+
+  // Seed the start field with the user's current location on first open.
+  // Skipped if a prefillStart was passed in via navigation params.
+  // Using params.prefillStart as a dep so the lint rule is satisfied; in
+  // practice this only fires once (on mount) because prefillStart never
+  // changes after navigation.
+  useEffect(() => {
+    if (params.prefillStart) return;
+    let cancelled = false;
+
+    async function seedFromGPS() {
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== "granted" || cancelled) return;
+
+        // Last-known position is instant (no GPS warm-up needed).
+        // Fall back to a fresh fix only if the cache is cold.
+        let pos = await Location.getLastKnownPositionAsync({ maxAge: 300_000 });
+        if (!pos) {
+          pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+        }
+        if (cancelled || !pos) return;
+
+        const { latitude, longitude } = pos.coords;
+        startCoordsRef.current = { latitude, longitude };
+
+        try {
+          const [geo] = await Location.reverseGeocodeAsync({
+            latitude,
+            longitude,
+          });
+          if (cancelled) return;
+          const street = [geo?.streetNumber, geo?.street]
+            .filter(Boolean)
+            .join(" ");
+          setStartText(street || geo?.name || "My location");
+        } catch {
+          if (!cancelled) setStartText("My location");
+        }
+      } catch {
+        // Permission not yet granted or location unavailable — leave field empty.
+      }
+    }
+
+    void seedFromGPS();
+    return () => {
+      cancelled = true;
+    };
+  }, [params.prefillStart]);
 
   const [phase, setPhase] = useState<Phase>("input");
   const [errorMsg, setErrorMsg] = useState("");
