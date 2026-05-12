@@ -268,10 +268,11 @@ const DENSITY_CONFIG: Record<
     refetchMeters: 60,
     cooldownMs: 25 * 1000,
     netScoreFloor: -2,
-    // Reduced from 220 m: in dense urban grids a 180 m cap keeps narration
-    // focused on the current block and the next, preventing the app from
-    // jumping to places several blocks away when closer ones exist.
-    maxQueueDistance: 180,
+    // Reduced from 180 m: in dense urban grids (e.g. Manhattan short blocks
+    // ~80 m) a 120 m cap keeps narration tightly focused on the current block,
+    // preventing cross-street jumps and far-avenue places from being picked
+    // ahead of buildings the user is actually standing in front of.
+    maxQueueDistance: 120,
     discoverRadius: 250,
     memoryRadius: 1000,
     minMetersBetweenPicks: 40,
@@ -357,16 +358,12 @@ const HEADING_BUFFER_SIZE = 5;
 // Maximum angular change between consecutive velocity-derived bearings that is
 // accepted into the buffer. Larger jumps are treated as GPS noise and ignored.
 const VELOCITY_HEADING_CONSISTENCY_DEG = 60;
-// Places arriving from the discover API that are more than this many degrees
-// off the user's current heading are deferred — they won't enter the queue
-// until a later fetch when the user has turned toward them.
-const DISCOVERY_HEADING_FILTER_DEG = 100;
 
 // Metres to project the discover-fetch centre ahead of the user's current
-// position in their direction of travel. This front-loads the Overpass result
-// set with places the user is approaching, so candidates are in the queue
-// well before the user reaches them.
-const LOOK_AHEAD_METERS = 150;
+// position in their direction of travel. Kept modest (60 m) so that compass
+// errors — common in dense steel-frame urban canyons — don't push the search
+// centre an entire block in the wrong direction.
+const LOOK_AHEAD_METERS = 60;
 
 // Compute a lat/lng that is `meters` ahead of (lat, lon) along `headingDeg`.
 function projectAhead(
@@ -765,39 +762,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // eviction the queue grows unbounded over a long walk, slowing
             // pickNext and piling stale markers across the whole neighborhood.
             const allIncoming = data.places as WalkPlace[];
-            // Forward filter: only accept newly discovered places that are
-            // within DISCOVERY_HEADING_FILTER_DEG (±100°) of the user's
-            // current heading. Places behind or far to the side are skipped on
-            // this fetch — they'll be picked up naturally once the user turns
-            // toward them. Existing queue entries are not retroactively evicted.
-            // When heading is unknown the filter is skipped entirely.
-            const currentHeading =
-              deviceHeadingRef.current ?? velocityHeadingRef.current;
-            const incoming =
-              currentHeading !== null
-                ? allIncoming.filter((p) => {
-                    const bearing = bearingDeg(
-                      latitude,
-                      longitude,
-                      p.latitude,
-                      p.longitude,
-                    );
-                    return (
-                      angularDiff(currentHeading, bearing) <=
-                      DISCOVERY_HEADING_FILTER_DEG
-                    );
-                  })
-                : allIncoming;
-            if (__DEV__ && currentHeading !== null) {
-              const filtered = allIncoming.length - incoming.length;
-              if (filtered > 0) {
-                addWalkBreadcrumb("discovery_heading_filter", {
-                  accepted: incoming.length,
-                  filtered,
-                  heading: Math.round(currentHeading),
-                });
-              }
-            }
+            // No pre-filter by heading here. In dense urban canyons (e.g.
+            // Midtown Manhattan) steel-frame buildings heavily distort the
+            // magnetometer, causing heading errors of 90–180°. A hard angular
+            // filter would silently drop places the user is about to walk into
+            // and leave the queue empty. pickNext() handles direction
+            // preference through forwardBiasMeters / offAxisPenaltyMeters
+            // scoring, so all discovered places can safely enter the pool and
+            // the scoring determines which one to narrate.
+            const incoming = allIncoming;
             const map = new Map<string, WalkPlace>();
             for (const p of placesRef.current) map.set(p.id, p);
             for (const p of incoming) map.set(p.id, p);
@@ -1530,6 +1503,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         deviceHeadingRef.current = null;
         velocityHeadingRef.current = null;
         cachedAddressHintRef.current = "";
+        // Critical: reset fetchingRef so the first discover call after a
+        // walk-restart isn't silently dropped. If stopWalk was called while a
+        // 15-second discover fetch was still in-flight, fetchingRef stays true
+        // until that fetch's finally block runs — which could be up to 15 s
+        // later. Any fetchNearbyPlaces call in the new walk would hit the
+        // early-return guard and bail, leaving placesRef empty and pickNext
+        // returning null for the entire first-fetch window.
+        fetchingRef.current = false;
         lastNarrationEndLocationRef.current = null;
         paceSamplesRef.current = [];
         slowSinceRef.current = null;
