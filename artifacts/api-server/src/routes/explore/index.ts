@@ -2413,7 +2413,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact, address } = parsed.data;
 
-  const narrationCacheKey = `narration:v9:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v10:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2450,7 +2450,7 @@ How to write for speech:
 - Target 2 to 3 sentences. Roughly 30 to 45 words total. Short is better.
 - Write in fragments and incomplete thoughts the way people actually speak. "Built in the eighteen eighties. Went through three different owners before the city took it over." That rhythm is good.
 - Use contractions always: it's, don't, they'd, you'll, wasn't, couldn't.
-- Spell out every number, year, and decade as words: "eighteen eighty-two" not "1882", "around nineteen twenty" not "circa 1920", "three stories tall" not "3-story", "the nineteen seventies" or "the seventies" not "the 70s" or "the 1970s".
+- Spell out every number, year, decade, ordinal, and acronym as words: "eighteen eighty-two" not "1882", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
 - If an address is provided, open with it as a natural spoken phrase — one brief clause before the story. For example: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-seventh —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE".
@@ -2607,7 +2607,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v9:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v10:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -2661,7 +2661,7 @@ How to write for speech:
 - Target 2 to 3 sentences. Roughly 30 to 45 words total. Short is better.
 - Write in fragments and incomplete thoughts the way people actually speak. "Built in the eighteen eighties. Went through three different owners before the city took it over." That rhythm is good.
 - Use contractions always: it's, don't, they'd, you'll, wasn't, couldn't.
-- Spell out every number, year, and decade as words: "eighteen eighty-two" not "1882", "around nineteen twenty" not "circa 1920", "three stories tall" not "3-story", "the nineteen seventies" or "the seventies" not "the 70s" or "the 1970s".
+- Spell out every number, year, decade, ordinal, and acronym as words: "eighteen eighty-two" not "1882", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
 - If an address is provided, open with it as a natural spoken phrase — one brief clause before the story. For example: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-seventh —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE".
@@ -2785,7 +2785,7 @@ router.post("/explore/deep-narration", async (req, res) => {
   const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
-  const deepCacheKey = `deep-narration:v9:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const deepCacheKey = `deep-narration:v10:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
@@ -2808,7 +2808,7 @@ How to write for speech:
 - Target 150 to 220 words. That's roughly sixty to ninety seconds spoken aloud.
 - Speak in a natural, conversational flow. Mix short sentences and longer ones. Use fragments when they sound right. "Built around eighteen ninety. Nobody's quite sure who commissioned it." That kind of rhythm.
 - Use contractions throughout: it's, wasn't, they'd, you'll, couldn't, hadn't. Never use the formal version when the contraction is available.
-- Spell out every year, number, and decade as words: "eighteen ninety-two" not "1892", "around nineteen twenty" not "circa 1920", "four stories" not "4-story", "the nineteen seventies" or "the seventies" not "the 70s" or "the 1970s". TTS engines mispronounce digits badly.
+- Spell out every number, year, decade, ordinal, and acronym as words: "eighteen ninety-two" not "1892", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "four stories" not "4-story". TTS engines mispronounce digits, ordinal suffixes, Roman numerals, and initialisms badly.
 - No abbreviations, acronyms, symbols, bullet points, headings, quotes, parentheses, or asterisks of any kind.
 - Use commas where you'd naturally pause for breath. Periods where you'd fully stop. No ellipses or dashes as structure.
 - If an address is provided, begin with a single natural spoken phrase naming the location — for example, "That's four twenty-three West Forty-eighth Street —" or "Right here at the corner of Fifth and Fifty-third —". Spell all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave". Then follow immediately with your hook.
