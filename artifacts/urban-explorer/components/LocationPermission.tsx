@@ -428,14 +428,6 @@ export function LocationPermission({
                 >
                   {t.locationPermission.exploreHeadline}
                 </Text>
-                <Text
-                  style={[
-                    styles.modeBody,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  {t.locationPermission.exploreBody}
-                </Text>
                 <View style={styles.modeActions}>
                   <Pressable
                     onPress={() => setShowSearch(true)}
@@ -566,14 +558,6 @@ export function LocationPermission({
                   >
                     {t.locationPermission.walkHeadline}
                   </Text>
-                  <Text
-                    style={[
-                      styles.modeBody,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {t.locationPermission.walkBody}
-                  </Text>
                   <View style={styles.modeActions}>
                     <Pressable
                       onPress={() => {
@@ -690,11 +674,11 @@ const styles = StyleSheet.create({
   modeCard: {
     width: "100%",
     borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    paddingTop: 18,
-    paddingBottom: 16,
-    gap: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 20,
+    gap: 6,
   },
   modeLabel: {
     fontSize: 11,
@@ -717,7 +701,7 @@ const styles = StyleSheet.create({
   },
   modeActions: {
     gap: 10,
-    marginTop: 16,
+    marginTop: 14,
   },
   cardButton: {
     flexDirection: "row",
