@@ -177,6 +177,10 @@ export interface Strings {
     searchByLocation: string;
     startWalking: string;
     walkSubtext: string;
+    exploreHeadline: string;
+    exploreBody: string;
+    walkHeadline: string;
+    walkBody: string;
   };
   languageModal: {
     title: string;
@@ -465,6 +469,11 @@ const en: Strings = {
     searchByLocation: "Search by Location",
     startWalking: "Start Walking",
     walkSubtext: "Skip ahead — explore on foot with audio",
+    exploreHeadline: "Browse the hidden layers of a place.",
+    exploreBody:
+      "Search neighborhoods, explore nearby stories, and follow your curiosity.",
+    walkHeadline: "Put your phone away and wander.",
+    walkBody: "Listen as the app quietly reveals stories around you.",
   },
   languageModal: {
     title: "App language",
@@ -780,6 +789,11 @@ const es: Strings = {
     searchByLocation: "Buscar por ubicación",
     startWalking: "Empezar a caminar",
     walkSubtext: "Sáltate este paso — explora a pie con audio",
+    exploreHeadline: "Explora las capas ocultas de un lugar.",
+    exploreBody:
+      "Busca barrios, explora historias cercanas y sigue tu curiosidad.",
+    walkHeadline: "Guarda el móvil y déjate llevar.",
+    walkBody: "Escucha cómo la app revela historias a tu alrededor.",
   },
   languageModal: {
     title: "Idioma de la app",
@@ -1100,6 +1114,12 @@ const fr: Strings = {
     searchByLocation: "Rechercher un lieu",
     startWalking: "Commencer la marche",
     walkSubtext: "Passez l'étape — explorez à pied avec l'audio",
+    exploreHeadline: "Explorez les couches cachées d'un lieu.",
+    exploreBody:
+      "Cherchez des quartiers, explorez des histoires à proximité et suivez votre curiosité.",
+    walkHeadline: "Rangez votre téléphone et partez à la découverte.",
+    walkBody:
+      "Écoutez l'application révéler discrètement les histoires autour de vous.",
   },
   languageModal: {
     title: "Langue de l'application",
@@ -1417,6 +1437,11 @@ const de: Strings = {
     searchByLocation: "Nach Ort suchen",
     startWalking: "Spaziergang starten",
     walkSubtext: "Überspringen — zu Fuß mit Audio entdecken",
+    exploreHeadline: "Entdecke die verborgenen Schichten eines Ortes.",
+    exploreBody:
+      "Erkunde Stadtteile, entdecke Geschichten in der Nähe und folge deiner Neugier.",
+    walkHeadline: "Steck dein Handy weg und stroll los.",
+    walkBody: "Lass dir die App die Geschichten um dich herum erzählen.",
   },
   languageModal: {
     title: "App-Sprache",
@@ -1735,6 +1760,11 @@ const it: Strings = {
     searchByLocation: "Cerca per luogo",
     startWalking: "Inizia a camminare",
     walkSubtext: "Salta — esplora a piedi con l'audio",
+    exploreHeadline: "Scopri i livelli nascosti di un luogo.",
+    exploreBody:
+      "Cerca quartieri, esplora storie vicine e segui la tua curiosità.",
+    walkHeadline: "Metti via il telefono e passeggia.",
+    walkBody: "Ascolta come l'app rivela storie intorno a te.",
   },
   languageModal: {
     title: "Lingua dell'app",
@@ -2052,6 +2082,11 @@ const pt: Strings = {
     searchByLocation: "Buscar por local",
     startWalking: "Começar a caminhar",
     walkSubtext: "Pule — explore a pé com áudio",
+    exploreHeadline: "Explore as camadas ocultas de um lugar.",
+    exploreBody:
+      "Pesquise bairros, explore histórias próximas e siga a sua curiosidade.",
+    walkHeadline: "Guarde o telefone e vagueie.",
+    walkBody: "Ouça a app revelar histórias ao seu redor.",
   },
   languageModal: {
     title: "Idioma do app",
@@ -2366,6 +2401,11 @@ const nl: Strings = {
     searchByLocation: "Zoek op locatie",
     startWalking: "Begin met lopen",
     walkSubtext: "Sla over — verken te voet met audio",
+    exploreHeadline: "Ontdek de verborgen lagen van een plek.",
+    exploreBody:
+      "Zoek buurten, verken verhalen in de buurt en volg je nieuwsgierigheid.",
+    walkHeadline: "Stop je telefoon weg en dwaal.",
+    walkBody: "Luister hoe de app stilletjes verhalen om je heen onthult.",
   },
   languageModal: {
     title: "Taal van de app",
@@ -2678,6 +2718,11 @@ const ja: Strings = {
     searchByLocation: "場所で検索",
     startWalking: "歩きはじめる",
     walkSubtext: "スキップ — オーディオで歩いて探索",
+    exploreHeadline: "場所の隠れた層を探索しよう。",
+    exploreBody:
+      "近隣を検索し、近くのストーリーを探索して、好奇心の赴くままに。",
+    walkHeadline: "スマートフォンをしまって、ぶらりと歩こう。",
+    walkBody: "アプリがあなたの周りのストーリーをそっと教えてくれます。",
   },
   languageModal: {
     title: "アプリの言語",
@@ -2984,6 +3029,11 @@ const ko: Strings = {
     searchByLocation: "위치로 검색",
     startWalking: "걷기 시작",
     walkSubtext: "건너뛰기 — 오디오와 함께 걸으며 탐험",
+    exploreHeadline: "장소의 숨겨진 층을 탐험하세요.",
+    exploreBody:
+      "동네를 검색하고, 주변 이야기를 탐험하며, 호기심을 따라가세요.",
+    walkHeadline: "전화기를 내려놓고 돌아다니세요.",
+    walkBody: "앱이 주변 이야기를 조용히 들려드립니다.",
   },
   languageModal: {
     title: "앱 언어",
@@ -3282,6 +3332,10 @@ const zh: Strings = {
     searchByLocation: "按位置搜索",
     startWalking: "开始步行",
     walkSubtext: "跳过 — 步行配语音探索",
+    exploreHeadline: "探索一个地方的隐藏层。",
+    exploreBody: "搜索街区，探索附近的故事，追随你的好奇心。",
+    walkHeadline: "放下手机，随意漫步。",
+    walkBody: "聆听应用悄悄揭示你周围的故事。",
   },
   languageModal: {
     title: "应用语言",
