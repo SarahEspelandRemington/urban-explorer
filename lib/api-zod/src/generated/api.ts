@@ -331,6 +331,12 @@ export const GetWalkNarrationBody = zod.object({
   category: zod.string().optional(),
   summary: zod.string(),
   fact: zod.string().optional(),
+  address: zod
+    .string()
+    .optional()
+    .describe(
+      'Street address or cross-street reference for the place (e.g. \"21 W 51st St\" or \"W 51st St & 8th Ave\"). When present the narration will open with a brief spoken location identifier before the story.\n',
+    ),
 });
 
 export const GetWalkNarrationResponse = zod.object({

@@ -233,8 +233,8 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v2"], // walk narration (short + deep)
-  ["deep-narration", "v2"], // deep walk narration
+  ["narration", "v3"], // walk narration (short + deep)
+  ["deep-narration", "v3"], // deep walk narration
   ["places-route", "v18"], // places along route
 ];
 
@@ -2411,9 +2411,9 @@ router.post("/explore/walk-narration", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact } = parsed.data;
+  const { placeName, category, summary, fact, address } = parsed.data;
 
-  const narrationCacheKey = `narration:v3:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v8:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2453,13 +2453,14 @@ How to write for speech:
 - Spell out every number and year as words: "eighteen eighty-two" not "1882", "around nineteen twenty" not "circa 1920", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
-- Vary how you open. Some options: lead with the place itself, lead with a surprising fact, lead with a person who was connected to it, lead with what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
+- If an address is provided, open with it as a natural spoken phrase — one brief clause before the story. For example: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-seventh —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE".
+- When no address is provided, vary how you open. Lead with the place itself, a surprising fact, a person connected to it, or what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
 - End with something specific — a detail to notice, a question to sit with, a contrast between then and now. Not a generic "isn't that fascinating."
 - If you're not certain of a detail, say "supposedly" or "the story goes" rather than stating it as fact.`,
         },
         {
           role: "user",
-          content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+          content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
         },
       ],
     })
@@ -2577,7 +2578,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact } = parsed.data;
+  const { placeName, category, summary, fact, address } = parsed.data;
 
   // Abort controller wired to the response close event so that any in-flight
   // audio conversion (e.g. ffmpeg via ensureCompatibleFormat) is cancelled
@@ -2606,7 +2607,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v3:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v8:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -2663,13 +2664,14 @@ How to write for speech:
 - Spell out every number and year as words: "eighteen eighty-two" not "1882", "around nineteen twenty" not "circa 1920", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
-- Vary how you open. Some options: lead with the place itself, lead with a surprising fact, lead with a person who was connected to it, lead with what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
+- If an address is provided, open with it as a natural spoken phrase — one brief clause before the story. For example: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-seventh —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE".
+- When no address is provided, vary how you open. Lead with the place itself, a surprising fact, a person connected to it, or what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
 - End with something specific — a detail to notice, a question to sit with, a contrast between then and now. Not a generic "isn't that fascinating."
 - If you're not certain of a detail, say "supposedly" or "the story goes" rather than stating it as fact.`,
               },
               {
                 role: "user",
-                content: `I'm walking past "${placeName}" (${category || "place"}). Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+                content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
               },
             ],
           },
@@ -2770,7 +2772,7 @@ router.post("/explore/deep-narration", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact } = parsed.data;
+  const { placeName, category, summary, fact, address } = parsed.data;
   const yearBuilt =
     typeof (req.body as any)?.yearBuilt === "string"
       ? (req.body as any).yearBuilt
@@ -2783,7 +2785,7 @@ router.post("/explore/deep-narration", async (req, res) => {
   const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
-  const deepCacheKey = `deep-narration:v2:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const deepCacheKey = `deep-narration:v8:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
@@ -2809,6 +2811,7 @@ How to write for speech:
 - Spell out every year and number as words: "eighteen ninety-two" not "1892", "around nineteen twenty" not "circa 1920", "four stories" not "4-story". TTS engines mispronounce digits badly.
 - No abbreviations, acronyms, symbols, bullet points, headings, quotes, parentheses, or asterisks of any kind.
 - Use commas where you'd naturally pause for breath. Periods where you'd fully stop. No ellipses or dashes as structure.
+- If an address is provided, begin with a single natural spoken phrase naming the location — for example, "That's four twenty-three West Forty-eighth Street —" or "Right here at the corner of Fifth and Fifty-third —". Spell all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave". Then follow immediately with your hook.
 - Open with a hook: a vivid sensory detail, an unexpected fact, a specific person, or a question. Don't start with the place's name and date — that's the least interesting thing about it.
 - Weave in: when and why it was built, who used it, one or two specific human moments connected to it, what makes it distinctive, and how it sits in the neighborhood now.
 - If a detail is uncertain, say so naturally: "the story goes," "supposedly," "nobody's quite sure, but."
@@ -2816,7 +2819,7 @@ How to write for speech:
           },
           {
             role: "user",
-            content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}.\n\nWhat we already know: ${summary}${fact ? `\nAlso noted: ${fact}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
+            content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}${address ? `\nAddress: ${address}` : ""}.\n\nWhat we already know: ${summary}${fact ? `\nAlso noted: ${fact}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
           },
         ],
       },
