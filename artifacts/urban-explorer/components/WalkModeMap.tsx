@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Easing,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -128,6 +129,43 @@ export function WalkModeMap({
   const [region, setRegion] = useState<Region>(initialRegion);
   const [previewCluster, setPreviewCluster] = useState<Cluster | null>(null);
 
+  // Track whether the map camera is following the user.
+  // Panning the map or zooming into a cluster disengages follow; the
+  // re-center button re-engages it.
+  const [isFollowing, setIsFollowing] = useState(followUser);
+  // Stable ref to the current region so the coordinate-tracking effect can
+  // read latitudeDelta/longitudeDelta without adding region to its dep array
+  // (which would cause the effect to re-run on every map camera move).
+  const regionRef = useRef(region);
+  useEffect(() => {
+    regionRef.current = region;
+  }, [region]);
+  // Ref to detect meaningful movement (>3 m) before calling animateToRegion,
+  // avoiding jitter from sub-metre GPS noise.
+  const prevUserPosRef = useRef({ lat: userLatitude, lng: userLongitude });
+
+  // Drive the map camera from live coordinates. On iOS this supplements
+  // followsUserLocation (which stops when the user pans). On Android it IS the
+  // only follow mechanism — followsUserLocation is iOS-only.
+  useEffect(() => {
+    if (!isFollowing) return;
+    const prev = prevUserPosRef.current;
+    const dLat = Math.abs(userLatitude - prev.lat);
+    const dLng = Math.abs(userLongitude - prev.lng);
+    // ~3 m in degrees (1° ≈ 111 km → 3 m ≈ 0.000027°). Skip tiny GPS jitter.
+    if (dLat < 0.000027 && dLng < 0.000027) return;
+    prevUserPosRef.current = { lat: userLatitude, lng: userLongitude };
+    mapRef.current?.animateToRegion(
+      {
+        latitude: userLatitude,
+        longitude: userLongitude,
+        latitudeDelta: regionRef.current.latitudeDelta,
+        longitudeDelta: regionRef.current.longitudeDelta,
+      },
+      500,
+    );
+  }, [userLatitude, userLongitude, isFollowing]);
+
   const clusters = useMemo(
     () => clusterPlaces(places, region),
     [places, region],
@@ -238,6 +276,9 @@ export function WalkModeMap({
 
   const handleClusterPress = (cluster: Cluster) => {
     if (cluster.places.length <= 1) return;
+    // User is intentionally inspecting a cluster; disengage follow so the
+    // camera doesn't snap back to their position immediately.
+    setIsFollowing(false);
     let minLat = cluster.places[0].latitude;
     let maxLat = cluster.places[0].latitude;
     let minLng = cluster.places[0].longitude;
@@ -264,6 +305,7 @@ export function WalkModeMap({
   };
 
   const focusPlace = (place: WalkPlace) => {
+    setIsFollowing(false);
     setPreviewCluster(null);
     mapRef.current?.animateToRegion(
       {
@@ -286,7 +328,8 @@ export function WalkModeMap({
         onRegionChangeComplete={setRegion}
         showsUserLocation
         showsMyLocationButton={false}
-        followsUserLocation={followUser}
+        followsUserLocation={Platform.OS === "ios" && followUser && isFollowing}
+        onPanDrag={() => setIsFollowing(false)}
       >
         <Circle
           center={{ latitude: userLatitude, longitude: userLongitude }}
@@ -447,6 +490,33 @@ export function WalkModeMap({
         })}
       </MapView>
 
+      {!isFollowing && (
+        <Pressable
+          style={[
+            styles.reCenterBtn,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+          onPress={() => {
+            setIsFollowing(true);
+            prevUserPosRef.current = { lat: userLatitude, lng: userLongitude };
+            mapRef.current?.animateToRegion(
+              {
+                latitude: userLatitude,
+                longitude: userLongitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              },
+              400,
+            );
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Re-center map on your location"
+          hitSlop={8}
+        >
+          <Feather name="crosshair" size={18} color={colors.primary} />
+        </Pressable>
+      )}
+
       {previewCluster ? (
         <>
           <Pressable
@@ -586,6 +656,21 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
+  },
+  reCenterBtn: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
   },
   previewCard: {
     position: "absolute",
