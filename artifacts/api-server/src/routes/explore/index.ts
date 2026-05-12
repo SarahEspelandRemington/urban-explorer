@@ -235,7 +235,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["timeline", "v2"], // place timeline
   ["narration", "v2"], // walk narration (short + deep)
   ["deep-narration", "v2"], // deep walk narration
-  ["places-route", "v4"], // places along route
+  ["places-route", "v18"], // places along route
 ];
 
 function getLLMCache<T>(key: string): T | null {
@@ -3298,7 +3298,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v17:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v18:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     res.json(cached);

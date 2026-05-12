@@ -4,22 +4,13 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 
 import { AUTH_TOKEN_STORAGE_KEY } from "./authConstants";
+import { getApiBase } from "./apiBase";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const AUTH_TOKEN_KEY = AUTH_TOKEN_STORAGE_KEY;
 const ISSUER_URL =
   process.env.EXPO_PUBLIC_ISSUER_URL ?? "https://replit.com/oidc";
-
-function getApiBaseUrl(): string {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-  if (process.env.EXPO_PUBLIC_DOMAIN) {
-    return `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
-  }
-  return "";
-}
 
 function getClientId(): string {
   return process.env.EXPO_PUBLIC_REPL_ID || "";
@@ -70,7 +61,7 @@ export function useLoginFlow(
     setIsExchangingToken(true);
     (async () => {
       try {
-        const apiBase = getApiBaseUrl();
+        const apiBase = getApiBase();
         if (!apiBase) {
           console.error("API base URL is not configured.");
           return;
