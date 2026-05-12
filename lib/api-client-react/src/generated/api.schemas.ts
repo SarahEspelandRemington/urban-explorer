@@ -229,6 +229,9 @@ export interface WalkNarrationRequest {
   category?: string;
   summary: string;
   fact?: string;
+  /** Street address or cross-street reference for the place (e.g. "21 W 51st St" or "W 51st St & 8th Ave"). When present the narration will open with a brief spoken location identifier before the story.
+   */
+  address?: string;
 }
 
 export interface WalkNarrationResponse {

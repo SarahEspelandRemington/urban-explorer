@@ -30,6 +30,7 @@ export interface NarrationPlace {
   category: string;
   summary: string;
   facts: string[];
+  address?: string;
 }
 
 export async function fetchNarrationPayload(
@@ -46,6 +47,7 @@ export async function fetchNarrationPayload(
     category: place.category,
     summary: place.summary,
     fact: place.facts[0],
+    ...(place.address ? { address: place.address } : {}),
   });
   const headers = {
     "Content-Type": "application/json",
