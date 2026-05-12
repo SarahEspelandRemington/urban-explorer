@@ -9,6 +9,7 @@ import React, {
 import { InteractionManager } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
+import { API_BASE } from "./apiBase";
 import { markStartupPhase } from "./coldStart";
 import { AUTH_TOKEN_STORAGE_KEY } from "./authConstants";
 
@@ -36,10 +37,6 @@ const AuthContext = createContext<AuthContextValue>({
   logout: async () => {},
 });
 
-function getApiBaseUrl(): string {
-  return process.env.EXPO_PUBLIC_API_URL ?? "";
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,8 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         return;
       }
-      const apiBase = getApiBaseUrl();
-      const res = await fetch(`${apiBase}/api/auth/user`, {
+      const res = await fetch(`${API_BASE}/api/auth/user`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -88,8 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = await SecureStore.getItemAsync(AUTH_TOKEN_STORAGE_KEY);
       if (token) {
-        const apiBase = getApiBaseUrl();
-        await fetch(`${apiBase}/api/mobile-auth/logout`, {
+        await fetch(`${API_BASE}/api/mobile-auth/logout`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         });

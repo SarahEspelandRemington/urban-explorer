@@ -204,8 +204,8 @@ interface WalkModeContextType {
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
 
 // API_BASE is imported from @/lib/apiBase — single source of truth shared
-// with the rest of the mobile app. Uses EXPO_PUBLIC_API_URL (the published
-// autoscale deployment) and falls back to the dev workspace domain.
+// with the rest of the mobile app. Always reads EXPO_PUBLIC_API_URL (the
+// published autoscale deployment). No dev-domain fallback.
 
 // IS_EXPO_GO is imported from @/lib/expoEnv — single definition for the whole app.
 
