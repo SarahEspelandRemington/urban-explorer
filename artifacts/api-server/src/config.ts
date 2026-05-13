@@ -116,7 +116,7 @@ export const PHOTO_CACHE_MAX_AGE_DAYS = envVar(
 export const WALK_FORWARD_BIAS_METERS = envVar(
   "WALK_FORWARD_BIAS_METERS",
   z.coerce.number().finite(),
-  200,
+  60,
 );
 
 /**
@@ -130,7 +130,7 @@ export const WALK_FORWARD_BIAS_METERS = envVar(
 export const WALK_OFF_AXIS_PENALTY_DEG = envVar(
   "WALK_OFF_AXIS_PENALTY_DEG",
   z.coerce.number().finite(),
-  45,
+  30,
 );
 
 /**
@@ -144,7 +144,7 @@ export const WALK_OFF_AXIS_PENALTY_DEG = envVar(
 export const WALK_OFF_AXIS_PENALTY_METERS = envVar(
   "WALK_OFF_AXIS_PENALTY_METERS",
   z.coerce.number().finite(),
-  180,
+  300,
 );
 
 // ---------------------------------------------------------------------------
@@ -554,6 +554,21 @@ export const AUDIO_CACHE_TTL_MS = envVar(
  */
 export const LLM_CACHE_MAX_SIZE = envVar(
   "LLM_CACHE_MAX_SIZE",
+  z.coerce.number().int().positive(),
+  200,
+);
+
+/**
+ * Maximum number of entries kept in the short proximity OSM cache (osmCache).
+ * When the cap is reached, the oldest entry is evicted before inserting a new
+ * one. Each entry holds an array of OSMPlace objects (a few KB at most).
+ *
+ * Env var : OSM_CACHE_MAX_SIZE
+ * Expects : positive integer
+ * Default : 200
+ */
+export const OSM_CACHE_MAX_SIZE = envVar(
+  "OSM_CACHE_MAX_SIZE",
   z.coerce.number().int().positive(),
   200,
 );

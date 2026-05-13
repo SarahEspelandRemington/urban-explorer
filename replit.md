@@ -29,6 +29,8 @@ A mobile app that surfaces AI-generated historical and factual information about
 - `UPLOAD_MAX_FILE_SIZE`: (Optional) Hard cap in bytes for a single uploaded file (positive integer, default derived from UPLOAD_BODY_LIMIT = 10485760 = 10 MB). Per-endpoint `fileSizeOverride` still takes precedence.
 - `UPLOAD_FIELD_SIZE`: (Optional) Maximum byte size for a non-file field value in any multipart upload request (positive integer, default 1048576 = 1 MB).
 - `UPLOAD_STRICT_CONFIG`: (Optional) When set to `true` (case-insensitive), turns the startup warning about `UPLOAD_MAX_FILE_SIZE` exceeding `UPLOAD_BODY_LIMIT` into a hard failure (thrown `Error`). Intended for CI/CD pipelines that should reject misconfigured deployments before serving traffic. Default: `false` (warn-only).
+- `DASHBOARD_SLOW_JOB_WINDOW`: (Optional, CI dashboard) Look-back window in runs used by the "consistently slowest job" bottleneck indicator in `gen-dashboard.js` (positive integer, default 5). Invalid values log a warning and fall back to 5.
+- `DASHBOARD_SLOW_JOB_MIN_RUNS`: (Optional, CI dashboard) Minimum number of runs within the window in which a job must be the bottleneck before the trend indicator is shown (positive integer, default 3). Invalid values log a warning and fall back to 3.
 
 ## Stack
 
@@ -61,7 +63,7 @@ A mobile app that surfaces AI-generated historical and factual information about
 - **AI Model Selection**: Uses specific OpenAI models (gpt-4.1-mini, gpt-4.1-nano) tuned for different API endpoints to balance speed, cost, and detail.
 - **Location Grounding**: Prioritizes Nominatim (OpenStreetMap) for geocoding and location suggestions, falling back to LLMs for ambiguity. Integrates Overpass API to ground AI-generated history with verified OSM data.
 - **Walk Mode Narration**: Prioritizes native pre-rendered MP3 audio via `expo-audio` for natural-voice TTS, falling back to `expo-speech` or Web Speech API. Includes a custom "Now Playing" module for lock screen integration.
-- **Walk Mode Directional Scoring**: `offAxisPenaltyDeg=45°` (places >45° off heading get a flat penalty), `offAxisPenaltyMeters=180m`, `forwardBiasMeters=200m` (cosine bonus for ahead-of-you places). Dense mode `maxQueueDistance=180m` caps narration to ~2 blocks. Overridable via `WALK_OFF_AXIS_PENALTY_DEG`, `WALK_OFF_AXIS_PENALTY_METERS`, `WALK_FORWARD_BIAS_METERS` env vars.
+- **Walk Mode Directional Scoring**: `offAxisPenaltyDeg=30°` (places >30° off heading get a flat penalty), `offAxisPenaltyMeters=300m`, `forwardBiasMeters=60m` (cosine bonus for ahead-of-you places, additionally capped at `dist/3` in `pickNext` so direction never overpowers raw proximity). Dense `maxQueueDistance=90m` (current Manhattan block + adjacent half-block); sparse `maxQueueDistance=120m`. `discoverRadius` is dense=130m / sparse=140m, and `LOOK_AHEAD_METERS=30m` keeps the discover-circle on the user's actual block. Rating bonus capped at 30m (was 80m) so a popular far place can't beat a closer one. Overridable via `WALK_OFF_AXIS_PENALTY_DEG`, `WALK_OFF_AXIS_PENALTY_METERS`, `WALK_FORWARD_BIAS_METERS` env vars.
 - **Dynamic Map Discovery**: Implements a debounced auto-discovery mechanism (150m+ pan) for map views, accumulating and deduplicating markers.
 - **Robust Caching & In-Flight Dedup**: In-memory caches for LLM results (15min TTL) and Overpass results (5min TTL). Concurrent cache-miss requests for the same key are coalesced onto a single LLM/TTS call via in-flight Maps (`inFlightNarration`, `inFlightAudio`, `inFlightDetail`), preventing duplicate paid API calls.
 - **OSRM Provider Racing**: Route endpoint races multiple OSRM providers with `Promise.any()` and returns the fastest successful result. Distinguishes reachable-but-no-route (404) from all-providers-failed (502).
@@ -101,7 +103,7 @@ SESSION_SECRET=<output of: openssl rand -hex 32>
 
 The server starts but all session-based features silently break without this.
 
-**Step 4 — Set GitHub Actions variable**
+**Step 4 — Set GitHub Actions variables**
 In the GitHub repo Settings → Variables → Actions, set:
 
 ```
@@ -109,6 +111,14 @@ MAX_NEW_WARNINGS=<copy value from original repo>
 ```
 
 This controls the CI warning gate. CI will fail on every PR until it is set.
+
+Optionally, also set:
+
+```
+DASHBOARD_BUILD_SPIKE_PCT=20
+```
+
+This controls the build-time spike threshold (%) shown in the CI dashboard. Defaults to `20` if unset. Raise or lower it from the GitHub UI without editing any workflow YAML.
 
 **Step 5 — Push the database schema**
 The PostgreSQL database is provisioned automatically by Replit. Run:
