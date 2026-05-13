@@ -1,0 +1,95 @@
+Please do a focused UI refinement pass to establish a clearer interaction hierarchy across the existing app. Do not rename the app yet. Do not change app icon, loading screen, global branding, or unrelated architecture.
+
+Goal:
+Make the app feel clearer, more intentional, and easier to use while walking or standing in a real urban environment. The app should prioritize glanceability, quick decision-making, and calm curiosity.
+
+Core design principle:
+The app should not visually compete with the city. It should help users quickly understand what to do, then get back to observing their surroundings.
+
+Interaction hierarchy:
+1. Strongest emphasis should go to:
+   - active mode clarity
+   - key next-step actions
+   - location/discovery moments
+   - orientation while outdoors
+
+2. Medium emphasis should go to:
+   - mode cards
+   - story/location preview cards
+   - map-related controls
+   - current walk/audio state
+
+3. Lowest emphasis should go to:
+   - secondary utilities
+   - supporting explanatory text
+   - repeated/helper actions
+   - non-critical metadata
+
+Strong color usage:
+Use strong/high-contrast color primarily for clarity and outdoor usability:
+- key buttons
+- active states
+- selected tabs
+- current location/walk state
+- discovery/pin states where helpful
+
+Avoid using strong color so heavily that every button feels equally urgent. Strong color should help the user quickly find what they need, not create visual noise.
+
+Button philosophy:
+Buttons should remain clear, modern, and easy to tap, but should not dominate every screen emotionally.
+- Prefer one clearly emphasized primary action per context when possible.
+- Secondary actions should generally use outline, tonal, or lower-emphasis styling.
+- Avoid screens where multiple large filled buttons compete at the same level.
+- Keep touch targets accessible and obvious.
+- Do not make the UI so subtle that users have to hunt for actions.
+
+Card philosophy:
+Cards/surfaces should feel:
+- atmospheric
+- architectural
+- lightly tactile
+
+In practice:
+- Use generous spacing.
+- Use soft borders or subtle elevation.
+- Avoid harsh boxed-in borders where possible.
+- Cards should feel like calm, place-based surfaces, not generic utility boxes.
+- Do not make cards overly decorative, glassy, neon, or gamified.
+- Keep readability and outdoor usability first.
+
+Motion:
+Do not add decorative motion in this pass.
+If any motion already exists, keep it subtle and functional.
+Do not add bouncing pins, celebratory effects, animated onboarding, or constant movement.
+Future motion should only support clarity, spatial awareness, or trust that the app is active.
+
+Specific issue to address from the current opening screen:
+The Explore/Walk screen structure is good, but the large orange buttons create the impression that the buttons are more important than the two modes.
+Please reduce button competition while preserving clarity:
+- Keep actions easy to see and tap.
+- Consider making secondary actions less visually dominant.
+- Consider allowing the card/mode itself to carry more visual weight than the buttons.
+- Do not change button routes or functionality.
+
+Apply this refinement lightly across the app where appropriate, especially:
+- initial location/start screen
+- Explore mode cards/controls
+- Walk mode controls
+- location/story preview cards
+- saved place cards
+
+Do not overhaul:
+- map logic
+- audio/TTS logic
+- route logic
+- database/API logic
+- navigation architecture
+
+Acceptance criteria:
+- The app feels clearer and less visually shouty.
+- Primary actions remain easy to find outdoors.
+- Secondary actions are visually calmer.
+- Cards feel more polished and intentional.
+- Existing functionality is preserved.
+- No global rebrand or Streetlit rename is attempted yet.
+- No unrelated refactors are introduced.

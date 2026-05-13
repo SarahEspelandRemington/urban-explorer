@@ -3319,8 +3319,7 @@ const zh: Strings = {
     titleSearch: "搜索地点",
     titleEnable: "启用定位",
     descriptionSearch: "输入城市、街区、路口或地址来探索。",
-    descriptionEnable:
-      "Urban Explorer使用您的位置来呈现附近的故事和地点。",
+    descriptionEnable: "Urban Explorer使用您的位置来呈现附近的故事和地点。",
     placeholder: "如：Greenwich Village, NYC",
     finding: "正在查找位置...",
     exploreThis: "探索此位置",

@@ -742,8 +742,8 @@ export const PlaceCard = React.memo(function PlaceCard({
 
 const styles = StyleSheet.create({
   heroCard: {
-    borderRadius: 14,
-    borderWidth: 1.5,
+    borderRadius: 16,
+    borderWidth: 1,
     overflow: "hidden",
     marginBottom: 8,
   },
@@ -760,7 +760,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   heroContent: {
-    padding: 18,
+    padding: 20,
   },
   heroTop: {
     flexDirection: "row",
@@ -836,11 +836,11 @@ const styles = StyleSheet.create({
   compactCard: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 14,
-    marginBottom: 6,
+    marginBottom: 8,
     gap: 12,
     minHeight: 56,
   },
