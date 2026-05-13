@@ -109,11 +109,11 @@ export default function ExploreScreen() {
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // 45 s client-side cap. Server uses gpt-4.1-mini with a 35 s LLM timeout;
-  // parallel phase adds up to 9 s → worst-case total ~44 s. 45 s lets the
-  // server timeout fire first so the mutation gets a clean 503 and shows the
-  // retry button rather than a generic network error.
-  const discoverMutation = useDiscoverPlaces({ request: { timeout: 45_000 } });
+  // 60 s client-side cap. Server worst-case: brainstorm (≤8 s) + main LLM
+  // (≤35 s) = 43 s; 60 s gives 17 s of network + OpenAI variance headroom and
+  // lets the server-side 503 path fire before the client times out, so the
+  // retry button gets shown instead of a generic network error.
+  const discoverMutation = useDiscoverPlaces({ request: { timeout: 60_000 } });
   const isBusy =
     discoverMutation.isError &&
     ((discoverMutation.error as any)?.status === 429 ||

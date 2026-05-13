@@ -1337,7 +1337,7 @@ router.post("/explore/discover", async (req, res) => {
   const brainstormPromise: Promise<string> = (async () => {
     if (isQuick) return "";
     try {
-      const BRAINSTORM_TIMEOUT_MS = 13000;
+      const BRAINSTORM_TIMEOUT_MS = 8000;
       const brainstormAbort = new AbortController();
       const brainstormTimer = setTimeout(
         () => brainstormAbort.abort(),
@@ -1412,9 +1412,10 @@ Respond in JSON:
 Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries beat 10 weak ones.`;
 
   // Hard cap the main discovery call. Parallel phase (Overpass + brainstorm)
-  // takes up to 9 s. With the ~3 000-token system prompt, gpt-4.1-mini needs
-  // ~15-25 s to generate 1 200-1 800 output tokens. 35 s gives comfortable
-  // headroom; total worst-case is ~44 s, covered by the client's 45 s cap.
+  // takes up to 8 s (brainstorm timeout). With the ~3 000-token system prompt,
+  // gpt-4.1-mini needs ~15-25 s to generate 1 200-1 800 output tokens. 35 s
+  // gives comfortable headroom; total worst-case is ~43 s, well within the
+  // client's 60 s cap.
   const DISCOVER_LLM_TIMEOUT_MS = 35_000;
   const discoverAbort = new AbortController();
   const discoverTimer = setTimeout(
