@@ -479,8 +479,18 @@ export default function SavedScreen() {
                 }}
                 title={place.name}
                 description={place.category}
-                pinColor={colors.primary}
-              />
+              >
+                <View
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    backgroundColor: colors.primary,
+                    borderWidth: 2,
+                    borderColor: "#fff",
+                  }}
+                />
+              </Marker>
             ))}
           </MapView>
         </Animated.View>

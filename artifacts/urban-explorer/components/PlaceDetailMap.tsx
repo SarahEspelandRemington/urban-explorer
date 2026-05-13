@@ -98,7 +98,18 @@ export function PlaceDetailMap({
           showsUserLocation
           provider={PROVIDER_DEFAULT}
         >
-          <Marker coordinate={coords} title={name} pinColor={colors.primary} />
+          <Marker coordinate={coords} title={name}>
+            <View
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 7,
+                backgroundColor: colors.primary,
+                borderWidth: 2,
+                borderColor: "#fff",
+              }}
+            />
+          </Marker>
         </MapView>
       </View>
       <Pressable

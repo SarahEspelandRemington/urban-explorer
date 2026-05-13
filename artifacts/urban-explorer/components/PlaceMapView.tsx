@@ -245,11 +245,10 @@ export function PlaceMapView({
             longitude: place.longitude,
           };
           return (
-            <Marker
-              key={place.id}
-              coordinate={markerCoord}
-              pinColor={colors.primary}
-            >
+            <Marker key={place.id} coordinate={markerCoord}>
+              <View
+                style={[styles.markerDot, { backgroundColor: colors.primary }]}
+              />
               <Callout tooltip onPress={() => navigateToDetail(place)}>
                 <View
                   style={[
@@ -390,6 +389,13 @@ const styles = StyleSheet.create({
   },
   map: {
     flex: 1,
+  },
+  markerDot: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   topBadge: {
     position: "absolute",
