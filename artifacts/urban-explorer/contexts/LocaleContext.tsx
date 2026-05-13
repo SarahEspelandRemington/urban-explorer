@@ -13,11 +13,11 @@ import React, {
 import {
   DEFAULT_LOCALE,
   LOCALES,
-  TRANSLATIONS,
   getLocaleMeta,
   getMeasurementSystem,
   getStrings,
   isLocaleCode,
+  loadStrings,
   type LocaleMeta,
   type MeasurementSystem,
   type Strings,
@@ -99,6 +99,27 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
+  // Start with English synchronously (zero parse cost on cold start).
+  // When the active locale is non-English, load the chunk asynchronously and
+  // swap t once it resolves. This is typically < 50 ms after hydration.
+  const [t, setT] = useState<Strings>(() => getStrings(DEFAULT_LOCALE));
+
+  useEffect(() => {
+    let cancelled = false;
+    if (locale === DEFAULT_LOCALE) {
+      setT(getStrings(DEFAULT_LOCALE));
+      return;
+    }
+    loadStrings(locale)
+      .then((strings) => {
+        if (!cancelled) setT(strings);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [locale]);
+
   const value = useMemo<LocaleContextType>(
     () => ({
       locale,
@@ -106,9 +127,9 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       setLocale,
       availableLocales: LOCALES,
       resolved: getLocaleMeta(locale),
-      t: getStrings(locale),
+      t,
     }),
-    [locale, setLocale],
+    [locale, setLocale, t],
   );
 
   return (
@@ -133,7 +154,3 @@ export function useT(): Strings {
 export function useMeasurementSystem(): MeasurementSystem {
   return getMeasurementSystem(useLocale().locale);
 }
-
-// Re-export for any direct consumers that previously imported the type from
-// the locale context module.
-export { TRANSLATIONS };
