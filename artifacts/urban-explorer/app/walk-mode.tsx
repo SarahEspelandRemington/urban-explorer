@@ -126,9 +126,20 @@ export default function WalkModeScreen() {
 
         <View style={styles.walkingIndicator}>
           <View style={[styles.liveDot, { backgroundColor: "#22c55e" }]} />
-          <Text style={[styles.walkingText, { color: colors.foreground }]}>
-            {t.walkMode.walking}
-          </Text>
+          <View style={styles.walkingTextCol}>
+            <Text style={[styles.walkingText, { color: colors.foreground }]}>
+              {t.walkMode.walking}
+            </Text>
+            <Text
+              style={[
+                styles.walkingSubtitle,
+                { color: colors.mutedForeground },
+              ]}
+              numberOfLines={1}
+            >
+              {t.walkMode.walkingSubtitle}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.headerRight}>
@@ -415,6 +426,7 @@ export default function WalkModeScreen() {
             userLongitude={walk.currentLocation.longitude}
             places={walk.nearbyPlaces}
             narratedIds={walk.narratedIds}
+            currentlyPlayingPlaceId={walk.currentNarrationPlace?.id}
             onPlayPlace={(place) => walk.playPlace(place)}
             onOpenPlace={(place) => {
               router.push({
@@ -461,75 +473,107 @@ export default function WalkModeScreen() {
               walk.narration.currentPlace,
             )}
           >
-            {(() => {
-              const photoUrl = walk.currentNarrationPlace?.photoUrl;
-              return photoUrl ? (
-                <Image
-                  source={{ uri: photoUrl }}
-                  style={styles.nowPlayingPhoto}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.nowPlayingIcon,
-                    { backgroundColor: colors.primary + "18" },
-                  ]}
-                >
-                  <Feather name="headphones" size={18} color={colors.primary} />
-                </View>
-              );
-            })()}
-            <View style={styles.nowPlayingText}>
-              <View style={styles.nowPlayingLabelRow}>
-                <Text
-                  style={[
-                    styles.nowPlayingLabel,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  {t.walkMode.nowPlaying}
-                </Text>
-                {walk.isReplay ? (
-                  <Animated.View
-                    entering={
-                      Platform.OS !== "web" ? FadeIn.duration(200) : undefined
-                    }
-                    exiting={
-                      Platform.OS !== "web" ? FadeOut.duration(200) : undefined
-                    }
+            <Pressable
+              style={styles.nowPlayingTapTarget}
+              onPress={() => {
+                const place = walk.currentNarrationPlace;
+                if (!place) return;
+                if (Platform.OS !== "web")
+                  Haptics.selectionAsync().catch(() => {});
+                router.push({
+                  pathname: "/place-detail",
+                  params: {
+                    name: place.name,
+                    latitude: String(place.latitude),
+                    longitude: String(place.longitude),
+                    category: place.category ?? "",
+                    yearBuilt: place.yearBuilt ?? "",
+                    tags: JSON.stringify(place.tags ?? []),
+                    summary: place.summary ?? "",
+                    facts: JSON.stringify(place.facts ?? []),
+                    address: place.address ?? "",
+                  },
+                });
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Open details for ${walk.narration.currentPlace}`}
+            >
+              {(() => {
+                const photoUrl = walk.currentNarrationPlace?.photoUrl;
+                return photoUrl ? (
+                  <Image
+                    source={{ uri: photoUrl }}
+                    style={styles.nowPlayingPhoto}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
                     style={[
-                      styles.replayBadge,
-                      {
-                        backgroundColor: colors.primary + "1f",
-                        borderColor: colors.primary + "55",
-                      },
+                      styles.nowPlayingIcon,
+                      { backgroundColor: colors.primary + "18" },
                     ]}
-                    accessibilityLabel={t.walkMode.replayBadge}
                   >
                     <Feather
-                      name="rotate-ccw"
-                      size={10}
+                      name="headphones"
+                      size={18}
                       color={colors.primary}
                     />
-                    <Text
+                  </View>
+                );
+              })()}
+              <View style={styles.nowPlayingText}>
+                <View style={styles.nowPlayingLabelRow}>
+                  <Text
+                    style={[
+                      styles.nowPlayingLabel,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {t.walkMode.nowPlaying}
+                  </Text>
+                  {walk.isReplay ? (
+                    <Animated.View
+                      entering={
+                        Platform.OS !== "web" ? FadeIn.duration(200) : undefined
+                      }
+                      exiting={
+                        Platform.OS !== "web"
+                          ? FadeOut.duration(200)
+                          : undefined
+                      }
                       style={[
-                        styles.replayBadgeText,
-                        { color: colors.primary },
+                        styles.replayBadge,
+                        {
+                          backgroundColor: colors.primary + "1f",
+                          borderColor: colors.primary + "55",
+                        },
                       ]}
+                      accessibilityLabel={t.walkMode.replayBadge}
                     >
-                      {t.walkMode.replayBadge}
-                    </Text>
-                  </Animated.View>
-                ) : null}
+                      <Feather
+                        name="rotate-ccw"
+                        size={10}
+                        color={colors.primary}
+                      />
+                      <Text
+                        style={[
+                          styles.replayBadgeText,
+                          { color: colors.primary },
+                        ]}
+                      >
+                        {t.walkMode.replayBadge}
+                      </Text>
+                    </Animated.View>
+                  ) : null}
+                </View>
+                <Text
+                  style={[styles.nowPlayingTitle, { color: colors.foreground }]}
+                  numberOfLines={2}
+                >
+                  {walk.narration.currentPlace}
+                </Text>
               </View>
-              <Text
-                style={[styles.nowPlayingTitle, { color: colors.foreground }]}
-                numberOfLines={2}
-              >
-                {walk.narration.currentPlace}
-              </Text>
-            </View>
+            </Pressable>
             <Pressable
               onPress={togglePause}
               hitSlop={16}
@@ -621,7 +665,7 @@ export default function WalkModeScreen() {
         <Text style={[styles.statsLine, { color: colors.mutedForeground }]}>
           {t.walkMode.storiesSoFar(walk.stats.placesNarrated)}
         </Text>
-        {__DEV__ || walk.showPrefetchStats ? (
+        {walk.showPrefetchStats ? (
           <Text
             style={[styles.debugLine, { color: colors.mutedForeground }]}
             accessibilityLabel="Prefetch cache stats"
@@ -672,6 +716,18 @@ const styles = StyleSheet.create({
   },
   headerHomeText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   walkingIndicator: { flexDirection: "row", alignItems: "center", gap: 6 },
+  walkingTextCol: { flexDirection: "column" },
+  walkingSubtitle: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 1,
+  },
+  nowPlayingTapTarget: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   walkingText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   nextTurnBanner: {

@@ -76,6 +76,9 @@ const ja: Strings = {
   walkMode: {
     end: "終了",
     walking: "歩行中",
+    walkingSubtitle: "周囲の物語を聞いています",
+    legendUpcoming: "近日",
+    legendPlayed: "再生済み",
     sparse: "少なめ",
     dense: "多め",
     gettingLocation: "位置情報を取得中…",

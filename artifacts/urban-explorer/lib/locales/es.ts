@@ -79,6 +79,9 @@ const es: Strings = {
   walkMode: {
     end: "Fin",
     walking: "Caminando",
+    walkingSubtitle: "Escuchando historias",
+    legendUpcoming: "Próximas",
+    legendPlayed: "Reproducidas",
     sparse: "Pocas",
     dense: "Frecuentes",
     gettingLocation: "Obteniendo tu ubicación…",

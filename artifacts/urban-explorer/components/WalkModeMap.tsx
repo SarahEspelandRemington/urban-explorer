@@ -18,6 +18,7 @@ import MapView, {
 } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
+import { useT } from "@/contexts/LocaleContext";
 import { WalkPlace } from "@/contexts/WalkModeContext";
 
 interface WalkModeMapProps {
@@ -26,6 +27,7 @@ interface WalkModeMapProps {
   places: WalkPlace[];
   narratedIds: Map<string, number>;
   followUser?: boolean;
+  currentlyPlayingPlaceId?: string;
   onOpenPlace?: (place: WalkPlace) => void;
   onPlayPlace?: (place: WalkPlace) => void;
 }
@@ -99,6 +101,7 @@ function clusterPlaces(places: WalkPlace[], region: Region): Cluster[] {
 }
 
 export function WalkModeMap({
+  currentlyPlayingPlaceId,
   userLatitude,
   userLongitude,
   places,
@@ -108,6 +111,7 @@ export function WalkModeMap({
   onPlayPlace,
 }: WalkModeMapProps) {
   const colors = useColors();
+  const t = useT();
   const mapRef = useRef<MapView>(null);
   const initialRegion: Region = {
     latitude: userLatitude,
@@ -416,6 +420,7 @@ export function WalkModeMap({
             const wasNarrated = narratedAt !== undefined;
             const opacity = wasNarrated ? visitedOpacity(narratedAt) * 0.5 : 1;
             const isSelected = selectedPlace?.id === place.id;
+            const isPlaying = currentlyPlayingPlaceId === place.id;
             return (
               <Marker
                 key={cluster.key}
@@ -438,11 +443,14 @@ export function WalkModeMap({
                   accessibilityLabel={`${place.name}${wasNarrated ? " (played)" : ""}. Tap to play.`}
                 >
                   <View style={styles.pinWrapper}>
-                    {isSelected && (
+                    {(isSelected || isPlaying) && (
                       <View
                         style={[
                           styles.pinRing,
-                          { borderColor: colors.primary },
+                          {
+                            borderColor: colors.primary,
+                            opacity: isPlaying ? 1 : 0.7,
+                          },
                         ]}
                       />
                     )}
@@ -450,10 +458,19 @@ export function WalkModeMap({
                       style={[
                         styles.pin,
                         {
-                          backgroundColor: wasNarrated
-                            ? colors.mutedForeground
-                            : colors.primary,
+                          backgroundColor: isPlaying
+                            ? colors.primary
+                            : wasNarrated
+                              ? colors.mutedForeground
+                              : colors.primary,
                           borderColor: "#fff",
+                          ...(isPlaying
+                            ? {
+                                shadowColor: colors.primary,
+                                shadowOpacity: 0.7,
+                                shadowRadius: 6,
+                              }
+                            : null),
                         },
                       ]}
                     />
@@ -517,6 +534,37 @@ export function WalkModeMap({
           );
         })}
       </MapView>
+
+      {places.length > 0 ? (
+        <View
+          style={[
+            styles.legend,
+            { backgroundColor: colors.card + "f0", borderColor: colors.border },
+          ]}
+          pointerEvents="none"
+          accessibilityLabel={`${t.walkMode.legendUpcoming}, ${t.walkMode.legendPlayed}`}
+        >
+          <View style={styles.legendItem}>
+            <View
+              style={[styles.legendDot, { backgroundColor: colors.primary }]}
+            />
+            <Text style={[styles.legendText, { color: colors.foreground }]}>
+              {t.walkMode.legendUpcoming}
+            </Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View
+              style={[
+                styles.legendDot,
+                { backgroundColor: colors.mutedForeground, opacity: 0.6 },
+              ]}
+            />
+            <Text style={[styles.legendText, { color: colors.foreground }]}>
+              {t.walkMode.legendPlayed}
+            </Text>
+          </View>
+        </View>
+      ) : null}
 
       {!isFollowing && (
         <Pressable
@@ -776,6 +824,37 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
+  },
+  legend: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  legendDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+  },
+  legendText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
   },
   pin: {
     width: 20,

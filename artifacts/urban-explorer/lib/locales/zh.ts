@@ -72,6 +72,9 @@ const zh: Strings = {
   walkMode: {
     end: "结束",
     walking: "步行中",
+    walkingSubtitle: "聆听附近故事",
+    legendUpcoming: "即将",
+    legendPlayed: "已播放",
     sparse: "稀疏",
     dense: "密集",
     gettingLocation: "正在获取你的位置…",

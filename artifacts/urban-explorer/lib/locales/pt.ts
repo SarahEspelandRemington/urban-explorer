@@ -78,6 +78,9 @@ const pt: Strings = {
   walkMode: {
     end: "Fim",
     walking: "Caminhando",
+    walkingSubtitle: "Ouvindo histórias",
+    legendUpcoming: "Próximas",
+    legendPlayed: "Reproduzidas",
     sparse: "Esparsas",
     dense: "Frequentes",
     gettingLocation: "Obtendo sua localização…",
