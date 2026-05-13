@@ -254,7 +254,7 @@ const DENSITY_CONFIG: Record<
   sparse: {
     refetchMeters: 120,
     cooldownMs: 75 * 1000,
-    netScoreFloor: 1,
+    netScoreFloor: 0,
     maxQueueDistance: 300,
     discoverRadius: 300,
     memoryRadius: 1000,
