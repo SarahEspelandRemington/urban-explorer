@@ -257,43 +257,46 @@ const DENSITY_CONFIG: Record<
   }
 > = {
   sparse: {
-    // Reduced from 120 m so stories reload within a single city block (~60 m)
-    // rather than waiting 1.5 blocks between fetches.
-    refetchMeters: 60,
+    refetchMeters: 50,
     cooldownMs: 75 * 1000,
     netScoreFloor: 0,
-    // Reduced from 300 m: limits narration to places within ~2 Manhattan
-    // blocks so the app stays on the user's current street rather than
-    // jumping to places a full avenue away.
-    maxQueueDistance: 150,
-    // Reduced from 300 m to match the tighter queue cap.
-    discoverRadius: 200,
-    memoryRadius: 1000,
-    minMetersBetweenPicks: 120,
-    corridorMeters: 150,
-    forwardBiasMeters: 200,
-    // Tightened from 45°: a 30° cone focuses narration on places squarely
-    // ahead of the user, reducing side-street bleed on a city grid.
+    // Tightened from 150 m to 120 m: limits narration to the user's current
+    // block plus immediately adjacent blocks (~1.5 Manhattan short blocks).
+    maxQueueDistance: 120,
+    // Tightened from 200 m to 140 m to match. With LOOK_AHEAD_METERS=30 the
+    // farthest a place can be from the user at fetch time is 170 m, and the
+    // 120 m maxQueueDistance gate will then re-filter at pick time.
+    discoverRadius: 140,
+    memoryRadius: 800,
+    minMetersBetweenPicks: 100,
+    corridorMeters: 120,
+    // Tightened from 200 m to 60 m. The old value let a place 200 m straight
+    // ahead score the same as a place right next to the user, which is why
+    // the app jumped 6 blocks up an avenue. Combined with the dist/3 cap in
+    // pickNext, raw proximity always dominates direction.
+    forwardBiasMeters: 60,
+    // 30° cone focuses narration on places squarely ahead of the user,
+    // reducing side-street bleed on a city grid.
     offAxisPenaltyDeg: 30,
-    // Raised from 180 m: the stronger penalty makes off-axis places a true
-    // last resort, not just slightly worse than on-path places.
+    // 300 m flat penalty makes off-axis places a true last resort.
     offAxisPenaltyMeters: 300,
   },
   dense: {
-    refetchMeters: 60,
+    refetchMeters: 50,
     cooldownMs: 25 * 1000,
     netScoreFloor: -2,
-    // Reduced from 180 m: in dense urban grids (e.g. Manhattan short blocks
-    // ~80 m) a 120 m cap keeps narration tightly focused on the current block,
-    // preventing cross-street jumps and far-avenue places from being picked
-    // ahead of buildings the user is actually standing in front of.
-    maxQueueDistance: 120,
-    discoverRadius: 250,
-    memoryRadius: 1000,
+    // Tightened from 120 m to 90 m: roughly the user's current Manhattan
+    // short block plus the immediately adjacent half-block in any direction.
+    // Hard ceiling — no story whose pin sits further than this can play.
+    maxQueueDistance: 90,
+    // Tightened from 250 m to 130 m. With LOOK_AHEAD_METERS=30 the maximum
+    // possible distance from user at fetch time is 160 m; pickNext then
+    // re-filters down to maxQueueDistance.
+    discoverRadius: 130,
+    memoryRadius: 800,
     minMetersBetweenPicks: 40,
-    corridorMeters: 70,
-    forwardBiasMeters: 200,
-    // Same tightening as sparse: 30° cone + 300 m off-axis penalty.
+    corridorMeters: 60,
+    forwardBiasMeters: 60,
     offAxisPenaltyDeg: 30,
     offAxisPenaltyMeters: 300,
   },
@@ -376,10 +379,12 @@ const HEADING_BUFFER_SIZE = 5;
 const VELOCITY_HEADING_CONSISTENCY_DEG = 60;
 
 // Metres to project the discover-fetch centre ahead of the user's current
-// position in their direction of travel. Kept modest (60 m) so that compass
-// errors — common in dense steel-frame urban canyons — don't push the search
-// centre an entire block in the wrong direction.
-const LOOK_AHEAD_METERS = 60;
+// position in their direction of travel. Tightened from 60 m to 30 m so the
+// discover-circle stays centred on the user's actual block rather than the
+// next one — important on Manhattan grids where 60 m is most of a short
+// block. Compass errors in steel-frame canyons would otherwise shift the
+// search centre an entire block in the wrong direction.
+const LOOK_AHEAD_METERS = 30;
 
 // Compute a lat/lng that is `meters` ahead of (lat, lon) along `headingDeg`.
 function projectAhead(
@@ -1064,13 +1069,26 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             p.longitude,
           );
           const diff = angularDiff(heading, placeBearing);
-          score -= fwdBias * Math.cos((diff * Math.PI) / 180);
+          // Cap the forward-direction boost at dist/3 so it can never
+          // overpower raw proximity. Without this cap, a place 200 m straight
+          // ahead got a -200 m boost (score 0) and beat a place 50 m to the
+          // side (score 50) — exactly the "jumped 6 blocks up an avenue" bug.
+          // With the cap, a 200 m place can only score down to 200-(200/3)=133,
+          // so the closer place always wins. A 90 m place can still score
+          // down to 60, so direction still tie-breaks among similarly close
+          // candidates.
+          const effectiveFwdBias = Math.min(fwdBias, dist / 3);
+          score -= effectiveFwdBias * Math.cos((diff * Math.PI) / 180);
           if (diff > penaltyDeg) {
             score += penaltyMeters;
           }
         }
-        // Rating bonus: each net upvote shaves up to 20m, capped at 80m.
-        score -= Math.min(80, Math.max(-40, net * 20));
+        // Rating bonus: each net upvote shaves up to 10m, capped at 30m.
+        // Tightened from 20m / 80m so a highly-rated far place can't jump
+        // ahead of a closer story (the whole maxQueueDistance for dense is
+        // now 90m, so an 80m bonus would have wiped out almost the entire
+        // distance gap).
+        score -= Math.min(30, Math.max(-30, net * 10));
 
         if (score < bestScore) {
           bestScore = score;

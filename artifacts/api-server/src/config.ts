@@ -116,7 +116,7 @@ export const PHOTO_CACHE_MAX_AGE_DAYS = envVar(
 export const WALK_FORWARD_BIAS_METERS = envVar(
   "WALK_FORWARD_BIAS_METERS",
   z.coerce.number().finite(),
-  200,
+  60,
 );
 
 /**
@@ -130,7 +130,7 @@ export const WALK_FORWARD_BIAS_METERS = envVar(
 export const WALK_OFF_AXIS_PENALTY_DEG = envVar(
   "WALK_OFF_AXIS_PENALTY_DEG",
   z.coerce.number().finite(),
-  45,
+  30,
 );
 
 /**
@@ -144,7 +144,7 @@ export const WALK_OFF_AXIS_PENALTY_DEG = envVar(
 export const WALK_OFF_AXIS_PENALTY_METERS = envVar(
   "WALK_OFF_AXIS_PENALTY_METERS",
   z.coerce.number().finite(),
-  180,
+  300,
 );
 
 // ---------------------------------------------------------------------------
