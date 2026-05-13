@@ -199,6 +199,11 @@ interface WalkModeContextType {
    */
   showPrefetchStats: boolean;
   setShowPrefetchStats: (enabled: boolean) => void;
+  /**
+   * Immediately narrate a specific place, bypassing cooldown and scoring.
+   * Used by manual pin-tap "Play / Replay" in the walk map.
+   */
+  playPlace: (place: WalkPlace) => void;
 }
 
 const WalkModeContext = createContext<WalkModeContextType | null>(null);
@@ -252,17 +257,27 @@ const DENSITY_CONFIG: Record<
   }
 > = {
   sparse: {
-    refetchMeters: 120,
+    // Reduced from 120 m so stories reload within a single city block (~60 m)
+    // rather than waiting 1.5 blocks between fetches.
+    refetchMeters: 60,
     cooldownMs: 75 * 1000,
     netScoreFloor: 0,
-    maxQueueDistance: 300,
-    discoverRadius: 300,
+    // Reduced from 300 m: limits narration to places within ~2 Manhattan
+    // blocks so the app stays on the user's current street rather than
+    // jumping to places a full avenue away.
+    maxQueueDistance: 150,
+    // Reduced from 300 m to match the tighter queue cap.
+    discoverRadius: 200,
     memoryRadius: 1000,
     minMetersBetweenPicks: 120,
     corridorMeters: 150,
     forwardBiasMeters: 200,
-    offAxisPenaltyDeg: 45,
-    offAxisPenaltyMeters: 180,
+    // Tightened from 45°: a 30° cone focuses narration on places squarely
+    // ahead of the user, reducing side-street bleed on a city grid.
+    offAxisPenaltyDeg: 30,
+    // Raised from 180 m: the stronger penalty makes off-axis places a true
+    // last resort, not just slightly worse than on-path places.
+    offAxisPenaltyMeters: 300,
   },
   dense: {
     refetchMeters: 60,
@@ -278,8 +293,9 @@ const DENSITY_CONFIG: Record<
     minMetersBetweenPicks: 40,
     corridorMeters: 70,
     forwardBiasMeters: 200,
-    offAxisPenaltyDeg: 45,
-    offAxisPenaltyMeters: 180,
+    // Same tightening as sparse: 30° cone + 300 m off-axis penalty.
+    offAxisPenaltyDeg: 30,
+    offAxisPenaltyMeters: 300,
   },
 };
 
@@ -965,6 +981,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       getStalePrefetchPool,
       handlePrefetchEvent,
     ],
+  );
+
+  /**
+   * Immediately narrate a specific place, bypassing all cooldown / scoring
+   * gates. Used by the manual "Play / Replay" pin action in the walk map.
+   */
+  const playPlace = useCallback(
+    (place: WalkPlace) => {
+      fetchNarration(place);
+    },
+    [fetchNarration],
   );
 
   /**
@@ -1806,6 +1833,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       setShowPrefetchStats,
       routeSteps,
       nextTurn,
+      playPlace,
     }),
     [
       isWalking,
@@ -1829,6 +1857,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       setShowPrefetchStats,
       routeSteps,
       nextTurn,
+      playPlace,
     ],
   );
 
