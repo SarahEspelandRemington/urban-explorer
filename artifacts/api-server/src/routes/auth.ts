@@ -151,7 +151,8 @@ router.get("/callback", async (req: Request, res: Response) => {
       expectedState,
       idTokenExpected: true,
     });
-  } catch {
+  } catch (err) {
+    req.log.warn({ err }, "OIDC authorization code grant failed");
     res.redirect("/api/login");
     return;
   }

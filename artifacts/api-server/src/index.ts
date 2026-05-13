@@ -16,14 +16,14 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const server = app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
+const server = app.listen(port, () => {
   logger.info({ port }, "Server listening");
   startPhotoCacheCleanup();
+});
+
+server.on("error", (err) => {
+  logger.error({ err }, "Server bind error");
+  process.exit(1);
 });
 
 function shutdown(signal: string) {

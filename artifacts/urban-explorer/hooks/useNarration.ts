@@ -336,7 +336,7 @@ export function useNarration() {
       utterance.pitch = 1.05;
       utterance.onend = onFinish;
       utterance.onerror = (e) => {
-        console.warn("Speech error:", e);
+        if (__DEV__) console.warn("Speech error:", e);
         // Surface the silent skip to the audio-fallback dashboard. A Web
         // Speech API regression (voice unavailable, synth backend down)
         // would otherwise be invisible — the user just gets a gap.
@@ -381,7 +381,7 @@ export function useNarration() {
 
       retryTimerRef.current = setTimeout(() => {
         if (speakingRef.current && !window.speechSynthesis.speaking) {
-          console.warn("Speech did not start, retrying...");
+          if (__DEV__) console.warn("Speech did not start, retrying...");
           window.speechSynthesis.cancel();
           window.speechSynthesis.speak(utterance);
         }
@@ -420,7 +420,7 @@ export function useNarration() {
         },
         onError: (err) => {
           if (__DEV__) console.log(`[Speech.speak] onError gen=${myGen}:`, err);
-          console.warn("Speech error:", err);
+          if (__DEV__) console.warn("Speech error:", err);
           // Surface the silent skip to the audio-fallback dashboard. An
           // expo-speech regression (engine unavailable, locale missing on
           // a new OS version) would otherwise leave the dashboard at zero

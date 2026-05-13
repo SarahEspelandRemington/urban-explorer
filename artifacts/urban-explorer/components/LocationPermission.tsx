@@ -676,12 +676,6 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     lineHeight: 24,
   },
-  modeBody: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 19,
-    marginTop: 2,
-  },
   modeActions: {
     gap: 10,
     marginTop: 14,
