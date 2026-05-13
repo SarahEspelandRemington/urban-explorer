@@ -245,10 +245,19 @@ export function PlaceMapView({
             longitude: place.longitude,
           };
           return (
-            <Marker key={place.id} coordinate={markerCoord}>
-              <View
-                style={[styles.markerDot, { backgroundColor: colors.primary }]}
-              />
+            <Marker
+              key={place.id}
+              coordinate={markerCoord}
+              anchor={{ x: 0.5, y: 0.5 }}
+            >
+              <View style={styles.pinWrapper}>
+                <View
+                  style={[
+                    styles.pin,
+                    { backgroundColor: colors.primary, borderColor: "#fff" },
+                  ]}
+                />
+              </View>
               <Callout tooltip onPress={() => navigateToDetail(place)}>
                 <View
                   style={[
@@ -390,12 +399,22 @@ const styles = StyleSheet.create({
   map: {
     flex: 1,
   },
-  markerDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+  pinWrapper: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pin: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 3,
   },
   topBadge: {
     position: "absolute",
