@@ -3,17 +3,7 @@
   "entries": {
     "artifacts/api-server/src/routes/explore/index.ts": {
       "sectionHash": "0ed836f492f0acf1c97a4d5af63225370df9fa44bb640447baacbd91a8911639",
-      "versions": [
-        "v10",
-        "v12",
-        "v17",
-        "v18",
-        "v2",
-        "v4",
-        "v5",
-        "v6",
-        "v7"
-      ],
+      "versions": ["v10", "v12", "v17", "v18", "v2", "v4", "v5", "v6", "v7"],
       "registered": "2026-05-13"
     }
   }

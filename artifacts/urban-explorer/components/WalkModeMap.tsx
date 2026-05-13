@@ -429,9 +429,21 @@ export function WalkModeMap({
                   longitude: place.longitude,
                 }}
                 title={place.name}
-                pinColor={wasNarrated ? colors.mutedForeground : colors.primary}
                 opacity={opacity}
-              />
+              >
+                <View
+                  style={{
+                    width: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    backgroundColor: wasNarrated
+                      ? colors.mutedForeground
+                      : colors.primary,
+                    borderWidth: 2,
+                    borderColor: "#fff",
+                  }}
+                />
+              </Marker>
             );
           }
           const allNarrated = cluster.places.every((p) =>
