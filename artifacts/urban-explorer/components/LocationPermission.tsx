@@ -297,9 +297,7 @@ export function LocationPermission({
               </View>
 
               {geocodeError && (
-                <Text
-                  style={[styles.errorText, { color: colors.destructive }]}
-                >
+                <Text style={[styles.errorText, { color: colors.destructive }]}>
                   {geocodeError}
                 </Text>
               )}
@@ -359,14 +357,8 @@ export function LocationPermission({
                   accessibilityRole="button"
                   accessibilityLabel="Back to results"
                 >
-                  <Feather
-                    name="arrow-left"
-                    size={14}
-                    color={colors.primary}
-                  />
-                  <Text
-                    style={[styles.switchText, { color: colors.primary }]}
-                  >
+                  <Feather name="arrow-left" size={14} color={colors.primary} />
+                  <Text style={[styles.switchText, { color: colors.primary }]}>
                     {t.locationPermission.backToResults}
                   </Text>
                 </Pressable>
@@ -384,14 +376,8 @@ export function LocationPermission({
                   accessibilityRole="button"
                   accessibilityLabel="Use my current location instead"
                 >
-                  <Feather
-                    name="navigation"
-                    size={14}
-                    color={colors.primary}
-                  />
-                  <Text
-                    style={[styles.switchText, { color: colors.primary }]}
-                  >
+                  <Feather name="navigation" size={14} color={colors.primary} />
+                  <Text style={[styles.switchText, { color: colors.primary }]}>
                     {t.locationPermission.useCurrentInstead}
                   </Text>
                 </Pressable>
@@ -469,7 +455,7 @@ export function LocationPermission({
                           styles.cardButtonGhost,
                           {
                             borderColor: colors.border,
-                            opacity: pressed ? 0.85 : 1,
+                            opacity: pressed ? 0.6 : 0.75,
                           },
                         ]}
                         accessibilityRole="button"
@@ -506,7 +492,7 @@ export function LocationPermission({
                         styles.cardButtonGhost,
                         {
                           borderColor: colors.border,
-                          opacity: pressed ? 0.85 : 1,
+                          opacity: pressed ? 0.6 : 0.75,
                         },
                       ]}
                       accessibilityRole="button"
@@ -551,10 +537,7 @@ export function LocationPermission({
                     {t.tabs.walk}
                   </Text>
                   <Text
-                    style={[
-                      styles.modeHeadline,
-                      { color: colors.foreground },
-                    ]}
+                    style={[styles.modeHeadline, { color: colors.foreground }]}
                   >
                     {t.locationPermission.walkHeadline}
                   </Text>
@@ -597,7 +580,7 @@ export function LocationPermission({
                           styles.cardButtonGhost,
                           {
                             borderColor: colors.border,
-                            opacity: pressed ? 0.85 : 1,
+                            opacity: pressed ? 0.6 : 0.75,
                           },
                         ]}
                         accessibilityRole="button"
@@ -708,7 +691,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 10,
     justifyContent: "center",
   },
@@ -721,14 +704,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
     justifyContent: "center",
   },
   cardButtonGhostText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
   },
   searchSection: {
     width: "100%",
