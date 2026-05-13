@@ -1388,6 +1388,30 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [isWalking]);
 
+  // Provider-level safety net: if the provider ever unmounts mid-walk
+  // (e.g. Expo Go hot-reload), remove native location subscriptions and
+  // dispose the stale-prefetch pool so temp files and timers don't leak.
+  useEffect(() => {
+    return () => {
+      if (watchRef.current) {
+        try {
+          watchRef.current.remove();
+        } catch {}
+        watchRef.current = null;
+      }
+      if (headingWatchRef.current) {
+        try {
+          headingWatchRef.current.remove();
+        } catch {}
+        headingWatchRef.current = null;
+      }
+      if (stalePrefetchPoolRef.current) {
+        disposeStalePrefetchPool(stalePrefetchPoolRef.current);
+        stalePrefetchPoolRef.current = null;
+      }
+    };
+  }, []);
+
   const startWalk = useCallback(
     async (
       initialPlaces?: WalkPlace[],

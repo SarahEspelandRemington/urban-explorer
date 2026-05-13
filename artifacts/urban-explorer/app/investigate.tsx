@@ -53,6 +53,8 @@ export default function InvestigateScreen() {
   }>();
 
   const addressInputRef = useRef<TextInput>(null);
+  const isMountedRef = useRef(true);
+  const focusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shouldAutoFill = params.autoFill === "true" && !!params.prefillAddress;
 
@@ -76,6 +78,15 @@ export default function InvestigateScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (focusTimerRef.current !== null) {
+        clearTimeout(focusTimerRef.current);
+      }
+    };
+  }, []);
+
   const showChip =
     !!params.prefillAddress && !chipDismissed && address.length === 0;
 
@@ -84,7 +95,8 @@ export default function InvestigateScreen() {
     setAddress(params.prefillAddress);
     setChipDismissed(true);
     const len = params.prefillAddress.length;
-    setTimeout(() => {
+    focusTimerRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
       addressInputRef.current?.focus();
       addressInputRef.current?.setNativeProps({
         selection: { start: len, end: len },
@@ -148,7 +160,8 @@ export default function InvestigateScreen() {
     setShowRefinementInput(true);
     if (Platform.OS !== "web")
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTimeout(() => {
+    focusTimerRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
       addressInputRef.current?.focus();
       const len = address.length;
       addressInputRef.current?.setNativeProps({
@@ -163,7 +176,8 @@ export default function InvestigateScreen() {
     setShowRefinementInput(true);
     if (Platform.OS !== "web")
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTimeout(() => {
+    focusTimerRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
       addressInputRef.current?.focus();
       addressInputRef.current?.setNativeProps({
         selection: { start: 0, end: suggestion.length },
