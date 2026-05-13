@@ -779,11 +779,6 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     marginHorizontal: 2,
   },
-  noLocationHint: {
-    fontSize: 11,
-    marginLeft: 4,
-    alignSelf: "center",
-  },
   mapContainer: {
     height: 200,
     borderBottomWidth: StyleSheet.hairlineWidth,

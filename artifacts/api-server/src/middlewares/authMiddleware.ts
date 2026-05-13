@@ -1,6 +1,7 @@
 import * as oidc from "openid-client";
 import { type Request, type Response, type NextFunction } from "express";
 import type { AuthUser } from "@workspace/api-zod";
+import { logger } from "../lib/logger";
 import {
   clearSession,
   getOidcConfig,
@@ -45,7 +46,8 @@ async function refreshIfExpired(
       : session.expires_at;
     await updateSession(sid, session);
     return session;
-  } catch {
+  } catch (err) {
+    logger.warn({ err }, "Token refresh failed, clearing session");
     return null;
   }
 }

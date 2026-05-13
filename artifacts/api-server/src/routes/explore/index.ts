@@ -543,8 +543,9 @@ out center body 40;
       timestamp: Date.now(),
     });
     return finalResults;
-  } catch {
+  } catch (err) {
     clearTimeout(timeout);
+    logger.warn({ err }, "Overpass fetch failed, returning empty");
     return [];
   }
 }
@@ -707,8 +708,9 @@ async function nominatimSearch(
     if (!resp.ok) return [];
     const data = (await resp.json()) as NominatimResult[];
     return Array.isArray(data) ? data : [];
-  } catch {
+  } catch (err) {
     clearTimeout(timer);
+    logger.warn({ err }, "Nominatim place search failed, returning empty");
     return [];
   }
 }
@@ -774,8 +776,9 @@ async function geocodeNearLocation(
     const result = { lat: parseFloat(first.lat), lon: parseFloat(first.lon) };
     setNearCoordCache(key, result);
     return result;
-  } catch {
+  } catch (err) {
     clearTimeout(timer);
+    logger.warn({ err }, "Nominatim geocode failed, caching null");
     setNearCoordCache(key, null);
     return null;
   }
@@ -1247,7 +1250,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v16:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v17:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -3663,6 +3666,12 @@ router.post(
         },
       })
       .returning();
+
+    if (!updated) {
+      req.log.warn({ placeId }, "Rate-place upsert returned no row");
+      res.json({ ok: true, placeId, up: 0, down: 0 });
+      return;
+    }
 
     if (userId) {
       await db

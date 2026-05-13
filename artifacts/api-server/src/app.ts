@@ -52,8 +52,10 @@ app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
 app.use(authMiddleware);
 
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+
 const generalLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: RATE_LIMIT_WINDOW_MS,
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
@@ -61,7 +63,7 @@ const generalLimiter = rateLimit({
 });
 
 const aiLimiter = rateLimit({
-  windowMs: 60 * 1000,
+  windowMs: RATE_LIMIT_WINDOW_MS,
   max: 15,
   standardHeaders: true,
   legacyHeaders: false,

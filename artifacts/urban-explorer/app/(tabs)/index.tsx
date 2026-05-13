@@ -114,6 +114,10 @@ export default function ExploreScreen() {
   // server timeout fire first so the mutation gets a clean 503 and shows the
   // retry button rather than a generic network error.
   const discoverMutation = useDiscoverPlaces({ request: { timeout: 45_000 } });
+  const isBusy =
+    discoverMutation.isError &&
+    ((discoverMutation.error as any)?.status === 429 ||
+      (discoverMutation.error as any)?.status === 503);
   const mapDiscoverMutation = useDiscoverPlaces();
   const geocodeMutation = useGeocodeLocation();
 
@@ -1191,10 +1195,7 @@ export default function ExploreScreen() {
                     <Text
                       style={[styles.emptyTitle, { color: colors.foreground }]}
                     >
-                      {(discoverMutation.error as any)?.status === 429 ||
-                      (discoverMutation.error as any)?.status === 503
-                        ? t.explore.busyTitle
-                        : t.explore.errorTitle}
+                      {isBusy ? t.explore.busyTitle : t.explore.errorTitle}
                     </Text>
                     <Text
                       style={[
@@ -1202,10 +1203,7 @@ export default function ExploreScreen() {
                         { color: colors.mutedForeground },
                       ]}
                     >
-                      {(discoverMutation.error as any)?.status === 429 ||
-                      (discoverMutation.error as any)?.status === 503
-                        ? t.explore.busyDetail
-                        : t.explore.errorDetail}
+                      {isBusy ? t.explore.busyDetail : t.explore.errorDetail}
                     </Text>
                     <Pressable
                       onPress={handleDiscover}
@@ -1403,20 +1401,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexShrink: 0,
   },
-  labeledHeaderBtn: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 12,
-    minWidth: 54,
-  },
-  labeledHeaderBtnText: {
-    fontSize: 9,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.3,
-  },
   iconHeaderBtn: {
     alignItems: "center",
     justifyContent: "center",
@@ -1509,12 +1493,6 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     paddingTop: 12,
-  },
-  loadingContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 100,
-    gap: 12,
   },
   skeletonContainer: {
     paddingTop: 4,

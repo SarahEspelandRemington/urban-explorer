@@ -288,7 +288,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   const BookmarkIcon = (
     <Animated.View style={bookmarkAnimStyle}>
       <Feather
-        name={saved ? "bookmark" : "bookmark"}
+        name="bookmark"
         size={20}
         color={saved ? categoryColor : colors.mutedForeground}
         style={{ opacity: saved ? 1 : 0.45 }}
