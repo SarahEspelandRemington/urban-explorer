@@ -77,6 +77,9 @@ const nl: Strings = {
   walkMode: {
     end: "Stop",
     walking: "Aan het lopen",
+    walkingSubtitle: "Luisteren naar verhalen",
+    legendUpcoming: "Aankomend",
+    legendPlayed: "Afgespeeld",
     sparse: "Spaarzaam",
     dense: "Vaak",
     gettingLocation: "Locatie ophalen…",

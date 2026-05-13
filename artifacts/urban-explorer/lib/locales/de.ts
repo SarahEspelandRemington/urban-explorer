@@ -77,6 +77,9 @@ const de: Strings = {
   walkMode: {
     end: "Ende",
     walking: "Unterwegs",
+    walkingSubtitle: "Lausche nach Geschichten",
+    legendUpcoming: "Bevorstehend",
+    legendPlayed: "Abgespielt",
     sparse: "Selten",
     dense: "Häufig",
     gettingLocation: "Standort wird abgerufen…",

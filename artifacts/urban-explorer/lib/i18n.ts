@@ -89,6 +89,9 @@ export interface Strings {
   walkMode: {
     end: string;
     walking: string;
+    walkingSubtitle: string;
+    legendUpcoming: string;
+    legendPlayed: string;
     sparse: string;
     dense: string;
     gettingLocation: string;
@@ -374,6 +377,9 @@ const en: Strings = {
   walkMode: {
     end: "End",
     walking: "Walking",
+    walkingSubtitle: "Listening for stories",
+    legendUpcoming: "Upcoming",
+    legendPlayed: "Played",
     sparse: "Fewer results",
     dense: "More results",
     gettingLocation: "Getting your location…",
