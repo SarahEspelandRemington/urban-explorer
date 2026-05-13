@@ -415,6 +415,7 @@ export default function WalkModeScreen() {
             userLongitude={walk.currentLocation.longitude}
             places={walk.nearbyPlaces}
             narratedIds={walk.narratedIds}
+            onPlayPlace={(place) => walk.playPlace(place)}
             onOpenPlace={(place) => {
               router.push({
                 pathname: "/place-detail",

@@ -18,20 +18,7 @@ import MapView, {
 } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
-
-interface WalkPlace {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  category?: string;
-  yearBuilt?: string;
-  tags?: string[];
-  summary?: string;
-  facts?: string[];
-  address?: string;
-  photoUrl?: string;
-}
+import { WalkPlace } from "@/contexts/WalkModeContext";
 
 interface WalkModeMapProps {
   userLatitude: number;
@@ -40,6 +27,7 @@ interface WalkModeMapProps {
   narratedIds: Map<string, number>;
   followUser?: boolean;
   onOpenPlace?: (place: WalkPlace) => void;
+  onPlayPlace?: (place: WalkPlace) => void;
 }
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -117,6 +105,7 @@ export function WalkModeMap({
   narratedIds,
   followUser = true,
   onOpenPlace,
+  onPlayPlace,
 }: WalkModeMapProps) {
   const colors = useColors();
   const mapRef = useRef<MapView>(null);
@@ -128,6 +117,7 @@ export function WalkModeMap({
   };
   const [region, setRegion] = useState<Region>(initialRegion);
   const [previewCluster, setPreviewCluster] = useState<Cluster | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<WalkPlace | null>(null);
 
   // Track whether the map camera is following the user.
   // Panning the map or zooming into a cluster disengages follow; the
@@ -330,6 +320,10 @@ export function WalkModeMap({
         showsMyLocationButton={false}
         followsUserLocation={Platform.OS === "ios" && followUser && isFollowing}
         onPanDrag={() => setIsFollowing(false)}
+        onPress={() => {
+          setSelectedPlace(null);
+          setPreviewCluster(null);
+        }}
       >
         <Circle
           center={{ latitude: userLatitude, longitude: userLongitude }}
@@ -421,6 +415,7 @@ export function WalkModeMap({
             const narratedAt = narratedIds.get(place.id);
             const wasNarrated = narratedAt !== undefined;
             const opacity = wasNarrated ? visitedOpacity(narratedAt) * 0.5 : 1;
+            const isSelected = selectedPlace?.id === place.id;
             return (
               <Marker
                 key={cluster.key}
@@ -428,21 +423,42 @@ export function WalkModeMap({
                   latitude: place.latitude,
                   longitude: place.longitude,
                 }}
-                title={place.name}
+                anchor={{ x: 0.5, y: 0.5 }}
+                tracksViewChanges={isSelected}
                 opacity={opacity}
+                stopPropagation
               >
-                <View
-                  style={{
-                    width: 14,
-                    height: 14,
-                    borderRadius: 7,
-                    backgroundColor: wasNarrated
-                      ? colors.mutedForeground
-                      : colors.primary,
-                    borderWidth: 2,
-                    borderColor: "#fff",
+                <Pressable
+                  onPress={() => {
+                    setPreviewCluster(null);
+                    setSelectedPlace(isSelected ? null : place);
                   }}
-                />
+                  hitSlop={10}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${place.name}${wasNarrated ? " (played)" : ""}. Tap to play.`}
+                >
+                  <View style={styles.pinWrapper}>
+                    {isSelected && (
+                      <View
+                        style={[
+                          styles.pinRing,
+                          { borderColor: colors.primary },
+                        ]}
+                      />
+                    )}
+                    <View
+                      style={[
+                        styles.pin,
+                        {
+                          backgroundColor: wasNarrated
+                            ? colors.mutedForeground
+                            : colors.primary,
+                          borderColor: "#fff",
+                        },
+                      ]}
+                    />
+                  </View>
+                </Pressable>
               </Marker>
             );
           }
@@ -528,6 +544,92 @@ export function WalkModeMap({
           <Feather name="crosshair" size={18} color={colors.primary} />
         </Pressable>
       )}
+
+      {selectedPlace && !previewCluster ? (
+        <View
+          style={[
+            styles.selectedCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+          ]}
+        >
+          <View style={styles.selectedCardBody}>
+            <View style={styles.selectedCardText}>
+              <Text
+                numberOfLines={1}
+                style={[styles.selectedName, { color: colors.foreground }]}
+              >
+                {selectedPlace.name}
+              </Text>
+              {selectedPlace.category || selectedPlace.summary ? (
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.selectedSub,
+                    { color: colors.mutedForeground },
+                  ]}
+                >
+                  {selectedPlace.category ||
+                    selectedPlace.summary?.split(/[.!?]/)[0]}
+                </Text>
+              ) : null}
+            </View>
+            {onOpenPlace ? (
+              <Pressable
+                onPress={() => {
+                  setSelectedPlace(null);
+                  onOpenPlace(selectedPlace);
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={`Open details for ${selectedPlace.name}`}
+                style={({ pressed }) => [
+                  styles.selectedActionBtn,
+                  {
+                    backgroundColor: pressed
+                      ? colors.muted
+                      : colors.muted + "80",
+                    borderColor: colors.border,
+                  },
+                ]}
+              >
+                <Feather name="info" size={15} color={colors.mutedForeground} />
+              </Pressable>
+            ) : null}
+            {onPlayPlace ? (
+              <Pressable
+                onPress={() => {
+                  onPlayPlace(selectedPlace);
+                  setSelectedPlace(null);
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  narratedIds.has(selectedPlace.id)
+                    ? `Replay story for ${selectedPlace.name}`
+                    : `Play story for ${selectedPlace.name}`
+                }
+                style={({ pressed }) => [
+                  styles.selectedActionBtn,
+                  styles.selectedPlayBtn,
+                  {
+                    backgroundColor: pressed
+                      ? colors.primary + "cc"
+                      : colors.primary,
+                  },
+                ]}
+              >
+                <Feather
+                  name={
+                    narratedIds.has(selectedPlace.id) ? "refresh-cw" : "play"
+                  }
+                  size={15}
+                  color={colors.primaryForeground}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
 
       {previewCluster ? (
         <>
@@ -668,6 +770,72 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
+  },
+  pinWrapper: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pin: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  pinRing: {
+    position: "absolute",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2.5,
+    opacity: 0.7,
+  },
+  selectedCard: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  selectedCardBody: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  selectedCardText: {
+    flex: 1,
+    gap: 2,
+  },
+  selectedName: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  selectedSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  selectedActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  selectedPlayBtn: {
+    borderWidth: 0,
   },
   reCenterBtn: {
     position: "absolute",
