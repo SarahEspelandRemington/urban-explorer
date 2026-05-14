@@ -37,6 +37,33 @@ export default function WalkModeScreen() {
   const walk = useWalkMode();
   const [settingsVisible, setSettingsVisible] = useState(false);
 
+  const navigateToPlace = (place: {
+    name: string;
+    latitude: number;
+    longitude: number;
+    category?: string | null;
+    yearBuilt?: string | null;
+    tags?: string[] | null;
+    summary?: string | null;
+    facts?: string[] | null;
+    address?: string | null;
+  }) => {
+    router.push({
+      pathname: "/place-detail",
+      params: {
+        name: place.name,
+        latitude: String(place.latitude),
+        longitude: String(place.longitude),
+        category: place.category ?? "",
+        yearBuilt: place.yearBuilt ?? "",
+        tags: JSON.stringify(place.tags ?? []),
+        summary: place.summary ?? "",
+        facts: JSON.stringify(place.facts ?? []),
+        address: place.address ?? "",
+      },
+    });
+  };
+
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   useEffect(() => {
@@ -428,22 +455,7 @@ export default function WalkModeScreen() {
             narratedIds={walk.narratedIds}
             currentlyPlayingPlaceId={walk.currentNarrationPlace?.id}
             onPlayPlace={(place) => walk.playPlace(place)}
-            onOpenPlace={(place) => {
-              router.push({
-                pathname: "/place-detail",
-                params: {
-                  name: place.name,
-                  latitude: String(place.latitude),
-                  longitude: String(place.longitude),
-                  category: place.category ?? "",
-                  yearBuilt: place.yearBuilt ?? "",
-                  tags: JSON.stringify(place.tags ?? []),
-                  summary: place.summary ?? "",
-                  facts: JSON.stringify(place.facts ?? []),
-                  address: place.address ?? "",
-                },
-              });
-            }}
+            onOpenPlace={(place) => navigateToPlace(place)}
           />
         ) : (
           <View style={[styles.loadingMap, { backgroundColor: colors.muted }]}>
@@ -480,20 +492,7 @@ export default function WalkModeScreen() {
                 if (!place) return;
                 if (Platform.OS !== "web")
                   Haptics.selectionAsync().catch(() => {});
-                router.push({
-                  pathname: "/place-detail",
-                  params: {
-                    name: place.name,
-                    latitude: String(place.latitude),
-                    longitude: String(place.longitude),
-                    category: place.category ?? "",
-                    yearBuilt: place.yearBuilt ?? "",
-                    tags: JSON.stringify(place.tags ?? []),
-                    summary: place.summary ?? "",
-                    facts: JSON.stringify(place.facts ?? []),
-                    address: place.address ?? "",
-                  },
-                });
+                navigateToPlace(place);
               }}
               accessibilityRole="button"
               accessibilityLabel={`Open details for ${walk.narration.currentPlace}`}
