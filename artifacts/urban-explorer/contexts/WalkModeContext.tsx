@@ -275,7 +275,11 @@ const DENSITY_CONFIG: Record<
     // Tightened from 140 m to 130 m to match the new maxQueueDistance.
     discoverRadius: 130,
     memoryRadius: 800,
-    minMetersBetweenPicks: 100,
+    // Reduced from 100 m: the cooldown (75 s) is the primary anti-spam gate;
+    // movement should only prevent narrating the exact same spot twice.
+    // 40 m ≈ half a Manhattan short block — enough spacing without making
+    // the user feel like they have to jog before the next story plays.
+    minMetersBetweenPicks: 40,
     corridorMeters: 120,
     // forwardBiasMeters: maximum score reduction (m) for a place straight
     // ahead (diff=0°). The dist/3 cap in pickNext was removed — see comment
@@ -311,7 +315,11 @@ const DENSITY_CONFIG: Record<
     // 60 + 30 + 30 m buffer = 120 m.
     discoverRadius: 120,
     memoryRadius: 800,
-    minMetersBetweenPicks: 40,
+    // Reduced from 40 m: with cooldownMs=25 s already rate-limiting picks,
+    // the movement gate just needs to prevent re-narrating the identical spot.
+    // 15 m ≈ 10 walking steps — short enough that a user pausing to look at
+    // a building and then stepping forward triggers the next story naturally.
+    minMetersBetweenPicks: 15,
     corridorMeters: 60,
     forwardBiasMeters: 60,
     offAxisPenaltyDeg: 45,
@@ -402,6 +410,13 @@ const VELOCITY_HEADING_CONSISTENCY_DEG = 60;
 // block. Compass errors in steel-frame canyons would otherwise shift the
 // search centre an entire block in the wrong direction.
 const LOOK_AHEAD_METERS = 30;
+
+// How long (ms) a velocity heading computed from GPS movement is considered
+// "fresh" enough to apply the hard 90° angular exclusion gate in pickNext.
+// After this interval without a new movement sample (user standing still or
+// very slow) the gate is relaxed to soft-penalty-only so nearby pins are
+// never completely blocked by a stale heading.
+const VELOCITY_HEADING_STALE_MS = 30_000;
 
 // Compute a lat/lng that is `meters` ahead of (lat, lon) along `headingDeg`.
 function projectAhead(
@@ -501,6 +516,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const compassHeadingBufferRef = useRef<number[]>([]);
   // Velocity-derived heading, as a fallback when the compass isn't available.
   const velocityHeadingRef = useRef<number | null>(null);
+  // Tracks the wall-clock time of the most recent velocity heading update.
+  // Used by pickNext to decide whether the heading is fresh enough to apply
+  // the hard 90° exclusion gate vs. falling back to soft-penalty-only.
+  const velocityHeadingTimestampRef = useRef<number | null>(null);
   // Rolling buffer of recent velocity-derived bearings for median smoothing.
   const velocityHeadingBufferRef = useRef<number[]>([]);
   const fetchingRef = useRef(false);
@@ -929,7 +948,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // lib/fetchNarrationPayload.ts so it can be tested without React.
   const fetchNarrationPayload = useCallback(
     (place: WalkPlace): Promise<NarrationPayload | null> => {
-      return fetchNarrationPayloadUtil(place, {
+      // Enrich the place with location context for the narration prompt.
+      // When the place has no specific street address (common for unnamed OSM
+      // POIs), fall back to the reverse-geocoded intersection of the user's
+      // current position (cachedAddressHintRef). This gives the model enough
+      // context to open every narration with a location phrase — "Right around
+      // two forty-nine West forty-ninth Street —" — even for unaddressed pins.
+      // The server prompt requires location orientation on every narration, so
+      // without this fallback the model has nothing to anchor to.
+      const enriched =
+        place.address || !cachedAddressHintRef.current
+          ? place
+          : { ...place, address: cachedAddressHintRef.current };
+      return fetchNarrationPayloadUtil(enriched, {
         apiBase: API_BASE,
         isExpoGo: IS_EXPO_GO,
       });
@@ -1065,63 +1096,95 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       const cfg = DENSITY_CONFIG[densityRef.current];
 
       // Movement gating: require the user to walk a minimum distance from where
-      // the last narration ended before queueing the next one. If we have no
-      // anchor yet (first pick of the walk), this gate is a no-op.
+      // the last narration ended before picking the next one. Prevents the same
+      // spot from auto-narrating twice in quick succession. The primary rate
+      // limiter is cooldownMs; this gate just anchors picks to movement.
       const anchor = lastNarrationEndLocationRef.current;
-      if (anchor) {
-        const movedSinceLast = haversineMeters(
-          anchor.latitude,
-          anchor.longitude,
-          loc.latitude,
-          loc.longitude,
-        );
-        if (movedSinceLast < cfg.minMetersBetweenPicks) return null;
+      const movedSinceLast = anchor
+        ? haversineMeters(
+            anchor.latitude,
+            anchor.longitude,
+            loc.latitude,
+            loc.longitude,
+          )
+        : Infinity;
+      if (anchor && movedSinceLast < cfg.minMetersBetweenPicks) {
+        if (__DEV__)
+          console.log(
+            `[pickNext] GATE:movement moved=${Math.round(movedSinceLast)}m need=${cfg.minMetersBetweenPicks}m`,
+          );
+        return null;
       }
-      // Prefer the GPS-velocity heading; fall back to the device compass when
-      // velocity is unavailable (user standing still, first few GPS ticks).
-      //
-      // The magnetometer (deviceHeading) is unreliable in urban canyons:
-      // steel-frame buildings and underground infrastructure can deflect it
-      // 90–180° from true north. GPS velocity (derived from consecutive
-      // position samples) is free of magnetic interference and consistently
-      // accurate at normal walking speeds once ≥12 m of movement has
-      // accumulated. Swapping priority here means the scoring model uses the
-      // more reliable signal whenever the user is actually moving.
+
+      // Heading priority: GPS velocity > device compass. Velocity is more
+      // reliable in urban steel-frame canyons where magnetic deflection can
+      // reach 90–180°. Compass is the fallback for standing-still scenarios.
       const heading = velocityHeadingRef.current ?? deviceHeadingRef.current;
+
+      // Decide if the velocity heading is fresh enough to trust for the hard
+      // 90° exclusion gate. After VELOCITY_HEADING_STALE_MS without a movement
+      // update (user has been standing still), the heading vector may no longer
+      // reflect actual travel direction — relax to soft-penalty-only so nearby
+      // pins are never permanently blocked by a stale heading.
+      const velocityHeadingAge =
+        velocityHeadingTimestampRef.current !== null
+          ? Date.now() - velocityHeadingTimestampRef.current
+          : Infinity;
+      const velocityHeadingIsRecent =
+        velocityHeadingAge < VELOCITY_HEADING_STALE_MS;
+
+      if (__DEV__) {
+        const headingDesc =
+          velocityHeadingRef.current !== null
+            ? `${Math.round(velocityHeadingRef.current)}°(vel/${velocityHeadingIsRecent ? "fresh" : "STALE"})`
+            : deviceHeadingRef.current !== null
+              ? `${Math.round(deviceHeadingRef.current)}°(compass)`
+              : "none";
+        console.log(
+          `[pickNext] density=${densityRef.current} maxDist=${cfg.maxQueueDistance}m ` +
+            `heading=${headingDesc} ` +
+            `anchor=${anchor ? `${Math.round(movedSinceLast)}m from last` : "firstPick"} ` +
+            `pool=${placesRef.current.length} narrated=${narratedIdsRef.current.size}`,
+        );
+      }
 
       let best: WalkPlace | null = null;
       let bestScore = Infinity;
+      // Track whether the 90° hard gate excluded at least one candidate so
+      // we know whether a fallback second pass is warranted.
+      let blockedBy90Deg = false;
 
       for (const p of placesRef.current) {
-        if (narratedIdsRef.current.has(p.id)) continue;
+        if (narratedIdsRef.current.has(p.id)) {
+          if (__DEV__) console.log(`  [skip:narrated] "${p.name}"`);
+          continue;
+        }
         const dist = haversineMeters(
           loc.latitude,
           loc.longitude,
           p.latitude,
           p.longitude,
         );
-        if (dist > cfg.maxQueueDistance) continue;
+        if (dist > cfg.maxQueueDistance) {
+          if (__DEV__)
+            console.log(
+              `  [skip:dist ${Math.round(dist)}m>${cfg.maxQueueDistance}m] "${p.name}"`,
+            );
+          continue;
+        }
         const net = p.netScore ?? 0;
-        if (net < cfg.netScoreFloor) continue;
+        if (net < cfg.netScoreFloor) {
+          if (__DEV__)
+            console.log(
+              `  [skip:netScore ${net}<${cfg.netScoreFloor}] "${p.name}"`,
+            );
+          continue;
+        }
 
         // Scoring: lower is better. Distance is the base.
         let score = dist;
-        // Heading-aware bias: strongly favour places in the direction of travel.
-        //
-        // When velocity heading is available (user is actively moving), apply
-        // a hard exclusion gate first: places more than 90° off the travel
-        // direction are completely skipped for automatic narration. This is the
-        // primary fix for "story played on the adjacent street" — a place on
-        // 47th St while walking on 48th will typically be ~80° off-axis and
-        // will be excluded rather than merely penalised. Manual pin-taps
-        // (playPlace) bypass this function entirely, so the user can still
-        // hear any visible pin on demand.
-        //
-        // We only apply the hard gate when we have the GPS-velocity heading
-        // (the more reliable signal). When only the compass is available
-        // (e.g. user standing still), we fall through to the softer cosine
-        // bias + penalty approach so a briefly stationary user still hears
-        // something nearby.
+        let diffForLog: number | null = null;
+
         if (heading !== null) {
           const overrides = walkConfigOverridesRef.current;
           const fwdBias = overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
@@ -1136,19 +1199,24 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             p.longitude,
           );
           const diff = angularDiff(heading, placeBearing);
+          diffForLog = diff;
 
-          // Hard gate: if velocity heading is available (user is moving),
-          // skip places more than 90° off the travel direction entirely.
-          // This is stronger than the off-axis penalty alone and is the key
-          // mechanism that keeps auto-narration to the user's current street.
-          if (velocityHeadingRef.current !== null && diff > 90) continue;
+          // Hard 90° gate: only applied when the velocity heading is FRESH
+          // (updated within VELOCITY_HEADING_STALE_MS). A stale heading from
+          // when the user was walking a different direction must not lock out
+          // all nearby pins once the user has stopped or turned.
+          if (velocityHeadingIsRecent && diff > 90) {
+            blockedBy90Deg = true;
+            if (__DEV__)
+              console.log(
+                `  [skip:90°gate diff=${Math.round(diff)}°] "${p.name}" dist=${Math.round(dist)}m`,
+              );
+            continue;
+          }
 
-          // Cosine forward bias: full bonus at diff=0 (straight ahead), zero
-          // at diff=90°, full penalty at diff=180°. The old dist/3 cap has
-          // been removed — with maxQueueDistance now capped at 60 m (dense)
-          // or 90 m (sparse), there is no risk of a far-away avenue place
-          // scoring 0 and jumping ahead; the maxQueueDistance gate prevents
-          // any place beyond the eligible radius from entering the loop at all.
+          // Cosine forward bias: full bonus at diff=0° (straight ahead),
+          // zero at 90°, penalty at 180°. No dist/3 cap — maxQueueDistance
+          // prevents far-avenue jumps structurally.
           score -= fwdBias * Math.cos((diff * Math.PI) / 180);
 
           // Flat penalty for places past the soft off-axis threshold.
@@ -1156,16 +1224,93 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             score += penaltyMeters;
           }
         }
-        // Rating bonus: each net upvote shaves up to 10m, capped at 30m.
-        // Tightened from 20m / 80m so a highly-rated far place can't jump
-        // ahead of a closer story (the whole maxQueueDistance for dense is
-        // now 90m, so an 80m bonus would have wiped out almost the entire
-        // distance gap).
+
+        // Rating bonus: each net upvote shaves up to 10 m, capped at 30 m.
         score -= Math.min(30, Math.max(-30, net * 10));
+
+        if (__DEV__) {
+          const diffStr =
+            diffForLog !== null ? ` diff=${Math.round(diffForLog)}°` : "";
+          console.log(
+            `  [pass] "${p.name}" dist=${Math.round(dist)}m${diffStr} score=${Math.round(score)}`,
+          );
+        }
 
         if (score < bestScore) {
           bestScore = score;
           best = p;
+        }
+      }
+
+      // Fallback: if the hard 90° gate eliminated EVERY eligible candidate
+      // (e.g. the user is surrounded by pins but all happened to fall behind
+      // a fresh-but-momentarily-inaccurate velocity heading), redo the loop
+      // with only soft cosine + penalty. This prevents "surrounded by pins
+      // but nothing plays" without permanently disabling the hard gate.
+      if (best === null && blockedBy90Deg) {
+        if (__DEV__)
+          console.log(
+            `[pickNext] 90°gate blocked all candidates — retrying without hard gate`,
+          );
+        for (const p of placesRef.current) {
+          if (narratedIdsRef.current.has(p.id)) continue;
+          const dist = haversineMeters(
+            loc.latitude,
+            loc.longitude,
+            p.latitude,
+            p.longitude,
+          );
+          if (dist > cfg.maxQueueDistance) continue;
+          const net = p.netScore ?? 0;
+          if (net < cfg.netScoreFloor) continue;
+          let score = dist;
+          if (heading !== null) {
+            const overrides = walkConfigOverridesRef.current;
+            const fwdBias =
+              overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
+            const penaltyDeg =
+              overrides?.offAxisPenaltyDeg ?? cfg.offAxisPenaltyDeg;
+            const penaltyMeters =
+              overrides?.offAxisPenaltyMeters ?? cfg.offAxisPenaltyMeters;
+            const placeBearing = bearingDeg(
+              loc.latitude,
+              loc.longitude,
+              p.latitude,
+              p.longitude,
+            );
+            const diff = angularDiff(heading, placeBearing);
+            score -= fwdBias * Math.cos((diff * Math.PI) / 180);
+            if (diff > penaltyDeg) score += penaltyMeters;
+          }
+          score -= Math.min(30, Math.max(-30, net * 10));
+          if (score < bestScore) {
+            bestScore = score;
+            best = p;
+          }
+        }
+        if (__DEV__ && best) {
+          const dist = haversineMeters(
+            loc.latitude,
+            loc.longitude,
+            best.latitude,
+            best.longitude,
+          );
+          const pb =
+            heading !== null
+              ? bearingDeg(
+                  loc.latitude,
+                  loc.longitude,
+                  best.latitude,
+                  best.longitude,
+                )
+              : null;
+          const diff =
+            heading !== null && pb !== null ? angularDiff(heading, pb) : null;
+          console.log(
+            `[pickNext] fallback → "${best.name}" dist=${Math.round(dist)}m` +
+              (diff !== null ? ` diff=${Math.round(diff)}°` : "") +
+              ` score=${Math.round(bestScore)}`,
+          );
         }
       }
 
@@ -1277,6 +1422,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             buf.push(newBearing);
             if (buf.length > HEADING_BUFFER_SIZE) buf.shift();
             velocityHeadingRef.current = circularMedian(buf);
+            velocityHeadingTimestampRef.current = now;
           }
         }
       }
@@ -1644,6 +1790,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         prevLocationRef.current = null;
         deviceHeadingRef.current = null;
         velocityHeadingRef.current = null;
+        velocityHeadingTimestampRef.current = null;
         cachedAddressHintRef.current = "";
         // Critical: reset fetchingRef so the first discover call after a
         // walk-restart isn't silently dropped. If stopWalk was called while a
@@ -1744,11 +1891,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // and fires handleLocationUpdate for the previous walk's lifecycle,
         // causing duplicate location events and potential state corruption.
         if (watchRef.current) {
-          try { watchRef.current.remove(); } catch {}
+          try {
+            watchRef.current.remove();
+          } catch {}
           watchRef.current = null;
         }
         if (headingWatchRef.current) {
-          try { headingWatchRef.current.remove(); } catch {}
+          try {
+            headingWatchRef.current.remove();
+          } catch {}
           headingWatchRef.current = null;
         }
 
