@@ -260,45 +260,62 @@ const DENSITY_CONFIG: Record<
     refetchMeters: 50,
     cooldownMs: 75 * 1000,
     netScoreFloor: 0,
-    // Tightened from 150 m to 120 m: limits narration to the user's current
-    // block plus immediately adjacent blocks (~1.5 Manhattan short blocks).
-    maxQueueDistance: 120,
-    // Tightened from 200 m to 140 m to match. With LOOK_AHEAD_METERS=30 the
-    // farthest a place can be from the user at fetch time is 170 m, and the
-    // 120 m maxQueueDistance gate will then re-filter at pick time.
-    discoverRadius: 140,
+    // PIN VISIBILITY vs AUTO-NARRATION:
+    //   • Map pins are displayed for all places within memoryRadius (800 m) —
+    //     the user can see and manually tap anything in the neighbourhood.
+    //   • Auto-narration (pickNext) is gated by maxQueueDistance ONLY.
+    //     Nothing beyond this radius plays automatically, regardless of score.
+    //
+    // Tightened from 120 m to 90 m: one full Manhattan short block (~80 m).
+    // Keeps automatic stories to the current block and the very start of the
+    // next; adjacent-street pins remain visible but do not auto-play.
+    maxQueueDistance: 90,
+    // discoverRadius must be ≥ maxQueueDistance + LOOK_AHEAD_METERS (30 m)
+    // so newly fetched places are immediately eligible for narration.
+    // Tightened from 140 m to 130 m to match the new maxQueueDistance.
+    discoverRadius: 130,
     memoryRadius: 800,
     minMetersBetweenPicks: 100,
     corridorMeters: 120,
-    // Tightened from 200 m to 60 m. The old value let a place 200 m straight
-    // ahead score the same as a place right next to the user, which is why
-    // the app jumped 6 blocks up an avenue. Combined with the dist/3 cap in
-    // pickNext, raw proximity always dominates direction.
+    // forwardBiasMeters: maximum score reduction (m) for a place straight
+    // ahead (diff=0°). The dist/3 cap in pickNext was removed — see comment
+    // there. With maxQueueDistance=90 m the "avenue jump" cannot happen
+    // because no place beyond 90 m is even considered.
     forwardBiasMeters: 60,
-    // 30° cone focuses narration on places squarely ahead of the user,
-    // reducing side-street bleed on a city grid.
-    offAxisPenaltyDeg: 30,
-    // 300 m flat penalty makes off-axis places a true last resort.
-    offAxisPenaltyMeters: 300,
+    // Angular threshold beyond which a place is considered "off-axis" and
+    // receives the flat offAxisPenaltyMeters penalty on top of the cosine
+    // bias. A hard 90° exclusion gate (only when velocity heading is
+    // available) sits above this in pickNext so places clearly behind the
+    // user never auto-play even if they are within maxQueueDistance.
+    offAxisPenaltyDeg: 45,
+    // Flat penalty (m) for off-axis places. Raised from 300 m to 500 m so
+    // a side-street or behind-the-user place is a decisive last resort and
+    // can only win when the queue is completely empty.
+    offAxisPenaltyMeters: 500,
   },
   dense: {
     refetchMeters: 50,
     cooldownMs: 25 * 1000,
     netScoreFloor: -2,
-    // Tightened from 120 m to 90 m: roughly the user's current Manhattan
-    // short block plus the immediately adjacent half-block in any direction.
-    // Hard ceiling — no story whose pin sits further than this can play.
-    maxQueueDistance: 90,
-    // Tightened from 250 m to 130 m. With LOOK_AHEAD_METERS=30 the maximum
-    // possible distance from user at fetch time is 160 m; pickNext then
-    // re-filters down to maxQueueDistance.
-    discoverRadius: 130,
+    // PIN VISIBILITY vs AUTO-NARRATION:
+    //   • Map pins are displayed for all places within memoryRadius (800 m).
+    //   • Auto-narration is gated by maxQueueDistance only.
+    //
+    // Tightened from 90 m to 60 m: well inside a single Manhattan short
+    // block (~80 m). A place on the adjacent street is typically 70-85 m
+    // away — above this threshold, so it stays visible but does not
+    // auto-play. Only places that are clearly on the user's current block
+    // or at the near edge of the next block can trigger automatically.
+    maxQueueDistance: 60,
+    // discoverRadius ≥ maxQueueDistance + LOOK_AHEAD_METERS.
+    // 60 + 30 + 30 m buffer = 120 m.
+    discoverRadius: 120,
     memoryRadius: 800,
     minMetersBetweenPicks: 40,
     corridorMeters: 60,
     forwardBiasMeters: 60,
-    offAxisPenaltyDeg: 30,
-    offAxisPenaltyMeters: 300,
+    offAxisPenaltyDeg: 45,
+    offAxisPenaltyMeters: 500,
   },
 };
 
@@ -890,7 +907,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         kind: payload.kind,
       });
       if (Platform.OS !== "web") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Wrapped in try/catch: Haptics can throw on devices without a
+        // haptic engine or when the audio session is temporarily locked by
+        // an incoming call. An unhandled rejection here would crash Expo Go.
+        try {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch {}
       }
       setStats((prev) => ({
         ...prev,
@@ -1055,9 +1077,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         );
         if (movedSinceLast < cfg.minMetersBetweenPicks) return null;
       }
-      // Prefer the live device compass heading; fall back to the heading we
-      // derive from GPS velocity when the magnetometer is unavailable.
-      const heading = deviceHeadingRef.current ?? velocityHeadingRef.current;
+      // Prefer the GPS-velocity heading; fall back to the device compass when
+      // velocity is unavailable (user standing still, first few GPS ticks).
+      //
+      // The magnetometer (deviceHeading) is unreliable in urban canyons:
+      // steel-frame buildings and underground infrastructure can deflect it
+      // 90–180° from true north. GPS velocity (derived from consecutive
+      // position samples) is free of magnetic interference and consistently
+      // accurate at normal walking speeds once ≥12 m of movement has
+      // accumulated. Swapping priority here means the scoring model uses the
+      // more reliable signal whenever the user is actually moving.
+      const heading = velocityHeadingRef.current ?? deviceHeadingRef.current;
 
       let best: WalkPlace | null = null;
       let bestScore = Infinity;
@@ -1077,14 +1107,21 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // Scoring: lower is better. Distance is the base.
         let score = dist;
         // Heading-aware bias: strongly favour places in the direction of travel.
-        //   forwardBiasMeters (200 m default) — cosine term gives the full bonus
-        //   when the place is straight ahead (diff=0) and 0 bonus at 90°. At 180°
-        //   it becomes a penalty. This overwhelms the Manhattan side-street effect:
-        //   a place 200 m ahead scores 200−200=0 vs 80 m perpendicular scoring 80.
         //
-        //   offAxisPenaltyDeg / offAxisPenaltyMeters — additional flat penalty for
-        //   places more than ~45° off-heading, making them a genuine last resort
-        //   without hard-excluding them (queue never goes empty in bad GPS).
+        // When velocity heading is available (user is actively moving), apply
+        // a hard exclusion gate first: places more than 90° off the travel
+        // direction are completely skipped for automatic narration. This is the
+        // primary fix for "story played on the adjacent street" — a place on
+        // 47th St while walking on 48th will typically be ~80° off-axis and
+        // will be excluded rather than merely penalised. Manual pin-taps
+        // (playPlace) bypass this function entirely, so the user can still
+        // hear any visible pin on demand.
+        //
+        // We only apply the hard gate when we have the GPS-velocity heading
+        // (the more reliable signal). When only the compass is available
+        // (e.g. user standing still), we fall through to the softer cosine
+        // bias + penalty approach so a briefly stationary user still hears
+        // something nearby.
         if (heading !== null) {
           const overrides = walkConfigOverridesRef.current;
           const fwdBias = overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
@@ -1099,16 +1136,22 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             p.longitude,
           );
           const diff = angularDiff(heading, placeBearing);
-          // Cap the forward-direction boost at dist/3 so it can never
-          // overpower raw proximity. Without this cap, a place 200 m straight
-          // ahead got a -200 m boost (score 0) and beat a place 50 m to the
-          // side (score 50) — exactly the "jumped 6 blocks up an avenue" bug.
-          // With the cap, a 200 m place can only score down to 200-(200/3)=133,
-          // so the closer place always wins. A 90 m place can still score
-          // down to 60, so direction still tie-breaks among similarly close
-          // candidates.
-          const effectiveFwdBias = Math.min(fwdBias, dist / 3);
-          score -= effectiveFwdBias * Math.cos((diff * Math.PI) / 180);
+
+          // Hard gate: if velocity heading is available (user is moving),
+          // skip places more than 90° off the travel direction entirely.
+          // This is stronger than the off-axis penalty alone and is the key
+          // mechanism that keeps auto-narration to the user's current street.
+          if (velocityHeadingRef.current !== null && diff > 90) continue;
+
+          // Cosine forward bias: full bonus at diff=0 (straight ahead), zero
+          // at diff=90°, full penalty at diff=180°. The old dist/3 cap has
+          // been removed — with maxQueueDistance now capped at 60 m (dense)
+          // or 90 m (sparse), there is no risk of a far-away avenue place
+          // scoring 0 and jumping ahead; the maxQueueDistance gate prevents
+          // any place beyond the eligible radius from entering the loop at all.
+          score -= fwdBias * Math.cos((diff * Math.PI) / 180);
+
+          // Flat penalty for places past the soft off-axis threshold.
           if (diff > penaltyDeg) {
             score += penaltyMeters;
           }
@@ -1694,6 +1737,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           ]);
           if (isWalkingRef.current) handleLocationUpdate(loc);
         } catch {}
+
+        // Guard: if a stale subscription exists from a previous walk session
+        // (e.g. after a hot-reload or rapid stop/restart), remove it before
+        // creating a new one. Without this guard, the old subscription leaks
+        // and fires handleLocationUpdate for the previous walk's lifecycle,
+        // causing duplicate location events and potential state corruption.
+        if (watchRef.current) {
+          try { watchRef.current.remove(); } catch {}
+          watchRef.current = null;
+        }
+        if (headingWatchRef.current) {
+          try { headingWatchRef.current.remove(); } catch {}
+          headingWatchRef.current = null;
+        }
 
         if (Platform.OS === "web") {
           try {
