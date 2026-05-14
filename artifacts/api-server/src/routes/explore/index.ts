@@ -2457,14 +2457,14 @@ How to write for speech:
 - Spell out every number, year, decade, ordinal, and acronym as words: "eighteen eighty-two" not "1882", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
-- If an address is provided, open with it as a natural spoken phrase — one brief clause before the story. For example: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-seventh —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE".
-- When no address is provided, vary how you open. Lead with the place itself, a surprising fact, a person connected to it, or what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
+- ALWAYS begin with a brief location orientation — a short clause that tells the listener where they are spatially. If an address is provided (a specific street number or a cross-street reference like "8th Ave & W 49th St"), open with it naturally: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-ninth —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49". If the address is a broader area description rather than a street number or intersection, use a directional phrase instead: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Location orientation is mandatory — never skip it.
+- After the location opener, vary how you continue. Lead with the place itself, a surprising fact, a person connected to it, or what it used to be. Never start with "Oh" or "Check this out" or "So".
 - End with something specific — a detail to notice, a question to sit with, a contrast between then and now. Not a generic "isn't that fascinating."
 - If you're not certain of a detail, say "supposedly" or "the story goes" rather than stating it as fact.`,
         },
         {
           role: "user",
-          content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+          content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address or nearby location: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
         },
       ],
     })
@@ -2668,14 +2668,14 @@ How to write for speech:
 - Spell out every number, year, decade, ordinal, and acronym as words: "eighteen eighty-two" not "1882", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
-- If an address is provided, open with it as a natural spoken phrase — one brief clause before the story. For example: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-seventh —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE".
-- When no address is provided, vary how you open. Lead with the place itself, a surprising fact, a person connected to it, or what it used to be. Never start with "Oh" or "Check this out" or "So" every time.
+- ALWAYS begin with a brief location orientation — a short clause that tells the listener where they are spatially. If an address is provided (a specific street number or a cross-street reference like "8th Ave & W 49th St"), open with it naturally: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-ninth —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49". If the address is a broader area description rather than a street number or intersection, use a directional phrase instead: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Location orientation is mandatory — never skip it.
+- After the location opener, vary how you continue. Lead with the place itself, a surprising fact, a person connected to it, or what it used to be. Never start with "Oh" or "Check this out" or "So".
 - End with something specific — a detail to notice, a question to sit with, a contrast between then and now. Not a generic "isn't that fascinating."
 - If you're not certain of a detail, say "supposedly" or "the story goes" rather than stating it as fact.`,
               },
               {
                 role: "user",
-                content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+                content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address or nearby location: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
               },
             ],
           },
