@@ -808,6 +808,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             placesRef.current = merged;
             setNearbyPlaces(merged);
             lastFetchRef.current = { latitude, longitude };
+            // Loop-walk recovery: prune narratedIds entries older than 1 hour
+            // so a place the user heard early in a long loop walk can re-narrate
+            // when they circle back. Without this prune, narratedIdsRef grows
+            // forever and the return leg of any loop walk is silent. We only
+            // prune the ref (used by pickNext), not the React state used to
+            // visually dim played pins on the map — the visual history of
+            // played stories deliberately persists for the whole walk.
+            const oneHourAgo = Date.now() - 60 * 60 * 1000;
+            for (const [id, ts] of narratedIdsRef.current.entries()) {
+              if (ts < oneHourAgo) narratedIdsRef.current.delete(id);
+            }
           }
         }
       } catch (err) {
@@ -991,12 +1002,31 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   /**
    * Immediately narrate a specific place, bypassing all cooldown / scoring
    * gates. Used by the manual "Play / Replay" pin action in the walk map.
+   *
+   * Manual intent must override any in-progress automatic narration, not
+   * queue behind it: without narration.stop() the user's tapped place would
+   * only start playing after the current auto-picked story finished, making
+   * the pin feel unresponsive. After stopping, we also anchor the
+   * lastNarrationEnd* refs so the auto-picker's movement gate
+   * (minMetersBetweenPicks) doesn't immediately fire a competing pick the
+   * very next GPS tick — the user's manual choice should hold its slot for
+   * at least one cooldown / movement window like an auto pick would.
    */
   const playPlace = useCallback(
     (place: WalkPlace) => {
+      try {
+        narration.stop();
+      } catch {}
+      if (currentLocation) {
+        lastNarrationEndLocationRef.current = {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+        };
+      }
+      lastNarrationEndRef.current = Date.now();
       fetchNarration(place);
     },
-    [fetchNarration],
+    [fetchNarration, narration, currentLocation],
   );
 
   /**
