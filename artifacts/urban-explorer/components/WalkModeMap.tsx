@@ -438,7 +438,7 @@ export function WalkModeMap({
                     setPreviewCluster(null);
                     setSelectedPlace(isSelected ? null : place);
                   }}
-                  hitSlop={10}
+                  hitSlop={14}
                   accessibilityRole="button"
                   accessibilityLabel={`${place.name}${wasNarrated ? " (played)" : ""}. Tap to play.`}
                 >
