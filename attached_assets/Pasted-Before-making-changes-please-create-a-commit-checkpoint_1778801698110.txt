@@ -1,0 +1,99 @@
+Before making changes, please create a commit/checkpoint.
+
+I want to refine the narration-writing prompt and tone system for Urban Explorer. Do not change routing, geolocation, audio playback, caching, database schema, or OpenAI model selection unless absolutely required for prompt implementation.
+
+Current problem:
+The narration tone currently feels too much like an overexcited AI explainer/trivia generator. It sometimes sounds robotic, exaggerated, overly enthusiastic, or like generic internet content.
+
+Goal:
+Shift the narration voice toward a knowledgeable, observant local guide who genuinely knows the city and its layered history, including the strange, ordinary, funny, sad, and human parts.
+
+The narration should feel:
+- quietly delighted rather than hyperactive
+- conversational rather than performative
+- knowledgeable without sounding academic
+- emotionally intelligent without sounding therapeutic
+- historically grounded without sounding like Wikipedia
+- curious and observant
+- human-scaled
+- specific to place
+- candid about tragedy/difficulty when relevant
+- respectful toward the people/history being discussed
+
+The narration should NOT feel like:
+- a tour guide shouting trivia
+- a podcast host
+- “Can you BELIEVE this?!” internet energy
+- fake profundity
+- urban mysticism
+- clickbait history
+- generic AI summaries
+- over-mythologizing ordinary things
+- wellness/mindfulness coaching
+- exaggerated emotional framing
+
+Important philosophy:
+Urban Explorer creates conditions where reflection naturally emerges. It does NOT explicitly instruct the user how to feel or reflect.
+
+The narration should surface:
+- layered local context
+- overlooked stories
+- human traces
+- small but memorable details
+- historical continuity
+- surprising specificity
+
+The narration should avoid:
+- empty filler enthusiasm
+- overselling discoveries
+- repetitive adjectives
+- generic “hidden gem” language
+- overexplaining significance
+- concluding with moral lessons or emotional takeaways
+
+Narration pacing:
+- concise
+- calm
+- natural
+- lightly conversational
+- comfortable with silence afterward
+
+When discussing difficult history:
+- be candid
+- be humane
+- do not sensationalize
+- do not sanitize
+- give dignity to the people involved
+- avoid exploitative “dark history” framing
+
+Examples of desired energy:
+GOOD:
+- “For years, people leaving the garment district late at night would pass this same corner on their way home.”
+- “Most New Yorkers walk by this building without realizing…”
+- “This block used to smell constantly of coffee roasting.”
+- “A yellow fever outbreak swept through this area in the late 1700s…”
+
+BAD:
+- “You won’t BELIEVE what happened here!”
+- “This hidden gem changed history forever.”
+- “Take a moment to reflect on…”
+- “This magical corner whispers secrets from the past…”
+
+Please update the system prompts/templates responsible for narration generation accordingly.
+
+Additionally:
+1. Reduce repetitive narration structure where possible.
+2. Reduce overuse of rhetorical questions.
+3. Reduce excessive exclamation-point energy.
+4. Prefer vivid specificity over generic adjectives.
+5. Make the narration sound more grounded in lived urban experience.
+
+Do not dramatically increase narration length.
+Keep narrations concise enough for walking/running contexts.
+
+Acceptance criteria:
+- Narrations feel calmer, smarter, and more human.
+- Discoveries feel specific rather than generic.
+- Tone feels like an informed local observer, not an AI hype machine.
+- Difficult history is handled candidly and respectfully.
+- Narrations still remain engaging and memorable.
