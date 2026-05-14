@@ -1,0 +1,28 @@
+I field-tested Walk Mode again today. It is a little better, but there are still major issues that need diagnosis rather than more light tuning.
+Please treat this as a debugging pass focused on stability, directionality, and location/story synchronization.
+Main issues observed:
+	1.	Expo Go crashed repeatedly
+	•	The app crashed multiple times during Walk Mode testing.
+	•	Please inspect Walk Mode for likely crash causes: location subscriptions, repeated refetching, audio playback state, map rendering, clustering, selected pin state, memory leaks, race conditions, or excessive re-renders.
+	•	Add defensive handling where needed so Walk Mode does not crash during normal use.
+	2.	Results are still not prioritizing the direction I am walking
+	•	I have at least one screenshot where I am walking west, but a large cluster of results is behind me.
+	•	Walk Mode still seems to load or prioritize stories based on general proximity rather than forward movement.
+	•	Please debug the heading/direction-of-travel logic and verify that “ahead of user” is actually being calculated correctly.
+	•	If GPS heading is unreliable at walking speed, please use recent location movement vector as the primary direction signal, with GPS heading as a fallback.
+	3.	Story playback is not synced closely enough to my actual location
+	•	The biggest problem is that the app is narrating places on the wrong street.
+	•	Example: a location on 47th Street played while my blue dot clearly showed I was on 48th Street.
+	•	The app should not trigger a story one street/block away when I am clearly on a different street, especially in a Manhattan-style grid.
+	•	Please tighten the eligibility logic so automatic narration requires much stronger location relevance than manual pin playback.
+	4.	Separate “visible nearby pins” from “eligible for automatic narration”
+	•	It is okay if the map displays nearby pins/clusters for context.
+	•	But automatic narration should be much stricter.
+	•	Please make sure the narration queue only includes pins that are very likely to match my current walking path, current street/block, and direction of travel.
+	•	Side-street or adjacent-street pins should usually remain visible but should not automatically play unless selected manually.
+Please do not make major UX changes or add new features. I need Walk Mode to become reliable and context-aware before anything else.
+Please first inspect and explain the likely root causes, then make targeted fixes. At the end, please summarize:
+	1.	What was causing the crashes or likely causing them
+	2.	How direction-of-travel is now being calculated
+	3.	How automatic narration eligibility is now stricter than visible map pins
+	4.	What I should specifically test on my next walk
