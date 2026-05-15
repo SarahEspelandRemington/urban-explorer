@@ -904,6 +904,91 @@ async function verifyPlaceCoordinates(
   );
 }
 
+/**
+ * Address ↔ coordinates coherence check.
+ *
+ * Catches the IMG_0343-style hallucination where the LLM emits a place with
+ * an internally inconsistent location: real-sounding street address (e.g.
+ * "610 8th Ave") attached to lat/lng that sit five blocks west on the
+ * Hudson piers. `verifyPlaceCoordinates` doesn't catch this because its
+ * Nominatim search combines name+address and the made-up name returns no
+ * match — so coords are left alone and the place flows downstream into
+ * Walk Mode's narration queue.
+ *
+ * Strategy: for any place with a parseable street address (a number +
+ * street word), geocode the address ALONE and require the result to be
+ * within COHERENCE_THRESHOLD_M of the place's claimed lat/lng. If not,
+ * mark _rejectOutOfArea so the post-filter drops it.
+ *
+ * Re-uses geocodeNearLocation (with its 30-min cache) so repeat hits cost
+ * nothing.
+ */
+async function verifyAddressCoherence(
+  places: any[],
+  userLat: number,
+  userLng: number,
+  searchRadius: number,
+): Promise<void> {
+  const COHERENCE_THRESHOLD_M = 200;
+  // Heuristic for "this looks like a real street address": a digit followed
+  // by a street-type token (Ave, Avenue, St, Street, Blvd, Rd, etc.). Plain
+  // intersection references like "8th Ave & W 49th St" don't have a street
+  // number and are skipped (they geocode to the intersection itself which
+  // can be far from the building).
+  const ADDRESS_RX =
+    /\b\d{1,5}\s+\S+\s+(ave|avenue|st|street|blvd|boulevard|rd|road|ln|lane|dr|drive|pl|place|ct|court|sq|square|way|pkwy|parkway|hwy|highway)\b/i;
+
+  const candidates = places.filter(
+    (p) =>
+      !p._rejectOutOfArea &&
+      typeof p.address === "string" &&
+      ADDRESS_RX.test(p.address) &&
+      typeof p.latitude === "number" &&
+      typeof p.longitude === "number",
+  );
+  if (candidates.length === 0) return;
+
+  // Use scheduleNominatimCall so we obey the 1 req/sec ToS cap. Promise.allSettled
+  // runs them concurrently; one slow lookup doesn't stall the rest.
+  await Promise.allSettled(
+    candidates.map((p) =>
+      scheduleNominatimCall(async () => {
+        const result = await geocodeNearLocation(p.address);
+        if (!result) return;
+        const dist = haversineDistance(
+          p.latitude,
+          p.longitude,
+          result.lat,
+          result.lon,
+        );
+        if (dist > COHERENCE_THRESHOLD_M) {
+          // Address resolves far from the LLM's lat/lng. We can't tell
+          // which side is correct from this signal alone — short address
+          // strings (e.g. "12 Main St") are ambiguous and can geocode to
+          // another city entirely. To avoid false-dropping legitimate local
+          // places we require *two* independent failure signals before
+          // rejecting:
+          //   (1) address geocode is >200 m from claimed lat/lng, AND
+          //   (2) the geocoded address is itself well outside the user's
+          //       current search area (>1.5× search radius from user).
+          // This catches the high-confidence "real street, wrong city"
+          // hallucination pattern while leaving ambiguous-but-plausible
+          // local addresses in place.
+          const geocodedDistFromUser = haversineDistance(
+            userLat,
+            userLng,
+            result.lat,
+            result.lon,
+          );
+          if (geocodedDistFromUser > searchRadius * 1.5) {
+            p._rejectOutOfArea = true;
+          }
+        }
+      }),
+    ),
+  );
+}
+
 async function postProcessPlaces(
   places: any[],
   userLat: number,
@@ -928,6 +1013,7 @@ async function postProcessPlaces(
 
   if (!options.skipVerification) {
     await verifyPlaceCoordinates(processed, userLat, userLng, searchRadius);
+    await verifyAddressCoherence(processed, userLat, userLng, searchRadius);
   }
 
   processed = processed.filter((p: any) => {
@@ -2439,7 +2525,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact, address } = parsed.data;
 
-  const narrationCacheKey = `narration:v11:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v13:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2479,7 +2565,12 @@ How to write for speech:
 - Spell out every number, year, decade, ordinal, and acronym as words: "eighteen eighty-two" not "1882", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
-- ALWAYS begin with a brief location orientation — a short clause that tells the listener where they are spatially. If an address is provided (a specific street number or a cross-street reference like "8th Ave & W 49th St"), open with it naturally: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-ninth —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49". If the address is a broader area description rather than a street number or intersection, use a directional phrase instead: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Location orientation is mandatory — never skip it.
+- MANDATORY FIRST CLAUSE — every narration MUST begin with a spatial anchor that orients the listener in physical space. This is non-negotiable: a narration that omits the spatial opener is wrong. Choose the strongest signal you have, in this priority order:
+  1. If a street number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
+  2. If only a cross-street / intersection reference is provided (e.g. "8th Ave & W 49th St"), open with it: "Right at the corner of Eighth and Forty-ninth —".
+  3. If only a broader area is provided (e.g. "near the Hudson piers"), open with a directional phrase tied to it: "Just back from the piers —" or "Across from the river —".
+  4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
+  Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
 - After the location opener, let the place speak for itself. Surface the specific person, use, era, or change that makes this spot worth a moment. Vary the angle — the person connected to it, what it used to be, a detail visible right now, something that happened here. Don't follow the same structure every time.
 - Never use exclamation points. Avoid rhetorical questions. Never say "hidden gem," "fascinating," "incredible," "amazing," or "you won't believe." Don't oversell what you're pointing at.
 - When the history involves difficulty — displacement, labor, disaster, tragedy — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.
@@ -2635,7 +2726,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v11:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v13:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -2692,7 +2783,12 @@ How to write for speech:
 - Spell out every number, year, decade, ordinal, and acronym as words: "eighteen eighty-two" not "1882", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "three stories tall" not "3-story".
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
-- ALWAYS begin with a brief location orientation — a short clause that tells the listener where they are spatially. If an address is provided (a specific street number or a cross-street reference like "8th Ave & W 49th St"), open with it naturally: "That's twenty-one West Fifty-first Street —" or "Right here at the corner of Eighth and Forty-ninth —". Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49". If the address is a broader area description rather than a street number or intersection, use a directional phrase instead: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Location orientation is mandatory — never skip it.
+- MANDATORY FIRST CLAUSE — every narration MUST begin with a spatial anchor that orients the listener in physical space. This is non-negotiable: a narration that omits the spatial opener is wrong. Choose the strongest signal you have, in this priority order:
+  1. If a street number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
+  2. If only a cross-street / intersection reference is provided (e.g. "8th Ave & W 49th St"), open with it: "Right at the corner of Eighth and Forty-ninth —".
+  3. If only a broader area is provided (e.g. "near the Hudson piers"), open with a directional phrase tied to it: "Just back from the piers —" or "Across from the river —".
+  4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
+  Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
 - After the location opener, let the place speak for itself. Surface the specific person, use, era, or change that makes this spot worth a moment. Vary the angle — the person connected to it, what it used to be, a detail visible right now, something that happened here. Don't follow the same structure every time.
 - Never use exclamation points. Avoid rhetorical questions. Never say "hidden gem," "fascinating," "incredible," "amazing," or "you won't believe." Don't oversell what you're pointing at.
 - When the history involves difficulty — displacement, labor, disaster, tragedy — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.

@@ -94,6 +94,10 @@ const ja: Strings = {
     showPrefetchStats: "プリフェッチ統計を表示",
     showPrefetchStatsDescription:
       "画面下部にキャッシュのヒット率カウンターを表示",
+    developerSection: "開発者",
+    walkDebugOverlay: "ウォークデバッグオーバーレイ",
+    walkDebugOverlayDescription: "散歩中にライブ診断パネルを表示します。",
+    nowPlayingPassedSuffix: "（通過済み）",
     buildingGroupResidential: "住宅系",
     buildingGroupResidentialDesc: "小屋、物置、屋根構造物",
     buildingGroupAgricultural: "農業系",

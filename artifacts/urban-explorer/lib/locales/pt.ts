@@ -97,6 +97,11 @@ const pt: Strings = {
     showPrefetchStats: "Mostrar estatísticas de pré-busca",
     showPrefetchStatsDescription:
       "Exibir o contador de cache na parte inferior da tela",
+    developerSection: "Desenvolvedor",
+    walkDebugOverlay: "Sobreposição de depuração",
+    walkDebugOverlayDescription:
+      "Mostrar um painel de diagnóstico ao vivo durante caminhadas.",
+    nowPlayingPassedSuffix: "(passou)",
     buildingGroupResidential: "Residencial",
     buildingGroupResidentialDesc: "Cabanas, galpões, telhados",
     buildingGroupAgricultural: "Agrícola",

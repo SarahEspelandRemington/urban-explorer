@@ -97,6 +97,11 @@ const de: Strings = {
     showPrefetchStats: "Prefetch-Statistik anzeigen",
     showPrefetchStatsDescription:
       "Cache-Trefferquote unten am Bildschirm anzeigen",
+    developerSection: "Entwickler",
+    walkDebugOverlay: "Walk-Debug-Overlay",
+    walkDebugOverlayDescription:
+      "Live-Diagnosepanel während Spaziergängen anzeigen.",
+    nowPlayingPassedSuffix: "(passiert)",
     buildingGroupResidential: "Wohngebäude",
     buildingGroupResidentialDesc: "Hütten, Schuppen, Dachaufbauten",
     buildingGroupAgricultural: "Landwirtschaft",

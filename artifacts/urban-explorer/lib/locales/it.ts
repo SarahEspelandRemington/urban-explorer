@@ -97,6 +97,11 @@ const it: Strings = {
     showPrefetchStats: "Mostra statistiche di prefetch",
     showPrefetchStatsDescription:
       "Mostra il contatore di cache in fondo allo schermo",
+    developerSection: "Sviluppatore",
+    walkDebugOverlay: "Overlay debug passeggiata",
+    walkDebugOverlayDescription:
+      "Mostra un pannello di diagnostica dal vivo durante le passeggiate.",
+    nowPlayingPassedSuffix: "(passato)",
     buildingGroupResidential: "Residenziale",
     buildingGroupResidentialDesc: "Capanne, rimesse, strutture sul tetto",
     buildingGroupAgricultural: "Agricolo",
