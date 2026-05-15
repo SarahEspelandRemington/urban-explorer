@@ -141,6 +141,25 @@ export interface WalkPlace {
   distanceMeters?: number;
   netScore?: number;
   photoUrl?: string;
+  /** Server-side address↔coordinate coherence check has flagged this place
+   *  as a strong-evidence mismatch (e.g. wrong-city hallucination). The
+   *  place still appears on the map and in lists, but auto-narration must
+   *  skip it. Single-signal "ambiguous" mismatches do NOT set this flag. */
+  autoNarrationBlocked?: boolean;
+  /** Debug payload from server-side address↔coordinate coherence check.
+   *  Always populated when an address was geocoded (regardless of outcome)
+   *  so field testers can inspect mismatches in the debug overlay. */
+  addressCoherence?: {
+    status: "ok" | "ambiguous" | "mismatch" | "geocode_failed";
+    reason: string;
+    storedLat?: number;
+    storedLon?: number;
+    geocodedLat?: number;
+    geocodedLon?: number;
+    mismatchMeters?: number;
+    geocodedDistFromUserMeters?: number;
+    address?: string;
+  };
 }
 
 export type WalkDensity = "sparse" | "dense";
@@ -1396,6 +1415,24 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       for (const p of placesRef.current) {
         if (narratedIdsRef.current.has(p.id)) {
           if (__DEV__) console.log(`  [skip:narrated] "${p.name}"`);
+          continue;
+        }
+        // Server-side address coherence rejection (non-destructive — the
+        // place still shows on the map, only auto-narration is gated).
+        if (p.autoNarrationBlocked) {
+          if (__DEV__) {
+            console.log(
+              `  [skip:addressMismatch] "${p.name}" ${p.addressCoherence?.reason ?? ""}`,
+            );
+          }
+          recordRejection({
+            ts: Date.now(),
+            placeId: p.id,
+            placeName: p.name,
+            reason: "addressMismatch",
+            distance: null,
+            bearingDiff: null,
+          });
           continue;
         }
         const dist = haversineMeters(

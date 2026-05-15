@@ -905,7 +905,7 @@ async function verifyPlaceCoordinates(
 }
 
 /**
- * Address ↔ coordinates coherence check.
+ * Address ↔ coordinates coherence check (NON-DESTRUCTIVE).
  *
  * Catches the IMG_0343-style hallucination where the LLM emits a place with
  * an internally inconsistent location: real-sounding street address (e.g.
@@ -915,10 +915,26 @@ async function verifyPlaceCoordinates(
  * match — so coords are left alone and the place flows downstream into
  * Walk Mode's narration queue.
  *
+ * Behaviour (deliberately conservative — this is a safety/quality filter
+ * for narration, not a destructive data-cleaning operation):
+ *   • Original record (name, lat/lng, summary, facts) is NEVER mutated.
+ *   • Only places with strong evidence of mismatch are blocked from auto
+ *     narration via `autoNarrationBlocked: true`. They still appear as map
+ *     pins and in API responses for the user to inspect.
+ *   • Strong evidence requires TWO signals: (1) geocoded address >200 m
+ *     from claimed lat/lng, AND (2) geocoded address >1.5× search radius
+ *     from the user (catches "real street, wrong city" hallucinations).
+ *   • Geocode failures or single-signal ambiguity are recorded in the
+ *     debug field but do NOT block narration — we don't have enough
+ *     confidence to act.
+ *   • Every coherence outcome is attached to `addressCoherence` for later
+ *     inspection: { storedLat, storedLon, geocodedLat, geocodedLon,
+ *     mismatchMeters, status, reason }. Mismatches are also logged.
+ *
  * Strategy: for any place with a parseable street address (a number +
- * street word), geocode the address ALONE and require the result to be
- * within COHERENCE_THRESHOLD_M of the place's claimed lat/lng. If not,
- * mark _rejectOutOfArea so the post-filter drops it.
+ * street word), geocode the address ALONE and compare the result to the
+ * place's claimed lat/lng. Annotate `addressCoherence` with the outcome
+ * and only set `autoNarrationBlocked` when the two-signal test passes.
  *
  * Re-uses geocodeNearLocation (with its 30-min cache) so repeat hits cost
  * nothing.
@@ -954,35 +970,74 @@ async function verifyAddressCoherence(
     candidates.map((p) =>
       scheduleNominatimCall(async () => {
         const result = await geocodeNearLocation(p.address);
-        if (!result) return;
-        const dist = haversineDistance(
+        if (!result) {
+          // Geocode failure: cautious — record but do NOT block.
+          p.addressCoherence = {
+            status: "geocode_failed",
+            reason: "Nominatim returned no result for parsed address",
+            storedLat: p.latitude,
+            storedLon: p.longitude,
+            address: p.address,
+          };
+          return;
+        }
+        const mismatchMeters = haversineDistance(
           p.latitude,
           p.longitude,
           result.lat,
           result.lon,
         );
-        if (dist > COHERENCE_THRESHOLD_M) {
-          // Address resolves far from the LLM's lat/lng. We can't tell
-          // which side is correct from this signal alone — short address
-          // strings (e.g. "12 Main St") are ambiguous and can geocode to
-          // another city entirely. To avoid false-dropping legitimate local
-          // places we require *two* independent failure signals before
-          // rejecting:
-          //   (1) address geocode is >200 m from claimed lat/lng, AND
-          //   (2) the geocoded address is itself well outside the user's
-          //       current search area (>1.5× search radius from user).
-          // This catches the high-confidence "real street, wrong city"
-          // hallucination pattern while leaving ambiguous-but-plausible
-          // local addresses in place.
-          const geocodedDistFromUser = haversineDistance(
-            userLat,
-            userLng,
-            result.lat,
-            result.lon,
+        const geocodedDistFromUser = haversineDistance(
+          userLat,
+          userLng,
+          result.lat,
+          result.lon,
+        );
+        const debug = {
+          storedLat: p.latitude,
+          storedLon: p.longitude,
+          geocodedLat: result.lat,
+          geocodedLon: result.lon,
+          mismatchMeters: Math.round(mismatchMeters),
+          geocodedDistFromUserMeters: Math.round(geocodedDistFromUser),
+          address: p.address,
+        };
+        if (mismatchMeters <= COHERENCE_THRESHOLD_M) {
+          p.addressCoherence = {
+            ...debug,
+            status: "ok",
+            reason: `mismatch ${Math.round(mismatchMeters)}m within tolerance`,
+          };
+          return;
+        }
+        // Mismatch >200 m. Only block auto-narration when we have a SECOND
+        // signal: the geocoded address is itself well outside the user's
+        // current search area (>1.5× search radius). This catches the
+        // high-confidence "real street, wrong city" hallucination while
+        // leaving ambiguous-but-plausible local addresses (which could be
+        // either the address or the lat/lng being slightly off) untouched.
+        if (geocodedDistFromUser > searchRadius * 1.5) {
+          p.autoNarrationBlocked = true;
+          p.addressCoherence = {
+            ...debug,
+            status: "mismatch",
+            reason: `Geocoded address is ${Math.round(geocodedDistFromUser)}m from user (>1.5x search radius ${Math.round(searchRadius)}m); likely wrong-city hallucination`,
+          };
+          logger.warn(
+            { place: p.name, ...debug },
+            "[address-coherence] BLOCKED from auto-narration: address resolves outside search area",
           );
-          if (geocodedDistFromUser > searchRadius * 1.5) {
-            p._rejectOutOfArea = true;
-          }
+        } else {
+          // Single signal only — be cautious. Record but don't block.
+          p.addressCoherence = {
+            ...debug,
+            status: "ambiguous",
+            reason: `Mismatch ${Math.round(mismatchMeters)}m but geocoded address still within search area; insufficient evidence to block`,
+          };
+          logger.info(
+            { place: p.name, ...debug },
+            "[address-coherence] AMBIGUOUS: single-signal mismatch, not blocking",
+          );
         }
       }),
     ),
@@ -2525,7 +2580,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact, address } = parsed.data;
 
-  const narrationCacheKey = `narration:v13:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v14:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2726,7 +2781,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v13:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v14:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);

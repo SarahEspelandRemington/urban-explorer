@@ -33,6 +33,10 @@ export interface EligibilityCandidate {
    *  by more than 200 m, the eligibility filter rejects it as a phantom. */
   addressLat?: number;
   addressLon?: number;
+  /** Server-side strong-evidence address↔coordinate mismatch. When true the
+   *  place is rejected from auto-narration with reason `addressMismatch`,
+   *  but the place itself remains in the pool (still shown on the map). */
+  autoNarrationBlocked?: boolean;
 }
 
 export interface EligibilityState {
@@ -144,6 +148,10 @@ export function evaluateEligibility(
 
     if (narratedIds.has(p.id)) {
       reason = "narrated";
+    } else if (p.autoNarrationBlocked) {
+      // Server-side strong-evidence mismatch — block auto-narration but keep
+      // the place in the pool so it still shows on the map.
+      reason = "addressMismatch";
     } else if (dist > cfg.maxQueueDistance) {
       reason = "tooFar";
     } else if ((p.netScore ?? 0) < cfg.netScoreFloor) {
