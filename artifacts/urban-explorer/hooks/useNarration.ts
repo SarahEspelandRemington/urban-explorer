@@ -1,9 +1,4 @@
-import {
-  setAudioModeAsync,
-  createAudioPlayer,
-  type AudioPlayer,
-  type AudioStatus,
-} from "expo-audio";
+import type { AudioPlayer, AudioStatus } from "expo-audio";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
@@ -12,6 +7,21 @@ import {
   trackNarrationFallback,
   trackNarrationPlayed,
 } from "../lib/sentryWalk";
+import { IS_EXPO_GO } from "../lib/expoEnv";
+
+/**
+ * Lazy accessor for expo-audio. The static import is intentionally avoided at
+ * module scope because expo-audio registers a native module initializer on
+ * import. In Expo Go the bundled native runtime may not satisfy the JS
+ * package's expected API version, which causes a hard native crash (the OS
+ * kills the process before the JS error overlay can render). Requiring it
+ * lazily, and only on native non-Expo-Go builds, prevents the initializer from
+ * running at all in Expo Go.
+ */
+function getExpoAudio() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require("expo-audio") as typeof import("expo-audio");
+}
 
 interface NarrationItem {
   id: string;
@@ -44,9 +54,9 @@ let backgroundAudioConfigured = false;
  * web (the browser tab keeps speechSynthesis alive on its own).
  */
 export async function enableBackgroundAudio(): Promise<void> {
-  if (Platform.OS === "web" || backgroundAudioConfigured) return;
+  if (Platform.OS === "web" || IS_EXPO_GO || backgroundAudioConfigured) return;
   try {
-    await setAudioModeAsync({
+    await getExpoAudio().setAudioModeAsync({
       playsInSilentMode: true,
       shouldPlayInBackground: true,
       interruptionMode: "duckOthers",
@@ -193,14 +203,17 @@ export function useNarration() {
 
     // --- Audio path: play the MP3 file via expo-audio ----------------------
     // Used on native when the server returned natural-voice TTS audio.
-    if (item.audioUri && Platform.OS !== "web") {
+    // IS_EXPO_GO items never have audioUri (fetchNarrationPayload skips the
+    // audio endpoint entirely), but guard here too for defence-in-depth so we
+    // never call into expo-audio in Expo Go even if that gate changes.
+    if (item.audioUri && Platform.OS !== "web" && !IS_EXPO_GO) {
       if (__DEV__)
         console.log(
           `[narration audio] play "${item.placeName}" uri=${item.audioUri} gen=${myGen}`,
         );
       let player: AudioPlayer;
       try {
-        player = createAudioPlayer({ uri: item.audioUri });
+        player = getExpoAudio().createAudioPlayer({ uri: item.audioUri });
       } catch (err) {
         if (__DEV__)
           console.log(`[narration audio] createAudioPlayer threw:`, err);

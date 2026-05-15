@@ -147,6 +147,12 @@ jest.mock("expo-audio", () => ({
   createAudioPlayer: mockCreateAudioPlayer,
 }));
 
+// ─── lib/expoEnv ─────────────────────────────────────────────────────────────
+// Mocked so that importing useNarration doesn't pull in expo-constants (which
+// uses ESM syntax incompatible with Jest's CommonJS transform). In these tests
+// IS_EXPO_GO is false so that the expo-audio code path is exercised.
+jest.mock("../lib/expoEnv", () => ({ IS_EXPO_GO: false }));
+
 // ─── lib/sentryWalk ──────────────────────────────────────────────────────────
 // Mocked so the playback-side fallback tests below can assert that
 // trackNarrationFallback fires with the right reason on each silent-skip
@@ -313,6 +319,7 @@ describe("useNarration — skip() bumps generation and drains the queue for the 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -381,6 +388,7 @@ describe("useNarration — audio watchdog is cancelled by teardownActive()", () 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -454,6 +462,7 @@ describe("useNarration — pause/resume suspend and resume the audio watchdog", 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -578,6 +587,7 @@ describe("useNarration — audio watchdog FIRES after 60s and unblocks the queue
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -698,6 +708,7 @@ describe("useNarration — playback-side silent skips emit trackNarrationFallbac
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -864,6 +875,7 @@ describe("useNarration — text-path silent skips emit trackNarrationFallback", 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -1035,6 +1047,7 @@ describe("useNarration — trackNarrationPlayed fires once per actually-started 
     jest.useFakeTimers();
   });
   afterEach(() => {
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
