@@ -1,0 +1,41 @@
+I found a clear example of the same location relevance problem in Explore Mode, not just Walk Mode.
+
+In the attached screenshots:
+
+My blue dot shows I am near West 38th/39th Street.
+
+The selected/recommended place is “1915 Subway Ventilation Grates on West 48th Street Between 6th and 7th Avenues.”
+
+The detail page correctly identifies the place as being on West 48th Street.
+
+But that is roughly 9–10 blocks north of my actual location, so it should not be surfaced as a close/relevant nearby result when I am sitting near 38th/39th.
+
+Please debug the shared location/ranking/search logic across Explore Mode and Walk Mode. This now appears to be a broader issue where the app is surfacing places that are geographically too far away or not actually near the user’s current blue-dot location.
+
+Please check specifically:
+
+Whether the user’s current GPS coordinate is being passed correctly into the place search/ranking logic
+
+Whether cached results from another area are being reused too aggressively
+
+Whether the app is selecting from all visible pins instead of only nearby/relevant pins
+
+Whether radius filters are being applied correctly before ranking
+
+Whether distance calculations are using correct lat/lng order and units
+
+Whether map viewport/region is being confused with actual user location
+
+Whether stale places remain selected after the user moves or changes mode
+
+Expected behavior:
+
+Explore Mode can show visible pins within the selected range, but it should not highlight/recommend a place 9–10 blocks away as if it is nearby.
+
+Walk Mode should be even stricter and should only narrate places that match the user’s actual current location/path.
+
+If cached places are used, they must still be filtered against the current live user location before being shown, selected, or narrated.
+
+A previously selected place should clear or become de-prioritized if the user is no longer nearby.
+
+Please diagnose the root cause before changing thresholds again. This looks less like a “range needs tuning” problem and more like stale/cached/wrong-location ranking logic.

@@ -857,18 +857,35 @@ async function verifyPlaceCoordinates(
         let bestLat = NaN;
         let bestLon = NaN;
         let bestDist = Infinity;
+        // Track the closest result Nominatim returned, regardless of the
+        // MAX_ACCEPT_DIST_M acceptance window.  We need it to detect the case
+        // where Nominatim found the address but it belongs in a different part
+        // of the city — i.e. the LLM hallucinated local coordinates for a
+        // real place that is genuinely far away.
+        let closestAnyDist = Infinity;
         for (const r of results) {
           const rLat = parseFloat(r.lat);
           const rLon = parseFloat(r.lon);
           if (!isFinite(rLat) || !isFinite(rLon)) continue;
           const d = haversineDistance(userLat, userLng, rLat, rLon);
+          if (d < closestAnyDist) closestAnyDist = d;
           if (d <= MAX_ACCEPT_DIST_M && d < bestDist) {
             bestDist = d;
             bestLat = rLat;
             bestLon = rLon;
           }
         }
-        if (!isFinite(bestLat)) return;
+        if (!isFinite(bestLat)) {
+          // Nominatim found the address, but every result is outside the
+          // acceptance window.  If the closest result is also beyond the
+          // search radius the place's address genuinely belongs elsewhere —
+          // flag it so the post-filter can remove it rather than leaving the
+          // LLM's hallucinated local coordinates in place.
+          if (isFinite(closestAnyDist) && closestAnyDist > searchRadius * 1.1) {
+            p._rejectOutOfArea = true;
+          }
+          return;
+        }
 
         const moveBy = haversineDistance(
           p.latitude,
@@ -914,6 +931,11 @@ async function postProcessPlaces(
   }
 
   processed = processed.filter((p: any) => {
+    // Drop places where Nominatim confirmed the address is outside the search
+    // area.  This catches LLM hallucinations where real historical knowledge
+    // about a distant street is pinned at the user's query coordinates: the
+    // LLM assigns the place to W 38th when it actually belongs on W 48th.
+    if (p._rejectOutOfArea) return false;
     const dist = haversineDistance(userLat, userLng, p.latitude, p.longitude);
     p.distanceMeters = Math.round(dist);
     return dist <= maxDist;
