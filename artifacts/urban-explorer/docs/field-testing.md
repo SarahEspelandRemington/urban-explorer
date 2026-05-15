@@ -122,12 +122,12 @@ trail.
 
 ### 2 · GPS lock and first discover
 
-| Step | Expected | [LOG] tag |
-|------|----------|-----------|
-| Tap **Start Walk** | Spinner < 8 s, then first pin on map | `[refetch] first fix` |
-| Walk 3–5 m | GPS summary log appears | `[GPS] lat=… vel=…` |
-| `vel=` field after 12+ m | Shows degrees and `(fresh)` | `[heading:vel]` accepted |
-| `pool=` field | Increases to > 0 within 30 s | `[discover] server OK` |
+| Step                     | Expected                             | [LOG] tag                |
+| ------------------------ | ------------------------------------ | ------------------------ |
+| Tap **Start Walk**       | Spinner < 8 s, then first pin on map | `[refetch] first fix`    |
+| Walk 3–5 m               | GPS summary log appears              | `[GPS] lat=… vel=…`      |
+| `vel=` field after 12+ m | Shows degrees and `(fresh)`          | `[heading:vel]` accepted |
+| `pool=` field            | Increases to > 0 within 30 s         | `[discover] server OK`   |
 
 **Pass**: at least one pin visible within 30 s.
 
@@ -135,35 +135,35 @@ trail.
 
 Run on the **same block** you just walked.
 
-| Step | Expected | [LOG] tag |
-|------|----------|-----------|
-| Stop walk, restart at same location | Pins appear instantly, no server call | `[discover] storage hit` |
-| Move 5 m and trigger a refetch | Same tile key → still an in-memory hit | `[discover] session hit` |
-| Walk 200+ m to a new tile | HTTP request fires; new pins merge in | `[discover] server fetch … server OK` |
+| Step                                | Expected                               | [LOG] tag                             |
+| ----------------------------------- | -------------------------------------- | ------------------------------------- |
+| Stop walk, restart at same location | Pins appear instantly, no server call  | `[discover] storage hit`              |
+| Move 5 m and trigger a refetch      | Same tile key → still an in-memory hit | `[discover] session hit`              |
+| Walk 200+ m to a new tile           | HTTP request fires; new pins merge in  | `[discover] server fetch … server OK` |
 
 **Pass**: second start-at-same-spot shows `storage hit` not `server fetch`.
 
 ### 4 · Narration pipeline
 
-| Step | Expected |
-|------|----------|
-| Walk within 60 m (dense) / 90 m (sparse) of a pin | Narration starts ≤ 5 s |
-| Audio quality | Natural voice MP3, not robotic TTS fallback |
-| **Now Playing** widget on lock screen | Visible with place name |
-| Skip button mid-narration | Audio stops immediately; next place queues |
-| Replay button (appears ~30 s after a skip) | Plays same place from cache, no re-fetch |
-| Two pins in range simultaneously | Second place queues and plays after first |
+| Step                                              | Expected                                    |
+| ------------------------------------------------- | ------------------------------------------- |
+| Walk within 60 m (dense) / 90 m (sparse) of a pin | Narration starts ≤ 5 s                      |
+| Audio quality                                     | Natural voice MP3, not robotic TTS fallback |
+| **Now Playing** widget on lock screen             | Visible with place name                     |
+| Skip button mid-narration                         | Audio stops immediately; next place queues  |
+| Replay button (appears ~30 s after a skip)        | Plays same place from cache, no re-fetch    |
+| Two pins in range simultaneously                  | Second place queues and plays after first   |
 
 **Pass**: ≥ 3 narrations over 15 min with no permanent deadlock.
 
 ### 5 · Directional gating (velocity heading)
 
-| Step | Expected | [LOG] tag |
-|------|----------|-----------|
-| Walk a single direction 30+ m | `vel=…(fresh)` in GPS log | `[heading:vel]` |
-| A pin 90°+ off your heading at 60 m | Skipped by auto-narration | `[pickNext] … SKIP 90° gate` |
-| Turn to face the skipped pin | Narration fires within one GPS cycle | — |
-| Stand still 35+ s | `vel=…(stale)` in GPS log; compass takes over | — |
+| Step                                | Expected                                      | [LOG] tag                    |
+| ----------------------------------- | --------------------------------------------- | ---------------------------- |
+| Walk a single direction 30+ m       | `vel=…(fresh)` in GPS log                     | `[heading:vel]`              |
+| A pin 90°+ off your heading at 60 m | Skipped by auto-narration                     | `[pickNext] … SKIP 90° gate` |
+| Turn to face the skipped pin        | Narration fires within one GPS cycle          | —                            |
+| Stand still 35+ s                   | `vel=…(stale)` in GPS log; compass takes over | —                            |
 
 **Pass**: no narrations fire for places clearly behind you while walking.
 
@@ -171,72 +171,73 @@ Run on the **same block** you just walked.
 
 Run for a 45–90 min loop (same block several times).
 
-| Step | Expected | [LOG] tag |
-|------|----------|-----------|
-| Complete a full loop | Places from the first pass do **not** re-narrate on the second pass within 1 h | `narrated=N` stays steady in `[GPS]` |
-| Walk loop after 65+ min | `narrated=` count drops; earlier places can re-narrate | — |
-| 45+ min in cached area | No server fetches; only `session hit` | `[discover] session hit` |
-| `pool=` in GPS log after 30 min | Stays bounded (< 300) | `[GPS] pool=…` |
+| Step                            | Expected                                                                       | [LOG] tag                            |
+| ------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------ |
+| Complete a full loop            | Places from the first pass do **not** re-narrate on the second pass within 1 h | `narrated=N` stays steady in `[GPS]` |
+| Walk loop after 65+ min         | `narrated=` count drops; earlier places can re-narrate                         | —                                    |
+| 45+ min in cached area          | No server fetches; only `session hit`                                          | `[discover] session hit`             |
+| `pool=` in GPS log after 30 min | Stays bounded (< 300)                                                          | `[GPS] pool=…`                       |
 
 **Pass**: no memory warnings after 60 min; narrations continue without deadlock.
 
 ### 7 · Auto-density switching
 
-| Step | Expected |
-|------|----------|
-| Walk briskly (> 1.8 m/s for 90 s) | Switches to **Sparse** (fewer, farther pins) |
-| Slow to a stroll (< 0.8 m/s for 120 s) | Switches to **Dense** |
-| Manual density toggle | Persists 10 min; auto-switching resumes after |
+| Step                                   | Expected                                      |
+| -------------------------------------- | --------------------------------------------- |
+| Walk briskly (> 1.8 m/s for 90 s)      | Switches to **Sparse** (fewer, farther pins)  |
+| Slow to a stroll (< 0.8 m/s for 120 s) | Switches to **Dense**                         |
+| Manual density toggle                  | Persists 10 min; auto-switching resumes after |
 
 ### 8 · Background / lock-screen operation
 
-*(Custom dev client only — Expo Go cannot test background location on iOS.)*
+_(Custom dev client only — Expo Go cannot test background location on iOS.)_
 
-| Step | Expected |
-|------|----------|
-| Lock screen mid-walk | Audio continues within 10 s of next pin entering range |
-| Now Playing widget on lock screen | Displays place name and "Urban Explorer" |
-| Phone call during narration | Audio pauses; resumes or drains queue after call ends |
-| Return from lock screen | Map pins still visible; GPS dot tracking correctly |
+| Step                              | Expected                                               |
+| --------------------------------- | ------------------------------------------------------ |
+| Lock screen mid-walk              | Audio continues within 10 s of next pin entering range |
+| Now Playing widget on lock screen | Displays place name and "Urban Explorer"               |
+| Phone call during narration       | Audio pauses; resumes or drains queue after call ends  |
+| Return from lock screen           | Map pins still visible; GPS dot tracking correctly     |
 
 **Pass**: no missed narrations on a 10-min locked-screen walk.
 
 ### 9 · Network interruption
 
-| Step | Expected | [LOG] tag |
-|------|----------|-----------|
-| Enable airplane mode mid-walk | App keeps running; cached tiles still narrate | — |
-| Walk to an uncached tile while offline | Loading spinner clears, no crash | `[discover] server error … status=` |
-| Re-enable connectivity | Next movement triggers a fresh server fetch for the missed tile | `[discover] server fetch … server OK` |
+| Step                                   | Expected                                                        | [LOG] tag                             |
+| -------------------------------------- | --------------------------------------------------------------- | ------------------------------------- |
+| Enable airplane mode mid-walk          | App keeps running; cached tiles still narrate                   | —                                     |
+| Walk to an uncached tile while offline | Loading spinner clears, no crash                                | `[discover] server error … status=`   |
+| Re-enable connectivity                 | Next movement triggers a fresh server fetch for the missed tile | `[discover] server fetch … server OK` |
 
 ### 10 · Stop / restart
 
-| Step | Expected |
-|------|----------|
-| Tap **Stop Walk** | Audio stops; Now Playing widget clears |
-| Tap **Start Walk** again at same spot | Fresh state; previously heard places re-narrate |
-| Stop and restart 3× rapidly | No duplicate GPS subscriptions; no audio overlap |
+| Step                                  | Expected                                         |
+| ------------------------------------- | ------------------------------------------------ |
+| Tap **Stop Walk**                     | Audio stops; Now Playing widget clears           |
+| Tap **Start Walk** again at same spot | Fresh state; previously heard places re-narrate  |
+| Stop and restart 3× rapidly           | No duplicate GPS subscriptions; no audio overlap |
 
 ### Reading the diagnostic logs
 
 Filter Metro console output by these prefixes:
 
-| Prefix | Meaning |
-|--------|---------|
-| `[GPS]` | Position + heading snapshot every 10 s |
-| `[heading:vel]` | Velocity heading accepted or rejected per fix |
-| `[refetch]` | Refetch trigger fired (distance vs threshold shown) |
-| `[discover] session hit` | Tile already fetched this session (in-memory) |
-| `[discover] storage hit` | Tile served from AsyncStorage 24 h cache |
-| `[discover] server fetch` | HTTP request to `/api/explore/discover` |
-| `[discover] server OK` | N incoming places, M merged into pool |
-| `[discover] server error` | Non-2xx HTTP response |
-| `[narration audio]` | MP3 play start, watchdog trip, or error |
-| `[Speech.speak]` | TTS fallback start / done / error |
-| `[pickNext]` | Candidate scoring and selection |
-| `[maybeNarrate]` | Blocked reason (cooldown, speaking, etc.) |
+| Prefix                    | Meaning                                             |
+| ------------------------- | --------------------------------------------------- |
+| `[GPS]`                   | Position + heading snapshot every 10 s              |
+| `[heading:vel]`           | Velocity heading accepted or rejected per fix       |
+| `[refetch]`               | Refetch trigger fired (distance vs threshold shown) |
+| `[discover] session hit`  | Tile already fetched this session (in-memory)       |
+| `[discover] storage hit`  | Tile served from AsyncStorage 24 h cache            |
+| `[discover] server fetch` | HTTP request to `/api/explore/discover`             |
+| `[discover] server OK`    | N incoming places, M merged into pool               |
+| `[discover] server error` | Non-2xx HTTP response                               |
+| `[narration audio]`       | MP3 play start, watchdog trip, or error             |
+| `[Speech.speak]`          | TTS fallback start / done / error                   |
+| `[pickNext]`              | Candidate scoring and selection                     |
+| `[maybeNarrate]`          | Blocked reason (cooldown, speaking, etc.)           |
 
 **Healthy fresh-walk pattern:**
+
 ```
 [refetch] first fix — triggering discover
 [discover] server fetch tile=40.754,-73.988:120 radius=120m
@@ -247,6 +248,7 @@ Filter Metro console output by these prefixes:
 ```
 
 **Trouble signs:**
+
 - `vel=…(stale)` for > 30 s while moving — GPS velocity too weak; check for obstructions.
 - `server error status=5xx` repeating — API server issue.
 - `[narration audio] watchdog tripped` — MP3 decoder stall; MP3 file may be corrupt.

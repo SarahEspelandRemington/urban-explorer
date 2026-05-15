@@ -147,6 +147,12 @@ jest.mock("expo-audio", () => ({
   createAudioPlayer: mockCreateAudioPlayer,
 }));
 
+// ─── lib/expoEnv ─────────────────────────────────────────────────────────────
+// Mocked so that importing useNarration doesn't pull in expo-constants (which
+// uses ESM syntax incompatible with Jest's CommonJS transform). In these tests
+// IS_EXPO_GO is false so that the expo-audio code path is exercised.
+jest.mock("../lib/expoEnv", () => ({ IS_EXPO_GO: false }));
+
 // ─── lib/sentryWalk ──────────────────────────────────────────────────────────
 // Mocked so the playback-side fallback tests below can assert that
 // trackNarrationFallback fires with the right reason on each silent-skip
