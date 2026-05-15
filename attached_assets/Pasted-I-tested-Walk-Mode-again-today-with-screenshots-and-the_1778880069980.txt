@@ -1,0 +1,89 @@
+I tested Walk Mode again today with screenshots, and the current behavior is still not working reliably enough. Please stop treating this as a radius/scoring tweak and do a more fundamental debugging pass on Walk Mode’s selection model.
+
+The core product goal, per Streetlit’s intended UX, is:
+
+Walk Mode should feel like a calm, context-aware walking companion. It should tell me about places I am approaching or passing in the real world — not just nearby database points scattered around the map.
+
+Current problems observed:
+
+Walk Mode is still narrating the wrong places
+It plays stories for locations that appear to be behind me, off my path, across major roads, or no longer relevant.
+In several screenshots, “Now Playing” is a place that does not appear to correspond cleanly to where the blue dot is.
+This makes the app feel confused rather than companion-like.
+Pins near me are visible, but Walk Mode does not reliably choose the right one
+Sometimes I am standing beside several visible pins and it narrates none of them.
+Other times it narrates something I seem to have already passed.
+This suggests that visible pins, eligible narration candidates, queued stories, and currently playing stories are not staying synchronized.
+Direction of travel still does not seem dependable
+The app often appears to choose places beside/behind me instead of places ahead of me.
+Please do not rely only on compass heading if it is unreliable at walking speed.
+Use a movement vector from recent GPS points as the primary direction signal once enough movement has occurred.
+The app needs to distinguish map discovery from automatic narration
+It is fine for the map to show broader nearby pins.
+Automatic narration should be much stricter.
+A pin being visible should not mean it is eligible to auto-play.
+
+Please rebuild/refine Walk Mode around a clear candidate pipeline:
+
+A. Fetch/cache visible places for the map
+
+These can be broader and include nearby context.
+Use local/session caching where appropriate to avoid repeated fetching of the same area.
+
+B. Create a much smaller “auto-narration eligible” set
+A place should only be eligible if it passes checks like:
+
+within a tight walking distance threshold
+not clearly behind the user
+not across an irrelevant street/avenue/major road if there are closer path-relevant options
+not already passed
+not stale from a prior location
+not already played recently
+reasonably aligned with the user’s current movement corridor
+
+C. Rank only the eligible set
+Rank candidates using:
+
+distance from current location
+direction of travel / movement vector
+whether it is on the same street, block, or immediate path
+whether the user is approaching it
+whether it has high-quality story content
+whether it has already been played
+
+D. Drop stale/passed candidates aggressively
+If the user has moved past a place, or the place is no longer near/current/path-relevant, it should fall out of the narration queue quickly.
+
+E. Keep “currently playing” honest
+If a story is playing, the UI should make sense relative to the current blue dot. Avoid continuing to present a place as contextually current if the user has clearly moved away, unless it is already actively playing and nearly finished.
+
+F. Add diagnostic logging/debug overlay
+Please add a temporary developer/debug mode for Walk Mode that shows or logs:
+
+current GPS coordinate
+calculated movement direction
+visible pin count
+auto-eligible candidate count
+top 5 ranked candidates
+why each candidate was included/excluded
+selected story and reason
+whether candidates were rejected for being behind, too far, off-path, stale, already played, etc.
+
+This is important because trial-and-error field testing is not enough anymore. I need to understand why the app chose a specific story and why it ignored others.
+
+Also please restore/verify this narration requirement:
+
+Every narrated story should include an address when available.
+If no address is available, it should include directional context such as “near the southwest corner of X and Y streets.”
+This seems to have regressed.
+
+Please do not add major new UX features right now. The priority is making Walk Mode reliable, explainable, and testable.
+
+Before coding, please summarize:
+
+What you believe is currently broken in the Walk Mode selection model
+What files/functions control visible pins, eligible narration candidates, queueing, and playback
+Your proposed candidate pipeline
+What debug output you will add so we can stop guessing during field tests
+
+Then implement targeted fixes and push to GitHub.
