@@ -106,6 +106,10 @@ export interface Strings {
     buildingFiltersDescription: string;
     showPrefetchStats: string;
     showPrefetchStatsDescription: string;
+    developerSection: string;
+    walkDebugOverlay: string;
+    walkDebugOverlayDescription: string;
+    nowPlayingPassedSuffix: string;
     buildingGroupResidential: string;
     buildingGroupResidentialDesc: string;
     buildingGroupAgricultural: string;
@@ -395,6 +399,11 @@ const en: Strings = {
     showPrefetchStats: "Show prefetch stats",
     showPrefetchStatsDescription:
       "Display the cache hit-rate counter at the bottom of the screen",
+    developerSection: "Developer",
+    walkDebugOverlay: "Walk debug overlay",
+    walkDebugOverlayDescription:
+      "Show a live diagnostic panel during walks: GPS, heading, candidates, and rejection reasons. For field testing.",
+    nowPlayingPassedSuffix: "(passed)",
     buildingGroupResidential: "Residential",
     buildingGroupResidentialDesc: "Huts, sheds, roof structures",
     buildingGroupAgricultural: "Agricultural",

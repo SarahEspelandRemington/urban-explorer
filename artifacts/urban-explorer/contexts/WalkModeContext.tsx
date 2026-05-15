@@ -51,6 +51,11 @@ import {
   runPrefetchCycle,
   type StalePrefetchPool,
 } from "@/lib/narrationPrefetchPipeline";
+import {
+  recordRejection,
+  recordSelectionSnapshot,
+  resetWalkDiagnostics,
+} from "@/lib/walkDiagnostics";
 import { NowPlaying } from "@/modules/expo-now-playing/src";
 import {
   type BuildingGroupKey,
@@ -200,6 +205,21 @@ interface WalkModeContextType {
    */
   showPrefetchStats: boolean;
   setShowPrefetchStats: (enabled: boolean) => void;
+  /**
+   * Persisted opt-in for the field-test diagnostic overlay. When on, the
+   * Walk Mode screen renders a floating panel with the live selection
+   * pipeline state — GPS, heading source, candidates, rejection reasons.
+   * Off by default; surfaced under Settings → Developer.
+   */
+  walkDebugEnabled: boolean;
+  setWalkDebugEnabled: (enabled: boolean) => void;
+  /**
+   * True when the user has physically moved past the place that's currently
+   * narrating (>80 m from the location captured at narration start, AND the
+   * narration has been running for at least 25 s). Used by the Now Playing
+   * pill to surface a "(passed)" suffix without interrupting playback.
+   */
+  narrationIsPassed: boolean;
   /**
    * Immediately narrate a specific place, bypassing cooldown and scoring.
    * Used by manual pin-tap "Play / Replay" in the walk map.
@@ -646,6 +666,58 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     void setStartupValue(STARTUP_KEYS.showPrefetchStats, enabled ? "1" : "0");
   }, []);
 
+  // Walk Mode diagnostic overlay opt-in. Same hydrate-from-AsyncStorage
+  // pattern as showPrefetchStats so the user's last choice survives a
+  // relaunch without flashing the panel for users who never enabled it.
+  const [walkDebugEnabled, setWalkDebugEnabledState] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void getStartupValue(STARTUP_KEYS.walkDebugOverlayEnabled).then((value) => {
+      if (cancelled) return;
+      if (value === "1") setWalkDebugEnabledState(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const setWalkDebugEnabled = useCallback((enabled: boolean) => {
+    setWalkDebugEnabledState(enabled);
+    void setStartupValue(
+      STARTUP_KEYS.walkDebugOverlayEnabled,
+      enabled ? "1" : "0",
+    );
+  }, []);
+
+  // Tracking refs for the "(passed)" badge on Now Playing. Captured at the
+  // moment a narration is enqueued; consulted on every render to decide
+  // whether the user has moved well past the place. Cleared on stop / next
+  // narration so a stale anchor never lingers.
+  const narrationStartLocationRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const narrationStartTimeRef = useRef<number>(0);
+  const [narrationStartTick, setNarrationStartTick] = useState(0);
+  // Recompute narrationIsPassed whenever currentLocation OR a new narration
+  // starts. The badge is intentionally generous: needs both 80 m of movement
+  // *away* from the place AND 25 s of audio elapsed, so a place that's a few
+  // metres past the user at the moment audio begins doesn't immediately show
+  // "(passed)".
+  const narrationIsPassed = useMemo(() => {
+    void narrationStartTick;
+    const anchor = narrationStartLocationRef.current;
+    if (!anchor || !currentLocation) return false;
+    const elapsed = Date.now() - narrationStartTimeRef.current;
+    if (elapsed < 25_000) return false;
+    const dist = Math.hypot(
+      (currentLocation.latitude - anchor.latitude) * 111_111,
+      (currentLocation.longitude - anchor.longitude) *
+        111_111 *
+        Math.cos((anchor.latitude * Math.PI) / 180),
+    );
+    return dist > 80;
+  }, [currentLocation, narrationStartTick]);
+
   const handlePrefetchEvent = useCallback((event: PrefetchEvent) => {
     prefetchCountersRef.current[event] += 1;
     trackPrefetchEvent(event);
@@ -995,6 +1067,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     (place: WalkPlace, payload: NarrationPayload) => {
       currentNarrationPlaceRef.current = place;
       setCurrentNarrationPlace(place);
+      // Anchor the "(passed)" badge state to this narration. Use the place's
+      // own coordinates (not the user's) — that is what "passed" is measured
+      // against. Bumping narrationStartTick triggers a re-render so the
+      // badge can recompute against the latest currentLocation.
+      narrationStartLocationRef.current = {
+        latitude: place.latitude,
+        longitude: place.longitude,
+      };
+      narrationStartTimeRef.current = Date.now();
+      setNarrationStartTick((t) => t + 1);
       if (payload.kind === "audio") {
         narration.enqueueAudio(
           place.id,
@@ -1054,6 +1136,41 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
   const fetchNarration = useCallback(
     async (place: WalkPlace) => {
+      // --- Re-validation guard ---
+      // pickNext ran at GPS-tick T0; fetchNarrationPayload can take 10–15s.
+      // By T0+15s the user may have walked past the place we picked.
+      // Re-check the place is still within 2× the density's queue distance
+      // before committing to play it. If not, abort and clear the narrated
+      // mark so the next tick can pick a fresh candidate.
+      const currentLoc = currentLocation;
+      if (currentLoc) {
+        const cfg = DENSITY_CONFIG[densityRef.current];
+        const dist = haversineMeters(
+          currentLoc.latitude,
+          currentLoc.longitude,
+          place.latitude,
+          place.longitude,
+        );
+        if (dist > cfg.maxQueueDistance * 2) {
+          if (__DEV__) {
+            console.log(
+              `[fetchNarration] ABORT (stale pick): "${place.name}" is now ${Math.round(dist)}m away, beyond 2×maxQueueDistance=${cfg.maxQueueDistance * 2}m`,
+            );
+          }
+          // Free the slot so the next tick can pick a closer place.
+          narratedIdsRef.current.delete(place.id);
+          setNarratedIds(new Map(narratedIdsRef.current));
+          recordRejection({
+            ts: Date.now(),
+            placeId: place.id,
+            placeName: place.name,
+            reason: "stale",
+            distance: dist,
+            bearingDiff: null,
+          });
+          return;
+        }
+      }
       // --- Narration pipeline: fast path ---
       // Check if we already pre-fetched the narration for this place while the
       // previous story was playing. If so, enqueue it immediately (no round-trip)
@@ -1129,6 +1246,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       prefetchNextRef.current?.();
     },
     [
+      currentLocation,
       enqueueNarration,
       fetchNarrationPayload,
       getStalePrefetchPool,
@@ -1420,6 +1538,73 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             ` finalScore=${Math.round(bestScore)}`,
         );
       }
+
+      // Diagnostics snapshot for the field-test overlay. Cheap (a few
+      // copies + a notify); safe to compute every tick because the overlay
+      // is rendered only when the Settings toggle is on, and getWalkDiagnostics
+      // returns the same object so subscribers re-read the latest values.
+      try {
+        const visible = placesRef.current;
+        const candidates: Array<{
+          id: string;
+          name: string;
+          distance: number;
+          bearingDiff: number | null;
+          score: number;
+        }> = [];
+        for (const p of visible) {
+          if (narratedIdsRef.current.has(p.id)) continue;
+          const d = haversineMeters(
+            loc.latitude,
+            loc.longitude,
+            p.latitude,
+            p.longitude,
+          );
+          if (d > cfg.maxQueueDistance) continue;
+          const pb =
+            heading !== null
+              ? bearingDeg(loc.latitude, loc.longitude, p.latitude, p.longitude)
+              : null;
+          const dd =
+            heading !== null && pb !== null ? angularDiff(heading, pb) : null;
+          candidates.push({
+            id: p.id,
+            name: p.name,
+            distance: d,
+            bearingDiff: dd,
+            score: p.netScore ?? 0,
+          });
+        }
+        candidates.sort((a, b) => a.distance - b.distance);
+        const headingSource: "velocity" | "compass" | "none" =
+          velocityHeadingRef.current !== null
+            ? "velocity"
+            : deviceHeadingRef.current !== null
+              ? "compass"
+              : "none";
+        const velocityFresh =
+          velocityHeadingRef.current !== null &&
+          velocityHeadingTimestampRef.current !== null &&
+          Date.now() - velocityHeadingTimestampRef.current < 8000;
+        recordSelectionSnapshot({
+          ts: Date.now(),
+          location: { latitude: loc.latitude, longitude: loc.longitude },
+          heading,
+          headingSource,
+          velocityHeadingFresh: velocityFresh,
+          velocityMps: null,
+          visiblePinCount: visible.length,
+          eligibleCount: candidates.length,
+          topCandidates: candidates.slice(0, 5),
+          selected: best
+            ? {
+                id: best.id,
+                name: best.name,
+                reason: `score=${Math.round(bestScore)}`,
+              }
+            : null,
+        });
+      } catch {}
 
       return best;
     },
@@ -2144,6 +2329,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     nowPlayingUnsubRef.current = null;
     setIsWalking(false);
     addWalkBreadcrumb("walk stopped");
+    // Reset narration anchor + diagnostics so the next walk starts fresh.
+    narrationStartLocationRef.current = null;
+    narrationStartTimeRef.current = 0;
+    resetWalkDiagnostics();
     // Tear down the "Replay" badge timer so it can't fire after the walk ends
     // (which would leave the badge briefly visible on the next walk).
     if (replayBadgeTimerRef.current) {
@@ -2225,6 +2414,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       prefetchStats,
       showPrefetchStats,
       setShowPrefetchStats,
+      walkDebugEnabled,
+      setWalkDebugEnabled,
+      narrationIsPassed,
       routeSteps,
       nextTurn,
       playPlace,
@@ -2249,6 +2441,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       prefetchStats,
       showPrefetchStats,
       setShowPrefetchStats,
+      walkDebugEnabled,
+      setWalkDebugEnabled,
+      narrationIsPassed,
       routeSteps,
       nextTurn,
       playPlace,

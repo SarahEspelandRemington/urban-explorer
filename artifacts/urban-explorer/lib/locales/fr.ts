@@ -98,6 +98,11 @@ const fr: Strings = {
     showPrefetchStats: "Afficher les stats de préchargement",
     showPrefetchStatsDescription:
       "Afficher le compteur de cache en bas de l'écran",
+    developerSection: "Développeur",
+    walkDebugOverlay: "Overlay de débogage",
+    walkDebugOverlayDescription:
+      "Afficher un panneau de diagnostic en direct pendant les promenades.",
+    nowPlayingPassedSuffix: "(dépassé)",
     buildingGroupResidential: "Résidentiel",
     buildingGroupResidentialDesc: "Cabanes, remises, toits",
     buildingGroupAgricultural: "Agricole",

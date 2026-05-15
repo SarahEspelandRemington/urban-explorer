@@ -95,6 +95,11 @@ const nl: Strings = {
     showPrefetchStats: "Prefetch-statistieken tonen",
     showPrefetchStatsDescription: "Toon de cache-hitratio onder aan het scherm",
     buildingGroupResidential: "Woningbouw",
+    developerSection: "Ontwikkelaar",
+    walkDebugOverlay: "Wandel debug-overlay",
+    walkDebugOverlayDescription:
+      "Toon een live diagnostisch paneel tijdens wandelingen.",
+    nowPlayingPassedSuffix: "(voorbij)",
     buildingGroupResidentialDesc: "Hutten, schuren, dakstructuren",
     buildingGroupAgricultural: "Agrarisch",
     buildingGroupAgriculturalDesc: "Schuren, kassen, silo's",

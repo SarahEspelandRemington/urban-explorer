@@ -1,0 +1,93 @@
+/**
+ * Lightweight in-memory diagnostics surface for Walk Mode.
+ *
+ * The selection pipeline writes structured snapshots and rejection events
+ * here. The debug overlay subscribes and re-renders. Nothing here is
+ * persisted — this is purely a runtime introspection tool, gated behind a
+ * Settings toggle so it never costs anything for normal users.
+ *
+ * No PII safety wrappers needed: GPS coords and place names are already
+ * what the user is looking at; this surface never leaves the device.
+ */
+
+import type { EligibilityReason } from "./walkEligibility";
+
+export interface DiagSelectionSnapshot {
+  ts: number;
+  location: { latitude: number; longitude: number };
+  heading: number | null;
+  headingSource: "velocity" | "compass" | "none";
+  velocityHeadingFresh: boolean;
+  velocityMps: number | null;
+  visiblePinCount: number;
+  eligibleCount: number;
+  /** Top candidates after ranking (lowest score first). Up to 5. */
+  topCandidates: Array<{
+    id: string;
+    name: string;
+    distance: number;
+    bearingDiff: number | null;
+    score: number;
+  }>;
+  /** Place chosen by pickNext, or null if nothing eligible. */
+  selected: { id: string; name: string; reason: string } | null;
+}
+
+export interface DiagRejection {
+  ts: number;
+  placeId: string;
+  placeName: string;
+  reason: EligibilityReason | "scoreLost";
+  distance: number;
+  bearingDiff: number | null;
+}
+
+export interface DiagState {
+  lastSnapshot: DiagSelectionSnapshot | null;
+  rejections: DiagRejection[]; // capped, most recent first
+}
+
+const REJECTION_CAP = 30;
+
+const state: DiagState = {
+  lastSnapshot: null,
+  rejections: [],
+};
+
+const subscribers = new Set<() => void>();
+
+function notify() {
+  for (const fn of subscribers) {
+    try {
+      fn();
+    } catch {}
+  }
+}
+
+export function getWalkDiagnostics(): DiagState {
+  return state;
+}
+
+export function subscribeWalkDiagnostics(fn: () => void): () => void {
+  subscribers.add(fn);
+  return () => subscribers.delete(fn);
+}
+
+export function recordSelectionSnapshot(snap: DiagSelectionSnapshot): void {
+  state.lastSnapshot = snap;
+  notify();
+}
+
+export function recordRejection(rej: DiagRejection): void {
+  state.rejections.unshift(rej);
+  if (state.rejections.length > REJECTION_CAP) {
+    state.rejections.length = REJECTION_CAP;
+  }
+  notify();
+}
+
+export function resetWalkDiagnostics(): void {
+  state.lastSnapshot = null;
+  state.rejections = [];
+  notify();
+}
