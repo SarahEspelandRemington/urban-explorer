@@ -38,7 +38,10 @@ export interface DiagRejection {
   placeId: string;
   placeName: string;
   reason: EligibilityReason | "scoreLost";
-  distance: number;
+  /** Distance from user to the rejected place in metres, or null when the
+   *  rejection reason makes distance irrelevant (e.g. address-mismatch
+   *  candidates rejected before any distance lookup). */
+  distance: number | null;
   bearingDiff: number | null;
 }
 

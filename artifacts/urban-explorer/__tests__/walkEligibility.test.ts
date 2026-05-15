@@ -85,6 +85,24 @@ describe("evaluateEligibility", () => {
     expect(result.evaluations[0].reason).toBe("lowScore");
   });
 
+  it("rejects places the server flagged with autoNarrationBlocked", () => {
+    // Place is close, has good score, no other reason to skip — but the
+    // server's address-coherence check flagged it as a wrong-city
+    // hallucination. Auto-narration must skip it.
+    const place = makePlace("p1", 30, 0, { autoNarrationBlocked: true });
+    const result = evaluateEligibility([place], baseState());
+    expect(result.eligibleIds).toEqual([]);
+    expect(result.evaluations[0].reason).toBe("addressMismatch");
+  });
+
+  it("does not block a place that is merely missing autoNarrationBlocked", () => {
+    // Sanity check: an undefined autoNarrationBlocked must be treated as
+    // false, not as truthy. Catches accidental `!== false` regressions.
+    const place = makePlace("p1", 30, 0, {});
+    const result = evaluateEligibility([place], baseState());
+    expect(result.evaluations[0].reason).toBe("ok");
+  });
+
   it("rejects places whose declared address geocodes far from claimed lat/lng", () => {
     // Place at NYC center, but its "address" geocoded 500m east.
     const place = makePlace("p1", 30, 0, {
