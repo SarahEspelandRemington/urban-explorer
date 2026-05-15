@@ -463,6 +463,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     latitude: number;
     longitude: number;
   } | null>(null);
+  // Mirror of currentLocation in a ref so async paths (fetchNarration awaits a
+  // 10–15s LLM call) can read the freshest GPS without re-rendering and
+  // without stale closures. Updated in a useEffect below.
+  const currentLocationRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<WalkPlace[]>([]);
   const [narratedIds, setNarratedIds] = useState<Map<string, number>>(
     new Map(),
@@ -1134,43 +1141,53 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // Re-validation guard reused at every `enqueueNarration` site. pickNext
+  // ran at GPS-tick T0; fetchNarrationPayload can take 10–15 s. By T0+15 s
+  // the user may have walked past the place we picked. Returns true when the
+  // place is still close enough to play; false when the picked place is now
+  // stale (in which case the slot is freed and a rejection is logged).
+  // Reads currentLocationRef (NOT closure state) so the freshest GPS tick is
+  // honored even when called after long awaits.
+  const isStillCloseEnough = useCallback(
+    (place: WalkPlace, contextLabel: string): boolean => {
+      const currentLoc = currentLocationRef.current;
+      if (!currentLoc) return true; // no GPS — don't second-guess pickNext
+      const cfg = DENSITY_CONFIG[densityRef.current];
+      const dist = haversineMeters(
+        currentLoc.latitude,
+        currentLoc.longitude,
+        place.latitude,
+        place.longitude,
+      );
+      if (dist > cfg.maxQueueDistance * 2) {
+        if (__DEV__) {
+          console.log(
+            `[${contextLabel}] ABORT (stale pick): "${place.name}" is now ${Math.round(dist)}m away, beyond 2×maxQueueDistance=${cfg.maxQueueDistance * 2}m`,
+          );
+        }
+        narratedIdsRef.current.delete(place.id);
+        setNarratedIds(new Map(narratedIdsRef.current));
+        recordRejection({
+          ts: Date.now(),
+          placeId: place.id,
+          placeName: place.name,
+          reason: "stale",
+          distance: dist,
+          bearingDiff: null,
+        });
+        return false;
+      }
+      return true;
+    },
+    [],
+  );
+
   const fetchNarration = useCallback(
     async (place: WalkPlace) => {
-      // --- Re-validation guard ---
-      // pickNext ran at GPS-tick T0; fetchNarrationPayload can take 10–15s.
-      // By T0+15s the user may have walked past the place we picked.
-      // Re-check the place is still within 2× the density's queue distance
-      // before committing to play it. If not, abort and clear the narrated
-      // mark so the next tick can pick a fresh candidate.
-      const currentLoc = currentLocation;
-      if (currentLoc) {
-        const cfg = DENSITY_CONFIG[densityRef.current];
-        const dist = haversineMeters(
-          currentLoc.latitude,
-          currentLoc.longitude,
-          place.latitude,
-          place.longitude,
-        );
-        if (dist > cfg.maxQueueDistance * 2) {
-          if (__DEV__) {
-            console.log(
-              `[fetchNarration] ABORT (stale pick): "${place.name}" is now ${Math.round(dist)}m away, beyond 2×maxQueueDistance=${cfg.maxQueueDistance * 2}m`,
-            );
-          }
-          // Free the slot so the next tick can pick a closer place.
-          narratedIdsRef.current.delete(place.id);
-          setNarratedIds(new Map(narratedIdsRef.current));
-          recordRejection({
-            ts: Date.now(),
-            placeId: place.id,
-            placeName: place.name,
-            reason: "stale",
-            distance: dist,
-            bearingDiff: null,
-          });
-          return;
-        }
-      }
+      // Pre-fetch sanity check: even before kicking off a 10–15 s request,
+      // bail if the place is already too far. The authoritative re-check
+      // happens immediately before each enqueueNarration call below.
+      if (!isStillCloseEnough(place, "fetchNarration:pre")) return;
       // --- Narration pipeline: fast path ---
       // Check if we already pre-fetched the narration for this place while the
       // previous story was playing. If so, enqueue it immediately (no round-trip)
@@ -1211,6 +1228,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           replayBadgeTimerRef.current = null;
           setIsReplay(false);
         }
+        // Authoritative re-check: even cache hits can be stale if the user
+        // moved a long way between pickNext and this point.
+        if (!isStillCloseEnough(place, "fetchNarration:cacheHit")) {
+          if (lookup.entry.payload.kind === "audio") {
+            try {
+              lookup.entry.payload.cleanup?.();
+            } catch {}
+          }
+          return;
+        }
         enqueueNarration(place, lookup.entry.payload);
         // Keep the pipeline going: pre-fetch the next candidate.
         prefetchNextRef.current?.();
@@ -1238,6 +1265,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         replayBadgeTimerRef.current = null;
       }
       setIsReplay(false);
+      // Authoritative re-check immediately before commit. The 10–15 s LLM/TTS
+      // request just resolved; the user may now be a block past this place.
+      if (!isStillCloseEnough(place, "fetchNarration:postFetch")) {
+        if (payload.kind === "audio") {
+          try {
+            payload.cleanup?.();
+          } catch {}
+        }
+        return;
+      }
       // Remember which place is now driving the lock-screen widget so the
       // artwork we send matches the story being spoken.
       enqueueNarration(place, payload);
@@ -1246,11 +1283,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       prefetchNextRef.current?.();
     },
     [
-      currentLocation,
       enqueueNarration,
       fetchNarrationPayload,
       getStalePrefetchPool,
       handlePrefetchEvent,
+      isStillCloseEnough,
     ],
   );
 
@@ -1651,6 +1688,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     (location: Location.LocationObject) => {
       const { latitude, longitude } = location.coords;
       const now = Date.now();
+      currentLocationRef.current = { latitude, longitude };
       setCurrentLocation({ latitude, longitude });
 
       if (prevLocationRef.current) {

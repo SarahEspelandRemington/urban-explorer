@@ -962,17 +962,25 @@ async function verifyAddressCoherence(
           result.lon,
         );
         if (dist > COHERENCE_THRESHOLD_M) {
-          // Address is real but resolves far from the LLM's lat/lng. Drop
-          // the place rather than narrating someone else's block. We do
-          // NOT relocate to the address coordinates because we can't tell
-          // which side is correct — the safer move is to skip entirely.
-          p._rejectOutOfArea = true;
-          // Also bail if the geocoded address is well outside the search
-          // area (catches "real street, wrong city" hallucinations).
-          if (
-            haversineDistance(userLat, userLng, result.lat, result.lon) >
-            searchRadius * 1.5
-          ) {
+          // Address resolves far from the LLM's lat/lng. We can't tell
+          // which side is correct from this signal alone — short address
+          // strings (e.g. "12 Main St") are ambiguous and can geocode to
+          // another city entirely. To avoid false-dropping legitimate local
+          // places we require *two* independent failure signals before
+          // rejecting:
+          //   (1) address geocode is >200 m from claimed lat/lng, AND
+          //   (2) the geocoded address is itself well outside the user's
+          //       current search area (>1.5× search radius from user).
+          // This catches the high-confidence "real street, wrong city"
+          // hallucination pattern while leaving ambiguous-but-plausible
+          // local addresses in place.
+          const geocodedDistFromUser = haversineDistance(
+            userLat,
+            userLng,
+            result.lat,
+            result.lon,
+          );
+          if (geocodedDistFromUser > searchRadius * 1.5) {
             p._rejectOutOfArea = true;
           }
         }
@@ -2517,7 +2525,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact, address } = parsed.data;
 
-  const narrationCacheKey = `narration:v12:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v13:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2718,7 +2726,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v12:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v13:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
