@@ -24,6 +24,7 @@ import { API_BASE } from "@/lib/apiBase";
 import { authHeaders } from "@/lib/apiToken";
 import { getLocaleMeta as getNotificationLocale } from "@/lib/i18n";
 import { fetchNarrationPayload as fetchNarrationPayloadUtil } from "@/lib/fetchNarrationPayload";
+import { buildTileKey, getPlaceCache, setPlaceCache } from "@/lib/placeCache";
 import {
   getStartupValue,
   setStartupValue,
@@ -485,8 +486,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     (groups: Set<BuildingGroupKey>) => {
       enabledBuildingGroupsRef.current = groups;
       setEnabledBuildingGroupsState(groups);
-      // Reset the fetch anchor so the next GPS tick re-fetches with the new prefs.
+      // Reset fetch anchor and session tile cache so the next GPS tick
+      // re-fetches with the updated building-type preferences.
       lastFetchRef.current = null;
+      fetchedTilesRef.current.clear();
     },
     [],
   );
@@ -505,6 +508,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const lastFetchRef = useRef<{ latitude: number; longitude: number } | null>(
     null,
   );
+  // Tile keys already fetched in this walk session. Prevents redundant
+  // /discover requests when the user stays within the same ~111 m grid cell.
+  // Cleared on stopWalk() and whenever building-type preferences change.
+  const fetchedTilesRef = useRef<Set<string>>(new Set());
   const prevLocationRef = useRef<{
     latitude: number;
     longitude: number;
@@ -746,26 +753,75 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
   const fetchNearbyPlaces = useCallback(
     async (latitude: number, longitude: number) => {
+      // -----------------------------------------------------------------------
+      // Compute the fetch centre and tile key synchronously BEFORE acquiring
+      // the fetchingRef lock so we can do a cheap in-memory check first.
+      const cfg = DENSITY_CONFIG[densityRef.current];
+      // Project the fetch centre ahead of the user in their direction of
+      // travel so the Overpass/LLM result set is front-loaded with places
+      // they're about to walk toward. Fall back to GPS position when no
+      // heading is available (first fix, standing still, etc.).
+      const fetchHeading =
+        deviceHeadingRef.current ?? velocityHeadingRef.current;
+      const fetchCenter =
+        fetchHeading !== null
+          ? projectAhead(latitude, longitude, fetchHeading, LOOK_AHEAD_METERS)
+          : { latitude, longitude };
+
+      const includedTypes = groupKeysToIncludedTypes(
+        enabledBuildingGroupsRef.current,
+      );
+      const includesSuffix =
+        includedTypes.length > 0
+          ? `:inc=${[...includedTypes].sort().join(",")}`
+          : "";
+      const tile = buildTileKey(
+        fetchCenter.latitude,
+        fetchCenter.longitude,
+        cfg.discoverRadius,
+        includesSuffix,
+      );
+
+      // Layer 1 — Session cache (in-memory, instant, zero I/O).
+      // If this tile was already fetched during this walk session the places
+      // are already in placesRef. Skip without touching the network or disk.
+      if (fetchedTilesRef.current.has(tile)) return;
+
       if (fetchingRef.current) return;
       fetchingRef.current = true;
       setIsLoading(true);
       try {
-        const cfg = DENSITY_CONFIG[densityRef.current];
-        // Critical path: hit /discover IMMEDIATELY with lat/lng — never block on
-        // reverse-geocode. Use any cached addressHint from a previous tick if we
-        // happen to have one, but never wait.
-        // Project the discover fetch centre ahead of the user in their direction
-        // of travel. This front-loads the Overpass result set with places the
-        // user is about to walk toward, so candidates are ready in the queue
-        // well before the user reaches them. Fall back to GPS position when no
-        // heading is available (first fix, standing still, etc.).
-        const fetchHeading =
-          deviceHeadingRef.current ?? velocityHeadingRef.current;
-        const fetchCenter =
-          fetchHeading !== null
-            ? projectAhead(latitude, longitude, fetchHeading, LOOK_AHEAD_METERS)
-            : { latitude, longitude };
+        // Layer 2 — Cross-session AsyncStorage cache (24 h TTL).
+        // Check before hitting the server so that revisiting a recently-walked
+        // area (same day, same block) requires zero HTTP round-trips.
+        const cachedPlaces = await getPlaceCache(tile);
+        if (cachedPlaces !== null) {
+          if (!isWalkingRef.current) return;
+          const allIncoming = cachedPlaces as WalkPlace[];
+          const map = new Map<string, WalkPlace>();
+          for (const p of placesRef.current) map.set(p.id, p);
+          for (const p of allIncoming) map.set(p.id, p);
+          const merged: WalkPlace[] = [];
+          for (const p of map.values()) {
+            if (
+              haversineMeters(latitude, longitude, p.latitude, p.longitude) <=
+              cfg.memoryRadius
+            )
+              merged.push(p);
+          }
+          placesRef.current = merged;
+          setNearbyPlaces(merged);
+          lastFetchRef.current = { latitude, longitude };
+          fetchedTilesRef.current.add(tile);
+          if (__DEV__)
+            console.log(
+              `[fetchNearbyPlaces] cache hit tile=${tile} merged=${merged.length}`,
+            );
+          return;
+        }
 
+        // Layer 3 — Server fetch.
+        // Build body now (addressHint and includedTypes were computed above).
         const body: Record<string, unknown> = {
           latitude: fetchCenter.latitude,
           longitude: fetchCenter.longitude,
@@ -773,9 +829,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         };
         if (cachedAddressHintRef.current)
           body.addressHint = cachedAddressHintRef.current;
-        const includedTypes = groupKeysToIncludedTypes(
-          enabledBuildingGroupsRef.current,
-        );
         if (includedTypes.length > 0) body.includeBuildingTypes = includedTypes;
 
         // Kick off a non-blocking reverse-geocode for the NEXT fetch to use.
@@ -844,6 +897,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             placesRef.current = merged;
             setNearbyPlaces(merged);
             lastFetchRef.current = { latitude, longitude };
+            // Persist to tile cache so the next walk in the same area skips
+            // the HTTP round-trip entirely. Use data.places (the raw server
+            // response) rather than the evicted `merged` list so the cache
+            // stores the full set of discovered places for this tile.
+            setPlaceCache(tile, data.places as unknown[]);
+            fetchedTilesRef.current.add(tile);
             // Loop-walk recovery: prune narratedIds entries older than 1 hour
             // so a place the user heard early in a long loop walk can re-narrate
             // when they circle back. Without this prune, narratedIdsRef grows
@@ -1787,6 +1846,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         setRouteSteps(seededSteps);
         setNextTurn(null);
         lastFetchRef.current = null;
+        // Clear the session-scoped tile cache so the next walk re-fetches
+        // normally rather than silently reusing stale session coverage.
+        fetchedTilesRef.current.clear();
         prevLocationRef.current = null;
         deviceHeadingRef.current = null;
         velocityHeadingRef.current = null;
