@@ -512,6 +512,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // /discover requests when the user stays within the same ~111 m grid cell.
   // Cleared on stopWalk() and whenever building-type preferences change.
   const fetchedTilesRef = useRef<Set<string>>(new Set());
+  // Throttle timestamps — low cost; used in both DEV and production paths.
+  const lastGpsLogTimestampRef = useRef<number>(0);
+  const lastNarratedPruneRef = useRef<number>(0);
   const prevLocationRef = useRef<{
     latitude: number;
     longitude: number;
@@ -785,7 +788,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // Layer 1 — Session cache (in-memory, instant, zero I/O).
       // If this tile was already fetched during this walk session the places
       // are already in placesRef. Skip without touching the network or disk.
-      if (fetchedTilesRef.current.has(tile)) return;
+      if (fetchedTilesRef.current.has(tile)) {
+        if (__DEV__)
+          console.log(`[discover] session hit tile=${tile} — skipping`);
+        return;
+      }
 
       if (fetchingRef.current) return;
       fetchingRef.current = true;
@@ -813,14 +820,24 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           setNearbyPlaces(merged);
           lastFetchRef.current = { latitude, longitude };
           fetchedTilesRef.current.add(tile);
+          // Same loop-walk recovery prune as the HTTP path — needed here too
+          // since cached-tile hits skip the HTTP branch entirely.
+          const oneHourAgoC = Date.now() - 60 * 60 * 1000;
+          for (const [id, ts] of narratedIdsRef.current.entries()) {
+            if (ts < oneHourAgoC) narratedIdsRef.current.delete(id);
+          }
           if (__DEV__)
             console.log(
-              `[fetchNearbyPlaces] cache hit tile=${tile} merged=${merged.length}`,
+              `[discover] storage hit tile=${tile} incoming=${allIncoming.length} merged=${merged.length}`,
             );
           return;
         }
 
         // Layer 3 — Server fetch.
+        if (__DEV__)
+          console.log(
+            `[discover] server fetch tile=${tile} radius=${cfg.discoverRadius}m`,
+          );
         // Build body now (addressHint and includedTypes were computed above).
         const body: Record<string, unknown> = {
           latitude: fetchCenter.latitude,
@@ -860,6 +877,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           signal: discoverAbort.signal,
         });
         clearTimeout(discoverTimeout);
+        if (!res.ok && __DEV__)
+          console.log(
+            `[discover] server error tile=${tile} status=${res.status}`,
+          );
         if (res.ok) {
           const data = await res.json();
           // Guard: if stopWalk was called while the fetch was in-flight, discard
@@ -903,6 +924,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // stores the full set of discovered places for this tile.
             setPlaceCache(tile, data.places as unknown[]);
             fetchedTilesRef.current.add(tile);
+            if (__DEV__)
+              console.log(
+                `[discover] server OK tile=${tile} incoming=${allIncoming.length} merged=${merged.length}`,
+              );
             // Loop-walk recovery: prune narratedIds entries older than 1 hour
             // so a place the user heard early in a long loop walk can re-narrate
             // when they circle back. Without this prune, narratedIdsRef grows
@@ -1482,10 +1507,43 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             if (buf.length > HEADING_BUFFER_SIZE) buf.shift();
             velocityHeadingRef.current = circularMedian(buf);
             velocityHeadingTimestampRef.current = now;
+            if (__DEV__)
+              console.log(
+                `[heading:vel] raw=${Math.round(newBearing)}° median=${Math.round(velocityHeadingRef.current)}° moved=${Math.round(dist)}m buf=${buf.length}`,
+              );
+          } else if (__DEV__) {
+            console.log(
+              `[heading:vel] raw=${Math.round(newBearing)}° REJECTED (diff from last=${lastVelocityHeading !== null ? Math.round(angularDiff(newBearing, lastVelocityHeading)) + "°" : "n/a"} > ${VELOCITY_HEADING_CONSISTENCY_DEG}°)`,
+            );
           }
         }
       }
       prevLocationRef.current = { latitude, longitude, ts: now };
+
+      // Throttled GPS summary — at most once per 10 s so it stays readable.
+      if (__DEV__ && now - lastGpsLogTimestampRef.current >= 10_000) {
+        lastGpsLogTimestampRef.current = now;
+        const velDesc =
+          velocityHeadingRef.current !== null
+            ? `${Math.round(velocityHeadingRef.current)}°(${
+                velocityHeadingTimestampRef.current !== null &&
+                now - velocityHeadingTimestampRef.current <
+                  VELOCITY_HEADING_STALE_MS
+                  ? "fresh"
+                  : "stale"
+              })`
+            : "none";
+        const cmpDesc =
+          deviceHeadingRef.current !== null
+            ? `${Math.round(deviceHeadingRef.current)}°`
+            : "none";
+        console.log(
+          `[GPS] lat=${latitude.toFixed(5)} lng=${longitude.toFixed(5)} ` +
+            `vel=${velDesc} cmp=${cmpDesc} ` +
+            `pool=${placesRef.current.length} narrated=${narratedIdsRef.current.size} ` +
+            `density=${densityRef.current}`,
+        );
+      }
 
       // --- Auto-density switching ---------------------------------------
       // Drop samples older than the rolling window.
@@ -1532,6 +1590,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // Refetch on movement.
       const cfg = DENSITY_CONFIG[densityRef.current];
       if (!lastFetchRef.current) {
+        if (__DEV__) console.log(`[refetch] first fix — triggering discover`);
         fetchNearbyPlaces(latitude, longitude);
       } else {
         const distFromLastFetch = haversineMeters(
@@ -1541,7 +1600,24 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           longitude,
         );
         if (distFromLastFetch > cfg.refetchMeters) {
+          if (__DEV__)
+            console.log(
+              `[refetch] moved=${Math.round(distFromLastFetch)}m > ${cfg.refetchMeters}m — triggering discover`,
+            );
           fetchNearbyPlaces(latitude, longitude);
+        }
+      }
+
+      // Throttled prune of narratedIdsRef: removes entries older than 1 h.
+      // The HTTP path runs the same prune after each server fetch, but if the
+      // user walks in fully-cached territory that branch never fires.  Running
+      // it here (at most once every 5 min) keeps the Map bounded on very long
+      // loop walks regardless of cache hit rate.
+      if (now - lastNarratedPruneRef.current >= 5 * 60 * 1000) {
+        lastNarratedPruneRef.current = now;
+        const pruneBeforeTs = now - 60 * 60 * 1000;
+        for (const [id, ts] of narratedIdsRef.current.entries()) {
+          if (ts < pruneBeforeTs) narratedIdsRef.current.delete(id);
         }
       }
 
