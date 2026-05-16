@@ -773,6 +773,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flexShrink: 1,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
   },
   headerHomeButton: {
     flexDirection: "row",
@@ -840,6 +843,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 20,
     padding: 3,
+    flexShrink: 0,
   },
   densityButton: {
     paddingHorizontal: 12,
