@@ -77,6 +77,7 @@ const ko: Strings = {
     walkingSubtitle: "주변 이야기 듣는 중",
     legendUpcoming: "예정",
     legendPlayed: "재생됨",
+    legendPlaying: "재생 중",
     sparse: "드물게",
     dense: "자주",
     gettingLocation: "위치를 가져오는 중…",

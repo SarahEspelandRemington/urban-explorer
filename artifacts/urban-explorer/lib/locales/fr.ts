@@ -82,6 +82,7 @@ const fr: Strings = {
     walkingSubtitle: "À l'écoute d'histoires",
     legendUpcoming: "À venir",
     legendPlayed: "Lues",
+    legendPlaying: "En cours",
     sparse: "Rares",
     dense: "Fréquentes",
     gettingLocation: "Obtention de votre position…",

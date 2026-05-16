@@ -82,6 +82,7 @@ const es: Strings = {
     walkingSubtitle: "Escuchando historias",
     legendUpcoming: "Próximas",
     legendPlayed: "Reproducidas",
+    legendPlaying: "Reproduciendo",
     sparse: "Pocas",
     dense: "Frecuentes",
     gettingLocation: "Obteniendo tu ubicación…",

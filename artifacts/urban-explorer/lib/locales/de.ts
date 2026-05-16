@@ -80,6 +80,7 @@ const de: Strings = {
     walkingSubtitle: "Lausche nach Geschichten",
     legendUpcoming: "Bevorstehend",
     legendPlayed: "Abgespielt",
+    legendPlaying: "Läuft",
     sparse: "Selten",
     dense: "Häufig",
     gettingLocation: "Standort wird abgerufen…",

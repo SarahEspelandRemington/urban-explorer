@@ -81,6 +81,7 @@ const pt: Strings = {
     walkingSubtitle: "Ouvindo histórias",
     legendUpcoming: "Próximas",
     legendPlayed: "Reproduzidas",
+    legendPlaying: "Reproduzindo",
     sparse: "Esparsas",
     dense: "Frequentes",
     gettingLocation: "Obtendo sua localização…",
