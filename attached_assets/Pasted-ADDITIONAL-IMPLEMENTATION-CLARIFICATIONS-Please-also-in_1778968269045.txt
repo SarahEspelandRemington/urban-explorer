@@ -1,0 +1,113 @@
+ADDITIONAL IMPLEMENTATION CLARIFICATIONS
+
+Please also incorporate the following refinements while implementing the attached Walk Mode visual direction:
+
+1. CONNECTOR / DIRECTIONAL RELATIONSHIP
+The subtle connector/path between the user location and active discovery should appear ONLY for:
+- the currently active narration
+- or an imminently queued discovery
+
+Do NOT show connectors for all nearby discoveries.
+
+Important:
+The connector should feel atmospheric and orienting — NOT like route navigation or turn-by-turn directions.
+
+Avoid:
+- navigation arrows
+- pathfinding visuals
+- GPS-route aesthetics
+- explicit instruction cues
+
+The goal is:
+“This story is meaningfully related to where I am and where I’m moving.”
+
+NOT:
+“Follow this route.”
+
+2. ACTIVE DISCOVERY POSITIONING
+When spatially/logically appropriate, the active discovery should generally appear visually ahead of the user’s movement direction rather than stacked directly on top of the user marker.
+
+The relationship between:
+- user
+- active discovery
+- movement direction
+
+should feel intentional rather than coincidental.
+
+3. UPCOMING DISCOVERIES
+Upcoming discoveries should remain tappable/interactable even while visually minimized.
+
+Please preserve interaction capability while reducing visual competition.
+
+4. FILTERS
+Remove Filters entirely from normal Walk Mode UI for now.
+
+Do not leave an empty visual gap where Filters existed.
+Rebalance spacing/layout accordingly.
+
+5. RESULT DENSITY CONTROL
+Keep the existing “Fewer results / More results” functionality and wording for now to reduce implementation risk.
+
+However:
+- visually soften it
+- compact it
+- reduce emphasis
+- make it feel secondary to the walking experience
+
+It should not visually dominate the top hierarchy.
+
+6. REAL-WORLD READABILITY / IMPLEMENTATION RESTRAINT
+The attached mockup is a directional visual target, not a cinematic art piece.
+
+Please preserve:
+- outdoor readability
+- quick glanceability
+- map legibility
+- strong contrast where needed
+- practical usability while walking
+
+Avoid:
+- over-darkening the map
+- excessive atmospheric overlays
+- overly cinematic glow
+- low-contrast typography
+- visual moodiness that harms usability
+- making the app feel like a concept render instead of a functioning product
+
+The desired tone is:
+- calm
+- warm
+- confident
+- spatially clear
+- minimally distracting
+
+NOT:
+- dramatic
+- hyper-stylized
+- “sci-fi”
+- overly moody
+
+7. IMPLEMENTATION PRIORITY
+Prioritize:
+- visual hierarchy
+- movement clarity
+- glance understanding
+- calmness
+- directional intentionality
+
+over:
+- decorative polish
+- additional controls
+- extra visual effects
+
+The Walk Mode experience should increasingly feel:
+- companion-like
+- unfolding
+- spatially aware
+- low-supervision
+
+NOT:
+- dashboard-like
+- analytical
+- gamified
+- cluttered

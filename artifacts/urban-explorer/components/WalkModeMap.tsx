@@ -10,14 +10,9 @@ import {
   Text,
   View,
 } from "react-native";
-import MapView, {
-  Marker,
-  PROVIDER_DEFAULT,
-  Region,
-} from "react-native-maps";
+import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
-import { useT } from "@/contexts/LocaleContext";
 import { WalkPlace } from "@/contexts/WalkModeContext";
 
 interface WalkModeMapProps {
@@ -110,7 +105,6 @@ export function WalkModeMap({
   onPlayPlace,
 }: WalkModeMapProps) {
   const colors = useColors();
-  const t = useT();
   const mapRef = useRef<MapView>(null);
   const initialRegion: Region = {
     latitude: userLatitude,
