@@ -714,12 +714,12 @@ export default function WalkModeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 10,
   },
   headerRight: {
     flexDirection: "row",
@@ -758,8 +758,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginHorizontal: 16,
-    marginTop: 10,
+    marginHorizontal: 18,
+    marginTop: 14,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
@@ -807,8 +807,8 @@ const styles = StyleSheet.create({
   mapContainer: {
     flex: 1,
     marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 16,
+    marginBottom: 16,
+    borderRadius: 18,
     overflow: "hidden",
   },
   loadingMap: {
@@ -820,7 +820,8 @@ const styles = StyleSheet.create({
   },
   loadingText: { fontSize: 14, fontFamily: "Inter_500Medium" },
   cardSlot: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
+    paddingBottom: 6,
     minHeight: 88,
   },
   nowPlaying: {

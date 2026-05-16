@@ -337,9 +337,11 @@ export function WalkModeMap({
                 { latitude: userLatitude, longitude: userLongitude },
                 { latitude: active.latitude, longitude: active.longitude },
               ]}
-              strokeColor={colors.primary + "55"}
-              strokeWidth={1.5}
-              lineDashPattern={[2, 6]}
+              strokeColor="rgba(216,154,99,0.45)"
+              strokeWidth={1.8}
+              lineDashPattern={[3, 10]}
+              lineCap="round"
+              lineJoin="round"
               tappable={false}
               zIndex={0}
             />
@@ -435,20 +437,19 @@ export function WalkModeMap({
             const markerOpacity = isPlaying
               ? 1
               : wasNarrated && !isSelected
-                ? visitedOpacity(narratedAt) * 0.14
+                ? visitedOpacity(narratedAt) * 0.1
                 : wasNarrated
-                  ? visitedOpacity(narratedAt) * 0.22
-                  : 0.84;
+                  ? visitedOpacity(narratedAt) * 0.18
+                  : 0.7;
 
-            // Active: 26 px dominant circle.
-            // Upcoming: 16 px standard, slightly transparent colour.
-            // Played: 12 px small, neutral grey — visually subordinate.
-            const pinSize = isPlaying ? 28 : wasNarrated ? 10 : 14;
+            // Active: 28 px dominant. Upcoming: 12 px quiet dot.
+            // Played: 9 px small, neutral grey — visually subordinate.
+            const pinSize = isPlaying ? 28 : wasNarrated ? 9 : 12;
             const pinColor = isPlaying
               ? colors.primary
               : wasNarrated
-                ? colors.mutedForeground + "99"
-                : colors.primary + "AA";
+                ? colors.mutedForeground + "66"
+                : colors.primary + "88";
             const wrapperSize = isPlaying ? 38 : pinSize + 8;
 
             return (
@@ -627,18 +628,20 @@ export function WalkModeMap({
               >
                 {selectedPlace.name}
               </Text>
-              {selectedPlace.category || selectedPlace.summary ? (
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.selectedSub,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  {selectedPlace.category ||
-                    selectedPlace.summary?.split(/[.!?]/)[0]}
-                </Text>
-              ) : null}
+              {(() => {
+                const sub = selectedPlace.summary?.split(/[.!?]/)[0]?.trim();
+                return sub ? (
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.selectedSub,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {sub}
+                  </Text>
+                ) : null;
+              })()}
             </View>
             {onOpenPlace ? (
               <Pressable
@@ -770,10 +773,7 @@ export function WalkModeMap({
                         {p.name}
                       </Text>
                       {(() => {
-                        const sub =
-                          (p.category?.trim() ||
-                            p.summary?.split(/[.!?]/)[0]?.trim()) ??
-                          "";
+                        const sub = p.summary?.split(/[.!?]/)[0]?.trim() ?? "";
                         return sub ? (
                           <Text
                             numberOfLines={1}
