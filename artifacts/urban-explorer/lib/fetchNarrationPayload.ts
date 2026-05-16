@@ -30,7 +30,12 @@ export interface NarrationPlace {
   category: string;
   summary: string;
   facts: string[];
+  /** Specific street address of the place (e.g. "610 8th Ave"). */
   address?: string;
+  /** Approximate block context from the user's GPS reverse-geocode
+   *  (e.g. "W 49th St, Hell's Kitchen, Manhattan"). Used as the
+   *  spatial anchor when no specific place address is available. */
+  crossStreets?: string;
 }
 
 export async function fetchNarrationPayload(
@@ -48,6 +53,7 @@ export async function fetchNarrationPayload(
     summary: place.summary,
     fact: place.facts[0],
     ...(place.address ? { address: place.address } : {}),
+    ...(place.crossStreets ? { crossStreets: place.crossStreets } : {}),
   });
   const headers = {
     "Content-Type": "application/json",

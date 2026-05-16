@@ -229,9 +229,12 @@ export interface WalkNarrationRequest {
   category?: string;
   summary: string;
   fact?: string;
-  /** Street address or cross-street reference for the place (e.g. "21 W 51st St" or "W 51st St & 8th Ave"). When present the narration will open with a brief spoken location identifier before the story.
+  /** Specific street address of the place itself (e.g. "610 8th Ave" or "21 W 51st St"). Takes priority over crossStreets in the spatial anchor.
    */
   address?: string;
+  /** Approximate block context derived from the user's current GPS position (e.g. "W 49th St, Hell's Kitchen, Manhattan"). Used as the spatial anchor when no specific place address is available. The model will open the narration with the most precise signal it has: address > crossStreets > generic phrase.
+   */
+  crossStreets?: string;
 }
 
 export interface WalkNarrationResponse {

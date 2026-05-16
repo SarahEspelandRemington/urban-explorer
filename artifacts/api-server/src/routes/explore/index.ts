@@ -233,7 +233,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v16"], // walk narration (short)
+  ["narration", "v17"], // walk narration (short)
   ["deep-narration", "v12"], // deep walk narration
   ["places-route", "v20"], // places along route
 ];
@@ -1787,6 +1787,12 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
           longitude,
           searchRadius,
         );
+        await verifyAddressCoherence(
+          data.places,
+          latitude,
+          longitude,
+          searchRadius,
+        );
         // Re-filter: a corrected coordinate might have moved a place outside radius.
         const maxDist = searchRadius * 1.1;
         data.places = data.places.filter(
@@ -2673,9 +2679,10 @@ router.post("/explore/walk-narration", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact, address } = parsed.data;
+  const { placeName, category, summary, fact, address, crossStreets } =
+    parsed.data;
 
-  const narrationCacheKey = `narration:v16:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v17:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2697,6 +2704,14 @@ router.post("/explore/walk-narration", async (req, res) => {
     return;
   }
 
+  // Build the location context string for the user message. Priority:
+  //   address (specific street number) > crossStreets (block context) > none.
+  const locationContext = address
+    ? ` Address: ${address}.`
+    : crossStreets
+      ? ` Nearby: ${crossStreets}.`
+      : "";
+
   const narrationPromise = openai.chat.completions
     .create({
       model: "gpt-4.1-nano",
@@ -2716,9 +2731,9 @@ How to write for speech:
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
 - MANDATORY FIRST CLAUSE — every narration MUST begin with a spatial anchor that orients the listener in physical space. This is non-negotiable: a narration that omits the spatial opener is wrong. Choose the strongest signal you have, in this priority order:
-  1. If a street number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
-  2. If only a cross-street / intersection reference is provided (e.g. "8th Ave & W 49th St"), open with it: "Right at the corner of Eighth and Forty-ninth —".
-  3. If only a broader area is provided (e.g. "near the Hudson piers"), open with a directional phrase tied to it: "Just back from the piers —" or "Across from the river —".
+  1. If a specific street-number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
+  2. If a nearby cross-street or block context is provided (e.g. "W 49th St, Hell's Kitchen"), open with a phrase tied to it: "Here on West Forty-ninth —" or "Just off Eighth, in Hell's Kitchen —".
+  3. If only a broader area or landmark reference is provided, open with a directional phrase tied to it: "Just back from the piers —" or "Across from the park —".
   4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
 - After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
@@ -2732,7 +2747,7 @@ How to write for speech:
         },
         {
           role: "user",
-          content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address or nearby location: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+          content: `I'm walking past "${placeName}" (${category || "place"}).${locationContext} Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
         },
       ],
     })
@@ -2850,7 +2865,8 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact, address } = parsed.data;
+  const { placeName, category, summary, fact, address, crossStreets } =
+    parsed.data;
 
   // Abort controller wired to the response close event so that any in-flight
   // audio conversion (e.g. ffmpeg via ensureCompatibleFormat) is cancelled
@@ -2879,7 +2895,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v16:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v17:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -2917,6 +2933,13 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         return;
       }
     } else {
+      // Build the location context string — same priority as /walk-narration.
+      const audioLocationContext = address
+        ? ` Address: ${address}.`
+        : crossStreets
+          ? ` Nearby: ${crossStreets}.`
+          : "";
+
       const audioNarrationPromise = openai.chat.completions
         .create(
           {
@@ -2937,9 +2960,9 @@ How to write for speech:
 - No abbreviations, no acronyms, no symbols, no quotes, no parentheses, no dashes used as parentheses.
 - Use a comma where you'd naturally pause for breath. A period where you'd stop completely. Nothing else for punctuation structure.
 - MANDATORY FIRST CLAUSE — every narration MUST begin with a spatial anchor that orients the listener in physical space. This is non-negotiable: a narration that omits the spatial opener is wrong. Choose the strongest signal you have, in this priority order:
-  1. If a street number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
-  2. If only a cross-street / intersection reference is provided (e.g. "8th Ave & W 49th St"), open with it: "Right at the corner of Eighth and Forty-ninth —".
-  3. If only a broader area is provided (e.g. "near the Hudson piers"), open with a directional phrase tied to it: "Just back from the piers —" or "Across from the river —".
+  1. If a specific street-number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
+  2. If a nearby cross-street or block context is provided (e.g. "W 49th St, Hell's Kitchen"), open with a phrase tied to it: "Here on West Forty-ninth —" or "Just off Eighth, in Hell's Kitchen —".
+  3. If only a broader area or landmark reference is provided, open with a directional phrase tied to it: "Just back from the piers —" or "Across from the park —".
   4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
 - After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
@@ -2953,7 +2976,7 @@ How to write for speech:
               },
               {
                 role: "user",
-                content: `I'm walking past "${placeName}" (${category || "place"})${address ? `. Address or nearby location: ${address}` : ""}. Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+                content: `I'm walking past "${placeName}" (${category || "place"}).${audioLocationContext} Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
               },
             ],
           },

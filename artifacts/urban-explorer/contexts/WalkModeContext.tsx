@@ -1148,10 +1148,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // two forty-nine West forty-ninth Street —" — even for unaddressed pins.
       // The server prompt requires location orientation on every narration, so
       // without this fallback the model has nothing to anchor to.
-      const enriched =
-        place.address || !cachedAddressHintRef.current
-          ? place
-          : { ...place, address: cachedAddressHintRef.current };
+      // address = the place's own street address (may be empty).
+      // crossStreets = the user's current block from reverse geocode — always
+      // passed when available so the model has a spatial anchor even for
+      // unnamed POIs with no recorded address.
+      const enriched = cachedAddressHintRef.current
+        ? { ...place, crossStreets: cachedAddressHintRef.current }
+        : place;
       return fetchNarrationPayloadUtil(enriched, {
         apiBase: API_BASE,
         isExpoGo: IS_EXPO_GO,
