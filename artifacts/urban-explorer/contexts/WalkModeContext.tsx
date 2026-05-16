@@ -1140,21 +1140,49 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // lib/fetchNarrationPayload.ts so it can be tested without React.
   const fetchNarrationPayload = useCallback(
     (place: WalkPlace): Promise<NarrationPayload | null> => {
-      // Enrich the place with location context for the narration prompt.
-      // When the place has no specific street address (common for unnamed OSM
-      // POIs), fall back to the reverse-geocoded intersection of the user's
-      // current position (cachedAddressHintRef). This gives the model enough
-      // context to open every narration with a location phrase — "Right around
-      // two forty-nine West forty-ninth Street —" — even for unaddressed pins.
-      // The server prompt requires location orientation on every narration, so
-      // without this fallback the model has nothing to anchor to.
-      // address = the place's own street address (may be empty).
-      // crossStreets = the user's current block from reverse geocode — always
-      // passed when available so the model has a spatial anchor even for
-      // unnamed POIs with no recorded address.
-      const enriched = cachedAddressHintRef.current
-        ? { ...place, crossStreets: cachedAddressHintRef.current }
-        : place;
+      // Spatial-anchor policy — critical for trust.
+      //
+      // The narration prompt requires a location phrase on every narration
+      // (server rule: MANDATORY FIRST CLAUSE). We resolve the anchor in
+      // strict priority order:
+      //
+      //   1. place.address (specific street number): always the strongest
+      //      signal. The LLM opens with "Right at three-twenty-eight Walnut
+      //      Street —". Never overridden by user location.
+      //
+      //   2. crossStreets from the user's reverse-geocode: ONLY used when
+      //      the place has no address AND the user is physically adjacent
+      //      (≤ maxQueueDistance) to the place. In that case user and place
+      //      occupy the same block, so the user's cross-street label is
+      //      approximately correct for the place too.
+      //
+      //   3. Nothing: the server falls back to a generic opener ("Right at
+      //      this corner —"). Always correct; never spatially misleading.
+      //
+      // NEVER pass the user's current reverse-geocode as crossStreets when
+      // the place has its own address, or when the user is far from the
+      // place. Doing so causes the LLM to anchor the narration to the
+      // user's neighborhood ("Here in Fairmount —") rather than the
+      // place's actual location ("Right at three-twenty-eight Walnut —"),
+      // which is the hallucinated spatial coherence bug.
+      const cfg = DENSITY_CONFIG[densityRef.current];
+      const currentLoc = currentLocationRef.current;
+      const placeHasAddress =
+        typeof place.address === "string" && place.address.trim().length > 0;
+      const distToPlace = currentLoc
+        ? haversineMeters(
+            currentLoc.latitude,
+            currentLoc.longitude,
+            place.latitude,
+            place.longitude,
+          )
+        : null;
+      const userIsAdjacent =
+        distToPlace !== null && distToPlace <= cfg.maxQueueDistance;
+      const enriched =
+        !placeHasAddress && userIsAdjacent && cachedAddressHintRef.current
+          ? { ...place, crossStreets: cachedAddressHintRef.current }
+          : place;
       return fetchNarrationPayloadUtil(enriched, {
         apiBase: API_BASE,
         isExpoGo: IS_EXPO_GO,
@@ -1172,6 +1200,27 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // honored even when called after long awaits.
   const isStillCloseEnough = useCallback(
     (place: WalkPlace, contextLabel: string): boolean => {
+      // Defense-in-depth: a server-side address↔coordinate coherence check
+      // already blocks auto-narration via pickNext, but the manual playPlace
+      // path bypasses pickNext. Re-check here so that even a tapped pin with
+      // a strong-evidence spatial mismatch is silently skipped rather than
+      // narrated with a fabricated location anchor.
+      if (place.autoNarrationBlocked) {
+        if (__DEV__) {
+          console.log(
+            `[${contextLabel}] ABORT (autoNarrationBlocked): "${place.name}" — ${place.addressCoherence?.reason ?? "address↔coord mismatch"}`,
+          );
+        }
+        recordRejection({
+          ts: Date.now(),
+          placeId: place.id,
+          placeName: place.name,
+          reason: "addressMismatch",
+          distance: null,
+          bearingDiff: null,
+        });
+        return false;
+      }
       const currentLoc = currentLocationRef.current;
       if (!currentLoc) return true; // no GPS — don't second-guess pickNext
       const cfg = DENSITY_CONFIG[densityRef.current];
