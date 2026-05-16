@@ -1,0 +1,117 @@
+Before making changes, please create a commit/checkpoint.
+
+I want to refine the discovery-selection and ranking heuristics for Urban Explorer. This request is focused on discovery quality, ranking, and prompt logic only. Do not redesign the UI or change routing/audio/geolocation systems unless necessary for this work.
+
+Core philosophy:
+Urban Explorer should surface discoveries that meaningfully change how users perceive the physical places around them.
+
+The goal is not merely to provide obscure trivia or hidden facts. The goal is to help users experience places as layered, inhabited, and shaped by overlapping human lives across time.
+
+A discovery should ideally:
+- recontextualize the visible environment
+- reveal traces still perceptible today
+- connect present geography to past human activity
+- create vivid mental imagery
+- feel inseparable from the specific place
+- deepen the user’s relationship to the location
+- create a subtle shift in how the place feels afterward
+
+PRIORITIZE discoveries that:
+- explain visible street geometry, building features, odd layouts, unusual infrastructure, reused spaces, neighborhood boundaries, or lingering physical traces
+- connect historical events to specific visible locations
+- reveal how ordinary people lived, moved, worked, gathered, traveled, adapted, or survived in this exact place
+- surface grounded local texture and neighborhood memory
+- connect infrastructure/history to lived human experience
+- create perceptual recontextualization of the present environment
+- make the user more likely to notice something around them after hearing the narration
+- are highly location-specific
+- create sensory imagination in restrained, grounded ways
+- reveal continuity between past and present
+
+Examples of strong sensory details:
+- “This block used to smell like roasting coffee.”
+- “People once slept on rooftops here during summer heat waves.”
+- “Musicians would spill into the street after late-night sessions.”
+
+Sensory details should remain concise, grounded, and observational — not flowery, theatrical, or overly atmospheric.
+
+DEPRIORITIZE discoveries that:
+- are obscure but perceptually inert
+- describe invisible hiddenness with no visible or experiential trace today
+- could apply equally to many neighborhoods or cities
+- rely primarily on celebrity adjacency
+- feel like generic trivia
+- sound like Wikipedia summaries
+- rely on “hidden gem” framing
+- overemphasize obscure infrastructure with no human or visible connection
+- shame users for not already knowing something
+- overstate significance
+- feel detached from the physical place around the user
+
+Examples of weaker discovery framing:
+- “There are buried streetcar tracks here.”
+- “A stream runs underneath this block.”
+- “This building appeared in the background of a TV show.”
+- “Thousands of commuters pass through here every day without realizing…”
+
+These may still become useful discoveries IF tied meaningfully to visible traces, present-day geography, or lived human experience.
+
+Examples:
+WEAK:
+“There is a buried stream under this block.”
+
+BETTER:
+“This oddly sloped street follows the path of a buried stream that once flooded nearby basements.”
+
+WEAK:
+“A famous actor briefly lived here.”
+
+BETTER:
+“This apartment building housed dozens of aspiring actors in the 1970s, including a young [name], long before the neighborhood became expensive.”
+
+Important nuance:
+Urban Explorer should not avoid major historical events, labor struggles, crime, tragedy, disasters, political conflict, corruption, or difficult history. These are important parts of the layered lives of places.
+
+However:
+- difficult history should remain grounded and humane
+- avoid sensationalism
+- avoid trauma-tourism framing
+- avoid exploitative “dark secrets” tone
+
+Ambiguity / local lore guidance:
+Urban Explorer may include local lore, semi-documented stories, neighborhood memory, or culturally persistent local narratives IF:
+- uncertainty is framed honestly
+- the lore meaningfully contributes to the texture of the place
+- it helps humanize or contextualize the environment
+- it does not present speculation as confirmed fact
+
+Examples:
+GOOD:
+“Older residents long claimed this bar was informally controlled by Westies associates in the 1970s.”
+
+BAD:
+“This bar was definitely a secret mafia headquarters.”
+
+Narration relationship:
+Discovery quality matters more than narration flourish.
+A strong discovery with concise narration is preferable to a weak discovery with elaborate prose.
+
+Narration should support the discovery, not overwhelm it.
+
+Implementation goals:
+- Improve discovery ranking quality
+- Improve location specificity
+- Improve perceptual/spatial relevance
+- Reduce generic trivia
+- Reduce invisible hiddenness
+- Reduce repetitive infrastructure facts
+- Increase grounded human texture
+- Increase discoveries that visibly recontextualize the environment
+- Improve discovery variety without sacrificing specificity
+
+Acceptance criteria:
+- Discoveries feel more tied to the visible world around the user
+- Locations feel layered and inhabited rather than trivia-driven
+- Users can more easily imagine the human lives connected to places
+- Discoveries feel grounded, specific, and spatially meaningful
+- Fewer discoveries feel generic, detached, or interchangeable
