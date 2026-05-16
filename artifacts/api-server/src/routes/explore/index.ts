@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v19"], // discover — quick mode
-  ["full", "v19"], // discover — full mode
+  ["quick", "v20"], // discover — quick mode
+  ["full", "v20"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -233,9 +233,9 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v15"], // walk narration (short)
-  ["deep-narration", "v11"], // deep walk narration
-  ["places-route", "v19"], // places along route
+  ["narration", "v16"], // walk narration (short)
+  ["deep-narration", "v12"], // deep walk narration
+  ["places-route", "v20"], // places along route
 ];
 
 function getLLMCache<T>(key: string): T | null {
@@ -1434,7 +1434,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v19:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v20:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1593,6 +1593,7 @@ DEPRIORITIZE discoveries that:
 - Read like generic trivia or a Wikipedia summary.
 - Use "hidden gem" framing or shame the reader for not already knowing.
 - Overstate significance or feel detached from the physical place around the user.
+- Require the user to hunt for a small, faded, or ambiguous visual detail — see PRECISION FLOOR below.
 
 WEAK vs STRONG framing — apply this transformation aggressively:
 - Weak: "There's a buried stream under this block." Strong: "This oddly sloped street follows the path of a buried stream that once flooded nearby basements."
@@ -1602,6 +1603,8 @@ A buried-thing or celebrity-adjacent fact only earns a slot when it is tied to a
 DIFFICULT HISTORY: Don't avoid labour struggles, crime, tragedy, disasters, displacement, political conflict, or corruption — these are part of the layered life of places. Treat them grounded and humane. No sensationalism, no trauma-tourism framing, no "dark secrets" tone.
 
 LOCAL LORE: Semi-documented stories and neighbourhood memory are welcome IF uncertainty is framed honestly ("Older residents long claimed…", "According to neighbourhood accounts…") and the lore meaningfully contributes to the texture of the place. Never present speculation as confirmed fact.
+
+PRECISION FLOOR — CRITICAL: Discoveries must not require the user to locate a fragile, small, faded, or hard-to-find visual object. Exclude the following as the primary discovery subject: ghost signs, faded painted wall advertisements, old painted building ads, vintage painted signage, faded commercial signage, faded wall ads. These are historically interesting but currently too fragile for the app — they require very precise visual positioning that walking-mode narration cannot reliably support, and they undermine user trust when spatial precision is already improving. This is not a permanent exclusion; they are a future category. WHAT TO KEEP: if a wall happens to carry a ghost sign but the building itself has a strong anchored story, surface the building story — do not lead with the sign. Always keep discoveries involving: official historical plaques or markers, carved stone building inscriptions, surviving original storefronts with a clear address and business history, visible architectural lettering that explains the building, building names in terra cotta or cast iron.
 
 QUALITY OVER QUANTITY: A strong discovery with a plain summary is better than a weak discovery dressed up. Every place must anchor to one specific building, corner, wall, or doorway.
 
@@ -1616,7 +1619,7 @@ HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhoo
 OSM DATA: The user message includes nearby OpenStreetMap features. Use each named feature as a prompt — what non-obvious story lies beneath what OSM calls "commercial"? Do not re-describe the OSM data; surface the obscure layer underneath.
 
 Respond in JSON:
-{"location":"specific area name","places":[{"id":"kebab-case","name":"Real or historical name","category":"building|storefront|alley|corner|infrastructure|former site|architectural detail|park|church|residential|vault sidewalk|subsurface|waterway remnant|transportation remnant","yearBuilt":"1920s","tags":["3-5 tags: ghost sign, speakeasy, labor history, immigrant history, art deco, tenement, gang territory, political machine, vault sidewalk, buried waterway, etc."],"summary":"One vivid sentence — the most surprising detail.","facts":["Fact with year/name/detail","Second distinct fact"],"latitude":40.12345,"longitude":-73.12345,"address":"157 W 48th St or W 48th St & 8th Ave","confidence":"high|medium|low"}]}
+{"location":"specific area name","places":[{"id":"kebab-case","name":"Real or historical name","category":"building|storefront|alley|corner|infrastructure|former site|architectural detail|park|church|residential|vault sidewalk|subsurface|waterway remnant|transportation remnant","yearBuilt":"1920s","tags":["3-5 tags: speakeasy, labor history, immigrant history, art deco, tenement, gang territory, political machine, vault sidewalk, buried waterway, etc."],"summary":"One vivid sentence — the most surprising detail.","facts":["Fact with year/name/detail","Second distinct fact"],"latitude":40.12345,"longitude":-73.12345,"address":"157 W 48th St or W 48th St & 8th Ave","confidence":"high|medium|low"}]}
 
 Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries beat 10 weak ones.`;
 
@@ -2626,7 +2629,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact, address } = parsed.data;
 
-  const narrationCacheKey = `narration:v15:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v16:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2674,6 +2677,7 @@ How to write for speech:
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
 - After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
 - Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no visible or experiential trace today (buried tracks, sealed tunnels, underground streams) — unless you can tie them to something the listener can actually perceive: a slope in the street, a sunken basement, a missing block, a remaining wall.
+- If the place is a ghost sign, faded painted wall advertisement, or similar fragile visual artifact, do NOT lead with the sign's appearance or ask the listener to find it. Lead instead with the building's or block's history. The app cannot currently give precise enough visual guidance for the listener to reliably locate a faded sign while walking. Anchor to the structure, not the fading paint.
 - Restrained sensory imagery is welcome when earned and specific. "This block used to smell like roasting coffee." "People slept on the rooftops during summer heat waves." Keep it short and observational. Never flowery, theatrical, or atmospheric for its own sake.
 - Never use exclamation points. Avoid rhetorical questions. Never say "hidden gem," "fascinating," "incredible," "amazing," or "you won't believe." Don't oversell what you're pointing at.
 - When the history involves difficulty — displacement, labor, disaster, tragedy, crime — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.
@@ -2829,7 +2833,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v15:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v16:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -2894,6 +2898,7 @@ How to write for speech:
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
 - After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
 - Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no visible or experiential trace today (buried tracks, sealed tunnels, underground streams) — unless you can tie them to something the listener can actually perceive: a slope in the street, a sunken basement, a missing block, a remaining wall.
+- If the place is a ghost sign, faded painted wall advertisement, or similar fragile visual artifact, do NOT lead with the sign's appearance or ask the listener to find it. Lead instead with the building's or block's history. The app cannot currently give precise enough visual guidance for the listener to reliably locate a faded sign while walking. Anchor to the structure, not the fading paint.
 - Restrained sensory imagery is welcome when earned and specific. "This block used to smell like roasting coffee." "People slept on the rooftops during summer heat waves." Keep it short and observational. Never flowery, theatrical, or atmospheric for its own sake.
 - Never use exclamation points. Avoid rhetorical questions. Never say "hidden gem," "fascinating," "incredible," "amazing," or "you won't believe." Don't oversell what you're pointing at.
 - When the history involves difficulty — displacement, labor, disaster, tragedy, crime — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.
@@ -3016,7 +3021,7 @@ router.post("/explore/deep-narration", async (req, res) => {
   const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
-  const deepCacheKey = `deep-narration:v11:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const deepCacheKey = `deep-narration:v12:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
@@ -3046,6 +3051,7 @@ How to write for speech:
 - Open with a hook: a vivid sensory detail, an unexpected fact, a specific person, or a question. Don't start with the place's name and date — that's the least interesting thing about it.
 - Weave in: when and why it was built, who used it, one or two specific human moments connected to it, what makes it distinctive, and how it sits in the neighborhood now. Prioritise details that recontextualise what the listener can see right now — visible features, street geometry, reused space, lingering traces of an earlier use.
 - Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no perceptible trace today (buried tracks, sealed tunnels, underground streams) unless you tie them to something present and visible. Restrained sensory imagery is welcome when earned and specific — never flowery or atmospheric for its own sake.
+- If the place is a ghost sign, faded painted wall advertisement, or similar fragile visual artifact: do NOT describe the sign or ask the listener to look for it. Pivot to the building's or block's structural or social history instead — the sign can be mentioned briefly but must not be the hook or the focus. Fragile visual objects require precise positioning the app cannot currently provide.
 - When the history involves difficulty — displacement, labour, disaster, tragedy, crime — be candid and humane. Avoid sensationalism and dark-tourism framing.
 - If a detail is uncertain, say so naturally: "the story goes," "supposedly," "nobody's quite sure, but."
 - End with something concrete — a detail to notice right now, a question to carry, a before-and-after that lands. No moral lesson or invitation to reflect.`,
@@ -3534,7 +3540,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v19:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v20:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     res.json(cached);
@@ -3643,6 +3649,7 @@ QUALITY STANDARDS:
 - Each fact MUST include a year, person's name, or concrete verifiable detail.
 - Prioritise facts that change how the walker perceives the visible place — explain a building feature, an odd street layout, a reused space, an earlier use, a specific human moment that happened here. Surface lived human texture (who worked, gathered, lived, adapted here) over generic significance.
 - Deprioritise generic trivia, celebrity-adjacent name-drops, "hidden gem" framing, and obscure-but-invisible facts (buried tracks, sealed tunnels) unless tied to a visible trace or present-day geography.
+- Do NOT surface ghost signs, faded painted wall advertisements, or similar fragile visual artifacts as the primary discovery. These require precise visual positioning that walking-tour audio cannot reliably support. If a place also has a ghost sign, lead with its structural or social history instead.
 - Restrained sensory detail is welcome when specific and earned ("this block used to smell like roasting coffee") — keep it brief and observational, never flowery.
 - Avoid generic statements like "has rich history" or "notable building".
 - Be honest: if you're uncertain, frame as "Local lore holds that..." rather than invent.
