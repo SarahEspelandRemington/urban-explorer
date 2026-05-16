@@ -171,6 +171,40 @@ export default function WalkModeScreen() {
         </View>
 
         <View style={styles.headerRight}>
+          {__DEV__ ? (
+            <Pressable
+              onPress={() => walk.setWalkDebugEnabled(!walk.walkDebugEnabled)}
+              hitSlop={8}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: walk.walkDebugEnabled }}
+              accessibilityLabel={t.walkMode.walkDebugOverlay}
+              style={({ pressed }) => [
+                styles.debugBtn,
+                {
+                  backgroundColor: walk.walkDebugEnabled
+                    ? colors.primary + "22"
+                    : colors.muted,
+                  borderColor: walk.walkDebugEnabled
+                    ? colors.primary
+                    : colors.border,
+                  opacity: pressed ? 0.75 : 1,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.debugBtnLabel,
+                  {
+                    color: walk.walkDebugEnabled
+                      ? colors.primary
+                      : colors.mutedForeground,
+                  },
+                ]}
+              >
+                Debug
+              </Text>
+            </Pressable>
+          ) : null}
           <View
             style={[styles.densityToggle, { backgroundColor: colors.muted }]}
           >
@@ -338,6 +372,30 @@ export default function WalkModeScreen() {
             >
               {t.walkMode.buildingFiltersDescription}
             </Text>
+            {__DEV__ && (
+              <>
+                <View style={{ height: 8 }} />
+                <Text
+                  style={[
+                    styles.modalDescription,
+                    {
+                      color: colors.mutedForeground,
+                      fontWeight: "600",
+                      fontSize: 11,
+                      letterSpacing: 0.5,
+                      marginBottom: 4,
+                    },
+                  ]}
+                >
+                  {t.walkMode.developerSection.toUpperCase()}
+                </Text>
+                <Text
+                  style={[styles.groupDesc, { color: colors.mutedForeground }]}
+                >
+                  {t.walkMode.walkDebugOverlayDescription}
+                </Text>
+              </>
+            )}
             <ScrollView
               style={styles.modalGroups}
               showsVerticalScrollIndicator={false}
@@ -383,57 +441,6 @@ export default function WalkModeScreen() {
                   />
                 </Pressable>
               )}
-              <View style={{ height: 8 }} />
-              <Text
-                style={[
-                  styles.modalDescription,
-                  {
-                    color: colors.mutedForeground,
-                    fontWeight: "600",
-                    fontSize: 11,
-                    letterSpacing: 0.5,
-                    marginBottom: 4,
-                  },
-                ]}
-              >
-                {t.walkMode.developerSection.toUpperCase()}
-              </Text>
-              <Pressable
-                onPress={() => walk.setWalkDebugEnabled(!walk.walkDebugEnabled)}
-                style={[styles.groupRow, { borderBottomColor: colors.border }]}
-                accessibilityRole="switch"
-                accessibilityState={{ checked: walk.walkDebugEnabled }}
-                accessibilityLabel={t.walkMode.walkDebugOverlay}
-              >
-                <View style={styles.groupText}>
-                  <Text
-                    style={[styles.groupName, { color: colors.foreground }]}
-                  >
-                    {t.walkMode.walkDebugOverlay}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.groupDesc,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {t.walkMode.walkDebugOverlayDescription}
-                  </Text>
-                </View>
-                <Switch
-                  value={walk.walkDebugEnabled}
-                  onValueChange={walk.setWalkDebugEnabled}
-                  trackColor={{
-                    false: colors.muted,
-                    true: colors.primary + "80",
-                  }}
-                  thumbColor={
-                    walk.walkDebugEnabled
-                      ? colors.primary
-                      : colors.mutedForeground
-                  }
-                />
-              </Pressable>
               <View style={{ height: 4 }} />
               {BUILDING_TYPE_GROUPS.map((group) => {
                 const key = group.key as BuildingGroupKey;
@@ -991,6 +998,16 @@ const styles = StyleSheet.create({
   groupDesc: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
+  },
+  debugBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  debugBtnLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
   modalCloseBtn: {
     marginTop: 20,
