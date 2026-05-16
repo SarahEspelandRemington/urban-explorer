@@ -328,14 +328,6 @@ export function WalkModeMap({
           setPreviewCluster(null);
         }}
       >
-        <Circle
-          center={{ latitude: userLatitude, longitude: userLongitude }}
-          radius={80}
-          fillColor={colors.primary + "15"}
-          strokeColor={colors.primary + "40"}
-          strokeWidth={1}
-        />
-
         {expansion &&
           expansion.cluster.places.map((place) => {
             const t = expandProgress;
