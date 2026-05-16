@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v20"], // discover — quick mode
-  ["full", "v20"], // discover — full mode
+  ["quick", "v21"], // discover — quick mode
+  ["full", "v21"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -954,14 +954,55 @@ async function verifyAddressCoherence(
   const ADDRESS_RX =
     /\b\d{1,5}\s+\S+\s+(ave|avenue|st|street|blvd|boulevard|rd|road|ln|lane|dr|drive|pl|place|ct|court|sq|square|way|pkwy|parkway|hwy|highway)\b/i;
 
-  // Also catch placenames that hard-code a street reference without a
-  // street number — e.g. "Unmarked Speakeasy Site near 8th Avenue" or
-  // "Ghost Sign on 9th Ave". Discover prompt forbids these, but the
-  // address-coherence check stays as a runtime backstop when the LLM
-  // ignores the instruction. We extract the street phrase and geocode
-  // it so the same two-signal mismatch test can run.
+  // Also catch placenames that hard-code a street reference — either with a
+  // preposition ("near 8th Avenue", "on 9th Ave") OR as a leading ordinal
+  // ("38th Street Vaudeville Theater", "42nd Street Ballroom", "8th Avenue
+  // Market"). The discover prompt forbids these, but this check is a runtime
+  // backstop when the LLM ignores the instruction.
+  //
+  // Match strategy:
+  //   • Optional preposition group ("near|on|along|at|off")
+  //   • Optional cardinal direction ("north|south|east|west|n|s|e|w")
+  //   • Required ordinal number + suffix (\d{1,3}(st|nd|rd|th))
+  //   • Required street type (full word preferred; abbreviation accepted)
+  // Ordinal suffix is now REQUIRED (was optional) to avoid matching bare
+  // decade references like "21st Century Architecture".
+  // Full word forms (street, avenue…) are listed before abbreviations (st,
+  // ave…) so the alternation matches the longest token first.
   const NAME_STREET_RX =
-    /\b(?:near|on|along|at|off)\s+((?:north|south|east|west|n|s|e|w)?\s*\d{1,3}(?:st|nd|rd|th)?\s+(?:ave|avenue|st|street|blvd|boulevard|rd|road|pl|place|sq|square|way|pkwy|parkway))\b/i;
+    /\b(?:(?:near|on|along|at|off)\s+)?(?:(?:north|south|east|west|n|s|e|w)\s+)?(\d{1,3}(?:st|nd|rd|th)\s+(?:street|avenue|boulevard|road|place|square|parkway|highway|lane|drive|ave|blvd|rd|pl|sq|pkwy|hwy|ln|dr|st|way))\b/i;
+
+  // Derive a short city+state string from coordinates so that name-extracted
+  // probes ("38th Street") can be disambiguated by Nominatim.  Without this,
+  // Nominatim may return "38th Street" from an entirely different city.
+  // Coverage is intentionally broad (generous bounding boxes are fine; a
+  // false "New York City" lookup is safe because the mismatch gate still
+  // fires if the geocode result is far from the place's claimed coords).
+  function cityContextFromCoords(lat: number, lon: number): string {
+    if (lat > 40.4 && lat < 40.95 && lon > -74.3 && lon < -73.7)
+      return "New York City, NY";
+    if (lat > 37.6 && lat < 37.9 && lon > -122.6 && lon < -122.3)
+      return "San Francisco, CA";
+    if (lat > 41.6 && lat < 42.1 && lon > -87.9 && lon < -87.5)
+      return "Chicago, IL";
+    if (lat > 34.0 && lat < 34.2 && lon > -118.5 && lon < -118.1)
+      return "Los Angeles, CA";
+    if (lat > 47.5 && lat < 47.7 && lon > -122.5 && lon < -122.2)
+      return "Seattle, WA";
+    if (lat > 42.2 && lat < 42.4 && lon > -71.2 && lon < -71.0)
+      return "Boston, MA";
+    if (lat > 29.6 && lat < 29.9 && lon > -95.5 && lon < -95.2)
+      return "Houston, TX";
+    if (lat > 33.6 && lat < 33.9 && lon > -84.5 && lon < -84.2)
+      return "Atlanta, GA";
+    if (lat > 39.8 && lat < 40.1 && lon > -75.3 && lon < -74.9)
+      return "Philadelphia, PA";
+    if (lat > 38.8 && lat < 39.0 && lon > -77.2 && lon < -76.9)
+      return "Washington, DC";
+    if (lat > 25.6 && lat < 25.9 && lon > -80.4 && lon < -80.1)
+      return "Miami, FL";
+    return "";
+  }
 
   const candidates = places
     .filter(
@@ -978,7 +1019,12 @@ async function verifyAddressCoherence(
         probe = p.address;
       } else if (typeof p.name === "string") {
         const m = p.name.match(NAME_STREET_RX);
-        if (m) probe = m[1];
+        if (m) {
+          // Append city context so Nominatim doesn't resolve "38th Street"
+          // to a city on the other side of the country.
+          const cityCtx = cityContextFromCoords(userLat, userLng);
+          probe = cityCtx ? `${m[1]}, ${cityCtx}` : m[1];
+        }
       }
       return probe ? { place: p, probe } : null;
     })
@@ -1434,7 +1480,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v20:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v21:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
