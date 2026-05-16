@@ -390,10 +390,7 @@ export default function WalkModeScreen() {
                   {t.walkMode.developerSection.toUpperCase()}
                 </Text>
                 <Text
-                  style={[
-                    styles.groupDesc,
-                    { color: colors.mutedForeground },
-                  ]}
+                  style={[styles.groupDesc, { color: colors.mutedForeground }]}
                 >
                   {t.walkMode.walkDebugOverlayDescription}
                 </Text>
@@ -1001,6 +998,16 @@ const styles = StyleSheet.create({
   groupDesc: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
+  },
+  debugBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  debugBtnLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
   modalCloseBtn: {
     marginTop: 20,

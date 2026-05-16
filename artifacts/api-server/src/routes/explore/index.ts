@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v16"], // discover — quick mode
-  ["full", "v16"], // discover — full mode
+  ["quick", "v18"], // discover — quick mode
+  ["full", "v18"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -233,9 +233,9 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v3"], // walk narration (short + deep)
-  ["deep-narration", "v3"], // deep walk narration
-  ["places-route", "v18"], // places along route
+  ["narration", "v15"], // walk narration (short)
+  ["deep-narration", "v11"], // deep walk narration
+  ["places-route", "v19"], // places along route
 ];
 
 function getLLMCache<T>(key: string): T | null {
@@ -1413,7 +1413,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v17:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v18:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1555,11 +1555,34 @@ router.post("/explore/discover", async (req, res) => {
 
 Given GPS coordinates, identify real places within roughly ${radiusFeet} feet (${searchRadius} m). Think small and specific.
 
-PRIORITIZE (in order): specific buildings and their hidden histories; architectural details passersby miss (ghost signs, terra cotta, unusual ironwork, cornerstones); former uses (speakeasies, union halls, boarding houses, vaudeville theaters, immigrant social clubs); local stories with names and dates; odd infrastructure (hitching posts, trolley tracks, sealed subway entrances, vault sidewalks, buried waterways); community power — ethnic mutual aid societies, gang territories, labor organizing halls, political machine clubhouses, named figures who shaped a specific block. Multi-era buildings whose use-transitions reveal social history are especially valuable.
+CORE PHILOSOPHY: A discovery should change how someone perceives the visible world around them. The goal is not obscure trivia. The goal is to make the place feel layered, inhabited, and shaped by overlapping human lives across time. After hearing it, the user should be more likely to NOTICE something physically present right now — a slope in the street, a sealed doorway, an odd setback, a row of cornices, the absence of a building that used to stand here.
 
-AVOID: famous tourist landmarks (Statue of Liberty, Empire State Building as a skyscraper, Times Square as spectacle); anything that would appear as the primary subject of a travel blog, Yelp top-10, or Wikipedia disambiguation page — favour what lives in footnotes, local newspaper archives, and academic dissertations; generic descriptions ("rich history," "many changes over the years"); neighbourhood-wide claims without a specific anchor. Every place must anchor to one building, corner, wall, or doorway.
+PRIORITIZE discoveries that:
+- Explain something visible right now: street geometry, building features, odd layouts, reused spaces, neighbourhood boundaries, lingering physical traces, infrastructure with a present-day footprint.
+- Connect a specific historical event to a specific visible location — not the neighbourhood, this corner.
+- Reveal how ordinary people lived, worked, gathered, travelled, adapted, or survived in this exact place. Named figures are welcome but not required.
+- Surface grounded local texture and neighbourhood memory — the kind of thing older residents still remember.
+- Use restrained sensory imagery when it is earned and tied to this exact spot. Good: "this block used to smell like roasting coffee" / "people slept on rooftops here during summer heat waves" / "musicians spilled into the street after late-night sessions". Keep sensory detail concise and observational, never flowery, theatrical, or atmospheric for its own sake.
+- Show continuity between past and present.
 
-TARGET: a place the user could walk past 100 times without knowing its significance. If it would headline any popular tourist guide, choose something more obscure.
+DEPRIORITIZE discoveries that:
+- Are obscure but perceptually inert — buried tracks, hidden streams, sealed tunnels with NO visible or experiential trace today.
+- Could apply equally to many neighbourhoods or cities.
+- Lean primarily on celebrity adjacency ("X briefly lived here").
+- Read like generic trivia or a Wikipedia summary.
+- Use "hidden gem" framing or shame the reader for not already knowing.
+- Overstate significance or feel detached from the physical place around the user.
+
+WEAK vs STRONG framing — apply this transformation aggressively:
+- Weak: "There's a buried stream under this block." Strong: "This oddly sloped street follows the path of a buried stream that once flooded nearby basements."
+- Weak: "A famous actor briefly lived here." Strong: "This building housed dozens of aspiring actors in the seventies, including a young [name], long before the neighbourhood became expensive."
+A buried-thing or celebrity-adjacent fact only earns a slot when it is tied to a visible trace, lived experience, or present-day geography.
+
+DIFFICULT HISTORY: Don't avoid labour struggles, crime, tragedy, disasters, displacement, political conflict, or corruption — these are part of the layered life of places. Treat them grounded and humane. No sensationalism, no trauma-tourism framing, no "dark secrets" tone.
+
+LOCAL LORE: Semi-documented stories and neighbourhood memory are welcome IF uncertainty is framed honestly ("Older residents long claimed…", "According to neighbourhood accounts…") and the lore meaningfully contributes to the texture of the place. Never present speculation as confirmed fact.
+
+QUALITY OVER QUANTITY: A strong discovery with a plain summary is better than a weak discovery dressed up. Every place must anchor to one specific building, corner, wall, or doorway.
 
 SPECIFICITY RULES — every fact must include at least one: specific year/decade, person's name, verifiable detail, or concrete event. BAD: "This building has a rich history." GOOD: "The Italianate cornice was added in 1887 when dry-goods merchant Samuel Hewitt converted the ground floor from a livery stable." Social history needs an address: BAD: "The Westies controlled Hell's Kitchen." GOOD: "596 10th Ave was the Westies' base — Jimmy Coonan ran the crew from this corner through the late 1970s."
 
@@ -2580,7 +2603,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   }
   const { placeName, category, summary, fact, address } = parsed.data;
 
-  const narrationCacheKey = `narration:v14:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v15:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -2626,9 +2649,11 @@ How to write for speech:
   3. If only a broader area is provided (e.g. "near the Hudson piers"), open with a directional phrase tied to it: "Just back from the piers —" or "Across from the river —".
   4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
-- After the location opener, let the place speak for itself. Surface the specific person, use, era, or change that makes this spot worth a moment. Vary the angle — the person connected to it, what it used to be, a detail visible right now, something that happened here. Don't follow the same structure every time.
+- After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
+- Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no visible or experiential trace today (buried tracks, sealed tunnels, underground streams) — unless you can tie them to something the listener can actually perceive: a slope in the street, a sunken basement, a missing block, a remaining wall.
+- Restrained sensory imagery is welcome when earned and specific. "This block used to smell like roasting coffee." "People slept on the rooftops during summer heat waves." Keep it short and observational. Never flowery, theatrical, or atmospheric for its own sake.
 - Never use exclamation points. Avoid rhetorical questions. Never say "hidden gem," "fascinating," "incredible," "amazing," or "you won't believe." Don't oversell what you're pointing at.
-- When the history involves difficulty — displacement, labor, disaster, tragedy — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.
+- When the history involves difficulty — displacement, labor, disaster, tragedy, crime — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.
 - End without a moral lesson, emotional coaching, or invitation to reflect. A specific fact, a small contrast, a human-scaled detail is enough. Let it land without commentary.
 - If you're not certain of a detail, say "supposedly" or "according to local accounts" rather than stating it as fact.`,
         },
@@ -2781,7 +2806,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v14:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v15:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -2844,9 +2869,11 @@ How to write for speech:
   3. If only a broader area is provided (e.g. "near the Hudson piers"), open with a directional phrase tied to it: "Just back from the piers —" or "Across from the river —".
   4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
-- After the location opener, let the place speak for itself. Surface the specific person, use, era, or change that makes this spot worth a moment. Vary the angle — the person connected to it, what it used to be, a detail visible right now, something that happened here. Don't follow the same structure every time.
+- After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
+- Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no visible or experiential trace today (buried tracks, sealed tunnels, underground streams) — unless you can tie them to something the listener can actually perceive: a slope in the street, a sunken basement, a missing block, a remaining wall.
+- Restrained sensory imagery is welcome when earned and specific. "This block used to smell like roasting coffee." "People slept on the rooftops during summer heat waves." Keep it short and observational. Never flowery, theatrical, or atmospheric for its own sake.
 - Never use exclamation points. Avoid rhetorical questions. Never say "hidden gem," "fascinating," "incredible," "amazing," or "you won't believe." Don't oversell what you're pointing at.
-- When the history involves difficulty — displacement, labor, disaster, tragedy — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.
+- When the history involves difficulty — displacement, labor, disaster, tragedy, crime — be candid and matter-of-fact. Give the people involved their dignity. Don't frame hard history as exotic or as dark tourism.
 - End without a moral lesson, emotional coaching, or invitation to reflect. A specific fact, a small contrast, a human-scaled detail is enough. Let it land without commentary.
 - If you're not certain of a detail, say "supposedly" or "according to local accounts" rather than stating it as fact.`,
               },
@@ -2966,7 +2993,7 @@ router.post("/explore/deep-narration", async (req, res) => {
   const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
-  const deepCacheKey = `deep-narration:v10:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const deepCacheKey = `deep-narration:v11:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
@@ -2994,9 +3021,11 @@ How to write for speech:
 - Use commas where you'd naturally pause for breath. Periods where you'd fully stop. No ellipses or dashes as structure.
 - If an address is provided, begin with a single natural spoken phrase naming the location — for example, "That's four twenty-three West Forty-eighth Street —" or "Right here at the corner of Fifth and Fifty-third —". Spell all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave". Then follow immediately with your hook.
 - Open with a hook: a vivid sensory detail, an unexpected fact, a specific person, or a question. Don't start with the place's name and date — that's the least interesting thing about it.
-- Weave in: when and why it was built, who used it, one or two specific human moments connected to it, what makes it distinctive, and how it sits in the neighborhood now.
+- Weave in: when and why it was built, who used it, one or two specific human moments connected to it, what makes it distinctive, and how it sits in the neighborhood now. Prioritise details that recontextualise what the listener can see right now — visible features, street geometry, reused space, lingering traces of an earlier use.
+- Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no perceptible trace today (buried tracks, sealed tunnels, underground streams) unless you tie them to something present and visible. Restrained sensory imagery is welcome when earned and specific — never flowery or atmospheric for its own sake.
+- When the history involves difficulty — displacement, labour, disaster, tragedy, crime — be candid and humane. Avoid sensationalism and dark-tourism framing.
 - If a detail is uncertain, say so naturally: "the story goes," "supposedly," "nobody's quite sure, but."
-- End with something concrete — a detail to notice right now, a question to carry, a before-and-after that lands.`,
+- End with something concrete — a detail to notice right now, a question to carry, a before-and-after that lands. No moral lesson or invitation to reflect.`,
           },
           {
             role: "user",
@@ -3482,7 +3511,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v18:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v19:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     res.json(cached);
@@ -3588,10 +3617,14 @@ router.post("/explore/places-along-route", async (req, res) => {
 You will be given a list of REAL places (verified from OpenStreetMap) along a planned walking route. For EACH place, write a captivating one-sentence summary and 2 specific historical facts.
 
 QUALITY STANDARDS:
-- Each fact MUST include a year, person's name, or concrete verifiable detail
-- Avoid generic statements like "has rich history" or "notable building"
-- Be honest: if you're uncertain, frame as "Local lore holds that..." rather than invent
-- Use the EXACT name and coordinates provided — do not rename or move places
+- Each fact MUST include a year, person's name, or concrete verifiable detail.
+- Prioritise facts that change how the walker perceives the visible place — explain a building feature, an odd street layout, a reused space, an earlier use, a specific human moment that happened here. Surface lived human texture (who worked, gathered, lived, adapted here) over generic significance.
+- Deprioritise generic trivia, celebrity-adjacent name-drops, "hidden gem" framing, and obscure-but-invisible facts (buried tracks, sealed tunnels) unless tied to a visible trace or present-day geography.
+- Restrained sensory detail is welcome when specific and earned ("this block used to smell like roasting coffee") — keep it brief and observational, never flowery.
+- Avoid generic statements like "has rich history" or "notable building".
+- Be honest: if you're uncertain, frame as "Local lore holds that..." rather than invent.
+- When difficult history applies (labour, displacement, tragedy, crime), be grounded and humane — no sensationalism or dark-tourism framing.
+- Use the EXACT name and coordinates provided — do not rename or move places.
 
 Respond in JSON format:
 {

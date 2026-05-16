@@ -8,6 +8,7 @@ description: Guides Urban Explorer Walk Mode decisions around phone-away trust, 
 ## When to Use
 
 Use this skill when changing Walk Mode behavior, especially:
+
 - place selection and ranking
 - narration timing and suppression
 - map pin vs auto-narration eligibility
@@ -21,6 +22,7 @@ Design Walk Mode so the user can put the phone away and trust the app to behave 
 Spatial correctness matters more than frequency. Silence is preferable to a confusing, mistimed, or aggressive narration.
 
 This philosophy is still evolving, but it should already shape decisions in this order:
+
 1. Cross-street / barrier / path-plausibility correctness
 2. A thoughtful silence threshold when confidence is low
 3. Debug visibility that explains decisions without driving them
@@ -42,11 +44,13 @@ This philosophy is still evolving, but it should already shape decisions in this
 ## Decision Rules
 
 Prefer these outcomes in order:
+
 1. Correct, relevant narration
 2. Quiet skip with explainable debug info
 3. No narration
 
 Avoid:
+
 - narrating places behind the user
 - narrating places across irrelevant streets, barriers, or dead-end paths
 - using proximity alone when heading/path context says the match is weak
@@ -55,6 +59,7 @@ Avoid:
 ## Debugging Guidance
 
 When adding or changing diagnostics:
+
 - include the place name
 - include stored and geocoded coordinates when available
 - include mismatch distance and reason
