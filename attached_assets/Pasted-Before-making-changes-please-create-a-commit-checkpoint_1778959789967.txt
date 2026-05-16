@@ -1,0 +1,81 @@
+Before making changes, please create a commit/checkpoint.
+
+Please make a focused Walk Mode map/UI refinement for Urban Explorer. Do not change geolocation scoring, narration queue logic, audio playback, route logic, database schema, or Explore Mode unless absolutely required for display.
+
+Goal:
+Reduce cognitive friction in Walk Mode by making the map answer one question quickly: “What matters right now?”
+
+Current issue:
+The Walk Mode map currently shows orange and gray dots that are confusing during field testing. The user cannot quickly tell which location is current, which is upcoming, which is inactive/loading, or what they should care about. This encourages phone-checking and map supervision.
+
+Design principle:
+Walk Mode should support movement continuity. The user should be able to glance for 1–2 seconds, understand the current state, and return attention to walking.
+
+Please simplify Walk Mode map semantics around temporal hierarchy:
+
+1. CURRENT / ACTIVE DISCOVERY
+Make the current active discovery visually dominant.
+This includes:
+- the location currently narrating
+- the location about to narrate
+- the most relevant queued target, if no narration is currently playing
+
+This marker should be unmistakable compared with all other markers.
+
+2. USER LOCATION
+Keep the user location indicator precise, stable, and visually clear.
+The user location marker is the trust anchor. It should communicate: “the app knows where I am.”
+
+3. NEARBY / FUTURE DISCOVERIES
+Nearby future discoveries may remain visible, but should visually recede.
+They should imply “there is more around you” without competing with the active/current discovery.
+
+4. INACTIVE / LESS RELEVANT DISCOVERIES
+Inactive, unavailable, already-played, distant, or lower-priority discoveries should be visually de-emphasized aggressively.
+Avoid showing many equally prominent dots.
+
+5. REMOVE OR CLARIFY ORANGE/GRAY AMBIGUITY
+Do not leave orange and gray dots unexplained.
+Either:
+- reduce the marker states to fewer, clearer visual categories, OR
+- add a very small, unobtrusive legend/label explaining exactly what each marker state means.
+
+Prefer simpler state reduction over adding explanatory UI if possible.
+
+6. SUGGESTED MARKER MODEL
+If compatible with current code, use a simple hierarchy like:
+
+- User location: precise blue/current-location style marker or existing location indicator
+- Active/current discovery: warm emphasized marker, larger size, stronger outline or halo
+- Nearby/upcoming discoveries: smaller muted warm markers
+- Inactive/already played/unavailable/loading: low-opacity neutral markers or hidden if not useful
+
+Please adapt this to the existing implementation rather than forcing exact colors if the current design tokens differ.
+
+7. NOW PLAYING / CURRENT DISCOVERY CARD
+If there is a current or queued narration, make the associated card clearly correspond to the emphasized map marker.
+The user should be able to understand: “this card goes with that place.”
+
+8. DO NOT OVERBUILD
+Do not add animations, haptics, new controls, new modes, or new ranking behavior in this pass.
+This is a visual hierarchy and state-clarity refinement only.
+
+9. PRESERVE EXISTING FUNCTIONALITY
+Do not alter:
+- narration timing
+- geolocation/proximity calculations
+- heading/distance scoring
+- route behavior
+- audio/TTS logic
+- Explore mode map behavior
+- Saved mode
+
+Acceptance criteria:
+- Walk Mode no longer feels like a field of ambiguous orange/gray dots.
+- The current/active discovery is immediately obvious.
+- User location remains clear and precise.
+- Nearby/future discoveries are visible but secondary.
+- Inactive/unavailable/already-played states do not visually compete.
+- A user can glance for 1–2 seconds and understand what matters now.
+- All existing Walk Mode functionality still works.
+- Typecheck/lint/tests pass.

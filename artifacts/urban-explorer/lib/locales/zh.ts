@@ -75,6 +75,7 @@ const zh: Strings = {
     walkingSubtitle: "聆听附近故事",
     legendUpcoming: "即将",
     legendPlayed: "已播放",
+    legendPlaying: "播放中",
     sparse: "稀疏",
     dense: "密集",
     gettingLocation: "正在获取你的位置…",

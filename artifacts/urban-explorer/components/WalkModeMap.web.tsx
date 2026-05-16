@@ -16,6 +16,7 @@ interface WalkModeMapProps {
   places: WalkPlace[];
   narratedIds: Map<string, number>;
   followUser?: boolean;
+  currentlyPlayingPlaceId?: string;
 }
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -95,6 +96,7 @@ export function WalkModeMap({
   userLongitude,
   places,
   narratedIds,
+  currentlyPlayingPlaceId,
 }: WalkModeMapProps) {
   const colors = useColors();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -104,6 +106,9 @@ export function WalkModeMap({
   const placesRef = useRef<WalkPlace[]>(places);
   const narratedRef = useRef<Map<string, number>>(narratedIds);
   const colorsRef = useRef(colors);
+  const currentlyPlayingIdRef = useRef<string | undefined>(
+    currentlyPlayingPlaceId,
+  );
   const prevClustersRef = useRef<Cluster[]>([]);
   const collapseRafRef = useRef<number | null>(null);
   const collapseMarkersRef = useRef<any[]>([]);
@@ -114,6 +119,7 @@ export function WalkModeMap({
     placesRef.current = places;
     narratedRef.current = narratedIds;
     colorsRef.current = colors;
+    currentlyPlayingIdRef.current = currentlyPlayingPlaceId;
   });
 
   useEffect(() => {
@@ -190,19 +196,56 @@ export function WalkModeMap({
           const place = cluster.places[0];
           const narratedAt = narrated.get(place.id);
           const isNarrated = narratedAt !== undefined;
-          const fill = isNarrated ? c.mutedForeground : c.primary;
-          const pinOpacity = isNarrated ? visitedOpacity(narratedAt) * 0.6 : 1;
+          const isPlaying = place.id === currentlyPlayingIdRef.current;
+
+          // Three-tier visual hierarchy matching the native map:
+          //   active (playing): 26 px, full primary, strong shadow + halo
+          //   upcoming: 16 px, primary at 73% opacity
+          //   played: 12 px, mutedForeground, very faded
+          const pinSize = isPlaying ? 26 : isNarrated ? 12 : 16;
+          const fill = isPlaying
+            ? c.primary
+            : isNarrated
+              ? c.mutedForeground
+              : c.primary + "BB";
+          const pinOpacity =
+            isNarrated && !isPlaying ? visitedOpacity(narratedAt) * 0.35 : 1;
+          const border = isPlaying ? 3 : isNarrated ? 1.5 : 2;
+          const shadow = isPlaying
+            ? `0 0 10px 3px ${c.primary}55, 0 2px 6px rgba(0,0,0,0.4)`
+            : isNarrated
+              ? "none"
+              : "0 2px 4px rgba(0,0,0,0.25)";
+          const halo = isPlaying
+            ? `<div style="
+                position: absolute; top: 50%; left: 50%;
+                transform: translate(-50%,-50%);
+                width: 48px; height: 48px; border-radius: 50%;
+                border: 3px solid ${c.primary};
+                background: ${c.primary}18;
+                pointer-events: none;
+              "></div>`
+            : "";
+          const half = Math.round(pinSize / 2);
+          const wrapperSize = isPlaying ? 52 : pinSize + 8;
+          const halfWrapper = Math.round(wrapperSize / 2);
           const icon = L.divIcon({
             className: "walk-marker",
             html: `<div style="
-              width: 22px; height: 22px; border-radius: 50%;
-              background: ${fill}; border: 2px solid white;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              position: relative;
+              width: ${wrapperSize}px; height: ${wrapperSize}px;
+              display: flex; align-items: center; justify-content: center;
+            ">${halo}<div style="
+              width: ${pinSize}px; height: ${pinSize}px; border-radius: 50%;
+              background: ${fill}; border: ${border}px solid white;
+              box-shadow: ${shadow};
               opacity: ${pinOpacity};
-            "></div>`,
-            iconSize: [22, 22],
-            iconAnchor: [11, 11],
+              position: relative;
+            "></div></div>`,
+            iconSize: [wrapperSize, wrapperSize],
+            iconAnchor: [halfWrapper, halfWrapper],
           });
+          void half; // suppress unused warning — kept for clarity
           const marker = L.marker([place.latitude, place.longitude], {
             icon,
           }).addTo(currentMap);
@@ -442,7 +485,7 @@ export function WalkModeMap({
     const map = mapInstanceRef.current;
     if (!map) return;
     map.fire("moveend");
-  }, [places, narratedIds, colors]);
+  }, [places, narratedIds, colors, currentlyPlayingPlaceId]);
 
   return (
     <View style={styles.container}>

@@ -540,7 +540,12 @@ export default function WalkModeScreen() {
             exiting={Platform.OS !== "web" ? FadeOut : undefined}
             style={[
               styles.nowPlaying,
-              { backgroundColor: colors.card, borderColor: colors.border },
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderLeftColor: colors.primary,
+                borderLeftWidth: 3,
+              },
             ]}
             accessibilityLiveRegion="polite"
             accessibilityLabel={t.walkMode.nowPlayingPlaceAccessibility(

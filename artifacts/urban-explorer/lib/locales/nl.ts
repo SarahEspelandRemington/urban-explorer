@@ -80,6 +80,7 @@ const nl: Strings = {
     walkingSubtitle: "Luisteren naar verhalen",
     legendUpcoming: "Aankomend",
     legendPlayed: "Afgespeeld",
+    legendPlaying: "Speelt",
     sparse: "Spaarzaam",
     dense: "Vaak",
     gettingLocation: "Locatie ophalen…",

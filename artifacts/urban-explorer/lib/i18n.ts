@@ -92,6 +92,7 @@ export interface Strings {
     walkingSubtitle: string;
     legendUpcoming: string;
     legendPlayed: string;
+    legendPlaying: string;
     sparse: string;
     dense: string;
     gettingLocation: string;
@@ -384,6 +385,7 @@ const en: Strings = {
     walkingSubtitle: "Listening for stories",
     legendUpcoming: "Upcoming",
     legendPlayed: "Played",
+    legendPlaying: "Playing",
     sparse: "Fewer results",
     dense: "More results",
     gettingLocation: "Getting your location…",

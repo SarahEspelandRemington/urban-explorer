@@ -79,6 +79,7 @@ const ja: Strings = {
     walkingSubtitle: "周囲の物語を聞いています",
     legendUpcoming: "近日",
     legendPlayed: "再生済み",
+    legendPlaying: "再生中",
     sparse: "少なめ",
     dense: "多め",
     gettingLocation: "位置情報を取得中…",
