@@ -1441,10 +1441,23 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           p.latitude,
           p.longitude,
         );
-        if (dist > cfg.maxQueueDistance) {
+        // Phone-away trust: when the heading source is unreliable
+        // (stale velocity OR compass-only), tighten the distance gate.
+        // Compass is unreliable in steel-frame canyons (90–180° deflection),
+        // and stale velocity doesn't reflect current travel. Rather than
+        // applying a hard angular gate to an unreliable bearing (which
+        // could exclude correct places), restrict picks to a tight radius
+        // where any direction is "ahead-ish" — silence beats a confusing
+        // perpendicular pick. See .agents/skills/walk-mode-phone-away-trust.
+        const headingIsReliable =
+          velocityHeadingRef.current !== null && velocityHeadingIsRecent;
+        const effectiveMaxDist = headingIsReliable
+          ? cfg.maxQueueDistance
+          : Math.min(cfg.maxQueueDistance, 40);
+        if (dist > effectiveMaxDist) {
           if (__DEV__)
             console.log(
-              `  [skip:dist ${Math.round(dist)}m>${cfg.maxQueueDistance}m] "${p.name}"`,
+              `  [skip:dist ${Math.round(dist)}m>${effectiveMaxDist}m${headingIsReliable ? "" : " (heading unreliable, tightened)"}] "${p.name}"`,
             );
           continue;
         }
@@ -1530,6 +1543,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           );
         for (const p of placesRef.current) {
           if (narratedIdsRef.current.has(p.id)) continue;
+          // Mirror first-pass filter set — autoNarrationBlocked places
+          // must remain blocked even in the fallback retry.
+          if (p.autoNarrationBlocked) continue;
           const dist = haversineMeters(
             loc.latitude,
             loc.longitude,
@@ -1617,8 +1633,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // copies + a notify); safe to compute every tick because the overlay
       // is rendered only when the Settings toggle is on, and getWalkDiagnostics
       // returns the same object so subscribers re-read the latest values.
+      //
+      // IMPORTANT: the `score` shown here MUST be the same score pickNext uses
+      // for selection (distance + off-axis penalty − forward bias − rating
+      // bonus), so the "Top candidates" list explains why a particular place
+      // was picked. Earlier versions exposed the raw netScore (a rating
+      // signal) which left the overlay disagreeing with the actual selection.
       try {
         const visible = placesRef.current;
+        const headingIsReliableForDiag =
+          velocityHeadingRef.current !== null && velocityHeadingIsRecent;
+        const diagMaxDist = headingIsReliableForDiag
+          ? cfg.maxQueueDistance
+          : Math.min(cfg.maxQueueDistance, 40);
         const candidates: Array<{
           id: string;
           name: string;
@@ -1628,28 +1655,56 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }> = [];
         for (const p of visible) {
           if (narratedIdsRef.current.has(p.id)) continue;
+          if (p.autoNarrationBlocked) continue;
           const d = haversineMeters(
             loc.latitude,
             loc.longitude,
             p.latitude,
             p.longitude,
           );
-          if (d > cfg.maxQueueDistance) continue;
+          if (d > diagMaxDist) continue;
+          const net = p.netScore ?? 0;
+          if (net < cfg.netScoreFloor) continue;
           const pb =
             heading !== null
               ? bearingDeg(loc.latitude, loc.longitude, p.latitude, p.longitude)
               : null;
           const dd =
             heading !== null && pb !== null ? angularDiff(heading, pb) : null;
+          // Mirror pickNext's fresh-velocity hard 90° gate — otherwise the
+          // overlay can list a >90° candidate as #1 while pickNext silently
+          // excludes it. The fallback retry-without-gate path in pickNext
+          // only fires when EVERY first-pass candidate was 90°-gated, so it
+          // is intentionally not modelled here; the overlay should reflect
+          // the primary path.
+          if (headingIsReliableForDiag && dd !== null && dd > 90) {
+            continue;
+          }
+          // Re-compute the same selection score pickNext uses so the
+          // overlay's ranking matches what actually got picked.
+          let s = d;
+          if (heading !== null && dd !== null) {
+            const overrides = walkConfigOverridesRef.current;
+            const fwdBias =
+              overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
+            const penaltyDeg =
+              overrides?.offAxisPenaltyDeg ?? cfg.offAxisPenaltyDeg;
+            const penaltyMeters =
+              overrides?.offAxisPenaltyMeters ?? cfg.offAxisPenaltyMeters;
+            s -= fwdBias * Math.cos((dd * Math.PI) / 180);
+            if (dd > penaltyDeg) s += penaltyMeters;
+          }
+          s -= Math.min(30, Math.max(-30, net * 10));
           candidates.push({
             id: p.id,
             name: p.name,
             distance: d,
             bearingDiff: dd,
-            score: p.netScore ?? 0,
+            score: s,
           });
         }
-        candidates.sort((a, b) => a.distance - b.distance);
+        // Lower score = better pick, so sort ascending — matches pickNext.
+        candidates.sort((a, b) => a.score - b.score);
         const headingSource: "velocity" | "compass" | "none" =
           velocityHeadingRef.current !== null
             ? "velocity"

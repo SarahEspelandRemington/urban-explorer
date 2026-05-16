@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v18"], // discover — quick mode
-  ["full", "v18"], // discover — full mode
+  ["quick", "v19"], // discover — quick mode
+  ["full", "v19"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -954,22 +954,43 @@ async function verifyAddressCoherence(
   const ADDRESS_RX =
     /\b\d{1,5}\s+\S+\s+(ave|avenue|st|street|blvd|boulevard|rd|road|ln|lane|dr|drive|pl|place|ct|court|sq|square|way|pkwy|parkway|hwy|highway)\b/i;
 
-  const candidates = places.filter(
-    (p) =>
-      !p._rejectOutOfArea &&
-      typeof p.address === "string" &&
-      ADDRESS_RX.test(p.address) &&
-      typeof p.latitude === "number" &&
-      typeof p.longitude === "number",
-  );
+  // Also catch placenames that hard-code a street reference without a
+  // street number — e.g. "Unmarked Speakeasy Site near 8th Avenue" or
+  // "Ghost Sign on 9th Ave". Discover prompt forbids these, but the
+  // address-coherence check stays as a runtime backstop when the LLM
+  // ignores the instruction. We extract the street phrase and geocode
+  // it so the same two-signal mismatch test can run.
+  const NAME_STREET_RX =
+    /\b(?:near|on|along|at|off)\s+((?:north|south|east|west|n|s|e|w)?\s*\d{1,3}(?:st|nd|rd|th)?\s+(?:ave|avenue|st|street|blvd|boulevard|rd|road|pl|place|sq|square|way|pkwy|parkway))\b/i;
+
+  const candidates = places
+    .filter(
+      (p) =>
+        !p._rejectOutOfArea &&
+        typeof p.latitude === "number" &&
+        typeof p.longitude === "number",
+    )
+    .map((p) => {
+      // Prefer the explicit address; fall back to a street phrase parsed
+      // from the placename when no address is present.
+      let probe: string | null = null;
+      if (typeof p.address === "string" && ADDRESS_RX.test(p.address)) {
+        probe = p.address;
+      } else if (typeof p.name === "string") {
+        const m = p.name.match(NAME_STREET_RX);
+        if (m) probe = m[1];
+      }
+      return probe ? { place: p, probe } : null;
+    })
+    .filter((x): x is { place: any; probe: string } => x !== null);
   if (candidates.length === 0) return;
 
   // Use scheduleNominatimCall so we obey the 1 req/sec ToS cap. Promise.allSettled
   // runs them concurrently; one slow lookup doesn't stall the rest.
   await Promise.allSettled(
-    candidates.map((p) =>
+    candidates.map(({ place: p, probe }) =>
       scheduleNominatimCall(async () => {
-        const result = await geocodeNearLocation(p.address);
+        const result = await geocodeNearLocation(probe);
         if (!result) {
           // Geocode failure: cautious — record but do NOT block.
           p.addressCoherence = {
@@ -977,7 +998,7 @@ async function verifyAddressCoherence(
             reason: "Nominatim returned no result for parsed address",
             storedLat: p.latitude,
             storedLon: p.longitude,
-            address: p.address,
+            address: probe,
           };
           return;
         }
@@ -1000,7 +1021,7 @@ async function verifyAddressCoherence(
           geocodedLon: result.lon,
           mismatchMeters: Math.round(mismatchMeters),
           geocodedDistFromUserMeters: Math.round(geocodedDistFromUser),
-          address: p.address,
+          address: probe,
         };
         if (mismatchMeters <= COHERENCE_THRESHOLD_M) {
           p.addressCoherence = {
@@ -1413,7 +1434,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v18:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v19:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1587,6 +1608,8 @@ QUALITY OVER QUANTITY: A strong discovery with a plain summary is better than a 
 SPECIFICITY RULES — every fact must include at least one: specific year/decade, person's name, verifiable detail, or concrete event. BAD: "This building has a rich history." GOOD: "The Italianate cornice was added in 1887 when dry-goods merchant Samuel Hewitt converted the ground floor from a livery stable." Social history needs an address: BAD: "The Westies controlled Hell's Kitchen." GOOD: "596 10th Ave was the Westies' base — Jimmy Coonan ran the crew from this corner through the late 1970s."
 
 COORDINATES: 5 decimal places (±1 m). Coordinates and address must agree. Never describe a multi-building phenomenon without picking one surviving example. NEVER write raw GPS coordinates (e.g. "39.96507, -75.17780") in any text field — not in summary, not in facts. The user is standing there; they don't need to read numbers. If you reference a location in text, use the street address or cross-street intersection.
+
+NAME–LOCATION COHERENCE — CRITICAL: The place's display name MUST NOT reference a street, avenue, or landmark the place is not actually on. NEVER use patterns like "X near 8th Avenue", "Y on Broadway", "Z at the Hudson piers" unless the place's coordinates are within ~100 m of that street/landmark. If you cannot place the entity on the named street within the search radius, either (a) rename it to use a feature it IS adjacent to, or (b) drop it entirely. This rule exists because narration reads the name aloud — a name claiming the wrong street produces a confusing experience for a user standing somewhere else. Generic descriptive names ("Unmarked Speakeasy Site", "Former Garment Loft") are preferable to a name that lies about location.
 
 HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhood accounts…"). Fewer verified places beats more invented ones. NEVER invent a street name — if you cannot confirm the exact address, anchor to the nearest real cross-street intersection instead (e.g. "NW corner of Green St & N 22nd St"). An invented street name is always worse than an honest intersection.
 
