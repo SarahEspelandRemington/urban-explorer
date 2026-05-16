@@ -1441,26 +1441,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           p.latitude,
           p.longitude,
         );
-        // Phone-away trust: when the heading source is unreliable
-        // (stale velocity OR compass-only), tighten the distance gate.
-        // Compass is unreliable in steel-frame canyons (90–180° deflection),
-        // and stale velocity doesn't reflect current travel. Rather than
-        // applying a hard angular gate to an unreliable bearing (which
-        // could exclude correct places), restrict picks to a tight radius
-        // where any direction is "ahead-ish" — silence beats a confusing
-        // perpendicular pick. See .agents/skills/walk-mode-phone-away-trust.
-        const headingIsReliable =
-          velocityHeadingRef.current !== null && velocityHeadingIsRecent;
-        const effectiveMaxDist = headingIsReliable
-          ? cfg.maxQueueDistance
-          : Math.min(cfg.maxQueueDistance, 40);
-        if (dist > effectiveMaxDist) {
-          if (__DEV__)
-            console.log(
-              `  [skip:dist ${Math.round(dist)}m>${effectiveMaxDist}m${headingIsReliable ? "" : " (heading unreliable, tightened)"}] "${p.name}"`,
-            );
-          continue;
-        }
+        if (dist > cfg.maxQueueDistance) continue;
         const net = p.netScore ?? 0;
         if (net < cfg.netScoreFloor) {
           if (__DEV__)
@@ -1643,9 +1624,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         const visible = placesRef.current;
         const headingIsReliableForDiag =
           velocityHeadingRef.current !== null && velocityHeadingIsRecent;
-        const diagMaxDist = headingIsReliableForDiag
-          ? cfg.maxQueueDistance
-          : Math.min(cfg.maxQueueDistance, 40);
         const candidates: Array<{
           id: string;
           name: string;
@@ -1662,7 +1640,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             p.latitude,
             p.longitude,
           );
-          if (d > diagMaxDist) continue;
+          if (d > cfg.maxQueueDistance) continue;
           const net = p.netScore ?? 0;
           if (net < cfg.netScoreFloor) continue;
           const pb =
