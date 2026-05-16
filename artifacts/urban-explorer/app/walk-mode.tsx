@@ -245,54 +245,6 @@ export default function WalkModeScreen() {
               );
             })}
           </View>
-
-          <Pressable
-            onPress={() => {
-              if (Platform.OS !== "web")
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setSettingsVisible(true);
-            }}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t.walkMode.buildingFiltersAccessibility}
-            style={({ pressed }) => [
-              styles.settingsBtn,
-              {
-                backgroundColor:
-                  walk.enabledBuildingGroups.size > 0
-                    ? colors.primary + "22"
-                    : colors.muted,
-                borderColor:
-                  walk.enabledBuildingGroups.size > 0
-                    ? colors.primary
-                    : colors.border,
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}
-          >
-            <Feather
-              name="sliders"
-              size={14}
-              color={
-                walk.enabledBuildingGroups.size > 0
-                  ? colors.primary
-                  : colors.mutedForeground
-              }
-            />
-            <Text
-              style={[
-                styles.filterBtnLabel,
-                {
-                  color:
-                    walk.enabledBuildingGroups.size > 0
-                      ? colors.primary
-                      : colors.mutedForeground,
-                },
-              ]}
-            >
-              {t.walkMode.filterBtn}
-            </Text>
-          </Pressable>
         </View>
       </View>
 
@@ -841,16 +793,17 @@ const styles = StyleSheet.create({
   },
   densityToggle: {
     flexDirection: "row",
-    borderRadius: 20,
-    padding: 3,
+    borderRadius: 16,
+    padding: 2,
     flexShrink: 0,
+    opacity: 0.85,
   },
   densityButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
   },
-  densityText: { fontSize: 12 },
+  densityText: { fontSize: 11, letterSpacing: 0.1 },
   mapContainer: {
     flex: 1,
     marginHorizontal: 16,

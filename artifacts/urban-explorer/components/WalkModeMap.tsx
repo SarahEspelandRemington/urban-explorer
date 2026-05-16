@@ -10,7 +10,12 @@ import {
   Text,
   View,
 } from "react-native";
-import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
+import MapView, {
+  Marker,
+  Polyline,
+  PROVIDER_DEFAULT,
+  Region,
+} from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
 import { WalkPlace } from "@/contexts/WalkModeContext";
@@ -322,6 +327,25 @@ export function WalkModeMap({
           setPreviewCluster(null);
         }}
       >
+        {(() => {
+          if (!currentlyPlayingPlaceId) return null;
+          const active = places.find((p) => p.id === currentlyPlayingPlaceId);
+          if (!active) return null;
+          return (
+            <Polyline
+              coordinates={[
+                { latitude: userLatitude, longitude: userLongitude },
+                { latitude: active.latitude, longitude: active.longitude },
+              ]}
+              strokeColor={colors.primary + "55"}
+              strokeWidth={1.5}
+              lineDashPattern={[2, 6]}
+              tappable={false}
+              zIndex={0}
+            />
+          );
+        })()}
+
         {expansion &&
           expansion.cluster.places.map((place) => {
             const t = expandProgress;
