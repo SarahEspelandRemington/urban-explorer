@@ -197,6 +197,19 @@ interface WalkModeContextType {
   density: WalkDensity;
   setDensity: (d: WalkDensity) => void;
   currentNarrationPlace: WalkPlace | null;
+  /**
+   * The place the audio engine is currently SPEAKING. Set at the moment
+   * playback starts (inside processQueue), null between stories. This is
+   * the single authoritative signal for "active story" — use it for the
+   * orange dot and Now Playing tap target.
+   */
+  activeNarrationPlace: WalkPlace | null;
+  /**
+   * A place that has been enqueued but whose audio has not yet started.
+   * Non-null only during the prefetch gap (fetch + queue wait). Null once
+   * the audio engine picks it up, and null when nothing is queued.
+   */
+  queuedNarrationPlace: WalkPlace | null;
   // True for a few seconds when the current narration started from the
   // short-window cache (a place that was just re-picked within the prefetch
   // TTL). UI uses this to show a small "Replay" badge so users know the
@@ -2605,6 +2618,30 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [narration]);
 
+  // Single authoritative "active story" signal: the place the audio engine is
+  // currently speaking, looked up by id from nearbyPlaces so it always carries
+  // fresh coordinates and metadata. Null between stories.
+  const activeNarrationPlace = useMemo(
+    () =>
+      narration.currentPlaceId != null
+        ? (nearbyPlaces.find((p) => p.id === narration.currentPlaceId) ?? null)
+        : null,
+    [nearbyPlaces, narration.currentPlaceId],
+  );
+
+  // Non-null only during the prefetch window: a place that has been enqueued
+  // (via enqueueNarration) but whose audio has not yet started playing. Becomes
+  // null the moment the audio engine picks it up (narration.currentPlaceId
+  // changes to match).
+  const queuedNarrationPlace = useMemo(
+    () =>
+      currentNarrationPlace !== null &&
+      currentNarrationPlace.id !== narration.currentPlaceId
+        ? currentNarrationPlace
+        : null,
+    [currentNarrationPlace, narration.currentPlaceId],
+  );
+
   const contextValue = useMemo(
     () => ({
       isWalking,
@@ -2619,6 +2656,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       density,
       setDensity,
       currentNarrationPlace,
+      activeNarrationPlace,
+      queuedNarrationPlace,
       isReplay,
       fetchPlacesAlongRoute,
       enabledBuildingGroups,
@@ -2646,6 +2685,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       density,
       setDensity,
       currentNarrationPlace,
+      activeNarrationPlace,
+      queuedNarrationPlace,
       isReplay,
       fetchPlacesAlongRoute,
       enabledBuildingGroups,

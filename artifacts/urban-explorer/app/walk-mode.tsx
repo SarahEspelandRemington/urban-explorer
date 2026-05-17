@@ -510,7 +510,7 @@ export default function WalkModeScreen() {
             userLongitude={walk.currentLocation.longitude}
             places={walk.nearbyPlaces}
             narratedIds={walk.narratedIds}
-            currentlyPlayingPlaceId={walk.currentNarrationPlace?.id}
+            currentlyPlayingPlaceId={walk.activeNarrationPlace?.id}
             onPlayPlace={(place) => walk.playPlace(place)}
             onOpenPlace={(place) => navigateToPlace(place)}
           />
@@ -550,7 +550,7 @@ export default function WalkModeScreen() {
             <Pressable
               style={styles.nowPlayingTapTarget}
               onPress={() => {
-                const place = walk.currentNarrationPlace;
+                const place = walk.activeNarrationPlace;
                 if (!place) return;
                 if (Platform.OS !== "web")
                   Haptics.selectionAsync().catch(() => {});
@@ -560,7 +560,7 @@ export default function WalkModeScreen() {
               accessibilityLabel={`Open details for ${walk.narration.currentPlace}`}
             >
               {(() => {
-                const photoUrl = walk.currentNarrationPlace?.photoUrl;
+                const photoUrl = walk.activeNarrationPlace?.photoUrl;
                 return photoUrl ? (
                   <Image
                     source={{ uri: photoUrl }}

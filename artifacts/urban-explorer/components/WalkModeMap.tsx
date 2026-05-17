@@ -615,6 +615,21 @@ export function WalkModeMap({
           <View style={styles.selectedCardBody}>
             <View style={styles.selectedCardText}>
               <Text
+                style={[
+                  styles.selectedCardLabel,
+                  {
+                    color:
+                      selectedPlace.id === currentlyPlayingPlaceId
+                        ? colors.primary
+                        : colors.mutedForeground,
+                  },
+                ]}
+              >
+                {selectedPlace.id === currentlyPlayingPlaceId
+                  ? "NOW PLAYING"
+                  : "PREVIEW"}
+              </Text>
+              <Text
                 numberOfLines={1}
                 style={[styles.selectedName, { color: colors.foreground }]}
               >
@@ -876,6 +891,12 @@ const styles = StyleSheet.create({
   selectedCardText: {
     flex: 1,
     gap: 2,
+  },
+  selectedCardLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
   },
   selectedName: {
     fontSize: 14,

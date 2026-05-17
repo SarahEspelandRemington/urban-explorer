@@ -7,11 +7,17 @@
  * toggled it on.
  *
  * Read-only: this overlay observes; it never affects narration logic.
+ *
+ * Three clearly separated sections:
+ *   PLAYING    — place the audio engine is currently speaking (activeNarrationPlace)
+ *   QUEUED     — enqueued but audio not yet started (queuedNarrationPlace)
+ *   NEXT CAND  — top pick from the most recent pickNext run (lastSnapshot.selected)
  */
 
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { useWalkMode } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import {
   getWalkDiagnostics,
@@ -20,6 +26,7 @@ import {
 
 export function WalkModeDebugOverlay() {
   const colors = useColors();
+  const walk = useWalkMode();
   const [, setTick] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -85,6 +92,39 @@ export function WalkModeDebugOverlay() {
                   Pins {lastSnapshot.visiblePinCount} · Eligible{" "}
                   {lastSnapshot.eligibleCount}
                 </Text>
+
+                {/* ── Active story state ─────────────────────────────── */}
+                <Text style={styles.sectionTitle}>Playing</Text>
+                <Text
+                  style={[
+                    styles.line,
+                    walk.activeNarrationPlace
+                      ? styles.lineActive
+                      : styles.lineDim,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {walk.activeNarrationPlace
+                    ? walk.activeNarrationPlace.name.slice(0, 34)
+                    : "—"}
+                </Text>
+
+                <Text style={styles.sectionTitle}>Queued</Text>
+                <Text
+                  style={[
+                    styles.line,
+                    walk.queuedNarrationPlace
+                      ? styles.lineQueued
+                      : styles.lineDim,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {walk.queuedNarrationPlace
+                    ? walk.queuedNarrationPlace.name.slice(0, 34)
+                    : "—"}
+                </Text>
+
+                {/* ── Ranking pipeline ───────────────────────────────── */}
                 <Text style={styles.sectionTitle}>Top candidates</Text>
                 {lastSnapshot.topCandidates.length === 0 ? (
                   <Text style={styles.lineDim}>(none)</Text>
@@ -100,7 +140,8 @@ export function WalkModeDebugOverlay() {
                     </Text>
                   ))
                 )}
-                <Text style={styles.sectionTitle}>Selected</Text>
+
+                <Text style={styles.sectionTitle}>Next candidate</Text>
                 <Text style={styles.line} numberOfLines={2}>
                   {lastSnapshot.selected
                     ? `${lastSnapshot.selected.name} — ${lastSnapshot.selected.reason}`
@@ -178,6 +219,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Menlo",
     lineHeight: 14,
+  },
+  lineActive: {
+    color: "#6ee7b7",
+  },
+  lineQueued: {
+    color: "#fcd34d",
   },
   lineDim: {
     color: "#bbb",

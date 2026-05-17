@@ -69,6 +69,9 @@ export function useNarration() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentPlace, setCurrentPlace] = useState<string | null>(null);
+  // Tracks the id of the item the audio engine is currently playing.
+  // Set alongside currentPlace so callers can look up the full WalkPlace.
+  const [currentPlaceId, setCurrentPlaceId] = useState<string | null>(null);
   const queueRef = useRef<NarrationItem[]>([]);
   const speakingRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -187,6 +190,7 @@ export function useNarration() {
     speakingRef.current = true;
     setIsSpeaking(true);
     setCurrentPlace(item.placeName);
+    setCurrentPlaceId(item.id);
 
     // Capture the generation for this specific playback. Any callback that
     // arrives after a newer playback has started is silently ignored.
@@ -198,6 +202,7 @@ export function useNarration() {
       speakingRef.current = false;
       setIsSpeaking(false);
       setCurrentPlace(null);
+      setCurrentPlaceId(null);
       processQueue();
     };
 
@@ -233,6 +238,7 @@ export function useNarration() {
         speakingRef.current = false;
         setIsSpeaking(false);
         setCurrentPlace(null);
+        setCurrentPlaceId(null);
         // Defer to break out of the current call stack before re-entering.
         setTimeout(() => processQueue(), 50);
         return;
@@ -430,6 +436,7 @@ export function useNarration() {
           speakingRef.current = false;
           setIsSpeaking(false);
           setCurrentPlace(null);
+          setCurrentPlaceId(null);
         },
         onError: (err) => {
           if (__DEV__) console.log(`[Speech.speak] onError gen=${myGen}:`, err);
@@ -501,6 +508,7 @@ export function useNarration() {
     setIsSpeaking(false);
     setIsPaused(false);
     setCurrentPlace(null);
+    setCurrentPlaceId(null);
   }, [teardownActive]);
 
   const pause = useCallback(() => {
@@ -621,6 +629,7 @@ export function useNarration() {
     setIsSpeaking(false);
     setIsPaused(false);
     setCurrentPlace(null);
+    setCurrentPlaceId(null);
     setTimeout(() => processQueue(), 100);
   }, [processQueue, teardownActive]);
 
@@ -636,6 +645,7 @@ export function useNarration() {
     isSpeaking,
     isPaused,
     currentPlace,
+    currentPlaceId,
     queueLength: queueRef.current.length,
   };
 }
