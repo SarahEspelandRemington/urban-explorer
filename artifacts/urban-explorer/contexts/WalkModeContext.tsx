@@ -2279,8 +2279,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         narratedIdsRef.current = new Map();
         // Seed pre-fetched places so narration can fire as soon as GPS arrives,
         // without waiting for the first GPS-driven discover call to complete.
-        placesRef.current = initialPlaces?.length ? [...initialPlaces] : [];
-        setNearbyPlaces(initialPlaces?.length ? [...initialPlaces] : []);
+        // Walk Mode spatial trust gate: only seed places that have been
+        // externally coordinate-verified (coordSource set by Nominatim).
+        // places-along-route places have no coordSource because that endpoint
+        // does not run Nominatim; seeding them directly would put LLM-hallucinated
+        // coordinates into candidate scoring before the first discover response.
+        // Those places are dropped here; verified places arrive via fetchNearbyPlaces.
+        const verifiedInitial = initialPlaces?.length
+          ? initialPlaces.filter((p) => (p as any).coordSource !== undefined)
+          : [];
+        placesRef.current = verifiedInitial;
+        setNearbyPlaces(verifiedInitial);
         // Seed turn-by-turn route state. Cleared if no route was planned so a
         // free-roam walk after a planned one doesn't surface stale steps.
         const seededSteps = routeContext?.steps ?? [];
