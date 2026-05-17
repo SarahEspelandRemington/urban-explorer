@@ -65,6 +65,12 @@ export const DiscoverPlacesBody = zod.object({
     .describe(
       "Optional human-readable address or neighbourhood context for the current location (e.g. 'South St & 2nd Ave, Old City, Philadelphia'). Sourced from the device reverse-geocode cache — never blocks the request. Injected into the brainstorm step to improve obscure-history recall.",
     ),
+  walkMode: zod
+    .boolean()
+    .optional()
+    .describe(
+      "When true, Nominatim coordinate verification runs synchronously before responding. Only places confirmed or corrected by Nominatim are returned. Places whose coordinates cannot be externally verified are omitted rather than returned with LLM-generated pins. Explore Mode callers should omit this field or set it to false.",
+    ),
 });
 
 export const DiscoverPlacesResponse = zod.object({

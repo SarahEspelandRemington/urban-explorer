@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v22"], // discover — quick mode
-  ["full", "v22"], // discover — full mode
+  ["quick", "v24"], // discover — quick mode
+  ["full", "v24"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -898,6 +898,11 @@ async function verifyPlaceCoordinates(
           p.longitude = bestLon;
           p.confidence = "low";
           p.coordSource = "nominatim-corrected";
+        } else {
+          // Nominatim found this place and its coordinates are already correct
+          // (within the correction threshold). Mark it confirmed so Walk Mode
+          // can distinguish "externally verified" from "LLM-only".
+          p.coordSource = "nominatim-confirmed";
         }
       }),
     ),
@@ -1463,6 +1468,7 @@ router.post("/explore/discover", async (req, res) => {
     mode,
     includeBuildingTypes,
     addressHint,
+    walkMode,
   } = parsed.data;
   const isQuick = mode === "quick";
   const requestedRadius = radius ?? (isQuick ? 500 : 300);
@@ -1489,7 +1495,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v22:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v24:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1501,7 +1507,14 @@ router.post("/explore/discover", async (req, res) => {
       Array.isArray(cachedDiscover.places) &&
       cachedDiscover.places.length > 0
     ) {
-      const refreshedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
+      const allCachedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
+      // Walk Mode only returns places whose coordinates were externally confirmed
+      // or corrected by Nominatim. A cached entry written by an earlier Explore
+      // Mode request may contain unverified LLM-coordinate places (coordSource
+      // undefined). Those are safe to show in Explore Mode but not as Walk Mode pins.
+      const refreshedPlaces = walkMode
+        ? allCachedPlaces.filter((p: any) => p.coordSource !== undefined)
+        : allCachedPlaces;
       const ratingsMap = await fetchRatingsMap(refreshedPlaces);
       applyRatingSortWithMap(refreshedPlaces, ratingsMap);
       res.json({ ...cachedDiscover, places: refreshedPlaces });
@@ -1749,20 +1762,40 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   }
 
   if (data.places && Array.isArray(data.places)) {
-    // Skip Nominatim verification on the critical path — it adds ~1 s per place
-    // sequentially. Process synchronously (validate, distance-filter, dedup, vague-
-    // filter), respond to the client immediately, then verify coordinates in the
-    // background and update the cache so the NEXT request for this area gets corrected
-    // pins. For the current caller the coordinates from GPT-4.1 are accurate enough.
+    // Explore Mode: skip Nominatim on the critical path and verify in the
+    // background so the next cache hit gets corrected coordinates.
+    //
+    // Walk Mode: run Nominatim synchronously now. The caller has consented to
+    // the additional latency (raised client timeout) in exchange for coordinates
+    // that are confirmed by an external source before any pin is rendered.
     data.places = await postProcessPlaces(
       data.places,
       latitude,
       longitude,
       searchRadius,
       {
-        skipVerification: true,
+        skipVerification: !walkMode,
       },
     );
+
+    // Walk Mode spatial trust gate: drop any place that Nominatim could not
+    // confirm. A missing coordSource means no external source verified this
+    // place's location — its coordinates are pure LLM output and must not
+    // appear as Walk Mode map pins. Return fewer results rather than inaccurate ones.
+    if (walkMode) {
+      const before = data.places.length;
+      data.places = data.places.filter((p: any) => p.coordSource !== undefined);
+      if (before !== data.places.length) {
+        logger.info(
+          {
+            dropped: before - data.places.length,
+            kept: data.places.length,
+            tile: `${snapGrid(latitude)},${snapGrid(longitude)}`,
+          },
+          "[walk-mode] dropped unverifiable places — coordSource undefined",
+        );
+      }
+    }
     // Fetch Wikipedia photos in parallel for all places. Runs concurrently with
     // ratings enrichment (below) and races a wall-clock timeout so it never
     // materially slows down a response that's already taken time for LLM calls.
@@ -1847,9 +1880,9 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   res.json(data);
 
   // Background: run Nominatim verification and silently update the cache so the
-  // next request for this block gets corrected pin positions. We only do this for
-  // non-empty results — no point verifying an empty set.
-  if (!isEmpty) {
+  // next request for this block gets corrected pin positions. Skipped for Walk
+  // Mode because verification already ran synchronously above.
+  if (!isEmpty && !walkMode) {
     (async () => {
       try {
         await verifyPlaceCoordinates(
