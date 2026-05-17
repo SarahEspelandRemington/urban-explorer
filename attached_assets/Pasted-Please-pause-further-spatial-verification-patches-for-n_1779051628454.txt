@@ -1,0 +1,45 @@
+Please pause further spatial-verification patches for now.
+
+I want a focused diagnosis of Walk Mode state/UI consistency.
+
+Problem:
+During field testing, “Now Playing” often does not match:
+- the large orange active marker on the map
+- the selected/top candidate in the debug overlay
+- the tapped bottom map preview card
+- sometimes even the currently eligible candidates
+
+Example:
+The app may be playing “Buried Chestnut Street Trolley Tracks,” but that item is not visible in the debug top candidates or clearly attached to the large orange dot.
+
+This creates a major UX trust issue. The user cannot tell:
+- what the big orange dot means
+- what story is currently playing
+- what the bottom preview modal represents
+- whether the debug selected item is the same as Now Playing
+- whether the app is showing current, queued, tapped, or stale state
+
+Please diagnose before editing:
+
+1. What is the single source of truth for the currently playing narration?
+2. What determines the large orange marker on the map?
+3. What determines the debug “Selected” item?
+4. What determines the bottom map preview modal?
+5. Can these states refer to different places at the same time?
+6. Can Now Playing continue after the place is no longer in nearbyPlaces/top candidates?
+7. Can the preview modal show a tapped/stale place while another story is playing?
+8. What state should be authoritative for Walk Mode?
+
+Desired UX model:
+- Now Playing should be the authoritative current story if narration is active.
+- The large orange marker should correspond to Now Playing.
+- Debug should clearly distinguish:
+  - currently playing
+  - selected next candidate
+  - queued
+  - eligible candidates
+- The bottom preview modal should be clearly treated as a tapped preview, not the active story.
+- If a preview is open while narration is playing, the UI should make that distinction obvious.
+- If Now Playing is not in the current candidate list, explain why and whether that is acceptable.
+
+Please provide a state-flow diagram or written trace first. Do not patch UI yet.
