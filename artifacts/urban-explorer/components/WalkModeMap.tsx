@@ -10,15 +10,9 @@ import {
   Text,
   View,
 } from "react-native";
-import MapView, {
-  Circle,
-  Marker,
-  PROVIDER_DEFAULT,
-  Region,
-} from "react-native-maps";
+import MapView, { Marker, PROVIDER_DEFAULT, Region } from "react-native-maps";
 
 import { useColors } from "@/hooks/useColors";
-import { useT } from "@/contexts/LocaleContext";
 import { WalkPlace } from "@/contexts/WalkModeContext";
 
 interface WalkModeMapProps {
@@ -111,7 +105,6 @@ export function WalkModeMap({
   onPlayPlace,
 }: WalkModeMapProps) {
   const colors = useColors();
-  const t = useT();
   const mapRef = useRef<MapView>(null);
   const initialRegion: Region = {
     latitude: userLatitude,
@@ -161,7 +154,14 @@ export function WalkModeMap({
   }, [userLatitude, userLongitude, isFollowing]);
 
   const clusters = useMemo(
-    () => clusterPlaces(places, region),
+    // Exclude places the server flagged as spatially untrustworthy — their
+    // stored coordinates don't match their described location, so rendering
+    // a pin would mislead the user about where the place actually is.
+    () =>
+      clusterPlaces(
+        places.filter((p) => !p.autoNarrationBlocked),
+        region,
+      ),
     [places, region],
   );
 
@@ -329,14 +329,6 @@ export function WalkModeMap({
           setPreviewCluster(null);
         }}
       >
-        <Circle
-          center={{ latitude: userLatitude, longitude: userLongitude }}
-          radius={80}
-          fillColor={colors.primary + "15"}
-          strokeColor={colors.primary + "40"}
-          strokeWidth={1}
-        />
-
         {expansion &&
           expansion.cluster.places.map((place) => {
             const t = expandProgress;
@@ -423,24 +415,23 @@ export function WalkModeMap({
 
             // Temporal hierarchy: active (playing) > upcoming > played.
             // Played pins are aggressively faded — they should recede, not compete.
-            const markerOpacity =
-              wasNarrated && !isPlaying ? visitedOpacity(narratedAt) * 0.35 : 1;
+            const markerOpacity = isPlaying
+              ? 1
+              : wasNarrated && !isSelected
+                ? visitedOpacity(narratedAt) * 0.1
+                : wasNarrated
+                  ? visitedOpacity(narratedAt) * 0.18
+                  : 0.7;
 
-            // Active: 26 px dominant circle.
-            // Upcoming: 16 px standard, slightly transparent colour.
-            // Played: 12 px small, neutral grey — visually subordinate.
-            const pinSize = isPlaying ? 26 : wasNarrated ? 12 : 16;
+            // Active: 28 px dominant. Upcoming: 12 px quiet dot.
+            // Played: 9 px small, neutral grey — visually subordinate.
+            const pinSize = isPlaying ? 28 : wasNarrated ? 9 : 12;
             const pinColor = isPlaying
               ? colors.primary
               : wasNarrated
-                ? colors.mutedForeground
-                : colors.primary + "BB";
-
-            // Ring shown for the actively-playing place (large halo) and for
-            // a selected-but-not-playing place (smaller selection ring).
-            const showRing = isPlaying || isSelected;
-            const ringSize = isPlaying ? 48 : 36;
-            const wrapperSize = showRing ? ringSize + 4 : pinSize + 8;
+                ? colors.mutedForeground + "66"
+                : colors.primary + "88";
+            const wrapperSize = isPlaying ? 38 : pinSize + 8;
 
             return (
               <Marker
@@ -469,20 +460,18 @@ export function WalkModeMap({
                       { width: wrapperSize, height: wrapperSize },
                     ]}
                   >
-                    {showRing && (
+                    {isPlaying && (
                       <View
                         style={[
                           styles.pinRing,
                           {
-                            width: ringSize,
-                            height: ringSize,
-                            borderRadius: ringSize / 2,
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
                             borderColor: colors.primary,
-                            borderWidth: isPlaying ? 3 : 2.5,
-                            opacity: isPlaying ? 1.0 : 0.55,
-                            ...(isPlaying && {
-                              backgroundColor: colors.primary + "18",
-                            }),
+                            borderWidth: 1.5,
+                            opacity: 0.22,
+                            backgroundColor: colors.primary + "10",
                           },
                         ]}
                       />
@@ -495,14 +484,16 @@ export function WalkModeMap({
                           height: pinSize,
                           borderRadius: pinSize / 2,
                           backgroundColor: pinColor,
-                          borderColor: "#fff",
-                          borderWidth: isPlaying ? 3 : wasNarrated ? 1.5 : 2,
+                          borderColor: isPlaying
+                            ? colors.primaryForeground
+                            : colors.background,
+                          borderWidth: isPlaying ? 2 : 1.25,
                           ...(isPlaying
                             ? {
                                 shadowColor: colors.primary,
-                                shadowOpacity: 0.85,
-                                shadowRadius: 10,
-                                elevation: 8,
+                                shadowOpacity: 0.4,
+                                shadowRadius: 8,
+                                elevation: 6,
                               }
                             : wasNarrated
                               ? { shadowOpacity: 0, elevation: 0 }
@@ -576,60 +567,6 @@ export function WalkModeMap({
         })}
       </MapView>
 
-      {places.length > 0 ? (
-        <View
-          style={[
-            styles.legend,
-            { backgroundColor: colors.card + "f0", borderColor: colors.border },
-          ]}
-          pointerEvents="none"
-          accessibilityLabel={[
-            currentlyPlayingPlaceId ? t.walkMode.legendPlaying : null,
-            t.walkMode.legendUpcoming,
-            t.walkMode.legendPlayed,
-          ]
-            .filter(Boolean)
-            .join(", ")}
-        >
-          {currentlyPlayingPlaceId ? (
-            <View style={styles.legendItem}>
-              <View
-                style={[
-                  styles.legendDot,
-                  styles.legendDotActive,
-                  { backgroundColor: colors.primary },
-                ]}
-              />
-              <Text style={[styles.legendText, { color: colors.foreground }]}>
-                {t.walkMode.legendPlaying}
-              </Text>
-            </View>
-          ) : null}
-          <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: colors.primary + "BB" },
-              ]}
-            />
-            <Text style={[styles.legendText, { color: colors.foreground }]}>
-              {t.walkMode.legendUpcoming}
-            </Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View
-              style={[
-                styles.legendDot,
-                { backgroundColor: colors.mutedForeground, opacity: 0.5 },
-              ]}
-            />
-            <Text style={[styles.legendText, { color: colors.foreground }]}>
-              {t.walkMode.legendPlayed}
-            </Text>
-          </View>
-        </View>
-      ) : null}
-
       {!isFollowing && (
         <Pressable
           style={[
@@ -672,18 +609,20 @@ export function WalkModeMap({
               >
                 {selectedPlace.name}
               </Text>
-              {selectedPlace.category || selectedPlace.summary ? (
-                <Text
-                  numberOfLines={1}
-                  style={[
-                    styles.selectedSub,
-                    { color: colors.mutedForeground },
-                  ]}
-                >
-                  {selectedPlace.category ||
-                    selectedPlace.summary?.split(/[.!?]/)[0]}
-                </Text>
-              ) : null}
+              {(() => {
+                const sub = selectedPlace.summary?.split(/[.!?]/)[0]?.trim();
+                return sub ? (
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.selectedSub,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {sub}
+                  </Text>
+                ) : null;
+              })()}
             </View>
             {onOpenPlace ? (
               <Pressable
@@ -815,10 +754,7 @@ export function WalkModeMap({
                         {p.name}
                       </Text>
                       {(() => {
-                        const sub =
-                          (p.category?.trim() ||
-                            p.summary?.split(/[.!?]/)[0]?.trim()) ??
-                          "";
+                        const sub = p.summary?.split(/[.!?]/)[0]?.trim() ?? "";
                         return sub ? (
                           <Text
                             numberOfLines={1}
@@ -888,42 +824,6 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-  },
-  legend: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  legendItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  legendDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
-  },
-  legendDotActive: {
-    width: 11,
-    height: 11,
-    borderRadius: 5.5,
-  },
-  legendText: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
   },
   pin: {
     width: 20,
