@@ -154,7 +154,14 @@ export function WalkModeMap({
   }, [userLatitude, userLongitude, isFollowing]);
 
   const clusters = useMemo(
-    () => clusterPlaces(places, region),
+    // Exclude places the server flagged as spatially untrustworthy — their
+    // stored coordinates don't match their described location, so rendering
+    // a pin would mislead the user about where the place actually is.
+    () =>
+      clusterPlaces(
+        places.filter((p) => !p.autoNarrationBlocked),
+        region,
+      ),
     [places, region],
   );
 

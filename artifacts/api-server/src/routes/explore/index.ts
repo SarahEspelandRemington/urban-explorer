@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v21"], // discover — quick mode
-  ["full", "v21"], // discover — full mode
+  ["quick", "v22"], // discover — quick mode
+  ["full", "v22"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -1084,15 +1084,24 @@ async function verifyAddressCoherence(
         // leaving ambiguous-but-plausible local addresses (which could be
         // either the address or the lat/lng being slightly off) untouched.
         if (geocodedDistFromUser > searchRadius * 1.5) {
+          // High-confidence mismatch: the geocoded address is outside the
+          // search area but the LLM assigned the place coordinates inside it
+          // (right at the user's block). Correct the stored coordinates to the
+          // geocoded location so the post-process distance filter drops this
+          // place from the cache on the next verification pass.  Without this
+          // correction the distance filter sees near-user coordinates and lets
+          // the hallucinatated pin through permanently.
+          p.latitude = result.lat;
+          p.longitude = result.lon;
           p.autoNarrationBlocked = true;
           p.addressCoherence = {
             ...debug,
             status: "mismatch",
-            reason: `Geocoded address is ${Math.round(geocodedDistFromUser)}m from user (>1.5x search radius ${Math.round(searchRadius)}m); likely wrong-city hallucination`,
+            reason: `Geocoded address is ${Math.round(geocodedDistFromUser)}m from user (>1.5x search radius ${Math.round(searchRadius)}m); coordinates corrected to geocoded location and blocked from walk narration`,
           };
           logger.warn(
             { place: p.name, ...debug },
-            "[address-coherence] BLOCKED from auto-narration: address resolves outside search area",
+            "[address-coherence] BLOCKED + coords corrected: address resolves outside search area",
           );
         } else {
           // Single signal only — be cautious. Record but don't block.
@@ -1480,7 +1489,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v21:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v22:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1758,6 +1767,68 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     // ratings enrichment (below) and races a wall-clock timeout so it never
     // materially slows down a response that's already taken time for LLM calls.
     await fetchPhotosForPlaces(data.places);
+
+    // Hot-path coordinate plausibility check — zero external API calls.
+    // Catches the most common LLM hallucination pattern: a place whose
+    // description is drawn from a distant street (e.g. "36th Street Trolley")
+    // but whose coordinates were placed right at the user's GPS position by the
+    // model (which is told to return nearby places).
+    //
+    // Algorithm:
+    //   1. Extract ordinal street numbers from the user's reverse-geocoded
+    //      location string (addressHint) — e.g. "22nd St" → {"22nd"}.
+    //   2. For each place within 50 m of the user's search centre, extract
+    //      ordinal street numbers from its address + name.
+    //   3. If the place references numbered streets that are ALL absent from
+    //      the user's location hint, the coordinates are almost certainly
+    //      hallucinated — flag autoNarrationBlocked immediately so the first
+    //      response already carries the flag and the client can hide the pin.
+    //
+    // Guard: only run when addressHint contains at least one ordinal (non-grid
+    // areas like named avenues produce no ordinals, so comparisons are
+    // meaningless and would produce false positives).
+    if (addressHint) {
+      const ORDINAL_RX = /\b(\d{1,3}(?:st|nd|rd|th))\b/gi;
+      const hintOrdinals = new Set(
+        [...addressHint.matchAll(ORDINAL_RX)].map((m) => m[1].toLowerCase()),
+      );
+      if (hintOrdinals.size > 0) {
+        for (const p of data.places) {
+          if (p.autoNarrationBlocked) continue;
+          const distToUser = haversineDistance(
+            latitude,
+            longitude,
+            p.latitude,
+            p.longitude,
+          );
+          if (distToUser > 50) continue; // not suspiciously close to user
+          const addrText = `${p.address ?? ""} ${p.name ?? ""}`;
+          const placeOrdinals = [...addrText.matchAll(ORDINAL_RX)].map((m) =>
+            m[1].toLowerCase(),
+          );
+          if (placeOrdinals.length === 0) continue; // no numbered streets
+          const hasMatch = placeOrdinals.some((s) => hintOrdinals.has(s));
+          if (!hasMatch) {
+            p.autoNarrationBlocked = true;
+            p.addressCoherence ??= {
+              status: "mismatch",
+              reason: `Hot-path: address "${p.address}" has numbered streets not present in user location "${addressHint}"`,
+              storedLat: p.latitude,
+              storedLon: p.longitude,
+            };
+            logger.warn(
+              {
+                placeName: p.name,
+                placeAddress: p.address,
+                addressHint,
+                distToUser: Math.round(distToUser),
+              },
+              "[address-coherence] HOT-PATH: numbered-street mismatch — blocked from walk narration",
+            );
+          }
+        }
+      }
+    }
   }
 
   // Cache zero-result responses for only 2 min so the user can retry after moving slightly.

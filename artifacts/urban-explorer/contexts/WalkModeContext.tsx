@@ -908,6 +908,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           for (const p of allIncoming) map.set(p.id, p);
           const merged: WalkPlace[] = [];
           for (const p of map.values()) {
+            // Skip places the server flagged as spatially untrustworthy —
+            // their coordinates do not match their described location.
+            if (p.autoNarrationBlocked) continue;
             if (
               haversineMeters(latitude, longitude, p.latitude, p.longitude) <=
               cfg.memoryRadius
@@ -1005,6 +1008,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             for (const p of incoming) map.set(p.id, p);
             const merged: WalkPlace[] = [];
             for (const p of map.values()) {
+              // Skip places the server flagged as spatially untrustworthy.
+              // incoming versions override placesRef versions (second loop
+              // above), so a place that arrives with autoNarrationBlocked=true
+              // on a subsequent discover call correctly evicts the old entry.
+              if (p.autoNarrationBlocked) continue;
               const d = haversineMeters(
                 latitude,
                 longitude,
