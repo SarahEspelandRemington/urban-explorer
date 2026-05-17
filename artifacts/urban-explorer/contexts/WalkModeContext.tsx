@@ -911,6 +911,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // Skip places the server flagged as spatially untrustworthy —
             // their coordinates do not match their described location.
             if (p.autoNarrationBlocked) continue;
+            // Walk Mode spatial trust gate (mirrors Layer 3 and server path):
+            // drop any place without a coordSource. coordSource is set by
+            // verifyPlaceCoordinates when Nominatim confirms or corrects the
+            // coordinates. Its absence means the LLM coordinates were never
+            // externally verified — the place must not enter candidate scoring.
+            if ((p as any).coordSource === undefined) continue;
             if (
               haversineMeters(latitude, longitude, p.latitude, p.longitude) <=
               cfg.memoryRadius
