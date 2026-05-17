@@ -29,7 +29,9 @@ export const snapGrid = (v: number): string =>
 /** 24 h TTL — historical places are stable within this window. */
 export const PLACE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-const STORAGE_PREFIX = "@urban-explorer/place-cache:v1:";
+// v2: bumped to invalidate pre-coordinate-trust-fix entries written without
+// Nominatim verification. Old v1 keys are unreachable and expire after 24 h.
+const STORAGE_PREFIX = "@urban-explorer/place-cache:v2:";
 
 /** Hard cap on tiles stored in AsyncStorage to bound disk usage. */
 const MAX_TILES = 60;
