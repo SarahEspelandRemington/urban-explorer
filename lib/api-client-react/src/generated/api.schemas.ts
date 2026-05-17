@@ -46,6 +46,8 @@ export interface DiscoverRequest {
    * @maxLength 200
    */
   addressHint?: string;
+  /** When true, Nominatim coordinate verification runs synchronously before responding. Only places confirmed or corrected by Nominatim are returned. Places whose coordinates cannot be externally verified are omitted rather than returned with LLM-generated pins. Explore Mode callers should omit this field or set it to false. */
+  walkMode?: boolean;
 }
 
 /**
