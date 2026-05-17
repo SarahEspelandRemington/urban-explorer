@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v27"], // discover — quick mode
-  ["full", "v27"], // discover — full mode
+  ["quick", "v29"], // discover — quick mode
+  ["full", "v29"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -991,6 +991,41 @@ async function verifyAddressCoherence(
   const NAME_STREET_RX =
     /\b(?:(?:near|on|along|at|off)\s+)?(?:(?:north|south|east|west|n|s|e|w)\s+)?(\d{1,3}(?:st|nd|rd|th)\s+(?:street|avenue|boulevard|road|place|square|parkway|highway|lane|drive|ave|blvd|rd|pl|sq|pkwy|hwy|ln|dr|st|way))\b/i;
 
+  // Catches named geographic entities — walkways, plazas, parks, landings,
+  // and similar features — whose names contain no ordinal number and whose
+  // type word ("Walk", "Plaza", "Landing", etc.) is absent from ADDRESS_RX.
+  // Strategy: match the capitalized word immediately before the type word so
+  // "Subsurface Locust Walk Trolley Tracks" extracts "Locust Walk", not
+  // "Subsurface Walk".  The GENERIC_PRECEDING_WORDS guard prevents common
+  // non-proper-nouns ("Street", "Old", "Historic", cardinal directions) from
+  // anchoring the probe and triggering false positives.
+  const NAME_PLACE_RX =
+    /\b([A-Z][a-z]+(?:[''][a-z]+)?)\s+(Walk|Plaza|Square|Park|Landing|Alley|Row|Viaduct|Bridge|Creek|Run|Canal|Wharf|Pier|Market|Campus|Promenade|Esplanade|Greenway|Trail|Boardwalk|Common|Commons|Loop|Waterfront)\b/;
+  const GENERIC_PRECEDING_WORDS = new Set([
+    "street",
+    "avenue",
+    "road",
+    "lane",
+    "drive",
+    "place",
+    "court",
+    "way",
+    "north",
+    "south",
+    "east",
+    "west",
+    "upper",
+    "lower",
+    "old",
+    "new",
+    "central",
+    "main",
+    "near",
+    "along",
+    "former",
+    "historic",
+  ]);
+
   // Derive a short city+state string from coordinates so that name-extracted
   // probes ("38th Street") can be disambiguated by Nominatim.  Without this,
   // Nominatim may return "38th Street" from an entirely different city.
@@ -1029,7 +1064,7 @@ async function verifyAddressCoherence(
   interface PlaceProbe {
     place: any;
     probe: string;
-    role: "address" | "name";
+    role: "address" | "name" | "named-place";
   }
   const allProbes: PlaceProbe[] = [];
 
@@ -1051,13 +1086,26 @@ async function verifyAddressCoherence(
         const nameProbe = cityCtx ? `${m[1]}, ${cityCtx}` : m[1];
         allProbes.push({ place: p, probe: nameProbe, role: "name" });
       }
+      // Named-place probe: catches "Locust Walk", "Fairmount Park",
+      // "Penn's Landing", "Reading Viaduct", etc. — geographic entities with
+      // no ordinal number and a type word absent from ADDRESS_RX.  Only fires
+      // when the word immediately before the type is a non-generic proper noun
+      // (GENERIC_PRECEDING_WORDS guard).
+      const mp = p.name.match(NAME_PLACE_RX);
+      if (mp && !GENERIC_PRECEDING_WORDS.has(mp[1].toLowerCase())) {
+        const cityCtx = cityContextFromCoords(userLat, userLng);
+        const placeProbe = cityCtx
+          ? `${mp[1]} ${mp[2]}, ${cityCtx}`
+          : `${mp[1]} ${mp[2]}`;
+        allProbes.push({ place: p, probe: placeProbe, role: "named-place" });
+      }
     }
   }
   if (allProbes.length === 0) return;
 
   // Accumulate geocode outcomes keyed by place object identity.
   interface ProbeOutcome {
-    role: "address" | "name";
+    role: "address" | "name" | "named-place";
     probe: string;
     mismatchMeters: number;
     geocodedDistFromUser: number;
@@ -1137,6 +1185,27 @@ async function verifyAddressCoherence(
   for (const [p, results] of outcomes) {
     const addrR = results.find((r) => r.role === "address");
     const nameR = results.find((r) => r.role === "name");
+    const namedPlaceR = results.find((r) => r.role === "named-place");
+
+    // Named-place probe is evaluated first and treated as a high-confidence
+    // signal.  A specific geographic entity ("Locust Walk", "Fairmount Park")
+    // has a well-known, unambiguous location.  If Nominatim places it far from
+    // the claimed coordinates the place is almost certainly hallucinated or
+    // mislocated — reject it regardless of what address/name-street probes say.
+    if (namedPlaceR && namedPlaceR.mismatchMeters > COHERENCE_THRESHOLD_M) {
+      const twoSignal = namedPlaceR.geocodedDistFromUser > searchRadius * 1.5;
+      applyRejection(
+        p,
+        namedPlaceR.probe,
+        namedPlaceR.mismatchMeters,
+        namedPlaceR.geocodedDistFromUser,
+        namedPlaceR.geocodedLat,
+        namedPlaceR.geocodedLon,
+        `Named-place reference "${namedPlaceR.probe}" geocodes ${Math.round(namedPlaceR.mismatchMeters)}m from claimed coordinates${twoSignal ? `; also ${Math.round(namedPlaceR.geocodedDistFromUser)}m from user (>1.5× search radius)` : ""}`,
+        twoSignal,
+      );
+      continue;
+    }
 
     if (addrR && nameR) {
       // Both probes returned results. Evaluate independently then reconcile.
@@ -1591,7 +1660,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v27:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v29:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
