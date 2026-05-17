@@ -1,0 +1,63 @@
+Before I field test, please do a focused post-change sanity review. Do not add features or refactor broadly.
+
+Goal:
+Confirm the recent Walk Mode coordinate-trust changes are clean, safe, and ready to test.
+
+Please check:
+
+1. Git status
+- Confirm there are no uncommitted changes.
+- Confirm the latest commit on main includes the coordinate-trust fix.
+
+2. Validation
+Run or confirm:
+- typecheck
+- lint
+- format check
+- prompt-manifest check
+- full test suite
+
+3. Walk Mode coordinate pipeline
+Please review the recent changes and confirm:
+- Walk Mode sends walkMode: true.
+- Walk Mode no longer returns unverified LLM-generated coordinates.
+- Nominatim verification runs before Walk Mode results are returned.
+- Places without coordSource are dropped from Walk Mode.
+- Cache-hit path also filters out unverified places for Walk Mode.
+- Explore Mode behavior remains unchanged.
+
+4. Timeout/loading risk
+Confirm the 40s timeout is applied only where intended.
+Confirm existing loading/empty state will handle slower/fewer Walk Mode results gracefully.
+
+5. Regression risk
+Check for obvious issues introduced by:
+- OpenAPI/codegen changes
+- cache version bump
+- prompt manifest update
+- coordSource typing/usage
+- regenerated API client/zod files
+
+6. Do not make any code changes unless you find a clear bug.
+If you find a bug, stop and explain it before editing.
+
+7. Expo Go testing stability
+Because I am currently testing in Expo Go, please do a focused sanity check for anything likely to cause crashes, freezes, reload loops, or instability during live mobile testing.
+
+Please specifically review for:
+- unhandled async errors
+- null/undefined map or coordinate access
+- race conditions around slower Walk Mode responses
+- timeout/retry loops
+- rendering issues when zero verified places are returned
+- map rendering edge cases
+- stale state after slower verification responses
+- anything that could destabilize Expo Go during repeated live testing
+
+Do not add new stability systems unless a clear issue is found. The goal is simply to catch obvious crash-risk regressions before field testing.
+
+Please summarize:
+- validation results
+- whether working tree is clean
+- latest commit hash
+- any risks I should know before field testing
