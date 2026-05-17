@@ -116,6 +116,17 @@ export function WalkModeMap({
   const [previewCluster, setPreviewCluster] = useState<Cluster | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<WalkPlace | null>(null);
 
+  // Stale preview guard (Problem C): clear the cluster preview card when any
+  // of its places have been removed from the places prop (e.g. by a coordinate
+  // trust filter). Without this, the preview card can display data for a place
+  // that is no longer in the verified pool.
+  useEffect(() => {
+    if (!previewCluster) return;
+    const placeIds = new Set(places.map((p) => p.id));
+    const allPresent = previewCluster.places.every((p) => placeIds.has(p.id));
+    if (!allPresent) setPreviewCluster(null);
+  }, [places, previewCluster]);
+
   // Track whether the map camera is following the user.
   // Panning the map or zooming into a cluster disengages follow; the
   // re-center button re-engages it.

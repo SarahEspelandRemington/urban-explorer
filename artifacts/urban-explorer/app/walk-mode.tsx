@@ -393,6 +393,49 @@ export default function WalkModeScreen() {
                   />
                 </Pressable>
               )}
+              {__DEV__ && (
+                <Pressable
+                  onPress={() =>
+                    walk.setWalkDebugEnabled(!walk.walkDebugEnabled)
+                  }
+                  style={[
+                    styles.groupRow,
+                    { borderBottomColor: colors.border },
+                  ]}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: walk.walkDebugEnabled }}
+                  accessibilityLabel={t.walkMode.walkDebugOverlay}
+                >
+                  <View style={styles.groupText}>
+                    <Text
+                      style={[styles.groupName, { color: colors.foreground }]}
+                    >
+                      {t.walkMode.walkDebugOverlay}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.groupDesc,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
+                      {t.walkMode.walkDebugOverlayDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={walk.walkDebugEnabled}
+                    onValueChange={walk.setWalkDebugEnabled}
+                    trackColor={{
+                      false: colors.muted,
+                      true: colors.primary + "80",
+                    }}
+                    thumbColor={
+                      walk.walkDebugEnabled
+                        ? colors.primary
+                        : colors.mutedForeground
+                    }
+                  />
+                </Pressable>
+              )}
               <View style={{ height: 4 }} />
               {BUILDING_TYPE_GROUPS.map((group) => {
                 const key = group.key as BuildingGroupKey;
