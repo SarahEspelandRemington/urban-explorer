@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v26"], // discover — quick mode
-  ["full", "v26"], // discover — full mode
+  ["quick", "v27"], // discover — quick mode
+  ["full", "v27"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -941,10 +941,19 @@ async function verifyPlaceCoordinates(
  *     inspection: { storedLat, storedLon, geocodedLat, geocodedLon,
  *     mismatchMeters, status, reason }. Mismatches are also logged.
  *
- * Strategy: for any place with a parseable street address (a number +
- * street word), geocode the address ALONE and compare the result to the
- * place's claimed lat/lng. Annotate `addressCoherence` with the outcome
- * and only set `autoNarrationBlocked` when the two-signal test passes.
+ * Strategy: for each eligible place, build UP TO TWO probes and run them
+ * in parallel:
+ *   • Address probe — when the address field matches ADDRESS_RX (digit +
+ *     street-type token). Geocodes the raw address string.
+ *   • Name probe — when the place NAME contains an ordinal street reference
+ *     (NAME_STREET_RX). Geocodes just that street phrase with city context.
+ *
+ * Previously the name probe was only a FALLBACK when no address matched.
+ * Now BOTH run simultaneously, and a name-street conflict overrides an
+ * otherwise-ok address result.  This is the primary fix for the
+ * "Remnant Trolley Track Embedded in 39th St" failure mode where the LLM
+ * fabricates a plausible local address (which geocodes fine near the user)
+ * while the place NAME reveals the historical subject is on a distant street.
  *
  * Re-uses geocodeNearLocation (with its 30-min cache) so repeat hits cost
  * nothing.
@@ -1014,50 +1023,56 @@ async function verifyAddressCoherence(
     return "";
   }
 
-  const candidates = places
-    .filter(
-      (p) =>
-        !p._rejectOutOfArea &&
-        typeof p.latitude === "number" &&
-        typeof p.longitude === "number",
-    )
-    .map((p) => {
-      // Prefer the explicit address; fall back to a street phrase parsed
-      // from the placename when no address is present.
-      let probe: string | null = null;
-      if (typeof p.address === "string" && ADDRESS_RX.test(p.address)) {
-        probe = p.address;
-      } else if (typeof p.name === "string") {
-        const m = p.name.match(NAME_STREET_RX);
-        if (m) {
-          // Append city context so Nominatim doesn't resolve "38th Street"
-          // to a city on the other side of the country.
-          const cityCtx = cityContextFromCoords(userLat, userLng);
-          probe = cityCtx ? `${m[1]}, ${cityCtx}` : m[1];
-        }
+  // Build per-place probe lists. Both address and name probes are collected
+  // when available — they run in parallel and are evaluated together so a
+  // fabricated local address cannot mask a conflicting name-street reference.
+  interface PlaceProbe {
+    place: any;
+    probe: string;
+    role: "address" | "name";
+  }
+  const allProbes: PlaceProbe[] = [];
+
+  for (const p of places.filter(
+    (p) =>
+      !p._rejectOutOfArea &&
+      typeof p.latitude === "number" &&
+      typeof p.longitude === "number",
+  )) {
+    if (typeof p.address === "string" && ADDRESS_RX.test(p.address)) {
+      allProbes.push({ place: p, probe: p.address, role: "address" });
+    }
+    if (typeof p.name === "string") {
+      const m = p.name.match(NAME_STREET_RX);
+      if (m) {
+        // Append city context so Nominatim doesn't resolve "39th Street"
+        // to a city on the other side of the country.
+        const cityCtx = cityContextFromCoords(userLat, userLng);
+        const nameProbe = cityCtx ? `${m[1]}, ${cityCtx}` : m[1];
+        allProbes.push({ place: p, probe: nameProbe, role: "name" });
       }
-      return probe ? { place: p, probe } : null;
-    })
-    .filter((x): x is { place: any; probe: string } => x !== null);
-  if (candidates.length === 0) return;
+    }
+  }
+  if (allProbes.length === 0) return;
+
+  // Accumulate geocode outcomes keyed by place object identity.
+  interface ProbeOutcome {
+    role: "address" | "name";
+    probe: string;
+    mismatchMeters: number;
+    geocodedDistFromUser: number;
+    geocodedLat: number;
+    geocodedLon: number;
+  }
+  const outcomes = new Map<any, ProbeOutcome[]>();
 
   // Use scheduleNominatimCall so we obey the 1 req/sec ToS cap. Promise.allSettled
   // runs them concurrently; one slow lookup doesn't stall the rest.
   await Promise.allSettled(
-    candidates.map(({ place: p, probe }) =>
+    allProbes.map(({ place: p, probe, role }) =>
       scheduleNominatimCall(async () => {
         const result = await geocodeNearLocation(probe);
-        if (!result) {
-          // Geocode failure: cautious — record but do NOT block.
-          p.addressCoherence = {
-            status: "geocode_failed",
-            reason: "Nominatim returned no result for parsed address",
-            storedLat: p.latitude,
-            storedLon: p.longitude,
-            address: probe,
-          };
-          return;
-        }
+        if (!result) return; // geocode failure — cautious, do not block
         const mismatchMeters = haversineDistance(
           p.latitude,
           p.longitude,
@@ -1070,63 +1085,140 @@ async function verifyAddressCoherence(
           result.lat,
           result.lon,
         );
-        const debug = {
-          storedLat: p.latitude,
-          storedLon: p.longitude,
+        const arr = outcomes.get(p) ?? [];
+        arr.push({
+          role,
+          probe,
+          mismatchMeters,
+          geocodedDistFromUser,
           geocodedLat: result.lat,
           geocodedLon: result.lon,
-          mismatchMeters: Math.round(mismatchMeters),
-          geocodedDistFromUserMeters: Math.round(geocodedDistFromUser),
-          address: probe,
-        };
-        if (mismatchMeters <= COHERENCE_THRESHOLD_M) {
-          p.addressCoherence = {
-            ...debug,
-            status: "ok",
-            reason: `mismatch ${Math.round(mismatchMeters)}m within tolerance`,
-          };
-          return;
-        }
-        // Mismatch > COHERENCE_THRESHOLD_M (200 m). Address geocodes to a different location:
-        // Hard-reject this place from Walk Mode so it does not appear as a
-        // narration candidate or a map pin. A 200m address↔coordinate
-        // discrepancy is sufficient evidence that the LLM placed the place
-        // at the wrong location — even if the geocoded address is still within
-        // the search area (single-signal case). Both signals are treated the
-        // same: the spatial mismatch alone is enough.
-        p._rejectOutOfArea = true;
-        if (geocodedDistFromUser > searchRadius * 1.5) {
-          // Two-signal case: geocoded address is also well outside the user's
-          // current search area. Additionally correct the stored coordinates
-          // to the geocoded location so the post-process distance filter can
-          // drop any cached copies of this place on future verification passes.
-          p.latitude = result.lat;
-          p.longitude = result.lon;
-          p.autoNarrationBlocked = true;
-          p.addressCoherence = {
-            ...debug,
-            status: "mismatch",
-            reason: `Address↔coordinate mismatch ${Math.round(mismatchMeters)}m AND geocoded address ${Math.round(geocodedDistFromUser)}m from user (>1.5× search radius); place rejected from Walk Mode`,
-          };
-          logger.warn(
-            { place: p.name, ...debug },
-            "[address-coherence] REJECTED (two-signal): address resolves outside search area",
-          );
-        } else {
-          // Single-signal case: coordinate mismatch > 200m alone is enough.
-          p.addressCoherence = {
-            ...debug,
-            status: "mismatch",
-            reason: `Address↔coordinate mismatch ${Math.round(mismatchMeters)}m (>${COHERENCE_THRESHOLD_M}m threshold); place rejected from Walk Mode`,
-          };
-          logger.warn(
-            { place: p.name, ...debug },
-            "[address-coherence] REJECTED (single-signal): address↔coordinate mismatch exceeds threshold",
-          );
-        }
+        });
+        outcomes.set(p, arr);
       }),
     ),
   );
+
+  // Evaluate each place after all Nominatim calls have settled.
+  const applyRejection = (
+    p: any,
+    probe: string,
+    mismatchM: number,
+    geocodedDistM: number,
+    gLat: number,
+    gLon: number,
+    reason: string,
+    twoSignal: boolean,
+  ) => {
+    p._rejectOutOfArea = true;
+    const debug = {
+      storedLat: p.latitude,
+      storedLon: p.longitude,
+      geocodedLat: gLat,
+      geocodedLon: gLon,
+      mismatchMeters: Math.round(mismatchM),
+      geocodedDistFromUserMeters: Math.round(geocodedDistM),
+      address: probe,
+    };
+    if (twoSignal) {
+      p.latitude = gLat;
+      p.longitude = gLon;
+      p.autoNarrationBlocked = true;
+    }
+    p.addressCoherence = { ...debug, status: "mismatch", reason };
+    logger.warn(
+      { place: p.name, ...debug },
+      twoSignal
+        ? "[address-coherence] REJECTED (two-signal): resolves outside search area"
+        : "[address-coherence] REJECTED: coordinate mismatch exceeds threshold",
+    );
+  };
+
+  for (const [p, results] of outcomes) {
+    const addrR = results.find((r) => r.role === "address");
+    const nameR = results.find((r) => r.role === "name");
+
+    if (addrR && nameR) {
+      // Both probes returned results. Evaluate independently then reconcile.
+      const addrOk = addrR.mismatchMeters <= COHERENCE_THRESHOLD_M;
+      const nameOk = nameR.mismatchMeters <= COHERENCE_THRESHOLD_M;
+
+      if (addrOk && nameOk) {
+        p.addressCoherence = {
+          storedLat: p.latitude,
+          storedLon: p.longitude,
+          geocodedLat: addrR.geocodedLat,
+          geocodedLon: addrR.geocodedLon,
+          mismatchMeters: Math.round(addrR.mismatchMeters),
+          geocodedDistFromUserMeters: Math.round(addrR.geocodedDistFromUser),
+          address: addrR.probe,
+          nameProbedStreet: nameR.probe,
+          status: "ok",
+          reason: `address ${Math.round(addrR.mismatchMeters)}m and name-street ${Math.round(nameR.mismatchMeters)}m — both within tolerance`,
+        };
+      } else if (!nameOk) {
+        // Name street reference conflicts with claimed coordinates even though
+        // the address geocodes near the user. This is the fabricated-address
+        // pattern: the LLM invented a plausible local address while the NAME
+        // reveals the historical subject actually belongs on a different street.
+        // The name signal takes precedence.
+        const twoSignal = nameR.geocodedDistFromUser > searchRadius * 1.5;
+        applyRejection(
+          p,
+          nameR.probe,
+          nameR.mismatchMeters,
+          nameR.geocodedDistFromUser,
+          nameR.geocodedLat,
+          nameR.geocodedLon,
+          `Name street reference "${nameR.probe}" geocodes ${Math.round(nameR.mismatchMeters)}m from claimed coordinates (address may be fabricated to match user location)${twoSignal ? `; also ${Math.round(nameR.geocodedDistFromUser)}m from user (>1.5× search radius)` : ""}`,
+          twoSignal,
+        );
+      } else {
+        // nameOk but !addrOk — address disagrees even though name is locally
+        // coherent. Standard address mismatch rejection.
+        const twoSignal = addrR.geocodedDistFromUser > searchRadius * 1.5;
+        applyRejection(
+          p,
+          addrR.probe,
+          addrR.mismatchMeters,
+          addrR.geocodedDistFromUser,
+          addrR.geocodedLat,
+          addrR.geocodedLon,
+          `Address↔coordinate mismatch ${Math.round(addrR.mismatchMeters)}m (>${COHERENCE_THRESHOLD_M}m threshold)${twoSignal ? `; geocoded address ${Math.round(addrR.geocodedDistFromUser)}m from user (>1.5× search radius)` : ""}; place rejected from Walk Mode`,
+          twoSignal,
+        );
+      }
+    } else {
+      // Only one probe type returned a result — single-probe evaluation.
+      const r = (addrR ?? nameR)!;
+      const label = addrR ? "Address" : `Name street reference "${r.probe}"`;
+      if (r.mismatchMeters <= COHERENCE_THRESHOLD_M) {
+        p.addressCoherence = {
+          storedLat: p.latitude,
+          storedLon: p.longitude,
+          geocodedLat: r.geocodedLat,
+          geocodedLon: r.geocodedLon,
+          mismatchMeters: Math.round(r.mismatchMeters),
+          geocodedDistFromUserMeters: Math.round(r.geocodedDistFromUser),
+          address: r.probe,
+          status: "ok",
+          reason: `mismatch ${Math.round(r.mismatchMeters)}m within tolerance`,
+        };
+      } else {
+        const twoSignal = r.geocodedDistFromUser > searchRadius * 1.5;
+        applyRejection(
+          p,
+          r.probe,
+          r.mismatchMeters,
+          r.geocodedDistFromUser,
+          r.geocodedLat,
+          r.geocodedLon,
+          `${label}↔coordinate mismatch ${Math.round(r.mismatchMeters)}m (>${COHERENCE_THRESHOLD_M}m threshold)${twoSignal ? `; geocoded ${Math.round(r.geocodedDistFromUser)}m from user (>1.5× search radius)` : ""}; place rejected from Walk Mode`,
+          twoSignal,
+        );
+      }
+    }
+  }
 }
 
 async function postProcessPlaces(
@@ -1499,7 +1591,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v26:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v27:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1806,20 +1898,27 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     await fetchPhotosForPlaces(data.places);
 
     // Hot-path coordinate plausibility check — zero external API calls.
-    // Catches the most common LLM hallucination pattern: a place whose
-    // description is drawn from a distant street (e.g. "36th Street Trolley")
-    // but whose coordinates were placed right at the user's GPS position by the
-    // model (which is told to return nearby places).
+    // Catches the LLM hallucination pattern: a place whose description is
+    // drawn from a distant street (e.g. "36th Street Trolley") but whose
+    // coordinates were placed near the user (either directly at the user's
+    // GPS position or moved there by verifyPlaceCoordinates matching on an
+    // address token rather than the place entity itself).
     //
     // Algorithm:
     //   1. Extract ordinal street numbers from the user's reverse-geocoded
     //      location string (addressHint) — e.g. "22nd St" → {"22nd"}.
-    //   2. For each place within 50 m of the user's search centre, extract
+    //   2. For each place within the search radius of the user, extract
     //      ordinal street numbers from its address + name.
     //   3. If the place references numbered streets that are ALL absent from
     //      the user's location hint, the coordinates are almost certainly
     //      hallucinated — flag autoNarrationBlocked immediately so the first
     //      response already carries the flag and the client can hide the pin.
+    //
+    // Previously this only checked places within 50 m. That gate was too tight:
+    // verifyPlaceCoordinates can move a hallucinated pin up to searchRadius away
+    // (by matching on an address token), placing it outside the 50 m window
+    // and allowing it to bypass this check entirely.  The threshold is now
+    // searchRadius so any place that could reach the narration queue is covered.
     //
     // Guard: only run when addressHint contains at least one ordinal (non-grid
     // areas like named avenues produce no ordinals, so comparisons are
@@ -1838,7 +1937,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
             p.latitude,
             p.longitude,
           );
-          if (distToUser > 50) continue; // not suspiciously close to user
+          if (distToUser > searchRadius) continue; // outside the narration search area
           const addrText = `${p.address ?? ""} ${p.name ?? ""}`;
           const placeOrdinals = [...addrText.matchAll(ORDINAL_RX)].map((m) =>
             m[1].toLowerCase(),
