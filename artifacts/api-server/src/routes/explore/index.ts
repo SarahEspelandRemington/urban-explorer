@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v24"], // discover — quick mode
-  ["full", "v24"], // discover — full mode
+  ["quick", "v26"], // discover — quick mode
+  ["full", "v26"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -898,12 +898,17 @@ async function verifyPlaceCoordinates(
           p.longitude = bestLon;
           p.confidence = "low";
           p.coordSource = "nominatim-corrected";
-        } else {
-          // Nominatim found this place and its coordinates are already correct
-          // (within the correction threshold). Mark it confirmed so Walk Mode
-          // can distinguish "externally verified" from "LLM-only".
-          p.coordSource = "nominatim-confirmed";
         }
+        // If Nominatim's best result is within the correction threshold
+        // (≤ COORD_CORRECTION_THRESHOLD_M of the LLM coordinates), we do NOT
+        // treat it as externally verified.  A close result is ambiguous: it
+        // may be a real confirmation, but it may equally be a spurious nearby
+        // match (e.g. a street segment) that happens to land close to the
+        // hallucinated pin — the very failure mode seen in field testing where
+        // places named after distant landmarks appeared at the user's GPS
+        // position.  Walk Mode drops places without coordSource; only
+        // corrections that materially move the pin to a Nominatim-grounded
+        // location survive the trust gate.
       }),
     ),
   );
@@ -1082,42 +1087,41 @@ async function verifyAddressCoherence(
           };
           return;
         }
-        // Mismatch >200 m. Only block auto-narration when we have a SECOND
-        // signal: the geocoded address is itself well outside the user's
-        // current search area (>1.5× search radius). This catches the
-        // high-confidence "real street, wrong city" hallucination while
-        // leaving ambiguous-but-plausible local addresses (which could be
-        // either the address or the lat/lng being slightly off) untouched.
+        // Mismatch > COHERENCE_THRESHOLD_M (200 m). Address geocodes to a different location:
+        // Hard-reject this place from Walk Mode so it does not appear as a
+        // narration candidate or a map pin. A 200m address↔coordinate
+        // discrepancy is sufficient evidence that the LLM placed the place
+        // at the wrong location — even if the geocoded address is still within
+        // the search area (single-signal case). Both signals are treated the
+        // same: the spatial mismatch alone is enough.
+        p._rejectOutOfArea = true;
         if (geocodedDistFromUser > searchRadius * 1.5) {
-          // High-confidence mismatch: the geocoded address is outside the
-          // search area but the LLM assigned the place coordinates inside it
-          // (right at the user's block). Correct the stored coordinates to the
-          // geocoded location so the post-process distance filter drops this
-          // place from the cache on the next verification pass.  Without this
-          // correction the distance filter sees near-user coordinates and lets
-          // the hallucinatated pin through permanently.
+          // Two-signal case: geocoded address is also well outside the user's
+          // current search area. Additionally correct the stored coordinates
+          // to the geocoded location so the post-process distance filter can
+          // drop any cached copies of this place on future verification passes.
           p.latitude = result.lat;
           p.longitude = result.lon;
           p.autoNarrationBlocked = true;
           p.addressCoherence = {
             ...debug,
             status: "mismatch",
-            reason: `Geocoded address is ${Math.round(geocodedDistFromUser)}m from user (>1.5x search radius ${Math.round(searchRadius)}m); coordinates corrected to geocoded location and blocked from walk narration`,
+            reason: `Address↔coordinate mismatch ${Math.round(mismatchMeters)}m AND geocoded address ${Math.round(geocodedDistFromUser)}m from user (>1.5× search radius); place rejected from Walk Mode`,
           };
           logger.warn(
             { place: p.name, ...debug },
-            "[address-coherence] BLOCKED + coords corrected: address resolves outside search area",
+            "[address-coherence] REJECTED (two-signal): address resolves outside search area",
           );
         } else {
-          // Single signal only — be cautious. Record but don't block.
+          // Single-signal case: coordinate mismatch > 200m alone is enough.
           p.addressCoherence = {
             ...debug,
-            status: "ambiguous",
-            reason: `Mismatch ${Math.round(mismatchMeters)}m but geocoded address still within search area; insufficient evidence to block`,
+            status: "mismatch",
+            reason: `Address↔coordinate mismatch ${Math.round(mismatchMeters)}m (>${COHERENCE_THRESHOLD_M}m threshold); place rejected from Walk Mode`,
           };
-          logger.info(
+          logger.warn(
             { place: p.name, ...debug },
-            "[address-coherence] AMBIGUOUS: single-signal mismatch, not blocking",
+            "[address-coherence] REJECTED (single-signal): address↔coordinate mismatch exceeds threshold",
           );
         }
       }),
@@ -1495,7 +1499,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v24:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v26:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );

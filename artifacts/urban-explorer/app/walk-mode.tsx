@@ -245,54 +245,6 @@ export default function WalkModeScreen() {
               );
             })}
           </View>
-
-          <Pressable
-            onPress={() => {
-              if (Platform.OS !== "web")
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setSettingsVisible(true);
-            }}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t.walkMode.buildingFiltersAccessibility}
-            style={({ pressed }) => [
-              styles.settingsBtn,
-              {
-                backgroundColor:
-                  walk.enabledBuildingGroups.size > 0
-                    ? colors.primary + "22"
-                    : colors.muted,
-                borderColor:
-                  walk.enabledBuildingGroups.size > 0
-                    ? colors.primary
-                    : colors.border,
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}
-          >
-            <Feather
-              name="sliders"
-              size={14}
-              color={
-                walk.enabledBuildingGroups.size > 0
-                  ? colors.primary
-                  : colors.mutedForeground
-              }
-            />
-            <Text
-              style={[
-                styles.filterBtnLabel,
-                {
-                  color:
-                    walk.enabledBuildingGroups.size > 0
-                      ? colors.primary
-                      : colors.mutedForeground,
-                },
-              ]}
-            >
-              {t.walkMode.filterBtn}
-            </Text>
-          </Pressable>
         </View>
       </View>
 
@@ -435,6 +387,49 @@ export default function WalkModeScreen() {
                     }}
                     thumbColor={
                       walk.showPrefetchStats
+                        ? colors.primary
+                        : colors.mutedForeground
+                    }
+                  />
+                </Pressable>
+              )}
+              {__DEV__ && (
+                <Pressable
+                  onPress={() =>
+                    walk.setWalkDebugEnabled(!walk.walkDebugEnabled)
+                  }
+                  style={[
+                    styles.groupRow,
+                    { borderBottomColor: colors.border },
+                  ]}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: walk.walkDebugEnabled }}
+                  accessibilityLabel={t.walkMode.walkDebugOverlay}
+                >
+                  <View style={styles.groupText}>
+                    <Text
+                      style={[styles.groupName, { color: colors.foreground }]}
+                    >
+                      {t.walkMode.walkDebugOverlay}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.groupDesc,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
+                      {t.walkMode.walkDebugOverlayDescription}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={walk.walkDebugEnabled}
+                    onValueChange={walk.setWalkDebugEnabled}
+                    trackColor={{
+                      false: colors.muted,
+                      true: colors.primary + "80",
+                    }}
+                    thumbColor={
+                      walk.walkDebugEnabled
                         ? colors.primary
                         : colors.mutedForeground
                     }
@@ -762,17 +757,20 @@ export default function WalkModeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 10,
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flexShrink: 1,
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
   },
   headerHomeButton: {
     flexDirection: "row",
@@ -803,8 +801,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginHorizontal: 16,
-    marginTop: 10,
+    marginHorizontal: 18,
+    marginTop: 14,
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
@@ -838,20 +836,22 @@ const styles = StyleSheet.create({
   },
   densityToggle: {
     flexDirection: "row",
-    borderRadius: 20,
-    padding: 3,
+    borderRadius: 16,
+    padding: 2,
+    flexShrink: 0,
+    opacity: 0.85,
   },
   densityButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
   },
-  densityText: { fontSize: 12 },
+  densityText: { fontSize: 11, letterSpacing: 0.1 },
   mapContainer: {
     flex: 1,
     marginHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: 16,
+    marginBottom: 16,
+    borderRadius: 18,
     overflow: "hidden",
   },
   loadingMap: {
@@ -863,7 +863,8 @@ const styles = StyleSheet.create({
   },
   loadingText: { fontSize: 14, fontFamily: "Inter_500Medium" },
   cardSlot: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
+    paddingBottom: 6,
     minHeight: 88,
   },
   nowPlaying: {

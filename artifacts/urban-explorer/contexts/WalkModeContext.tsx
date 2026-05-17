@@ -801,6 +801,27 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [narration.isSpeaking, currentLocation]);
 
+  // Stale narration guard (Problem B): when nearbyPlaces is updated by the
+  // coordSource trust gate, check whether the currently-playing place is still
+  // in the verified pool. If it has been removed (e.g. because its coordSource
+  // was undefined and was filtered out), stop the active audio immediately and
+  // clear all narration display state so the UI does not continue showing or
+  // playing an unverified place.
+  useEffect(() => {
+    if (!isWalking) return;
+    const current = currentNarrationPlaceRef.current;
+    if (!current) return;
+    const stillPresent = nearbyPlaces.some((p) => p.id === current.id);
+    if (!stillPresent) {
+      narration.stop();
+      currentNarrationPlaceRef.current = null;
+      setCurrentNarrationPlace(null);
+    }
+    // narration.stop is a stable useCallback — including narration here would
+    // cause spurious re-runs; the ref gives us synchronous access to stop().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nearbyPlaces, isWalking]);
+
   // Keep Sentry scope up-to-date with walk state so every crash report carries
   // a snapshot of what was happening: whether the user was walking, which place
   // was being narrated, and how many places are in the queue.
