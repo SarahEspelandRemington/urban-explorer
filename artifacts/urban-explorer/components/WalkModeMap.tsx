@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Easing,
   Image,
   Platform,
@@ -115,6 +116,34 @@ export function WalkModeMap({
   const [region, setRegion] = useState<Region>(initialRegion);
   const [previewCluster, setPreviewCluster] = useState<Cluster | null>(null);
   const [selectedPlace, setSelectedPlace] = useState<WalkPlace | null>(null);
+
+  // Narration aura: a slow breathing animation that drives the isPlaying ring
+  // opacity. Single value — only one place narrates at a time.
+  const narrationPulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (currentlyPlayingPlaceId) {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(narrationPulse, {
+            toValue: 1,
+            duration: 1400,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+          Animated.timing(narrationPulse, {
+            toValue: 0,
+            duration: 1400,
+            easing: Easing.inOut(Easing.sin),
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      loop.start();
+      return () => loop.stop();
+    } else {
+      narrationPulse.setValue(0);
+    }
+  }, [currentlyPlayingPlaceId, narrationPulse]);
 
   // Stale preview guard (Problem C): clear the cluster preview card when any
   // of its places have been removed from the places prop (e.g. by a coordinate
@@ -424,25 +453,35 @@ export function WalkModeMap({
             const isSelected = selectedPlace?.id === place.id;
             const isPlaying = currentlyPlayingPlaceId === place.id;
 
-            // Temporal hierarchy: active (playing) > upcoming > played.
-            // Played pins are aggressively faded — they should recede, not compete.
+            // Semantic opacity hierarchy:
+            //   narration > selected > played (faded) > upcoming.
+            //   Selected pins surface to full opacity so they visually link
+            //   to the open preview card, even if previously narrated.
             const markerOpacity = isPlaying
               ? 1
-              : wasNarrated && !isSelected
-                ? visitedOpacity(narratedAt) * 0.1
+              : isSelected
+                ? 1
                 : wasNarrated
-                  ? visitedOpacity(narratedAt) * 0.18
+                  ? visitedOpacity(narratedAt) * 0.1
                   : 0.7;
 
             // Active: 28 px dominant. Upcoming: 12 px quiet dot.
             // Played: 9 px small, neutral grey — visually subordinate.
+            // Selected + not playing: surface with more-opaque primary.
             const pinSize = isPlaying ? 28 : wasNarrated ? 9 : 12;
             const pinColor = isPlaying
               ? colors.primary
-              : wasNarrated
-                ? colors.mutedForeground + "66"
-                : colors.primary + "88";
-            const wrapperSize = isPlaying ? 38 : pinSize + 8;
+              : isSelected
+                ? colors.primary + "CC"
+                : wasNarrated
+                  ? colors.mutedForeground + "66"
+                  : colors.primary + "88";
+            // Active: 38 px wrapper. Selected: widen to fit halo ring. Others: pin + 8.
+            const wrapperSize = isPlaying
+              ? 38
+              : isSelected
+                ? Math.max(pinSize + 8, 34)
+                : pinSize + 8;
 
             return (
               <Marker
@@ -472,17 +511,36 @@ export function WalkModeMap({
                     ]}
                   >
                     {isPlaying && (
+                      <Animated.View
+                        style={[
+                          styles.pinRing,
+                          {
+                            width: 44,
+                            height: 44,
+                            borderRadius: 22,
+                            borderColor: colors.primary,
+                            borderWidth: 1.5,
+                            backgroundColor: colors.primary + "0A",
+                            opacity: narrationPulse.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [0.1, 0.3],
+                            }),
+                          },
+                        ]}
+                      />
+                    )}
+                    {isSelected && !isPlaying && (
                       <View
                         style={[
                           styles.pinRing,
                           {
-                            width: 40,
-                            height: 40,
-                            borderRadius: 20,
-                            borderColor: colors.primary,
+                            width: 30,
+                            height: 30,
+                            borderRadius: 15,
+                            borderColor: colors.primary + "80",
                             borderWidth: 1.5,
-                            opacity: 0.22,
-                            backgroundColor: colors.primary + "10",
+                            backgroundColor: colors.primary + "0D",
+                            opacity: 0.85,
                           },
                         ]}
                       />
@@ -506,14 +564,21 @@ export function WalkModeMap({
                                 shadowRadius: 8,
                                 elevation: 6,
                               }
-                            : wasNarrated
-                              ? { shadowOpacity: 0, elevation: 0 }
-                              : {
-                                  shadowColor: "#000",
+                            : isSelected
+                              ? {
+                                  shadowColor: colors.primary,
                                   shadowOpacity: 0.2,
-                                  shadowRadius: 3,
-                                  elevation: 2,
-                                }),
+                                  shadowRadius: 4,
+                                  elevation: 3,
+                                }
+                              : wasNarrated
+                                ? { shadowOpacity: 0, elevation: 0 }
+                                : {
+                                    shadowColor: "#000",
+                                    shadowOpacity: 0.2,
+                                    shadowRadius: 3,
+                                    elevation: 2,
+                                  }),
                         },
                       ]}
                     />
