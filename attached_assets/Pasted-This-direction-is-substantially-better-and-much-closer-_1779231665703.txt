@@ -1,0 +1,135 @@
+This direction is substantially better and much closer to the correct architecture.
+
+Please implement the revisions discussed previously, plus the refinements below.
+
+Most important additional feedback:
+
+The app now feels coherent and elegant, but it still does not fully feel like Streetlit yet.
+
+Right now it risks feeling like:
+
+* a beautifully designed urban discovery app
+  instead of:
+* a calm companion helping you notice hidden layers of place.
+
+Please use the following guidance while implementing.
+
+1. Move the Walk CTA banner ABOVE the discovery list
+
+Current placement inside the feed slightly reads like a sponsored/promotional card interrupting discoveries.
+
+Reorder to:
+
+* location/context header
+* Explore title
+* “Small stories hidden in ordinary places.”
+* radius chips
+* Walk CTA banner
+* discoveries list
+
+Keep the Walk banner visually restrained and integrated into the system.
+
+2. Add one subtle “anchor” discovery treatment
+
+The Explore list risks becoming visually flat because every card currently has identical hierarchy.
+
+Please add ONE subtle focal treatment to the nearest/most relevant discovery.
+
+Examples:
+
+* slightly larger card
+* softer glow
+* richer surface contrast
+* slightly expanded spacing
+* subtle “nearby” treatment
+
+Do NOT turn this into a loud featured article.
+The effect should be atmospheric and calm.
+
+3. Revise Wander copy
+
+Change:
+“Put your phone away and wander.”
+
+To something softer and more trust-building.
+
+Preferred direction:
+“Listen as you wander.”
+
+Supporting text can remain similar:
+“Stories narrate automatically as you move through the neighborhood.”
+
+Important:
+Do not imply fully screenless behavior yet.
+Users still need spatial trust-building.
+
+4. Guided Walks card should feel aspirational, not disabled
+
+The current “SOON” treatment reads slightly dead/unavailable.
+
+Please make it feel:
+
+* future-facing
+* intriguing
+* part of the world of the app
+
+Possible approaches:
+
+* softer opacity reduction
+* “Coming soon”
+* subtle example themes:
+
+  * Hidden Infrastructure
+  * Jazz Age Midtown
+  * Waterfront Industry
+  * etc.
+
+The feeling should be:
+“more experiences are coming”
+not:
+“feature disabled.”
+
+5. Preserve Walk tab behavior
+
+The Walk tab should continue opening the Walk landing/chooser screen.
+
+Do NOT revert to immediate auto-start narration.
+
+6. Important emotional/tone guidance
+
+The app should increasingly feel like:
+
+* urban field notes
+* layered memory
+* hidden traces of ordinary life
+* calm discovery
+* spatial intimacy
+
+It should feel less like:
+
+* recommendations
+* tourism
+* city guides
+* “top things nearby”
+
+The visual system is already calmer and more cohesive.
+Now the app needs slightly more soul and specificity in how it frames discovery.
+
+The map, copy, and hierarchy should support:
+“noticing”
+rather than
+“consuming content.”
+
+7. Preserve restraint
+
+Do NOT overcorrect by adding:
+
+* dramatic illustrations
+* excessive glow
+* heavy branding
+* ornamental typography
+* clutter
+* marketing copy
+
+Streetlit should feel:
+quietly distinctive.

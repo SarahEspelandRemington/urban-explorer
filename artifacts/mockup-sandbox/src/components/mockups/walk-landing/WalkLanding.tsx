@@ -4,7 +4,6 @@ import {
   Map,
   ChevronLeft,
   ChevronRight,
-  Lock,
 } from "lucide-react";
 
 const BG = "#081827";
@@ -21,26 +20,23 @@ function WalkCard({
   label,
   headline,
   body,
-  disabled,
 }: {
   icon: React.ReactNode;
   label: string;
   headline: string;
   body: string;
-  disabled?: boolean;
 }) {
   return (
     <div
       style={{
         borderRadius: 16,
-        border: `0.5px solid ${disabled ? BORDER + "80" : BORDER}`,
-        backgroundColor: disabled ? `${CARD}99` : CARD,
+        border: `0.5px solid ${BORDER}`,
+        backgroundColor: CARD,
         padding: "18px 18px",
         display: "flex",
         flexDirection: "row",
         alignItems: "center",
         gap: 16,
-        opacity: disabled ? 0.6 : 1,
       }}
     >
       <div
@@ -63,50 +59,28 @@ function WalkCard({
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          gap: 3,
+          gap: 4,
           minWidth: 0,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.8px",
-              textTransform: "uppercase",
-              color: disabled ? MUTED_FG + "99" : MUTED_FG,
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            {label}
-          </span>
-          {disabled && (
-            <div
-              style={{
-                borderRadius: 4,
-                border: `0.5px solid ${BORDER}`,
-                backgroundColor: MUTED,
-                paddingLeft: 6,
-                paddingRight: 6,
-                paddingTop: 2,
-                paddingBottom: 2,
-                display: "flex",
-                alignItems: "center",
-                gap: 3,
-              }}
-            >
-              <Lock size={9} color={MUTED_FG} strokeWidth={2} />
-              <span style={{ fontSize: 9, color: MUTED_FG, fontWeight: 600, letterSpacing: "0.5px" }}>
-                SOON
-              </span>
-            </div>
-          )}
-        </div>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.8px",
+            textTransform: "uppercase",
+            color: MUTED_FG,
+            opacity: 0.75,
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
+          {label}
+        </span>
         <span
           style={{
             fontSize: 16,
             fontWeight: 600,
-            color: disabled ? FOREGROUND + "99" : FOREGROUND,
+            color: FOREGROUND,
             letterSpacing: "-0.3px",
             lineHeight: "22px",
             fontFamily: "'Inter', sans-serif",
@@ -119,7 +93,8 @@ function WalkCard({
             fontSize: 13,
             color: MUTED_FG,
             lineHeight: "18px",
-            marginTop: 2,
+            marginTop: 1,
+            opacity: 0.85,
             fontFamily: "'Inter', sans-serif",
           }}
         >
@@ -127,7 +102,132 @@ function WalkCard({
         </span>
       </div>
 
-      {!disabled && <ChevronRight size={18} color={MUTED_FG} strokeWidth={2} />}
+      <ChevronRight size={18} color={MUTED_FG} strokeWidth={2} />
+    </div>
+  );
+}
+
+function GuidedCard() {
+  const themes = ["Hidden Infrastructure", "Jazz Age Midtown", "Waterfront Industry"];
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        border: `0.5px solid ${BORDER}`,
+        backgroundColor: CARD,
+        padding: "18px 18px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        opacity: 0.72,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+        <div
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 26,
+            backgroundColor: ICON_BG,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <Map size={26} color={PRIMARY} strokeWidth={1.75} />
+        </div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: "0.8px",
+                textTransform: "uppercase",
+                color: MUTED_FG,
+                opacity: 0.75,
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
+              Guided walks
+            </span>
+            <span
+              style={{
+                fontSize: 9,
+                fontWeight: 700,
+                letterSpacing: "0.6px",
+                textTransform: "uppercase",
+                color: PRIMARY,
+                opacity: 0.7,
+                fontFamily: "'Inter', sans-serif",
+                borderRadius: 4,
+                border: `0.5px solid ${PRIMARY}40`,
+                paddingLeft: 5,
+                paddingRight: 5,
+                paddingTop: 2,
+                paddingBottom: 2,
+              }}
+            >
+              Coming soon
+            </span>
+          </div>
+          <span
+            style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: FOREGROUND,
+              letterSpacing: "-0.3px",
+              lineHeight: "22px",
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            Follow a curated experience.
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              color: MUTED_FG,
+              lineHeight: "18px",
+              marginTop: 1,
+              opacity: 0.85,
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            Thematic tours built around specific eras, stories, and neighborhoods.
+          </span>
+        </div>
+      </div>
+
+      {/* Example themes */}
+      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingLeft: 68 }}>
+        {themes.map((theme) => (
+          <div
+            key={theme}
+            style={{
+              borderRadius: 6,
+              border: `0.5px solid ${BORDER}`,
+              backgroundColor: MUTED,
+              paddingLeft: 9,
+              paddingRight: 9,
+              paddingTop: 4,
+              paddingBottom: 4,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                color: MUTED_FG,
+                fontFamily: "'Inter', sans-serif",
+                fontWeight: 500,
+                opacity: 0.8,
+              }}
+            >
+              {theme}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -192,6 +292,7 @@ export function WalkLanding() {
               fontStyle: "italic",
               display: "block",
               marginTop: 1,
+              opacity: 0.8,
             }}
           >
             Choose how you want to move.
@@ -203,7 +304,7 @@ export function WalkLanding() {
       <div
         style={{
           flex: 1,
-          padding: "20px 16px",
+          padding: "18px 16px",
           display: "flex",
           flexDirection: "column",
           gap: 12,
@@ -213,7 +314,7 @@ export function WalkLanding() {
         <WalkCard
           icon={<Headphones size={26} color={PRIMARY} strokeWidth={1.75} />}
           label="Wander"
-          headline="Put your phone away and wander."
+          headline="Listen as you wander."
           body="Stories narrate automatically as you move through the neighborhood. No route needed."
         />
         <WalkCard
@@ -222,27 +323,26 @@ export function WalkLanding() {
           headline="Choose where you're going."
           body="Pick a start and end point, get a walking route, and discover what's along the way."
         />
-        <WalkCard
-          icon={<Map size={26} color={PRIMARY} strokeWidth={1.75} />}
-          label="Guided walks"
-          headline="Follow a curated experience."
-          body="Thematic tours designed around specific eras, stories, or neighborhoods."
-          disabled
-        />
+        <GuidedCard />
 
-        {/* Note */}
+        {/* Grounding note */}
         <div
           style={{
-            marginTop: 8,
-            borderRadius: 12,
+            borderRadius: 11,
             backgroundColor: MUTED,
-            padding: "12px 14px",
+            padding: "11px 14px",
           }}
         >
           <span
-            style={{ fontSize: 12, color: MUTED_FG, lineHeight: "18px", display: "block" }}
+            style={{
+              fontSize: 12,
+              color: MUTED_FG,
+              lineHeight: "18px",
+              display: "block",
+              opacity: 0.8,
+            }}
           >
-            Wander works best in areas with several stories nearby. You can always pause or switch to a planned route from within the walk.
+            Wander works best when several stories are nearby. You can pause or switch to a planned route any time.
           </span>
         </div>
       </div>

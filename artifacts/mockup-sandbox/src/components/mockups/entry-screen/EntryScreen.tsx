@@ -3,10 +3,7 @@ import {
   Headphones,
   Bookmark,
   Search,
-  MapPin,
-  RefreshCw,
   ChevronRight,
-  Navigation,
 } from "lucide-react";
 
 const BG = "#081827";
@@ -18,6 +15,97 @@ const MUTED = "#1A3144";
 const BORDER = "#294055";
 const ICON_BG = "rgba(242, 162, 58, 0.094)";
 const PRIMARY_FG = "#081827";
+
+function AnchorCard({
+  name,
+  category,
+  distance,
+  snippet,
+}: {
+  name: string;
+  category: string;
+  distance: string;
+  snippet: string;
+}) {
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        border: `0.5px solid ${BORDER}`,
+        backgroundColor: "#132D42",
+        padding: "18px 18px 20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 7,
+        boxShadow: "0 0 0 1px rgba(242,162,58,0.07), 0 4px 20px rgba(0,0,0,0.28)",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <div
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: PRIMARY,
+              opacity: 0.85,
+            }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.7px",
+              textTransform: "uppercase",
+              color: PRIMARY,
+              opacity: 0.8,
+              fontFamily: "'Inter', sans-serif",
+            }}
+          >
+            {distance} away
+          </span>
+        </div>
+        <Bookmark size={13} color={MUTED_FG} strokeWidth={1.75} />
+      </div>
+      <span
+        style={{
+          fontSize: 18,
+          fontWeight: 700,
+          color: FOREGROUND,
+          fontFamily: "'Inter', sans-serif",
+          letterSpacing: "-0.35px",
+          lineHeight: "24px",
+        }}
+      >
+        {name}
+      </span>
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          letterSpacing: "0.6px",
+          textTransform: "uppercase",
+          color: MUTED_FG,
+          opacity: 0.7,
+          fontFamily: "'Inter', sans-serif",
+        }}
+      >
+        {category}
+      </span>
+      <span
+        style={{
+          fontSize: 13,
+          color: MUTED_FG,
+          fontFamily: "'Inter', sans-serif",
+          lineHeight: "20px",
+          marginTop: 2,
+        }}
+      >
+        {snippet}
+      </span>
+    </div>
+  );
+}
 
 function PlaceCard({
   name,
@@ -36,10 +124,10 @@ function PlaceCard({
         borderRadius: 14,
         border: `0.5px solid ${BORDER}`,
         backgroundColor: CARD,
-        padding: "14px 16px",
+        padding: "13px 16px",
         display: "flex",
         flexDirection: "column",
-        gap: 5,
+        gap: 4,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -50,12 +138,13 @@ function PlaceCard({
             letterSpacing: "0.7px",
             textTransform: "uppercase",
             color: MUTED_FG,
+            opacity: 0.7,
             fontFamily: "'Inter', sans-serif",
           }}
         >
           {category} · {distance}
         </span>
-        <Bookmark size={13} color={MUTED_FG} strokeWidth={1.75} />
+        <Bookmark size={12} color={MUTED_FG} strokeWidth={1.75} />
       </div>
       <span
         style={{
@@ -70,14 +159,70 @@ function PlaceCard({
       </span>
       <span
         style={{
-          fontSize: 13,
+          fontSize: 12,
           color: MUTED_FG,
           fontFamily: "'Inter', sans-serif",
           lineHeight: "18px",
+          opacity: 0.85,
         }}
       >
         {snippet}
       </span>
+    </div>
+  );
+}
+
+function WalkBanner() {
+  return (
+    <div
+      style={{
+        borderRadius: 13,
+        border: `0.5px solid ${PRIMARY}30`,
+        backgroundColor: `${PRIMARY}0f`,
+        padding: "12px 16px",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+      }}
+    >
+      <div
+        style={{
+          width: 34,
+          height: 34,
+          borderRadius: 17,
+          backgroundColor: ICON_BG,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <Headphones size={16} color={PRIMARY} strokeWidth={1.75} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: FOREGROUND,
+            fontFamily: "'Inter', sans-serif",
+          }}
+        >
+          Start listening nearby
+        </div>
+        <div
+          style={{
+            fontSize: 12,
+            color: MUTED_FG,
+            marginTop: 1,
+            fontFamily: "'Inter', sans-serif",
+            opacity: 0.85,
+          }}
+        >
+          Wander or plan a route with audio
+        </div>
+      </div>
+      <ChevronRight size={15} color={PRIMARY} strokeWidth={2} opacity={0.7} />
     </div>
   );
 }
@@ -160,7 +305,7 @@ export function EntryScreen() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            marginBottom: 2,
+            marginBottom: 4,
           }}
         >
           <span
@@ -170,6 +315,7 @@ export function EntryScreen() {
               textTransform: "uppercase",
               letterSpacing: "0.8px",
               color: MUTED_FG,
+              opacity: 0.75,
             }}
           >
             Chelsea · ±18m
@@ -219,9 +365,10 @@ export function EntryScreen() {
             fontSize: 13,
             color: MUTED_FG,
             fontWeight: 400,
-            marginTop: 1,
+            marginTop: 2,
             display: "block",
             fontStyle: "italic",
+            opacity: 0.8,
           }}
         >
           Small stories hidden in ordinary places.
@@ -239,9 +386,7 @@ export function EntryScreen() {
           flexShrink: 0,
         }}
       >
-        <span
-          style={{ fontSize: 11, color: MUTED_FG, fontWeight: 500, flexShrink: 0 }}
-        >
+        <span style={{ fontSize: 11, color: MUTED_FG, fontWeight: 500, opacity: 0.7, flexShrink: 0 }}>
           Range
         </span>
         {[
@@ -260,20 +405,14 @@ export function EntryScreen() {
               backgroundColor: active ? FOREGROUND : MUTED,
             }}
           >
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: active ? BG : MUTED_FG,
-              }}
-            >
+            <span style={{ fontSize: 11, fontWeight: 600, color: active ? BG : MUTED_FG }}>
               {label}
             </span>
           </div>
         ))}
       </div>
 
-      {/* Place list */}
+      {/* Scrollable content area */}
       <div
         style={{
           flex: 1,
@@ -284,62 +423,30 @@ export function EntryScreen() {
           gap: 10,
         }}
       >
-        <PlaceCard
+        {/* Walk banner — above the list */}
+        <WalkBanner />
+
+        {/* Anchor card — nearest/most relevant, slightly elevated */}
+        <AnchorCard
           name="The High Line"
           category="Landmark"
           distance="180m"
-          snippet="Opened in 2009 on an abandoned rail spur, this elevated park transformed Chelsea's western edge."
+          snippet="Opened in 2009 on an abandoned 1934 freight rail spur. The rusted infrastructure became a model for adaptive reuse in cities worldwide."
         />
+
+        {/* Standard cards */}
         <PlaceCard
           name="Starrett-Lehigh Building"
           category="Architecture"
           distance="260m"
-          snippet="Built in 1931, its continuous horizontal windows were radical — the entire facade was glass and concrete ribbon."
+          snippet="Its 1931 ribbon windows were radical. The whole facade was continuous glass and concrete — rail cars once drove inside to load goods."
         />
         <PlaceCard
           name="London Terrace"
           category="Residential"
           distance="390m"
-          snippet="This 1930 mega-block housed 1,600 apartments and its own post office when it opened."
+          snippet="This 1930 mega-block housed 1,600 apartments, its own post office, and a rooftop pool. Doormen wore London bobby uniforms."
         />
-
-        {/* Walk entry banner */}
-        <div
-          style={{
-            marginTop: 4,
-            borderRadius: 14,
-            border: `0.5px solid ${PRIMARY}40`,
-            backgroundColor: `${PRIMARY}14`,
-            padding: "14px 16px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              backgroundColor: ICON_BG,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <Headphones size={18} color={PRIMARY} strokeWidth={1.75} />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: FOREGROUND }}>
-              Start listening nearby
-            </div>
-            <div style={{ fontSize: 12, color: MUTED_FG, marginTop: 1 }}>
-              Wander or plan a route with audio
-            </div>
-          </div>
-          <ChevronRight size={16} color={PRIMARY} strokeWidth={2} />
-        </div>
 
         <div style={{ height: 8 }} />
       </div>
