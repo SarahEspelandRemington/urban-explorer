@@ -34,10 +34,17 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useRouter } from "expo-router";
 
+import { ExploreDebugOverlay } from "@/components/ExploreDebugOverlay";
 import { LanguagePickerModal } from "@/components/LanguagePickerModal";
 import { LoadingMessages } from "@/components/LoadingMessages";
 import { StillLoadingHint } from "@/components/StillLoadingHint";
 import { LocationPermission } from "@/components/LocationPermission";
+import {
+  computeSpatialWarnings,
+  toExploreDebugPlace,
+  type ExploreSnapshot,
+  type ExploreSourceMode,
+} from "@/lib/exploreDiagnostics";
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceCardSkeleton } from "@/components/PlaceCardSkeleton";
 import { PlaceMapView } from "@/components/PlaceMapView";
@@ -167,6 +174,66 @@ export default function ExploreScreen() {
     return closest.address || closest.name || undefined;
   }, [places]);
 
+  const [exploreDebugEnabled, setExploreDebugEnabled] = useState(false);
+  const [searchCenterCoords, setSearchCenterCoords] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const selectedPlace = useMemo(() => {
+    if (expandedId === null) return sortedPlaces[0] ?? null;
+    return (
+      allMapPlaces.find((p) => p.id === expandedId) ?? sortedPlaces[0] ?? null
+    );
+  }, [expandedId, sortedPlaces, allMapPlaces]);
+
+  const exploreSnapshot = useMemo((): ExploreSnapshot | null => {
+    if (!exploreDebugEnabled || !searchCenterCoords) return null;
+    const mode: ExploreSourceMode = manualCoords ? "manual" : "gps";
+    const userGps = location
+      ? {
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+          accuracy: location.coords.accuracy ?? null,
+        }
+      : null;
+    const topPlaces = [...sortedPlaces, ...mapPlaces]
+      .slice(0, 5)
+      .map((p) => toExploreDebugPlace(p, searchCenterCoords, userGps));
+    const sel = selectedPlace
+      ? toExploreDebugPlace(selectedPlace, searchCenterCoords, userGps)
+      : null;
+    return {
+      ts: Date.now(),
+      mode,
+      userGps,
+      searchCenter: searchCenterCoords,
+      mapCenter: mapPendingCenterRef.current
+        ? {
+            latitude: mapPendingCenterRef.current.lat,
+            longitude: mapPendingCenterRef.current.lng,
+          }
+        : null,
+      searchRadius,
+      areaName,
+      totalPlaces: allMapPlaces.length,
+      topPlaces,
+      selectedPlace: sel,
+      spatialWarnings: sel ? computeSpatialWarnings(sel, searchRadius) : [],
+    };
+  }, [
+    exploreDebugEnabled,
+    searchCenterCoords,
+    manualCoords,
+    location,
+    sortedPlaces,
+    mapPlaces,
+    selectedPlace,
+    searchRadius,
+    areaName,
+    allMapPlaces.length,
+  ]);
+
   const [showStillLoading, setShowStillLoading] = useState(false);
 
   useEffect(() => {
@@ -198,6 +265,16 @@ export default function ExploreScreen() {
       cancelled = true;
     };
   }, [WALK_BANNER_KEY]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStartupValue(STARTUP_KEYS.exploreDebugOverlayEnabled).then((val) => {
+      if (!cancelled && val === "1") setExploreDebugEnabled(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const dismissWalkBanner = useCallback(() => {
     setShowWalkBanner(false);
@@ -428,6 +505,7 @@ export default function ExploreScreen() {
       const requestId = ++discoverRequestRef.current;
       const r = radiusOverride ?? searchRadius;
       lastDiscoverCoordsRef.current = { latitude: lat, longitude: lng };
+      setSearchCenterCoords({ latitude: lat, longitude: lng });
       lastDiscoverAccuracyRef.current =
         typeof accuracy === "number" && Number.isFinite(accuracy)
           ? accuracy
@@ -727,6 +805,48 @@ export default function ExploreScreen() {
                 {t.explore.discover}
               </Text>
               <View style={styles.headerActions}>
+                {__DEV__ ? (
+                  <Pressable
+                    onPress={() => {
+                      const next = !exploreDebugEnabled;
+                      setExploreDebugEnabled(next);
+                      setStartupValue(
+                        STARTUP_KEYS.exploreDebugOverlayEnabled,
+                        next ? "1" : "0",
+                      ).catch(() => {});
+                    }}
+                    hitSlop={8}
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: exploreDebugEnabled }}
+                    accessibilityLabel="Explore debug overlay"
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: exploreDebugEnabled
+                        ? colors.primary
+                        : colors.border,
+                      backgroundColor: exploreDebugEnabled
+                        ? colors.primary + "22"
+                        : colors.muted,
+                      opacity: pressed ? 0.75 : 1,
+                      marginRight: 4,
+                    })}
+                  >
+                    <Text
+                      style={{
+                        color: exploreDebugEnabled
+                          ? colors.primary
+                          : colors.mutedForeground,
+                        fontSize: 11,
+                        fontFamily: "Inter_600SemiBold",
+                      }}
+                    >
+                      Dbg
+                    </Text>
+                  </Pressable>
+                ) : null}
                 {places.length > 0 && (
                   <View
                     style={[
@@ -1373,6 +1493,9 @@ export default function ExploreScreen() {
           />
         </>
       )}
+      {exploreDebugEnabled && exploreSnapshot ? (
+        <ExploreDebugOverlay explore={exploreSnapshot} />
+      ) : null}
     </View>
   );
 }

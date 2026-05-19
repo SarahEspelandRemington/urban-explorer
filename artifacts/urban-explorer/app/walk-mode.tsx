@@ -26,6 +26,11 @@ import { stepIcon } from "@/lib/maneuverIcon";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
 import {
+  getStartupValue,
+  setStartupValue,
+  STARTUP_KEYS,
+} from "@/lib/startupStorage";
+import {
   BUILDING_TYPE_GROUPS,
   type BuildingGroupKey,
 } from "@/constants/buildingTypeGroups";
@@ -37,6 +42,17 @@ export default function WalkModeScreen() {
   const insets = useSafeAreaInsets();
   const walk = useWalkMode();
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [exploreDebugEnabled, setExploreDebugEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStartupValue(STARTUP_KEYS.exploreDebugOverlayEnabled).then((val) => {
+      if (!cancelled && val === "1") setExploreDebugEnabled(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const navigateToPlace = (place: {
     name: string;
@@ -429,6 +445,60 @@ export default function WalkModeScreen() {
                   }
                 />
               </Pressable>
+              {__DEV__ && (
+                <Pressable
+                  onPress={() => {
+                    const next = !exploreDebugEnabled;
+                    setExploreDebugEnabled(next);
+                    setStartupValue(
+                      STARTUP_KEYS.exploreDebugOverlayEnabled,
+                      next ? "1" : "0",
+                    ).catch(() => {});
+                  }}
+                  style={[
+                    styles.groupRow,
+                    { borderBottomColor: colors.border },
+                  ]}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: exploreDebugEnabled }}
+                  accessibilityLabel="Explore Debug Overlay"
+                >
+                  <View style={styles.groupText}>
+                    <Text
+                      style={[styles.groupName, { color: colors.foreground }]}
+                    >
+                      Explore Debug Overlay
+                    </Text>
+                    <Text
+                      style={[
+                        styles.groupDesc,
+                        { color: colors.mutedForeground },
+                      ]}
+                    >
+                      Spatial coherence panel for Explore and Plan modes.
+                    </Text>
+                  </View>
+                  <Switch
+                    value={exploreDebugEnabled}
+                    onValueChange={(v) => {
+                      setExploreDebugEnabled(v);
+                      setStartupValue(
+                        STARTUP_KEYS.exploreDebugOverlayEnabled,
+                        v ? "1" : "0",
+                      ).catch(() => {});
+                    }}
+                    trackColor={{
+                      false: colors.muted,
+                      true: colors.primary + "80",
+                    }}
+                    thumbColor={
+                      exploreDebugEnabled
+                        ? colors.primary
+                        : colors.mutedForeground
+                    }
+                  />
+                </Pressable>
+              )}
               <View style={{ height: 4 }} />
               {BUILDING_TYPE_GROUPS.map((group) => {
                 const key = group.key as BuildingGroupKey;
