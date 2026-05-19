@@ -17,6 +17,8 @@ export const modules: ModuleMap = {
     import("../components/mockups/header-redesign/SimplifiedBar.tsx"),
   "./components/mockups/header-redesign/WalkFirst.tsx": () =>
     import("../components/mockups/header-redesign/WalkFirst.tsx"),
+  "./components/mockups/entry-screen/EntryScreen.tsx": () =>
+    import("../components/mockups/entry-screen/EntryScreen.tsx"),
   "./components/mockups/style-directions/CoolSignal.tsx": () =>
     import("../components/mockups/style-directions/CoolSignal.tsx"),
   "./components/mockups/style-directions/CuriousNight.tsx": () =>
