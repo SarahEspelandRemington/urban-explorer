@@ -123,6 +123,10 @@ export function PlaceMapView({
     Record<string, { latitude: number; longitude: number }>
   >({});
 
+  // Track which marker's callout is open so we can apply the selected-state
+  // halo ring. Clears automatically when the callout is dismissed.
+  const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -244,17 +248,37 @@ export function PlaceMapView({
             latitude: place.latitude,
             longitude: place.longitude,
           };
+          const isSelectedExplore = selectedMarkerId === place.id;
           return (
             <Marker
               key={place.id}
               coordinate={markerCoord}
               anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={selectedMarkerId !== null}
+              onSelect={() => setSelectedMarkerId(place.id)}
+              onDeselect={() => setSelectedMarkerId(null)}
             >
               <View style={styles.pinWrapper}>
+                {isSelectedExplore && (
+                  <View
+                    style={[
+                      styles.pinHalo,
+                      {
+                        borderColor: colors.primary + "80",
+                        backgroundColor: colors.primary + "0D",
+                      },
+                    ]}
+                  />
+                )}
                 <View
                   style={[
                     styles.pin,
-                    { backgroundColor: colors.primary, borderColor: "#fff" },
+                    {
+                      backgroundColor: isSelectedExplore
+                        ? colors.primary
+                        : colors.primary + "CC",
+                      borderColor: "#fff",
+                    },
                   ]}
                 />
               </View>
@@ -404,6 +428,14 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
+  },
+  pinHalo: {
+    position: "absolute",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    opacity: 0.85,
   },
   pin: {
     width: 20,
