@@ -1139,8 +1139,17 @@ export default function ExploreScreen() {
                           accessibilityRole="alert"
                           accessibilityLabel="You're rating quickly — pace yourself"
                         >
-                          <Feather name="clock" size={14} color="#92400e" />
-                          <Text style={styles.ratingPaceWarningText}>
+                          <Feather
+                            name="clock"
+                            size={14}
+                            color={colors.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.ratingPaceWarningText,
+                              { color: colors.primary },
+                            ]}
+                          >
                             {t.explore.ratingPaceWarning}
                           </Text>
                           <Pressable
@@ -1152,7 +1161,7 @@ export default function ExploreScreen() {
                             <Feather
                               name="x"
                               size={14}
-                              color="#92400e"
+                              color={colors.primary}
                               style={{ opacity: 0.7 }}
                             />
                           </Pressable>
@@ -1578,18 +1587,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#fef3c7",
+    backgroundColor: "rgba(242, 162, 58, 0.10)",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#fde68a",
+    borderColor: "rgba(242, 162, 58, 0.28)",
   },
   ratingPaceWarningText: {
     flex: 1,
     fontSize: 13,
     fontFamily: "Inter_500Medium",
-    color: "#92400e",
   },
 });

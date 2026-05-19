@@ -370,7 +370,9 @@ export const PlaceCard = React.memo(function PlaceCard({
                       name="thumbs-up"
                       size={18}
                       color={
-                        userRating === "up" ? "#22c55e" : colors.mutedForeground
+                        userRating === "up"
+                          ? colors.accentGreen
+                          : colors.mutedForeground
                       }
                       style={{ opacity: userRating === "up" ? 1 : 0.45 }}
                     />
@@ -382,9 +384,9 @@ export const PlaceCard = React.memo(function PlaceCard({
                         {
                           color:
                             communityRating.netScore > 0
-                              ? "#22c55e"
+                              ? colors.accentGreen
                               : communityRating.netScore < 0
-                                ? "#ef4444"
+                                ? colors.destructive
                                 : colors.mutedForeground,
                         },
                       ]}
@@ -410,7 +412,7 @@ export const PlaceCard = React.memo(function PlaceCard({
                       size={18}
                       color={
                         userRating === "down"
-                          ? "#ef4444"
+                          ? colors.destructive
                           : colors.mutedForeground
                       }
                       style={{ opacity: userRating === "down" ? 1 : 0.45 }}
@@ -459,8 +461,13 @@ export const PlaceCard = React.memo(function PlaceCard({
                     style={[styles.topPickBadge, badgeAnimStyle]}
                     accessibilityLabel="Top pick"
                   >
-                    <Feather name="star" size={11} color="#f59e0b" />
-                    <Text style={styles.topPickBadgeText}>
+                    <Feather name="star" size={11} color={colors.primary} />
+                    <Text
+                      style={[
+                        styles.topPickBadgeText,
+                        { color: colors.primary },
+                      ]}
+                    >
                       {t.placeCard.topPick}
                     </Text>
                   </Animated.View>
@@ -612,7 +619,7 @@ export const PlaceCard = React.memo(function PlaceCard({
                 <Animated.View
                   style={[styles.compactTopStarWrapper, badgeAnimStyle]}
                 >
-                  <Feather name="star" size={12} color="#f59e0b" />
+                  <Feather name="star" size={12} color={colors.primary} />
                 </Animated.View>
               ) : null}
             </View>
@@ -651,7 +658,11 @@ export const PlaceCard = React.memo(function PlaceCard({
               <Feather
                 name="thumbs-up"
                 size={13}
-                color={userRating === "up" ? "#22c55e" : colors.mutedForeground}
+                color={
+                  userRating === "up"
+                    ? colors.accentGreen
+                    : colors.mutedForeground
+                }
                 style={{ opacity: userRating === "up" ? 1 : 0.35 }}
               />
             </Pressable>
@@ -662,9 +673,9 @@ export const PlaceCard = React.memo(function PlaceCard({
                   {
                     color:
                       communityRating.netScore > 0
-                        ? "#22c55e"
+                        ? colors.accentGreen
                         : communityRating.netScore < 0
-                          ? "#ef4444"
+                          ? colors.destructive
                           : colors.mutedForeground,
                   },
                 ]}
@@ -689,7 +700,9 @@ export const PlaceCard = React.memo(function PlaceCard({
                 name="thumbs-down"
                 size={13}
                 color={
-                  userRating === "down" ? "#ef4444" : colors.mutedForeground
+                  userRating === "down"
+                    ? colors.destructive
+                    : colors.mutedForeground
                 }
                 style={{ opacity: userRating === "down" ? 1 : 0.35 }}
               />
@@ -924,12 +937,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 20,
-    backgroundColor: "#f59e0b1a",
+    backgroundColor: "rgba(242, 162, 58, 0.10)",
   },
   topPickBadgeText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
-    color: "#f59e0b",
   },
   compactNameRow: {
     flexDirection: "row",

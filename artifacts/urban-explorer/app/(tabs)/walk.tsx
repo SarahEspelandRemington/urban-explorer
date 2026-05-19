@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
   toast: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1C1C1E",
+    backgroundColor: "#0D2035",
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,

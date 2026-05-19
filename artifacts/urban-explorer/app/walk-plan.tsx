@@ -445,7 +445,7 @@ export default function WalkPlanScreen() {
               onSelectSuggestion={handleSelectStart}
               onSubmitEditing={() => {}}
               placeholder={t.walkPlan.startPlaceholder}
-              dotColor="#22c55e"
+              dotColor={colors.accentGreen}
               returnKeyType="next"
               nearLocation={endText.trim() || undefined}
             />
@@ -542,10 +542,10 @@ export default function WalkPlanScreen() {
             <Feather
               name="alert-circle"
               size={16}
-              color="#ef4444"
+              color={colors.destructive}
               style={{ marginRight: 8 }}
             />
-            <Text style={[styles.errorText, { color: "#ef4444" }]}>
+            <Text style={[styles.errorText, { color: colors.destructive }]}>
               {errorMsg}
             </Text>
           </View>

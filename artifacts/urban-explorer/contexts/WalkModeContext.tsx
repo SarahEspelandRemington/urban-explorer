@@ -2553,7 +2553,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
                 return {
                   notificationTitle: strings.notificationTitle,
                   notificationBody: strings.notificationBody,
-                  notificationColor: "#1f2937",
+                  notificationColor: "#081827",
                 };
               })(),
             });
