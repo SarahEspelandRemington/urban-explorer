@@ -1,44 +1,47 @@
 const CATEGORY_COLORS = {
   light: {
-    sage: "#4D5E4A",
-    terracotta: "#8B5E47",
-    mauve: "#6E5C6B",
+    sage: "#4F7A5A",
+    terracotta: "#9A6E58",
+    mauve: "#6E5E7E",
   },
   dark: {
-    sage: "#8A9A86",
-    terracotta: "#B4846C",
-    mauve: "#988496",
+    sage: "#6E9975",
+    terracotta: "#AC8270",
+    mauve: "#907892",
   },
 };
 
 const colors = {
   light: {
-    text: "#2C2A28",
-    tint: "#9C5A2E",
+    text: "#102033",
+    tint: "#E98D32",
 
-    background: "#F5F3F0",
-    foreground: "#2C2A28",
+    background: "#FFF8EE",
+    foreground: "#102033",
 
     card: "#FFFFFF",
-    cardForeground: "#2C2A28",
+    cardForeground: "#102033",
 
-    primary: "#9C5A2E",
+    primary: "#E98D32",
     primaryForeground: "#FFFFFF",
 
-    secondary: "#353230",
-    secondaryForeground: "#F5F3F0",
+    secondary: "#294055",
+    secondaryForeground: "#FFF8EE",
 
-    muted: "#EDEBE8",
-    mutedForeground: "#5C5752",
+    muted: "#F4E6D6",
+    mutedForeground: "#6F6372",
 
-    accent: "#8B5E47",
+    accent: "#8E668C",
     accentForeground: "#FFFFFF",
+
+    accentCyan: "#4DB7C5",
+    accentGreen: "#A8D85B",
 
     destructive: "#dc2626",
     destructiveForeground: "#ffffff",
 
-    border: "#E5E2DD",
-    input: "#E5E2DD",
+    border: "#E7D4C0",
+    input: "#E7D4C0",
 
     categorySage: CATEGORY_COLORS.light.sage,
     categoryTerracotta: CATEGORY_COLORS.light.terracotta,
@@ -46,32 +49,35 @@ const colors = {
   },
 
   dark: {
-    text: "#E2DFD8",
-    tint: "#D4845A",
+    text: "#FFF7E8",
+    tint: "#F2A23A",
 
-    background: "#242220",
-    foreground: "#E2DFD8",
+    background: "#081827",
+    foreground: "#FFF7E8",
 
-    card: "#2C2A28",
-    cardForeground: "#E2DFD8",
+    card: "#102537",
+    cardForeground: "#FFF7E8",
 
-    primary: "#D4845A",
-    primaryForeground: "#242220",
+    primary: "#F2A23A",
+    primaryForeground: "#081827",
 
-    secondary: "#353230",
-    secondaryForeground: "#E2DFD8",
+    secondary: "#1A3144",
+    secondaryForeground: "#FFF7E8",
 
-    muted: "#2C2A28",
-    mutedForeground: "#9A968C",
+    muted: "#1A3144",
+    mutedForeground: "#B8AFC0",
 
-    accent: "#B4846C",
-    accentForeground: "#242220",
+    accent: "#C77A8F",
+    accentForeground: "#081827",
+
+    accentCyan: "#4DB7C5",
+    accentGreen: "#A8D85B",
 
     destructive: "#ef4444",
     destructiveForeground: "#ffffff",
 
-    border: "rgba(255,255,255,0.06)",
-    input: "rgba(255,255,255,0.06)",
+    border: "#294055",
+    input: "#294055",
 
     categorySage: CATEGORY_COLORS.dark.sage,
     categoryTerracotta: CATEGORY_COLORS.dark.terracotta,
