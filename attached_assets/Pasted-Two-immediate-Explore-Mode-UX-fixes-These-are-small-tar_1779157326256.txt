@@ -1,0 +1,99 @@
+Two immediate Explore Mode UX fixes.
+
+These are small, targeted interaction fixes — not a redesign.
+
+-----------------------------------
+1. DO NOT HIDE THE SELECTED DISCOVERY MARKER
+-----------------------------------
+
+Current behavior:
+When a discovery is tapped in Explore Mode, the marker disappears or visually collapses into the card state.
+
+This weakens spatial trust because the user loses the exact geographic anchor they just selected.
+
+Please change this behavior:
+
+- the selected discovery marker must remain visible on the map at all times while its preview card/modal is open
+- selected markers should visually strengthen, not disappear
+- preserve map continuity and orientation
+
+Goal:
+The user should always be able to glance between:
+- the selected marker
+- themselves
+- surrounding discoveries
+
+without losing spatial context.
+
+-----------------------------------
+2. STRONGER SELECTED STATE FOR EXPLORE MODE
+-----------------------------------
+
+The current selected-state halo is too subtle and does not clearly communicate:
+“This is the discovery associated with the open card.”
+
+Please strengthen the selected state.
+
+Desired behavior:
+- calm
+- elegant
+- highly legible
+- spatially trustworthy
+- NOT flashy
+- NOT game-like
+
+Please try this treatment:
+
+SELECTED MARKER:
+- preserve existing amber marker
+- add a larger soft radial halo behind it
+- increase contrast between selected vs non-selected markers
+- slight scale increase (very restrained; ~1.08–1.12x)
+- optional thin outer ring for clarity
+
+IMPORTANT:
+- static only
+- no animation
+- no pulsing
+- active narration animation is reserved for Walk Mode audio state only
+
+The selected state should read instantly even in peripheral vision.
+
+-----------------------------------
+VISUAL HIERARCHY TARGET
+-----------------------------------
+
+Desired marker hierarchy:
+
+quiet discovery markers
+↓
+selected marker (static focused halo)
+↓
+active narration marker (animated audio aura in Walk Mode only)
+
+Those states should never visually collapse into each other.
+
+-----------------------------------
+DO NOT CHANGE
+-----------------------------------
+
+Do not change:
+- discovery logic
+- map provider
+- clustering
+- card layouts
+- ranking
+- backend logic
+- narration logic
+
+Only adjust marker persistence + selected-state clarity.
+
+-----------------------------------
+AFTER IMPLEMENTATION
+-----------------------------------
+
+Please include:
+- exact files changed
+- how selected marker persistence now works
+- how selected state differs from active narration state
+- whether there are any remaining ambiguities between Explore and Walk marker semantics
