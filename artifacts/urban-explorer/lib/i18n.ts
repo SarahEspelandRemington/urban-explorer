@@ -487,10 +487,9 @@ const en: Strings = {
     startWalking: "Start Walking",
     walkSubtext: "Skip ahead — explore on foot with audio",
     exploreHeadline: "Browse the hidden layers of a place.",
-    exploreBody:
-      "Search neighborhoods, explore nearby stories, and follow your curiosity.",
+    exploreBody: "See what's around me.",
     walkHeadline: "Put your phone away and wander.",
-    walkBody: "Listen as the app quietly reveals stories around you.",
+    walkBody: "Go for a walk.",
   },
   languageModal: {
     title: "App language",
