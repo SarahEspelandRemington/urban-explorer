@@ -23,14 +23,9 @@ import {
   loadRecentRoutes,
   type RecentRoute,
 } from "@/lib/recentRoutes";
-import {
-  STARTUP_KEYS,
-  getStartupValue,
-  setStartupValue,
-} from "@/lib/startupStorage";
+import { STARTUP_KEYS, setStartupValue } from "@/lib/startupStorage";
 
 const UNDO_DURATION_MS = 4000;
-const WALK_WELCOME_KEY = STARTUP_KEYS.walkWelcomeDismissed;
 
 interface PendingDelete {
   route: RecentRoute;
@@ -74,25 +69,6 @@ export default function WalkScreen() {
   // instead of the boot snapshot.
   useEffect(() => {
     setStartupValue(WALK_BANNER_KEY, "1").catch(() => {});
-  }, []);
-
-  // First-run welcome card on the Walk tab itself. Hidden by default so we
-  // don't briefly flash it before the storage read resolves; we show it only
-  // when the persisted dismiss flag is missing.
-  const [showWelcome, setShowWelcome] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    getStartupValue(WALK_WELCOME_KEY).then((val) => {
-      if (cancelled) return;
-      if (val == null) setShowWelcome(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  const dismissWelcome = useCallback(() => {
-    setShowWelcome(false);
-    setStartupValue(WALK_WELCOME_KEY, "1").catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -301,7 +277,7 @@ export default function WalkScreen() {
           </Pressable>
         </View>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          {t.walk.subtitle}
+          Choose how you want to move.
         </Text>
       </View>
 
@@ -313,60 +289,6 @@ export default function WalkScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {showWelcome && !isWalking && (
-          <View
-            style={[
-              styles.welcomeCard,
-              {
-                backgroundColor: colors.primary + "14",
-                borderColor: colors.primary + "40",
-              },
-            ]}
-            accessibilityRole="summary"
-            accessibilityLabel={t.walk.welcomeTitle}
-          >
-            <View style={styles.welcomeHeader}>
-              <View
-                style={[
-                  styles.welcomeIcon,
-                  { backgroundColor: colors.primary + "22" },
-                ]}
-              >
-                <Feather name="compass" size={18} color={colors.primary} />
-              </View>
-              <Text style={[styles.welcomeTitle, { color: colors.foreground }]}>
-                {t.walk.welcomeTitle}
-              </Text>
-            </View>
-            <Text
-              style={[styles.welcomeBody, { color: colors.mutedForeground }]}
-            >
-              {t.walk.welcomeBody}
-            </Text>
-            <Pressable
-              onPress={dismissWelcome}
-              style={({ pressed }) => [
-                styles.welcomeButton,
-                {
-                  backgroundColor: colors.primary,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t.walk.welcomeDismiss}
-            >
-              <Text
-                style={[
-                  styles.welcomeButtonText,
-                  { color: colors.primaryForeground },
-                ]}
-              >
-                {t.walk.welcomeDismiss}
-              </Text>
-            </Pressable>
-          </View>
-        )}
-
         {isWalking && (
           <Pressable
             onPress={handleResumeWalk}
@@ -431,7 +353,7 @@ export default function WalkScreen() {
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Start Walking — audio tour"
+          accessibilityLabel="Wander — listen as you walk"
           accessibilityHint="Start a free-roam audio walking tour"
         >
           <View
@@ -450,7 +372,7 @@ export default function WalkScreen() {
             <Text
               style={[styles.actionTitle, { color: colors.primaryForeground }]}
             >
-              Start Walking
+              Listen as you wander.
             </Text>
             <Text
               style={[
@@ -458,8 +380,8 @@ export default function WalkScreen() {
                 { color: colors.primaryForeground + "CC" },
               ]}
             >
-              Free-roam mode — stories play automatically as you approach
-              historic buildings and places.
+              Stories narrate automatically as you move through the
+              neighborhood. No route needed.
             </Text>
           </View>
           <Feather
@@ -482,7 +404,7 @@ export default function WalkScreen() {
             },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={t.walkPlan.title}
+          accessibilityLabel="Plan a route"
           accessibilityHint="Plan a walking route and pre-load stories"
         >
           <View style={[styles.actionIcon, { backgroundColor: colors.muted }]}>
@@ -494,7 +416,7 @@ export default function WalkScreen() {
           </View>
           <View style={styles.actionText}>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>
-              {t.walkPlan.title}
+              Choose where you're going.
             </Text>
             <Text
               style={[
@@ -502,8 +424,8 @@ export default function WalkScreen() {
                 { color: colors.mutedForeground },
               ]}
             >
-              Set a start and end point. We'll pre-load stories for every
-              historic place along your path.
+              Pick a start and end point, get a walking route, and discover
+              what's along the way.
             </Text>
           </View>
           <Feather
@@ -515,17 +437,78 @@ export default function WalkScreen() {
 
         <View
           style={[
-            styles.tipCard,
+            styles.actionCard,
             {
-              backgroundColor: colors.muted,
+              backgroundColor: colors.card,
               borderColor: colors.border,
+              borderWidth: StyleSheet.hairlineWidth,
+              opacity: 0.6,
             },
           ]}
+          accessibilityRole="text"
+          accessibilityLabel="Guided walks — coming soon"
         >
-          <Feather name="info" size={14} color={colors.mutedForeground} />
-          <Text style={[styles.tipText, { color: colors.mutedForeground }]}>
-            Headphones recommended — stories narrate automatically as you walk.
-          </Text>
+          <View style={[styles.actionIcon, { backgroundColor: colors.muted }]}>
+            <Feather name="map" size={26} color={colors.mutedForeground} />
+          </View>
+          <View style={styles.actionText}>
+            <View style={styles.guidedHeader}>
+              <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+                Guided walks
+              </Text>
+              <View
+                style={[
+                  styles.comingSoonBadge,
+                  {
+                    borderColor: colors.primary + "50",
+                    backgroundColor: colors.muted,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.comingSoonText, { color: colors.primary }]}
+                >
+                  SOON
+                </Text>
+              </View>
+            </View>
+            <Text
+              style={[
+                styles.actionDescription,
+                { color: colors.mutedForeground },
+              ]}
+            >
+              Thematic tours built around specific eras, stories, and
+              neighborhoods.
+            </Text>
+            <View style={styles.themeChips}>
+              {[
+                "Hidden Infrastructure",
+                "Jazz Age Midtown",
+                "Waterfront Industry",
+              ].map((theme) => (
+                <View
+                  key={theme}
+                  style={[
+                    styles.themeChip,
+                    {
+                      backgroundColor: colors.muted,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.themeChipText,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    {theme}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
         </View>
 
         <View style={styles.recentSection}>
@@ -868,20 +851,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
-  tipCard: {
+  guidedHeader: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    marginTop: 4,
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
   },
-  tipText: {
-    flex: 1,
-    fontSize: 13,
+  comingSoonBadge: {
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  comingSoonText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.5,
+  },
+  themeChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  themeChip: {
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  themeChipText: {
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
-    lineHeight: 18,
   },
   recentSection: {
     gap: 8,

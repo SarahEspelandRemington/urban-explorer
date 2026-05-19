@@ -108,7 +108,11 @@ function WalkCard({
 }
 
 function GuidedCard() {
-  const themes = ["Hidden Infrastructure", "Jazz Age Midtown", "Waterfront Industry"];
+  const themes = [
+    "Hidden Infrastructure",
+    "Jazz Age Midtown",
+    "Waterfront Industry",
+  ];
   return (
     <div
       style={{
@@ -137,7 +141,9 @@ function GuidedCard() {
         >
           <Map size={26} color={PRIMARY} strokeWidth={1.75} />
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+        <div
+          style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span
               style={{
@@ -194,13 +200,16 @@ function GuidedCard() {
               fontFamily: "'Inter', sans-serif",
             }}
           >
-            Thematic tours built around specific eras, stories, and neighborhoods.
+            Thematic tours built around specific eras, stories, and
+            neighborhoods.
           </span>
         </div>
       </div>
 
       {/* Example themes */}
-      <div style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingLeft: 68 }}>
+      <div
+        style={{ display: "flex", gap: 7, flexWrap: "wrap", paddingLeft: 68 }}
+      >
         {themes.map((theme) => (
           <div
             key={theme}
@@ -342,7 +351,8 @@ export function WalkLanding() {
               opacity: 0.8,
             }}
           >
-            Wander works best when several stories are nearby. You can pause or switch to a planned route any time.
+            Wander works best when several stories are nearby. You can pause or
+            switch to a planned route any time.
           </span>
         </div>
       </div>

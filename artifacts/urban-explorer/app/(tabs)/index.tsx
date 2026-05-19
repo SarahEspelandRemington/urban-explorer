@@ -325,7 +325,7 @@ export default function ExploreScreen() {
     ({ item, index }: { item: DiscoveredPlace; index: number }) => {
       const isExpanded =
         expandedId === item.id || (expandedId === null && index === 0);
-      return (
+      const card = (
         <PlaceCard
           place={item}
           index={index}
@@ -334,8 +334,24 @@ export default function ExploreScreen() {
           onRate={handlePlaceRated}
         />
       );
+      if (index !== 0) return card;
+      return (
+        <View
+          style={{
+            borderRadius: 16,
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 14,
+            elevation: 3,
+            marginBottom: 2,
+          }}
+        >
+          {card}
+        </View>
+      );
     },
-    [expandedId, handleToggleExpand, handlePlaceRated],
+    [expandedId, handleToggleExpand, handlePlaceRated, colors.primary],
   );
 
   const effectiveLatitude =
@@ -804,6 +820,7 @@ export default function ExploreScreen() {
               >
                 {t.explore.discover}
               </Text>
+
               <View style={styles.headerActions}>
                 {__DEV__ ? (
                   <Pressable
@@ -980,6 +997,9 @@ export default function ExploreScreen() {
                 </Pressable>
               </View>
             </View>
+            <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
+              Small stories hidden in ordinary places.
+            </Text>
           </Animated.View>
 
           {(hasCoords || locationLoading) && (
@@ -1109,6 +1129,74 @@ export default function ExploreScreen() {
             </Animated.View>
           )}
 
+          {showWalkBanner && showContent && viewMode !== "map" ? (
+            <Animated.View
+              entering={FadeIn.duration(300)}
+              exiting={FadeOut.duration(200)}
+            >
+              <Pressable
+                onPress={handleWalkBannerTap}
+                style={[
+                  styles.walkBannerOuter,
+                  {
+                    backgroundColor: colors.primary + "12",
+                    borderColor: colors.primary + "30",
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Start listening nearby"
+                accessibilityHint="Opens the Walk tab to wander or plan a route"
+              >
+                <View
+                  style={[
+                    styles.walkBannerIconWrap,
+                    { backgroundColor: colors.primary + "20" },
+                  ]}
+                >
+                  <Feather name="headphones" size={16} color={colors.primary} />
+                </View>
+                <View style={styles.walkBannerBody}>
+                  <Text
+                    style={[
+                      styles.walkBannerTitle,
+                      { color: colors.foreground },
+                    ]}
+                  >
+                    Start listening nearby
+                  </Text>
+                  <Text
+                    style={[
+                      styles.walkBannerSub,
+                      { color: colors.mutedForeground },
+                    ]}
+                  >
+                    Wander or plan a route with audio
+                  </Text>
+                </View>
+                <Feather
+                  name="chevron-right"
+                  size={15}
+                  color={colors.primary}
+                  style={{ opacity: 0.7 }}
+                />
+                <Pressable
+                  onPress={dismissWalkBanner}
+                  hitSlop={14}
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss"
+                  style={{ paddingLeft: 4 }}
+                >
+                  <Feather
+                    name="x"
+                    size={13}
+                    color={colors.mutedForeground}
+                    style={{ opacity: 0.6 }}
+                  />
+                </Pressable>
+              </Pressable>
+            </Animated.View>
+          ) : null}
+
           {viewMode === "map" && places.length > 0 ? (
             <PlaceMapView
               places={allMapPlaces}
@@ -1134,60 +1222,6 @@ export default function ExploreScreen() {
               initialNumToRender={6}
               ListHeaderComponent={
                 <View>
-                  {showWalkBanner ? (
-                    <Animated.View
-                      entering={FadeIn.duration(300)}
-                      exiting={FadeOut.duration(200)}
-                      style={[
-                        styles.walkBanner,
-                        {
-                          backgroundColor: colors.primary + "18",
-                          borderColor: colors.primary + "40",
-                        },
-                      ]}
-                    >
-                      <Pressable
-                        onPress={handleWalkBannerTap}
-                        style={styles.walkBannerContent}
-                        accessibilityRole="button"
-                        accessibilityLabel="Start Walking — tap to open Walk tab"
-                        accessibilityHint="Opens the Walk tab to start your audio tour"
-                      >
-                        <Feather
-                          name="headphones"
-                          size={16}
-                          color={colors.primary}
-                        />
-                        <Text
-                          style={[
-                            styles.walkBannerText,
-                            { color: colors.primary },
-                          ]}
-                        >
-                          Tap Walk tab to start your audio tour
-                        </Text>
-                        <Feather
-                          name="arrow-right"
-                          size={14}
-                          color={colors.primary}
-                        />
-                      </Pressable>
-                      <Pressable
-                        onPress={dismissWalkBanner}
-                        hitSlop={12}
-                        accessibilityRole="button"
-                        accessibilityLabel="Dismiss tip"
-                      >
-                        <Feather
-                          name="x"
-                          size={14}
-                          color={colors.primary}
-                          style={{ opacity: 0.6 }}
-                        />
-                      </Pressable>
-                    </Animated.View>
-                  ) : null}
-
                   {showContent ? (
                     <>
                       <Pressable
@@ -1684,27 +1718,44 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     letterSpacing: 0.1,
   },
-  walkBanner: {
+  walkBannerOuter: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 12,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
     borderWidth: 1,
-    gap: 8,
+    gap: 10,
   },
-  walkBannerContent: {
-    flex: 1,
-    flexDirection: "row",
+  walkBannerIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  walkBannerText: {
+  walkBannerBody: {
     flex: 1,
+    gap: 1,
+  },
+  walkBannerTitle: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.1,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: -0.1,
+  },
+  walkBannerSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  tagline: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    fontStyle: "italic",
+    marginTop: 3,
+    opacity: 0.75,
   },
   ratingPaceWarning: {
     flexDirection: "row",

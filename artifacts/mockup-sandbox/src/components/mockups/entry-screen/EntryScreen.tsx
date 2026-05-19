@@ -37,10 +37,17 @@ function AnchorCard({
         display: "flex",
         flexDirection: "column",
         gap: 7,
-        boxShadow: "0 0 0 1px rgba(242,162,58,0.07), 0 4px 20px rgba(0,0,0,0.28)",
+        boxShadow:
+          "0 0 0 1px rgba(242,162,58,0.07), 0 4px 20px rgba(0,0,0,0.28)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <div
             style={{
@@ -130,7 +137,13 @@ function PlaceCard({
         gap: 4,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <span
           style={{
             fontSize: 11,
@@ -242,9 +255,21 @@ function TabBar() {
       }}
     >
       {[
-        { icon: <Compass size={22} color={PRIMARY} strokeWidth={1.75} />, label: "Explore", active: true },
-        { icon: <Headphones size={22} color={MUTED_FG} strokeWidth={1.75} />, label: "Walk", active: false },
-        { icon: <Bookmark size={22} color={MUTED_FG} strokeWidth={1.75} />, label: "Saved", active: false },
+        {
+          icon: <Compass size={22} color={PRIMARY} strokeWidth={1.75} />,
+          label: "Explore",
+          active: true,
+        },
+        {
+          icon: <Headphones size={22} color={MUTED_FG} strokeWidth={1.75} />,
+          label: "Walk",
+          active: false,
+        },
+        {
+          icon: <Bookmark size={22} color={MUTED_FG} strokeWidth={1.75} />,
+          label: "Saved",
+          active: false,
+        },
       ].map(({ icon, label, active }) => (
         <div
           key={label}
@@ -386,7 +411,15 @@ export function EntryScreen() {
           flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: 11, color: MUTED_FG, fontWeight: 500, opacity: 0.7, flexShrink: 0 }}>
+        <span
+          style={{
+            fontSize: 11,
+            color: MUTED_FG,
+            fontWeight: 500,
+            opacity: 0.7,
+            flexShrink: 0,
+          }}
+        >
           Range
         </span>
         {[
@@ -405,7 +438,13 @@ export function EntryScreen() {
               backgroundColor: active ? FOREGROUND : MUTED,
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 600, color: active ? BG : MUTED_FG }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: active ? BG : MUTED_FG,
+              }}
+            >
               {label}
             </span>
           </div>
