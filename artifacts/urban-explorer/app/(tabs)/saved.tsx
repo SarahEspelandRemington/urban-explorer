@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NoteModal } from "@/components/NoteModal";
 import { PlaceCard } from "@/components/PlaceCard";
 import { SaveToast } from "@/components/SaveToast";
-import { getCategoryColor } from "@/constants/categories";
+
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
@@ -423,7 +423,6 @@ export default function SavedScreen() {
 
           {categories.map((cat) => {
             const active = categoryFilter === cat;
-            const catColor = getCategoryColor(cat, colors);
             return (
               <Pressable
                 key={cat}
@@ -431,8 +430,10 @@ export default function SavedScreen() {
                 style={[
                   styles.chip,
                   {
-                    backgroundColor: active ? catColor + "20" : colors.muted,
-                    borderColor: active ? catColor + "60" : colors.border,
+                    backgroundColor: active
+                      ? colors.primary + "18"
+                      : colors.muted,
+                    borderColor: active ? colors.primary + "40" : colors.border,
                   },
                 ]}
                 accessibilityRole="button"
@@ -441,7 +442,9 @@ export default function SavedScreen() {
                 <Text
                   style={[
                     styles.chipText,
-                    { color: active ? catColor : colors.mutedForeground },
+                    {
+                      color: active ? colors.primary : colors.mutedForeground,
+                    },
                   ]}
                 >
                   {cat}
@@ -519,11 +522,11 @@ export default function SavedScreen() {
               accessibilityRole="alert"
               accessibilityLabel="You're rating quickly — pace yourself"
             >
-              <Feather name="clock" size={14} color={colors.primary} />
+              <Feather name="clock" size={14} color={colors.mutedForeground} />
               <Text
                 style={[
                   styles.ratingPaceWarningText,
-                  { color: colors.primary },
+                  { color: colors.mutedForeground },
                 ]}
               >
                 {t.explore.ratingPaceWarning}
@@ -537,7 +540,7 @@ export default function SavedScreen() {
                 <Feather
                   name="x"
                   size={14}
-                  color={colors.primary}
+                  color={colors.mutedForeground}
                   style={{ opacity: 0.7 }}
                 />
               </Pressable>

@@ -326,7 +326,7 @@ export const PlaceCard = React.memo(function PlaceCard({
               styles.heroCard,
               {
                 backgroundColor: colors.card,
-                borderColor: categoryColor + "40",
+                borderColor: colors.border,
                 opacity: pressed ? 0.95 : 1,
               },
             ]}

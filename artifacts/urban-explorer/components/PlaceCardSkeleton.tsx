@@ -43,7 +43,7 @@ export function PlaceCardSkeleton({ count = 4 }: Props) {
     inputRange: [0, 1],
     outputRange: [0.55, 1],
   });
-  const blockBg = colors.muted;
+  const blockBg = colors.border;
 
   return (
     <View
