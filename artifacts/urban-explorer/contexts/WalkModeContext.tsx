@@ -52,6 +52,10 @@ import {
   type StalePrefetchPool,
 } from "@/lib/narrationPrefetchPipeline";
 import {
+  evaluateEligibility,
+  type EligibilityState,
+} from "@/lib/walkEligibility";
+import {
   recordRejection,
   recordSelectionSnapshot,
   resetWalkDiagnostics,
@@ -1551,70 +1555,78 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
+      // --- Eligibility filter: pure evaluateEligibility replaces inline
+      //     narrated/tooFar/lowScore/behind90 checks. Ranking stays here.
+      const eligState: EligibilityState = {
+        loc,
+        heading,
+        velocityHeadingFresh: velocityHeadingIsRecent,
+        narratedIds: narratedIdsRef.current,
+        cfg: {
+          maxQueueDistance: cfg.maxQueueDistance,
+          netScoreFloor: cfg.netScoreFloor,
+        },
+      };
+      const { eligibleIds, evaluations } = evaluateEligibility(
+        placesRef.current,
+        eligState,
+      );
+      for (const ev of evaluations) {
+        if (ev.reason === "ok") continue;
+        if (__DEV__) {
+          if (ev.reason === "narrated")
+            console.log(`  [skip:narrated] "${ev.name}"`);
+          else if (ev.reason === "addressMismatch") {
+            const p = placesRef.current.find((q) => q.id === ev.id);
+            console.log(
+              `  [skip:addressMismatch] "${ev.name}" ${p?.addressCoherence?.reason ?? ""}`,
+            );
+          } else if (ev.reason === "behind90")
+            console.log(
+              `  [skip:90°gate diff=${ev.bearingDiff !== null ? Math.round(ev.bearingDiff) : "?"}°] "${ev.name}" dist=${Math.round(ev.distance)}m`,
+            );
+          else if (ev.reason === "lowScore")
+            console.log(`  [skip:netScore] "${ev.name}"`);
+        }
+        recordRejection({
+          ts: Date.now(),
+          placeId: ev.id,
+          placeName: ev.name,
+          reason: ev.reason,
+          distance: ev.distance,
+          bearingDiff: ev.bearingDiff,
+        });
+      }
+      const blockedBy90Deg =
+        eligibleIds.length === 0 &&
+        evaluations.some((e) => e.reason === "behind90");
+      let finalEligibleIds = eligibleIds;
+      if (blockedBy90Deg) {
+        if (__DEV__)
+          console.log(
+            `[pickNext] 90°gate blocked all candidates — retrying without hard gate`,
+          );
+        const fb = evaluateEligibility(placesRef.current, {
+          ...eligState,
+          velocityHeadingFresh: false,
+        });
+        finalEligibleIds = fb.eligibleIds;
+      }
+
+      // --- Ranking: lower score = better pick. Eligibility is settled above;
+      //     this loop only computes the selection metric. ---
+      const eligibleSet = new Set(finalEligibleIds);
       let best: WalkPlace | null = null;
       let bestScore = Infinity;
-      // Track whether the 90° hard gate excluded at least one candidate so
-      // we know whether a fallback second pass is warranted.
-      let blockedBy90Deg = false;
 
       for (const p of placesRef.current) {
-        if (narratedIdsRef.current.has(p.id)) {
-          if (__DEV__) console.log(`  [skip:narrated] "${p.name}"`);
-          continue;
-        }
-        // Server-side address coherence rejection (non-destructive — the
-        // place still shows on the map, only auto-narration is gated).
-        if (p.autoNarrationBlocked) {
-          if (__DEV__) {
-            console.log(
-              `  [skip:addressMismatch] "${p.name}" ${p.addressCoherence?.reason ?? ""}`,
-            );
-          }
-          recordRejection({
-            ts: Date.now(),
-            placeId: p.id,
-            placeName: p.name,
-            reason: "addressMismatch",
-            distance: null,
-            bearingDiff: null,
-          });
-          continue;
-        }
+        if (!eligibleSet.has(p.id)) continue;
         const dist = haversineMeters(
           loc.latitude,
           loc.longitude,
           p.latitude,
           p.longitude,
         );
-        if (dist > cfg.maxQueueDistance) {
-          recordRejection({
-            ts: Date.now(),
-            placeId: p.id,
-            placeName: p.name,
-            reason: "tooFar",
-            distance: dist,
-            bearingDiff: null,
-          });
-          continue;
-        }
-        const net = p.netScore ?? 0;
-        if (net < cfg.netScoreFloor) {
-          if (__DEV__)
-            console.log(
-              `  [skip:netScore ${net}<${cfg.netScoreFloor}] "${p.name}"`,
-            );
-          recordRejection({
-            ts: Date.now(),
-            placeId: p.id,
-            placeName: p.name,
-            reason: "lowScore",
-            distance: dist,
-            bearingDiff: null,
-          });
-          continue;
-        }
-
-        // Scoring: lower is better. Distance is the base.
         let score = dist;
         let diffForLog: number | null = null;
 
@@ -1634,27 +1646,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           const diff = angularDiff(heading, placeBearing);
           diffForLog = diff;
 
-          // Hard 90° gate: only applied when the velocity heading is FRESH
-          // (updated within VELOCITY_HEADING_STALE_MS). A stale heading from
-          // when the user was walking a different direction must not lock out
-          // all nearby pins once the user has stopped or turned.
-          if (velocityHeadingIsRecent && diff > 90) {
-            blockedBy90Deg = true;
-            if (__DEV__)
-              console.log(
-                `  [skip:90°gate diff=${Math.round(diff)}°] "${p.name}" dist=${Math.round(dist)}m`,
-              );
-            recordRejection({
-              ts: Date.now(),
-              placeId: p.id,
-              placeName: p.name,
-              reason: "behind90",
-              distance: dist,
-              bearingDiff: diff,
-            });
-            continue;
-          }
-
           // Cosine forward bias: full bonus at diff=0° (straight ahead),
           // zero at 90°, penalty at 180°. No dist/3 cap — maxQueueDistance
           // prevents far-avenue jumps structurally.
@@ -1667,7 +1658,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Rating bonus: each net upvote shaves up to 10 m, capped at 30 m.
-        score -= Math.min(30, Math.max(-30, net * 10));
+        score -= Math.min(30, Math.max(-30, (p.netScore ?? 0) * 10));
 
         if (__DEV__) {
           const diffStr =
@@ -1683,79 +1674,29 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Fallback: if the hard 90° gate eliminated EVERY eligible candidate
-      // (e.g. the user is surrounded by pins but all happened to fall behind
-      // a fresh-but-momentarily-inaccurate velocity heading), redo the loop
-      // with only soft cosine + penalty. This prevents "surrounded by pins
-      // but nothing plays" without permanently disabling the hard gate.
-      if (best === null && blockedBy90Deg) {
-        if (__DEV__)
-          console.log(
-            `[pickNext] 90°gate blocked all candidates — retrying without hard gate`,
-          );
-        for (const p of placesRef.current) {
-          if (narratedIdsRef.current.has(p.id)) continue;
-          // Mirror first-pass filter set — autoNarrationBlocked places
-          // must remain blocked even in the fallback retry.
-          if (p.autoNarrationBlocked) continue;
-          const dist = haversineMeters(
-            loc.latitude,
-            loc.longitude,
-            p.latitude,
-            p.longitude,
-          );
-          if (dist > cfg.maxQueueDistance) continue;
-          const net = p.netScore ?? 0;
-          if (net < cfg.netScoreFloor) continue;
-          let score = dist;
-          if (heading !== null) {
-            const overrides = walkConfigOverridesRef.current;
-            const fwdBias =
-              overrides?.forwardBiasMeters ?? cfg.forwardBiasMeters;
-            const penaltyDeg =
-              overrides?.offAxisPenaltyDeg ?? cfg.offAxisPenaltyDeg;
-            const penaltyMeters =
-              overrides?.offAxisPenaltyMeters ?? cfg.offAxisPenaltyMeters;
-            const placeBearing = bearingDeg(
-              loc.latitude,
-              loc.longitude,
-              p.latitude,
-              p.longitude,
-            );
-            const diff = angularDiff(heading, placeBearing);
-            score -= fwdBias * Math.cos((diff * Math.PI) / 180);
-            if (diff > penaltyDeg) score += penaltyMeters;
-          }
-          score -= Math.min(30, Math.max(-30, net * 10));
-          if (score < bestScore) {
-            bestScore = score;
-            best = p;
-          }
-        }
-        if (__DEV__ && best) {
-          const dist = haversineMeters(
-            loc.latitude,
-            loc.longitude,
-            best.latitude,
-            best.longitude,
-          );
-          const pb =
-            heading !== null
-              ? bearingDeg(
-                  loc.latitude,
-                  loc.longitude,
-                  best.latitude,
-                  best.longitude,
-                )
-              : null;
-          const diff =
-            heading !== null && pb !== null ? angularDiff(heading, pb) : null;
-          console.log(
-            `[pickNext] fallback → "${best.name}" dist=${Math.round(dist)}m` +
-              (diff !== null ? ` diff=${Math.round(diff)}°` : "") +
-              ` score=${Math.round(bestScore)}`,
-          );
-        }
+      if (__DEV__ && best && blockedBy90Deg) {
+        const dist = haversineMeters(
+          loc.latitude,
+          loc.longitude,
+          best.latitude,
+          best.longitude,
+        );
+        const pb =
+          heading !== null
+            ? bearingDeg(
+                loc.latitude,
+                loc.longitude,
+                best.latitude,
+                best.longitude,
+              )
+            : null;
+        const diff =
+          heading !== null && pb !== null ? angularDiff(heading, pb) : null;
+        console.log(
+          `[pickNext] fallback → "${best.name}" dist=${Math.round(dist)}m` +
+            (diff !== null ? ` diff=${Math.round(diff)}°` : "") +
+            ` score=${Math.round(bestScore)}`,
+        );
       }
 
       if (__DEV__ && best) {
