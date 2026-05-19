@@ -1304,6 +1304,43 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         });
         return false;
       }
+      // Re-check the hard 90° heading gate using live heading refs.
+      // pickNext ran up to 10–15 s ago; the user may have turned away from
+      // this place while the fetch was in-flight. Only apply when the
+      // velocity heading is still fresh so a stale vector doesn't wrongly
+      // suppress narration for a user who has since stopped or turned back.
+      const vHeading = velocityHeadingRef.current;
+      const vAge =
+        velocityHeadingTimestampRef.current !== null
+          ? Date.now() - velocityHeadingTimestampRef.current
+          : Infinity;
+      if (vHeading !== null && vAge < VELOCITY_HEADING_STALE_MS) {
+        const pb = bearingDeg(
+          currentLoc.latitude,
+          currentLoc.longitude,
+          place.latitude,
+          place.longitude,
+        );
+        const angDiff = angularDiff(vHeading, pb);
+        if (angDiff > 90) {
+          if (__DEV__) {
+            console.log(
+              `[${contextLabel}] ABORT (behind90 post-fetch): "${place.name}" diff=${Math.round(angDiff)}° heading=${Math.round(vHeading)}°`,
+            );
+          }
+          narratedIdsRef.current.delete(place.id);
+          setNarratedIds(new Map(narratedIdsRef.current));
+          recordRejection({
+            ts: Date.now(),
+            placeId: place.id,
+            placeName: place.name,
+            reason: "behind90",
+            distance: dist,
+            bearingDiff: angDiff,
+          });
+          return false;
+        }
+      }
       return true;
     },
     [],
@@ -1549,13 +1586,31 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           p.latitude,
           p.longitude,
         );
-        if (dist > cfg.maxQueueDistance) continue;
+        if (dist > cfg.maxQueueDistance) {
+          recordRejection({
+            ts: Date.now(),
+            placeId: p.id,
+            placeName: p.name,
+            reason: "tooFar",
+            distance: dist,
+            bearingDiff: null,
+          });
+          continue;
+        }
         const net = p.netScore ?? 0;
         if (net < cfg.netScoreFloor) {
           if (__DEV__)
             console.log(
               `  [skip:netScore ${net}<${cfg.netScoreFloor}] "${p.name}"`,
             );
+          recordRejection({
+            ts: Date.now(),
+            placeId: p.id,
+            placeName: p.name,
+            reason: "lowScore",
+            distance: dist,
+            bearingDiff: null,
+          });
           continue;
         }
 
@@ -1589,6 +1644,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               console.log(
                 `  [skip:90°gate diff=${Math.round(diff)}°] "${p.name}" dist=${Math.round(dist)}m`,
               );
+            recordRejection({
+              ts: Date.now(),
+              placeId: p.id,
+              placeName: p.name,
+              reason: "behind90",
+              distance: dist,
+              bearingDiff: diff,
+            });
             continue;
           }
 
