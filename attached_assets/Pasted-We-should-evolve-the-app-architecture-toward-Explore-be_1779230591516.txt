@@ -1,0 +1,147 @@
+We should evolve the app architecture toward Explore becoming the natural home view, rather than treating the opening screen as a permanent “mode chooser.”
+
+Please revise the current entry/onboarding flow accordingly.
+
+Core product direction
+The app should feel like:
+
+* “you are already somewhere interesting”
+  NOT:
+* “choose which subsystem you want to enter.”
+
+Explore is becoming the default spatial home of the app.
+Walk is becoming a deeper listening/guided mode launched from Explore.
+
+This is NOT a major redesign.
+This is a refinement of hierarchy, flow, and conceptual clarity.
+
+Please implement the following:
+
+1. App launch behavior
+
+Instead of centering the experience around a large opening chooser screen:
+
+* launch directly into Explore mode/home
+* show the map immediately
+* show nearby discoveries immediately
+* preserve current location/search capability
+* preserve the calmer navy visual system already implemented
+
+The app should feel immediately alive and geographically grounded.
+
+2. Replace the current full-screen entry screen with a lightweight introductory/home treatment
+
+Do NOT show the current giant stacked-card chooser as the first full screen anymore.
+
+Instead:
+
+* integrate the emotional orientation directly into Explore/home
+* the app itself becomes the onboarding
+
+At the top of Explore/home, incorporate:
+
+Title:
+“Explore”
+
+Supporting line:
+“Small stories hidden in ordinary places.”
+
+Tone:
+quiet, thoughtful, grounded.
+
+3. Reposition Walk as a contextual action
+
+Walk should no longer appear as an equal top-level conceptual product beside Explore.
+
+Instead:
+
+* Walk becomes a contextual action launched from Explore/home
+* users first orient visually/spatially
+* then decide whether to begin listening or planning a walk
+
+This is important because:
+
+* Explore builds trust
+* Walk depends on that trust
+
+4. Add a clear Walk entry point INSIDE Explore/home
+
+Add a lightweight but visible action somewhere appropriate in Explore/home for entering Walk.
+
+Examples (choose whichever fits best with the existing architecture):
+
+* “Start listening nearby”
+* “Go for a walk”
+* “Walk with audio”
+* similar language
+
+This should open the Walk landing/options screen.
+
+IMPORTANT:
+Do NOT auto-start wandering narration immediately anymore.
+
+5. Walk landing screen architecture
+
+The Walk landing/options screen should become the intentional chooser for:
+
+* Wander Walk
+* Planned Walk
+* future guided/curated walks
+
+Current issue:
+Users tap Walk and are immediately dropped into Wander mode, while planned walks are hidden behind an additional screen after ending the walk.
+
+Please fix this flow now.
+
+6. Preserve what is already working visually
+
+Keep:
+
+* deep navy palette
+* restrained glow
+* calmer map treatment
+* softened marker language
+* cleaner hierarchy
+* editorial warmth
+* reduced clutter
+
+Avoid:
+
+* reintroducing loud onboarding
+* giant CTA imbalance
+* utility-app permission vibes
+* overcomplicated transitions
+
+7. Clarify Explore vs Walk conceptually
+
+The mental model should become:
+
+Explore:
+
+* visual
+* map-first
+* spatial discovery
+* browsing nearby stories
+
+Walk:
+
+* listening
+* guided movement
+* ambient narration
+* planned or wandering experiences
+
+Users should understand this naturally from the architecture itself, not from heavy explanatory copy.
+
+8. Acceptance criteria
+
+After implementation:
+
+* the app opens into a calm, trustworthy Explore/home state
+* the map feels like the natural center of the product
+* Walk feels like a deeper mode launched intentionally
+* users can access planned walks without first entering Wander mode
+* onboarding friction is dramatically reduced
+* the app feels more like one coherent companion experience rather than multiple disconnected modes
+
+Do NOT redesign the entire app.
+This is an architectural and hierarchy refinement pass.

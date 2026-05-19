@@ -1,0 +1,117 @@
+The revised entry screen is directionally correct, but we need to simplify the hierarchy and align it with the actual product structure.
+
+Goals:
+
+* calmer
+* clearer
+* less “mode picker”
+* more emotionally grounded
+* better aligned with how Walk actually works
+
+Please revise the entry screen as follows:
+
+1. Replace the top section title
+
+Change:
+“Location Access”
+
+To:
+“Discover your surroundings”
+
+Add the supporting line beneath it:
+“Small stories hidden in ordinary places.”
+
+Tone:
+quiet, thoughtful, inviting — not marketing-heavy.
+
+2. Reduce the visual weight of the search/location section
+
+The current top card dominates the screen too much.
+
+Please:
+
+* reduce its vertical height significantly
+* make it feel like lightweight utility/navigation
+* preserve:
+
+  * search field
+  * current location behavior
+  * “Explore this location” CTA
+* but visually subordinate it to the two main choices below
+
+This should no longer feel like a permissions/search gateway.
+
+3. Clarify Explore vs Walk
+
+Replace the current card copy with:
+
+EXPLORE
+Headline:
+“See stories around you.”
+
+Supporting text:
+“Browse nearby discoveries on the map.”
+
+WALK
+Headline:
+“Listen as you wander.”
+
+Supporting text:
+“Choose a guided walk or wander freely.”
+
+This is important:
+Walk should no longer imply ONLY immediate ambient wandering mode.
+
+4. Fix the Walk entry flow
+
+Current issue:
+Tapping Walk immediately starts Wander Walk Mode, while planned/guided walks are hidden behind a second internal screen after ending the walk.
+
+Please change this architecture:
+
+Tapping Walk should first open the Walk landing screen.
+
+That screen should become the intentional chooser for:
+
+* Wander Walk
+* Planned Walk
+* Guided/curated walks (future-friendly)
+
+Do NOT auto-start wandering audio immediately from the home screen anymore.
+
+5. Adjust visual hierarchy
+
+The Explore and Walk cards should remain peer options, but:
+
+* Explore should feel slightly more immediately approachable
+* Walk should feel slightly calmer/more intentional
+
+Do this subtly:
+
+* brightness
+* surface contrast
+* icon treatment
+* spacing
+
+Avoid giant orange CTA imbalance.
+
+6. Preserve overall direction
+
+What is working:
+
+* calmer navy palette
+* cleaner hierarchy
+* reduced visual clutter
+* more cohesive feeling with Walk Mode
+* softer atmospheric tone
+
+Do NOT redesign the whole screen.
+This is refinement and clarification, not a new concept.
+
+Acceptance criteria:
+
+* the screen feels intentional rather than instructional
+* users understand Explore vs Walk immediately
+* Walk no longer accidentally hides planned walks behind a wandering-only default
+* the screen feels like the beginning of one coherent product experience
+* hierarchy is calmer and easier to scan

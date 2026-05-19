@@ -13,6 +13,8 @@ export const modules: ModuleMap = {
     import("../components/mockups/color-exploration/SlateBlue.tsx"),
   "./components/mockups/entry-screen/EntryScreen.tsx": () =>
     import("../components/mockups/entry-screen/EntryScreen.tsx"),
+  "./components/mockups/walk-landing/WalkLanding.tsx": () =>
+    import("../components/mockups/walk-landing/WalkLanding.tsx"),
   "./components/mockups/header-redesign/LabeledActions.tsx": () =>
     import("../components/mockups/header-redesign/LabeledActions.tsx"),
   "./components/mockups/header-redesign/SimplifiedBar.tsx": () =>
