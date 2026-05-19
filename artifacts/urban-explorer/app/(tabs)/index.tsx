@@ -1142,12 +1142,12 @@ export default function ExploreScreen() {
                           <Feather
                             name="clock"
                             size={14}
-                            color={colors.primary}
+                            color={colors.mutedForeground}
                           />
                           <Text
                             style={[
                               styles.ratingPaceWarningText,
-                              { color: colors.primary },
+                              { color: colors.mutedForeground },
                             ]}
                           >
                             {t.explore.ratingPaceWarning}
@@ -1161,7 +1161,7 @@ export default function ExploreScreen() {
                             <Feather
                               name="x"
                               size={14}
-                              color={colors.primary}
+                              color={colors.mutedForeground}
                               style={{ opacity: 0.7 }}
                             />
                           </Pressable>

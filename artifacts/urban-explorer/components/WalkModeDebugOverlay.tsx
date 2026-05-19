@@ -157,7 +157,7 @@ export function WalkModeDebugOverlay() {
             {rejections.length === 0 ? (
               <Text style={styles.lineDim}>(none)</Text>
             ) : (
-              rejections.slice(0, 12).map((r, i) => (
+              rejections.slice(0, 20).map((r, i) => (
                 <Text
                   key={`${r.placeId}-${r.ts}-${i}`}
                   style={styles.lineDim}

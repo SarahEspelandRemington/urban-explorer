@@ -423,9 +423,9 @@ export default function WalkScreen() {
           style={({ pressed }) => [
             styles.actionCard,
             {
-              backgroundColor: colors.card,
-              borderColor: colors.primary + "40",
-              borderWidth: 1.5,
+              backgroundColor: colors.primary,
+              borderColor: colors.primary,
+              borderWidth: 1,
               opacity: pressed ? 0.88 : 1,
               transform: [{ scale: pressed ? 0.98 : 1 }],
             },
@@ -437,19 +437,25 @@ export default function WalkScreen() {
           <View
             style={[
               styles.actionIcon,
-              { backgroundColor: colors.primary + "18" },
+              { backgroundColor: "rgba(255,255,255,0.15)" },
             ]}
           >
-            <Feather name="headphones" size={26} color={colors.primary} />
+            <Feather
+              name="headphones"
+              size={26}
+              color={colors.primaryForeground}
+            />
           </View>
           <View style={styles.actionText}>
-            <Text style={[styles.actionTitle, { color: colors.foreground }]}>
+            <Text
+              style={[styles.actionTitle, { color: colors.primaryForeground }]}
+            >
               Start Walking
             </Text>
             <Text
               style={[
                 styles.actionDescription,
-                { color: colors.mutedForeground },
+                { color: colors.primaryForeground + "CC" },
               ]}
             >
               Free-roam mode — stories play automatically as you approach
@@ -459,7 +465,7 @@ export default function WalkScreen() {
           <Feather
             name="chevron-right"
             size={20}
-            color={colors.mutedForeground}
+            color={colors.primaryForeground + "80"}
           />
         </Pressable>
 
