@@ -255,29 +255,61 @@ export function PlaceMapView({
               coordinate={markerCoord}
               anchor={{ x: 0.5, y: 0.5 }}
               tracksViewChanges={selectedMarkerId !== null}
+              zIndex={isSelectedExplore ? 1 : 0}
               onSelect={() => setSelectedMarkerId(place.id)}
               onDeselect={() => setSelectedMarkerId(null)}
             >
-              <View style={styles.pinWrapper}>
+              <View
+                style={[
+                  styles.pinWrapper,
+                  isSelectedExplore && styles.pinWrapperSelected,
+                ]}
+              >
                 {isSelectedExplore && (
-                  <View
-                    style={[
-                      styles.pinHalo,
-                      {
-                        borderColor: colors.primary + "80",
-                        backgroundColor: colors.primary + "0D",
-                      },
-                    ]}
-                  />
+                  <>
+                    {/* Outermost: large ambient fill — the "soft radial halo" */}
+                    <View
+                      style={[
+                        styles.pinGlow,
+                        { backgroundColor: colors.primary + "14" },
+                      ]}
+                    />
+                    {/* Middle: thin outer ring for legibility */}
+                    <View
+                      style={[
+                        styles.pinOuterRing,
+                        { borderColor: colors.primary + "50" },
+                      ]}
+                    />
+                    {/* Inner: crisp defining ring — closest to the pin */}
+                    <View
+                      style={[
+                        styles.pinHalo,
+                        {
+                          borderColor: colors.primary + "99",
+                          backgroundColor: colors.primary + "10",
+                        },
+                      ]}
+                    />
+                  </>
                 )}
                 <View
                   style={[
                     styles.pin,
+                    isSelectedExplore && styles.pinSelected,
                     {
                       backgroundColor: isSelectedExplore
                         ? colors.primary
-                        : colors.primary + "CC",
-                      borderColor: "#fff",
+                        : colors.primary + "77",
+                      borderColor: isSelectedExplore
+                        ? "#ffffff"
+                        : colors.background,
+                    },
+                    isSelectedExplore && {
+                      shadowColor: colors.primary,
+                      shadowOpacity: 0.45,
+                      shadowRadius: 6,
+                      elevation: 5,
                     },
                   ]}
                 />
@@ -429,13 +461,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  pinWrapperSelected: {
+    width: 52,
+    height: 52,
+  },
+  pinGlow: {
+    position: "absolute",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  pinOuterRing: {
+    position: "absolute",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
   pinHalo: {
     position: "absolute",
     width: 30,
     height: 30,
     borderRadius: 15,
     borderWidth: 1.5,
-    opacity: 0.85,
   },
   pin: {
     width: 20,
@@ -447,6 +495,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 3,
     elevation: 3,
+  },
+  pinSelected: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
   topBadge: {
     position: "absolute",
