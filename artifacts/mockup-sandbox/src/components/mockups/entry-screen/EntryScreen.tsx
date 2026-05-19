@@ -166,17 +166,13 @@ export function EntryScreen() {
             }}
           >
             <ModeCard
-              icon={
-                <Compass size={24} color={PRIMARY} strokeWidth={1.75} />
-              }
+              icon={<Compass size={24} color={PRIMARY} strokeWidth={1.75} />}
               label="Explore"
               headline="Browse the hidden layers of a place."
               tagline="See what's around me."
             />
             <ModeCard
-              icon={
-                <Headphones size={24} color={PRIMARY} strokeWidth={1.75} />
-              }
+              icon={<Headphones size={24} color={PRIMARY} strokeWidth={1.75} />}
               label="Walk"
               headline="Put your phone away and wander."
               tagline="Go for a walk."

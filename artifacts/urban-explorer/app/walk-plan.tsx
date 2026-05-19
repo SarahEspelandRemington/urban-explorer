@@ -30,6 +30,9 @@ import { fetchNarrationPayload } from "@/lib/fetchNarrationPayload";
 import { saveRecentRoute } from "@/lib/recentRoutes";
 import { IS_EXPO_GO } from "@/lib/expoEnv";
 import { stepIcon } from "@/lib/maneuverIcon";
+import { ExploreDebugOverlay } from "@/components/ExploreDebugOverlay";
+import { getStartupValue, STARTUP_KEYS } from "@/lib/startupStorage";
+import { type PlanSnapshot } from "@/lib/exploreDiagnostics";
 
 interface Coords {
   latitude: number;
@@ -176,6 +179,19 @@ export default function WalkPlanScreen() {
   const [routeSteps, setRouteSteps] = useState<RouteStep[]>([]);
   const routeGeometryRef = useRef<number[][]>([]);
 
+  const [exploreDebugEnabled, setExploreDebugEnabled] = useState(false);
+  const [planSnapshot, setPlanSnapshot] = useState<PlanSnapshot | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStartupValue(STARTUP_KEYS.exploreDebugOverlayEnabled).then((val) => {
+      if (!cancelled && val === "1") setExploreDebugEnabled(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   const canSearch = startText.trim().length >= 2 && endText.trim().length >= 2;
@@ -309,6 +325,28 @@ export default function WalkPlanScreen() {
       const places = await walk.fetchPlacesAlongRoute(geometry, 20, 150);
       setPrefetchedPlaces(places);
       setPhase("ready");
+      if (
+        exploreDebugEnabled &&
+        startCoordsRef.current &&
+        endCoordsRef.current
+      ) {
+        setPlanSnapshot({
+          startCoords: startCoordsRef.current,
+          endCoords: endCoordsRef.current,
+          geometryPoints: geometry.length,
+          corridorMeters: 150,
+          places: places.map((p) => ({
+            id: p.id,
+            name: p.name,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            address: p.address,
+            distanceMeters: p.distanceMeters,
+            autoNarrationBlocked: p.autoNarrationBlocked,
+            addressCoherenceStatus: p.addressCoherence?.status,
+          })),
+        });
+      }
 
       // --- Fire-and-forget narration prefetch -----------------------------
       // Warm the server-side LLM (and on native, the audio) caches for the
@@ -824,6 +862,9 @@ export default function WalkPlanScreen() {
           </View>
         )}
       </ScrollView>
+      {exploreDebugEnabled && planSnapshot ? (
+        <ExploreDebugOverlay plan={planSnapshot} />
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
