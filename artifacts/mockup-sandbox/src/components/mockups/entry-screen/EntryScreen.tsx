@@ -1,4 +1,4 @@
-import { Compass, Headphones, ChevronRight, MapPin } from "lucide-react";
+import { Compass, Headphones, ChevronRight, MapPin, Search } from "lucide-react";
 
 const BG = "#081827";
 const CARD = "#102537";
@@ -35,7 +35,6 @@ function ModeCard({
         alignItems: "center",
         gap: 14,
         boxSizing: "border-box",
-        cursor: "pointer",
       }}
     >
       <div
@@ -105,6 +104,50 @@ function ModeCard({
   );
 }
 
+function MiniField({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        width: "100%",
+        borderRadius: 14,
+        border: `0.5px solid ${BORDER}`,
+        backgroundColor: "rgba(16, 37, 55, 0.82)",
+        padding: 14,
+        boxSizing: "border-box",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+      }}
+    >
+      <Search size={16} color={MUTED_FG} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+        <span
+          style={{
+            fontSize: 10,
+            textTransform: "uppercase",
+            letterSpacing: "0.7px",
+            color: MUTED_FG,
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 600,
+          }}
+        >
+          {label}
+        </span>
+        <span
+          style={{
+            fontSize: 13,
+            color: FOREGROUND,
+            fontFamily: "'Inter', sans-serif",
+            fontWeight: 500,
+          }}
+        >
+          {value}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function EntryScreen() {
   return (
     <div
@@ -124,16 +167,16 @@ export function EntryScreen() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          paddingTop: 40,
-          paddingBottom: 40,
+          paddingTop: 28,
+          paddingBottom: 28,
           overflowY: "auto",
         }}
       >
         <div
           style={{
             width: "100%",
-            paddingLeft: 28,
-            paddingRight: 28,
+            paddingLeft: 24,
+            paddingRight: 24,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -150,7 +193,7 @@ export function EntryScreen() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              marginBottom: 4,
+              marginBottom: 2,
             }}
           >
             <MapPin size={36} color={PRIMARY} strokeWidth={1.75} />
@@ -161,10 +204,79 @@ export function EntryScreen() {
               width: "100%",
               display: "flex",
               flexDirection: "column",
-              gap: 12,
-              marginTop: 8,
+              gap: 10,
+              marginTop: 4,
             }}
           >
+            <div
+              style={{
+                padding: 14,
+                borderRadius: 16,
+                border: `0.5px solid ${BORDER}`,
+                backgroundColor: CARD,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <span
+                    style={{
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.8px",
+                      color: MUTED_FG,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Location access
+                  </span>
+                  <span style={{ fontSize: 16, color: FOREGROUND, fontWeight: 600 }}>
+                    Find nearby stories
+                  </span>
+                </div>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: ICON_BG,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <MapPin size={18} color={PRIMARY} strokeWidth={2} />
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <MiniField label="Search location" value="Try a neighborhood, address, or landmark" />
+                <div
+                  style={{
+                    height: 44,
+                    borderRadius: 12,
+                    backgroundColor: PRIMARY,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 8,
+                  }}
+                >
+                  <Compass size={18} color={BG} strokeWidth={2} />
+                  <span style={{ color: BG, fontWeight: 700, fontSize: 14 }}>Explore this location</span>
+                </div>
+              </div>
+            </div>
+
             <ModeCard
               icon={<Compass size={24} color={PRIMARY} strokeWidth={1.75} />}
               label="Explore"
