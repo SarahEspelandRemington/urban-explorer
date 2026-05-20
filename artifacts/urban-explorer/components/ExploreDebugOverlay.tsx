@@ -70,6 +70,30 @@ function Row({ label, value }: { label: string; value: string }) {
 
 function ExploreContent({ s }: { s: ExploreSnapshot }) {
   const sel = s.selectedPlace;
+
+  // Class distribution from the top-places sample (may be a subset of all pins).
+  const verified = s.topPlaces.filter(
+    (p) => !p.discoveryClass || p.discoveryClass === "VERIFIED_PLACE",
+  ).length;
+  const approx = s.topPlaces.filter(
+    (p) => p.discoveryClass === "APPROXIMATE_SITE",
+  ).length;
+  const interp = s.topPlaces.filter(
+    (p) => p.discoveryClass === "INTERPRETIVE_OVERLAY",
+  ).length;
+  const suppressed = s.topPlaces.filter(
+    (p) => p.spatialSuppression === "llmCoordWithSpecificLocationText",
+  ).length;
+
+  // coordSrc distribution from the same sample.
+  const srcNom = s.topPlaces.filter(
+    (p) => p.coordSource === "nominatim",
+  ).length;
+  const srcNomC = s.topPlaces.filter(
+    (p) => p.coordSource === "nominatim-corrected",
+  ).length;
+  const srcLlm = s.topPlaces.filter((p) => !p.coordSource).length;
+
   return (
     <>
       <Row label="mode" value={s.mode} />
@@ -96,7 +120,15 @@ function ExploreContent({ s }: { s: ExploreSnapshot }) {
         />
       ) : null}
 
-      <SectionTitle>Results ({s.totalPlaces} pins)</SectionTitle>
+      <SectionTitle>
+        Results ({s.totalPlaces} pins · v{verified} ap{approx} interp{interp}
+        {suppressed > 0 ? ` sup${suppressed}` : ""})
+      </SectionTitle>
+      {s.topPlaces.length > 0 ? (
+        <Text style={styles.lineDim} numberOfLines={1}>
+          coordSrc: llm×{srcLlm} nom×{srcNom} nom-c×{srcNomC}
+        </Text>
+      ) : null}
       {s.topPlaces.length === 0 ? (
         <Text style={styles.lineDim}>(none)</Text>
       ) : (
@@ -123,6 +155,11 @@ function ExploreContent({ s }: { s: ExploreSnapshot }) {
             value={`${Math.round(sel.distFromCenter)}m${sel.distFromUser != null ? `  Δuser ${Math.round(sel.distFromUser)}m` : ""}`}
           />
           <ClassBadge cls={sel.discoveryClass} />
+          {sel.spatialSuppression ? (
+            <Text style={styles.lineWarn} numberOfLines={1}>
+              {"suppressed".padEnd(11)} {sel.spatialSuppression}
+            </Text>
+          ) : null}
           {sel.confidence ? (
             <Row label="confidence" value={sel.confidence} />
           ) : null}
