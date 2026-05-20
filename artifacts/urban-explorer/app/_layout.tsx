@@ -80,10 +80,12 @@ function RootLayoutNav() {
         name="investigate"
         options={{ headerShown: false, animation: "slide_from_right" }}
       />
-      <Stack.Screen
-        name="settings-messages"
-        options={{ headerShown: false, animation: "slide_from_right" }}
-      />
+      {__DEV__ ? (
+        <Stack.Screen
+          name="settings-messages"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
+      ) : null}
     </Stack>
   );
 }
