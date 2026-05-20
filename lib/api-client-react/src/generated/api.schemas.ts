@@ -74,6 +74,17 @@ export const PlaceDiscoveryClass = {
   INTERPRETIVE_OVERLAY: "INTERPRETIVE_OVERLAY",
 } as const;
 
+/**
+ * Spatial trust rejection reason. Present when the discovery's coordinate cannot support its stated location. llmCoordWithSpecificLocationText: LLM-only coordinate with a specific named-street reference in the title or description. interpretiveOverlay: inferred area-level phenomenon without a pinpointable coordinate.
+ */
+export type PlaceSpatialSuppression =
+  (typeof PlaceSpatialSuppression)[keyof typeof PlaceSpatialSuppression];
+
+export const PlaceSpatialSuppression = {
+  llmCoordWithSpecificLocationText: "llmCoordWithSpecificLocationText",
+  interpretiveOverlay: "interpretiveOverlay",
+} as const;
+
 export interface Place {
   id: string;
   name: string;
@@ -98,6 +109,8 @@ export interface Place {
   discoveryClass?: PlaceDiscoveryClass;
   /** How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified). */
   coordSource?: string;
+  /** Spatial trust rejection reason. Present when the discovery's coordinate cannot support its stated location. llmCoordWithSpecificLocationText: LLM-only coordinate with a specific named-street reference in the title or description. interpretiveOverlay: inferred area-level phenomenon without a pinpointable coordinate. */
+  spatialSuppression?: PlaceSpatialSuppression;
   /** URL of a representative photo for this place, when available (sourced from Wikipedia) */
   photoUrl?: string;
 }
