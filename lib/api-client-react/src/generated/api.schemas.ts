@@ -62,6 +62,18 @@ export const PlaceConfidence = {
   low: "low",
 } as const;
 
+/**
+ * Spatial trust classification derived server-side. VERIFIED_PLACE has a geocoder-confirmed anchor; APPROXIMATE_SITE is a former/demolished entity at a plausible location; INTERPRETIVE_OVERLAY is an inferred area-level phenomenon (buried waterways, corridors, etc.) without a pinpointable coordinate.
+ */
+export type PlaceDiscoveryClass =
+  (typeof PlaceDiscoveryClass)[keyof typeof PlaceDiscoveryClass];
+
+export const PlaceDiscoveryClass = {
+  VERIFIED_PLACE: "VERIFIED_PLACE",
+  APPROXIMATE_SITE: "APPROXIMATE_SITE",
+  INTERPRETIVE_OVERLAY: "INTERPRETIVE_OVERLAY",
+} as const;
+
 export interface Place {
   id: string;
   name: string;
@@ -82,6 +94,10 @@ export interface Place {
   distanceMeters?: number;
   /** How confident the AI is about this place's existence and details */
   confidence?: PlaceConfidence;
+  /** Spatial trust classification derived server-side. VERIFIED_PLACE has a geocoder-confirmed anchor; APPROXIMATE_SITE is a former/demolished entity at a plausible location; INTERPRETIVE_OVERLAY is an inferred area-level phenomenon (buried waterways, corridors, etc.) without a pinpointable coordinate. */
+  discoveryClass?: PlaceDiscoveryClass;
+  /** How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified). */
+  coordSource?: string;
   /** URL of a representative photo for this place, when available (sourced from Wikipedia) */
   photoUrl?: string;
 }

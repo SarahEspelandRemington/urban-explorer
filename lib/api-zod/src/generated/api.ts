@@ -106,6 +106,18 @@ export const DiscoverPlacesResponse = zod.object({
         .describe(
           "How confident the AI is about this place's existence and details",
         ),
+      discoveryClass: zod
+        .enum(["VERIFIED_PLACE", "APPROXIMATE_SITE", "INTERPRETIVE_OVERLAY"])
+        .optional()
+        .describe(
+          "Spatial trust classification derived server-side. VERIFIED_PLACE has a geocoder-confirmed anchor; APPROXIMATE_SITE is a former\/demolished entity at a plausible location; INTERPRETIVE_OVERLAY is an inferred area-level phenomenon (buried waterways, corridors, etc.) without a pinpointable coordinate.",
+        ),
+      coordSource: zod
+        .string()
+        .optional()
+        .describe(
+          "How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified).",
+        ),
       photoUrl: zod
         .string()
         .optional()

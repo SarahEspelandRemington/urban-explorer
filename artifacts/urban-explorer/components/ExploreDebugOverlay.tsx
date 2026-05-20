@@ -122,6 +122,11 @@ function ExploreContent({ s }: { s: ExploreSnapshot }) {
             label="Δcenter"
             value={`${Math.round(sel.distFromCenter)}m${sel.distFromUser != null ? `  Δuser ${Math.round(sel.distFromUser)}m` : ""}`}
           />
+          <ClassBadge cls={sel.discoveryClass} />
+          {sel.confidence ? (
+            <Row label="confidence" value={sel.confidence} />
+          ) : null}
+          <Row label="coordSrc" value={sel.coordSource ?? "llm"} />
           {sel.autoNarrationBlocked ? (
             <Text style={styles.lineWarn}>autoNarrationBlocked</Text>
           ) : null}
@@ -185,15 +190,40 @@ function PlanContent({ s }: { s: PlanSnapshot }) {
   );
 }
 
-function PlaceLine({ p }: { p: ExploreDebugPlace }) {
+function ClassBadge({ cls }: { cls: string | undefined }) {
+  if (!cls) return null;
+  const color =
+    cls === "VERIFIED_PLACE"
+      ? "#6ee7b7"
+      : cls === "APPROXIMATE_SITE"
+        ? "#fcd34d"
+        : "#fb923c";
   return (
-    <Text
-      style={p.autoNarrationBlocked ? styles.lineWarn : styles.line}
-      numberOfLines={1}
-    >
+    <Text style={[styles.line, { color }]} numberOfLines={1}>
+      {"class".padEnd(11)} {cls}
+    </Text>
+  );
+}
+
+function PlaceLine({ p }: { p: ExploreDebugPlace }) {
+  const isInterpretive = p.discoveryClass === "INTERPRETIVE_OVERLAY";
+  const isApprox = p.discoveryClass === "APPROXIMATE_SITE";
+  const lineStyle = p.autoNarrationBlocked
+    ? styles.lineWarn
+    : isInterpretive
+      ? styles.lineInterp
+      : isApprox
+        ? styles.lineApprox
+        : styles.line;
+  return (
+    <Text style={lineStyle} numberOfLines={1}>
       {p.name.slice(0, 26)}
       {" · "}
-      {Math.round(p.distFromCenter)}m{p.autoNarrationBlocked ? " ⚠" : ""}
+      {Math.round(p.distFromCenter)}m
+      {p.discoveryClass && p.discoveryClass !== "VERIFIED_PLACE"
+        ? ` [${p.discoveryClass === "INTERPRETIVE_OVERLAY" ? "interp" : "approx"}]`
+        : ""}
+      {p.autoNarrationBlocked ? " ⚠" : ""}
       {p.addressCoherenceStatus && p.addressCoherenceStatus !== "ok"
         ? ` [${p.addressCoherenceStatus}]`
         : ""}
@@ -264,6 +294,18 @@ const styles = StyleSheet.create({
   },
   lineWarn: {
     color: "#fcd34d",
+    fontSize: 11,
+    fontFamily: "Menlo",
+    lineHeight: 14,
+  },
+  lineInterp: {
+    color: "#fb923c",
+    fontSize: 11,
+    fontFamily: "Menlo",
+    lineHeight: 14,
+  },
+  lineApprox: {
+    color: "#e2c97e",
     fontSize: 11,
     fontFamily: "Menlo",
     lineHeight: 14,

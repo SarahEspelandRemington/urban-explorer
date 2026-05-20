@@ -22,6 +22,9 @@ export interface ExploreDebugPlace {
   distFromUser: number | null;
   autoNarrationBlocked?: boolean;
   addressCoherenceStatus?: string;
+  confidence?: string;
+  coordSource?: string;
+  discoveryClass?: string;
 }
 
 export interface ExploreSnapshot {
@@ -86,6 +89,9 @@ export function toExploreDebugPlace(
     address?: string;
     autoNarrationBlocked?: boolean;
     addressCoherence?: { status: string };
+    confidence?: string;
+    coordSource?: string;
+    discoveryClass?: string;
   },
   searchCenter: { latitude: number; longitude: number },
   userGps: { latitude: number; longitude: number } | null,
@@ -112,6 +118,9 @@ export function toExploreDebugPlace(
       : null,
     autoNarrationBlocked: place.autoNarrationBlocked,
     addressCoherenceStatus: place.addressCoherence?.status,
+    confidence: place.confidence,
+    coordSource: place.coordSource,
+    discoveryClass: place.discoveryClass,
   };
 }
 
@@ -139,6 +148,10 @@ export function computeSpatialWarnings(
 
   if (place.autoNarrationBlocked) {
     warnings.push("autoNarrationBlocked — address coherence mismatch");
+  }
+
+  if (place.discoveryClass === "INTERPRETIVE_OVERLAY") {
+    warnings.push("interpretive overlay — no pinpointable coordinate");
   }
 
   if (
