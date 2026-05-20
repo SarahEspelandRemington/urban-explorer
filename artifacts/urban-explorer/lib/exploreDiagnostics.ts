@@ -25,6 +25,10 @@ export interface ExploreDebugPlace {
   confidence?: string;
   coordSource?: string;
   discoveryClass?: string;
+  /** Spatial trust rejection reason set by applyLlmPrecisionFilter. Present
+   *  on every INTERPRETIVE_OVERLAY place; also set on places downgraded from
+   *  VERIFIED_PLACE/APPROXIMATE_SITE due to LLM-only coords + street claim. */
+  spatialSuppression?: string;
 }
 
 export interface ExploreSnapshot {
@@ -92,6 +96,7 @@ export function toExploreDebugPlace(
     confidence?: string;
     coordSource?: string;
     discoveryClass?: string;
+    spatialSuppression?: string;
   },
   searchCenter: { latitude: number; longitude: number },
   userGps: { latitude: number; longitude: number } | null,
@@ -121,6 +126,7 @@ export function toExploreDebugPlace(
     confidence: place.confidence,
     coordSource: place.coordSource,
     discoveryClass: place.discoveryClass,
+    spatialSuppression: place.spatialSuppression,
   };
 }
 
@@ -150,7 +156,11 @@ export function computeSpatialWarnings(
     warnings.push("autoNarrationBlocked — address coherence mismatch");
   }
 
-  if (place.discoveryClass === "INTERPRETIVE_OVERLAY") {
+  if (place.spatialSuppression === "llmCoordWithSpecificLocationText") {
+    warnings.push(
+      "llmCoordWithSpecificLocationText — LLM-only coord with named-street claim; downgraded to interpretive overlay",
+    );
+  } else if (place.discoveryClass === "INTERPRETIVE_OVERLAY") {
     warnings.push("interpretive overlay — no pinpointable coordinate");
   }
 

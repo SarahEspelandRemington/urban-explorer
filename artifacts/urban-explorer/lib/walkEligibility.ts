@@ -18,6 +18,7 @@ export type EligibilityReason =
   | "behind90"
   | "lowScore"
   | "addressMismatch"
+  | "interpretiveOverlay"
   | "passed"
   | "stale";
 
@@ -37,6 +38,10 @@ export interface EligibilityCandidate {
    *  place is rejected from auto-narration with reason `addressMismatch`,
    *  but the place itself remains in the pool (still shown on the map). */
   autoNarrationBlocked?: boolean;
+  /** Server-side spatial trust classification. INTERPRETIVE_OVERLAY places are
+   *  permanently ineligible for auto-narration regardless of distance or score.
+   *  They remain visible as map pins with subdued opacity. */
+  discoveryClass?: string;
 }
 
 export interface EligibilityState {
@@ -146,7 +151,14 @@ export function evaluateEligibility(
 
     let reason: EligibilityReason = "ok";
 
-    if (narratedIds.has(p.id)) {
+    if (p.discoveryClass === "INTERPRETIVE_OVERLAY") {
+      // Interpretive overlays are permanently ineligible for auto-narration.
+      // They represent inferred area-level phenomena (buried waterways,
+      // corridors, etc.) or LLM-only coordinates with specific location claims
+      // that cannot be pinpointed. They stay visible on the map (not filtered
+      // from the pool) but are never chosen for narration.
+      reason = "interpretiveOverlay";
+    } else if (narratedIds.has(p.id)) {
       reason = "narrated";
     } else if (p.autoNarrationBlocked) {
       // Server-side strong-evidence mismatch — block auto-narration but keep

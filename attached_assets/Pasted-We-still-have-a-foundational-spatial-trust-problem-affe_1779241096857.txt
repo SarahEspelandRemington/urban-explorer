@@ -1,0 +1,132 @@
+We still have a foundational spatial-trust problem affecting BOTH Explore and Walk Mode.
+
+The new debug overlays are extremely helpful because they now clearly expose the failure mode.
+
+Example currently happening:
+Selected result:
+“Buried Stream Under Walnut Street”
+
+Text/location claims:
+- “Along Walnut Street near 33rd Street”
+- “University City neighborhood near 33rd…”
+
+But debug overlay shows:
+- user/search center: 39.96633, -75.17470
+- selected coords: 39.96630, -75.17480
+- distance from center/user: 9m
+- confidence: medium
+- coordSrc: llm
+
+This means:
+An LLM-generated coordinate is being accepted as a precise geographic truth and rendered as a normal discovery pin, even though the textual location description points somewhere materially different.
+
+That breaks the core trust model of Streetlit.
+
+This is NOT just an Explore issue.
+This rule must apply consistently across:
+- Explore map pins
+- Explore selected cards
+- Walk Mode candidate pins
+- Walk Mode narration eligibility
+- any prefetch/route/discovery pipeline feeding those systems
+
+Core rule to implement:
+LLM-only coordinates cannot support precise location claims.
+
+Required behavior:
+If:
+- coordSrc = llm
+AND
+- the title/address/description contains specific geographic references
+
+Examples:
+- “near 33rd Street”
+- “Walnut Street”
+- “University City”
+- “near [street]”
+- “[street] & [street]”
+- named intersections
+- named neighborhoods
+- named landmarks
+- “across from…”
+- “between X and Y”
+
+then the discovery MUST NOT:
+- render as a normal precise pin
+- enter Walk narration eligibility
+- appear as a normal verified nearby discovery
+
+Instead, one of these must happen:
+1. reject the discovery entirely
+OR
+2. classify it as INTERPRETIVE_OVERLAY / unverified and visually separate it from grounded discoveries
+
+Interpretive discoveries should never visually impersonate verified geographic truth.
+
+Implementation guidance:
+Please implement this upstream/shared if possible — not separately in Explore and Walk — so the same filtering logic protects the entire app.
+
+Likely correct architecture:
+shared discovery validation/filter layer
+→ feeds Explore
+→ feeds Walk
+→ feeds route planning
+→ feeds narration candidate selection
+
+Additional debug requirements:
+Add explicit rejection reasons to both debug overlays.
+
+Examples:
+- llmCoordWithSpecificLocationText
+- insufficientSpatialVerification
+- conflictingLocationSignals
+- unverifiableIntersection
+
+Debug overlays should also show:
+- verified result count
+- suppressed/unverified result count
+- coordSrc distribution (geocoded / parcel / llm / inferred / etc if available)
+
+UI behavior requirements:
+Verified discoveries:
+- normal pins
+- eligible for narration
+- full opacity
+
+Interpretive/unverified discoveries:
+- subdued opacity
+- optional dashed ring or alternate visual treatment
+- never treated as authoritative
+- never chosen for automatic narration
+
+Very important:
+Do NOT change:
+- palette
+- typography
+- spacing
+- card design
+- marker sizing
+- animation system
+- loading copy
+- map language work already completed
+
+This task is ONLY about restoring spatial trust and preventing fabricated precision.
+
+Acceptance criteria:
+- A discovery whose text says “Walnut Street near 33rd Street” cannot render at 23rd/Fairmount using coordSrc=llm.
+- Walk Mode cannot auto-narrate an llm-only coordinate with explicit location claims.
+- Explore and Walk must use the same spatial-verification rule.
+- Debug overlays must expose suppression/rejection reasons.
+- Existing verified discoveries should continue working unchanged.
+
+After implementation:
+- run typecheck
+- run lint
+- run format
+- run tests
+
+Then summarize:
+- files changed
+- where the shared filtering now lives
+- exact suppression logic added
+- examples of discoveries now blocked

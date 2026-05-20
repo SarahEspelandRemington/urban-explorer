@@ -91,6 +91,10 @@ export function WalkModeDebugOverlay() {
                 <Text style={styles.line}>
                   Pins {lastSnapshot.visiblePinCount} · Eligible{" "}
                   {lastSnapshot.eligibleCount}
+                  {rejections.filter((r) => r.reason === "interpretiveOverlay")
+                    .length > 0
+                    ? ` · interp ${rejections.filter((r) => r.reason === "interpretiveOverlay").length}`
+                    : ""}
                 </Text>
 
                 {/* ── Active story state ─────────────────────────────── */}

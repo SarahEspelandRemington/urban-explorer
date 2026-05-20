@@ -118,6 +118,12 @@ export const DiscoverPlacesResponse = zod.object({
         .describe(
           "How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified).",
         ),
+      spatialSuppression: zod
+        .enum(["llmCoordWithSpecificLocationText", "interpretiveOverlay"])
+        .optional()
+        .describe(
+          "Spatial trust rejection reason. Present when the discovery's coordinate cannot support its stated location. llmCoordWithSpecificLocationText: LLM-only coordinate with a specific named-street reference in the title or description. interpretiveOverlay: inferred area-level phenomenon without a pinpointable coordinate.",
+        ),
       photoUrl: zod
         .string()
         .optional()
