@@ -51,6 +51,10 @@ interface Place {
   distanceMeters?: number;
   address?: string;
   tags?: string[];
+  discoveryClass?:
+    | "VERIFIED_PLACE"
+    | "APPROXIMATE_SITE"
+    | "INTERPRETIVE_OVERLAY";
 }
 
 interface PlaceMapViewProps {
@@ -300,7 +304,11 @@ export function PlaceMapView({
                     {
                       backgroundColor: isSelectedExplore
                         ? colors.primary
-                        : colors.primary + "77",
+                        : place.discoveryClass === "INTERPRETIVE_OVERLAY"
+                          ? colors.primary + "44"
+                          : place.discoveryClass === "APPROXIMATE_SITE"
+                            ? colors.primary + "55"
+                            : colors.primary + "77",
                       borderColor: isSelectedExplore
                         ? "#ffffff"
                         : colors.background,
