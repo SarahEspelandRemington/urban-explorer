@@ -1456,57 +1456,8 @@ export function classifyDiscovery(places: any[]): void {
 // LLM precision claim detection
 // ---------------------------------------------------------------------------
 
-/**
- * Matches a named street reference in free-form prose — checked against the
- * place's name and summary, NOT the address field (which always contains a
- * street ref by design and would cause every place to match).
- *
- * Matches: "Walnut Street", "33rd Street", "7th Avenue", "Market Ave", etc.
- * A leading proper-noun word (or ordinal) must precede the street-type suffix.
- */
-const SPECIFIC_LOC_TEXT_RE =
-  /\b(?:[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*|\d+(?:st|nd|rd|th))\s+(?:Street|Avenue|Boulevard|Blvd|Road|Drive|Lane|Way|Parkway|Place|Court|Alley)\b/;
-
-/**
- * Second-pass spatial trust filter. Runs after classifyDiscovery().
- *
- * Problem: a place classified as VERIFIED_PLACE or APPROXIMATE_SITE may have
- * coordSource=undefined (no Nominatim confirmation — pure LLM output) while
- * its name or summary contains specific street-level location claims such as
- * "Buried Stream Under Walnut Street" or "Along 33rd Street near Market Ave".
- * Those pins visually impersonate verified discoveries even though their
- * coordinates are fabricated.
- *
- * Rule: if coordSource is absent (LLM-only) AND the name or summary contains
- * a specific named-street reference, downgrade the place to INTERPRETIVE_OVERLAY
- * and set spatialSuppression = "llmCoordWithSpecificLocationText".
- *
- * Separately: every INTERPRETIVE_OVERLAY place receives spatialSuppression so
- * the reason is always present for clients (debug overlays, Walk Mode
- * eligibility) regardless of how the class was assigned.
- */
-export function applyLlmPrecisionFilter(places: any[]): void {
-  for (const p of places) {
-    if (p.discoveryClass === "INTERPRETIVE_OVERLAY") {
-      // Already the weakest classification — ensure the reason field is set.
-      if (!p.spatialSuppression) {
-        p.spatialSuppression = "interpretiveOverlay";
-      }
-      continue;
-    }
-
-    // Only applies to LLM-only coordinates (coordSource absent = no Nominatim
-    // confirmation; the string "llm" is a client-display alias for undefined).
-    if (p.coordSource !== undefined) continue;
-
-    // Check for specific named-street references in prose text only.
-    const prose = `${p.name ?? ""} ${p.summary ?? ""}`;
-    if (SPECIFIC_LOC_TEXT_RE.test(prose)) {
-      p.discoveryClass = "INTERPRETIVE_OVERLAY";
-      p.spatialSuppression = "llmCoordWithSpecificLocationText";
-    }
-  }
-}
+import { applyLlmPrecisionFilter } from "../../lib/spatialTrustFilter";
+export { applyLlmPrecisionFilter };
 
 // ---------------------------------------------------------------------------
 // Wikipedia / Wikimedia photo fetching
@@ -1775,7 +1726,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v31:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v32:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );

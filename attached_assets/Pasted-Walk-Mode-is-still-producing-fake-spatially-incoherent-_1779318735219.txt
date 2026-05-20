@@ -1,0 +1,86 @@
+Walk Mode is still producing fake / spatially incoherent narration.
+
+Example from field test:
+Actual GPS from debug:
+39.96615, -75.17436
+
+Now Playing:
+“Former Hitching Post Site at 39th & Market”
+
+This is geographically impossible for my current location. It should never have become:
+- a Walk Mode pin
+- a queued narration item
+- a Now Playing item
+- a narrated story
+
+Debug also shows other suspect candidates:
+- “4101 Market Street…”
+- “Buried Tributary of Mill Creek…”
+- “West Philadelphia…” / Market-adjacent references
+
+This suggests the shared spatial-trust rule is still not protecting Walk Mode fully, or it is being applied too late.
+
+Please diagnose before patching:
+
+1. For the currently playing “Former Hitching Post Site at 39th & Market,” trace:
+- raw place object
+- id
+- name
+- address/location text
+- description/snippet
+- lat/lon
+- coordSrc
+- confidence
+- discoveryType / confidence classification if present
+- rejection flags
+- how it entered nearbyPlaces
+- how it entered the queue
+- why it passed Walk eligibility
+- whether it came from cache, fresh discover, route prefetch, or previous queued state
+
+2. Confirm whether the new rule is applied to Walk Mode before:
+- map pin rendering
+- pickNext eligibility
+- enqueueNarration
+- active narration playback
+
+Rule to verify:
+LLM-only coordinates cannot support precise location claims.
+
+A result with coordSrc=llm and text like:
+- “39th & Market”
+- “Market Street”
+- “4101 Market”
+- “West Philadelphia”
+- “Mill Creek”
+must not be treated as a precise nearby Walk Mode discovery when the user is at 39.966/-75.174.
+
+3. If the rule exists but did not fire, explain why:
+- Did the regex miss “39th & Market”?
+- Did it only check address but not title?
+- Did it only check Explore mode?
+- Did cached results bypass the filter?
+- Did a queued item survive after being filtered out?
+- Did narration start before filtering completed?
+
+4. Implement a narrow fix after diagnosis:
+- apply the spatial-specific-text + llm-coordinate rejection upstream before Walk Mode receives places
+- flush or skip queued narration items that fail this rule before playback
+- ensure pickNext cannot select these items
+- ensure Walk debug logs rejection reason, e.g. llmCoordWithSpecificLocationText
+
+5. Add tests for examples:
+- “Former Hitching Post Site at 39th & Market” near Fairmount GPS should be rejected
+- “4101 Market Street…” near Fairmount GPS should be rejected
+- “Buried Stream Under Walnut Street near 33rd” near Fairmount GPS should be rejected
+- a verified local church/building with non-LLM coordinates should still pass
+
+Do not change UI styling, prompts, map marker design, discovery tone, or Explore home architecture in this task.
+
+Run typecheck, lint, format, and tests.
+
+Final summary should include:
+- root cause
+- exact files changed
+- where the Walk Mode protection now happens
+- whether cached/queued stale results are also protected
