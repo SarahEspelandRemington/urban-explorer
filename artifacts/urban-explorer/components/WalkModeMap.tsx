@@ -469,13 +469,21 @@ export function WalkModeMap({
             // Played: 9 px small, neutral grey — visually subordinate.
             // Selected + not playing: surface with more-opaque primary.
             const pinSize = isPlaying ? 28 : wasNarrated ? 9 : 12;
+            const isInterpretive =
+              !isPlaying && place.discoveryClass === "INTERPRETIVE_OVERLAY";
+            const isApproxSite =
+              !isPlaying && place.discoveryClass === "APPROXIMATE_SITE";
             const pinColor = isPlaying
               ? colors.primary
               : isSelected
                 ? colors.primary + "CC"
                 : wasNarrated
                   ? colors.mutedForeground + "66"
-                  : colors.primary + "88";
+                  : isInterpretive
+                    ? colors.primary + "55"
+                    : isApproxSite
+                      ? colors.primary + "66"
+                      : colors.primary + "88";
             // Active: 38 px wrapper. Selected: widen to fit halo ring. Others: pin + 8.
             const wrapperSize = isPlaying
               ? 38
