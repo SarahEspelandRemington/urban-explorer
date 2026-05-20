@@ -150,6 +150,11 @@ export interface WalkPlace {
    *  place still appears on the map and in lists, but auto-narration must
    *  skip it. Single-signal "ambiguous" mismatches do NOT set this flag. */
   autoNarrationBlocked?: boolean;
+  /** Server-side spatial trust classification for this place. */
+  discoveryClass?:
+    | "VERIFIED_PLACE"
+    | "APPROXIMATE_SITE"
+    | "INTERPRETIVE_OVERLAY";
   /** Debug payload from server-side address↔coordinate coherence check.
    *  Always populated when an address was geocoded (regardless of outcome)
    *  so field testers can inspect mismatches in the debug overlay. */
