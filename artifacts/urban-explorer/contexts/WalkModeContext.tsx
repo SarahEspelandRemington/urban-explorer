@@ -954,6 +954,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // Skip places the server flagged as spatially untrustworthy —
             // their coordinates do not match their described location.
             if (p.autoNarrationBlocked) continue;
+            // Belt-and-suspenders: drop interpretive overlays from the Walk
+            // Mode pool regardless of how they arrived (cache hit, server
+            // response, or stale v3 tile). walkEligibility already gates
+            // these out of narration, but excluding them here prevents them
+            // from showing in debug candidate counts as "blocked" entries.
+            if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
             // Walk Mode spatial trust gate (mirrors Layer 3 and server path):
             // drop any place without a coordSource. coordSource is set by
             // verifyPlaceCoordinates when Nominatim confirms or corrects the
@@ -1070,6 +1076,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               // above), so a place that arrives with autoNarrationBlocked=true
               // on a subsequent discover call correctly evicts the old entry.
               if (p.autoNarrationBlocked) continue;
+              // Belt-and-suspenders: server already excludes these for walkMode
+              // requests, but guard here too so the pool stays clean if the
+              // route is called without walkMode or if the filter changes.
+              if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
               const d = haversineMeters(
                 latitude,
                 longitude,
@@ -1751,6 +1761,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         for (const p of visible) {
           if (narratedIdsRef.current.has(p.id)) continue;
           if (p.autoNarrationBlocked) continue;
+          if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
           const d = haversineMeters(
             loc.latitude,
             loc.longitude,
@@ -2328,8 +2339,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // does not run Nominatim; seeding them directly would put LLM-hallucinated
         // coordinates into candidate scoring before the first discover response.
         // Those places are dropped here; verified places arrive via fetchNearbyPlaces.
+        // INTERPRETIVE_OVERLAY places are also excluded — they may have
+        // coordSource set (Nominatim matched a nearby token) but their name
+        // asserts a different location and must not enter narration scoring.
         const verifiedInitial = initialPlaces?.length
-          ? initialPlaces.filter((p) => (p as any).coordSource !== undefined)
+          ? initialPlaces.filter(
+              (p) =>
+                (p as any).coordSource !== undefined &&
+                (p as any).discoveryClass !== "INTERPRETIVE_OVERLAY",
+            )
           : [];
         placesRef.current = verifiedInitial;
         setNearbyPlaces(verifiedInitial);
