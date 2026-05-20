@@ -244,37 +244,39 @@ export default function WalkScreen() {
       >
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.foreground }]}>Walk</Text>
-          <Pressable
-            onPress={() => {
-              if (Platform.OS !== "web")
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/settings-messages");
-            }}
-            style={({ pressed }) => [
-              styles.editMessagesBtn,
-              {
-                borderColor: colors.border,
-                backgroundColor: colors.muted,
-                opacity: pressed ? 0.75 : 1,
-              },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t.walk.editMessages}
-          >
-            <Feather
-              name="message-square"
-              size={13}
-              color={colors.mutedForeground}
-            />
-            <Text
-              style={[
-                styles.editMessagesBtnText,
-                { color: colors.mutedForeground },
+          {__DEV__ ? (
+            <Pressable
+              onPress={() => {
+                if (Platform.OS !== "web")
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push("/settings-messages");
+              }}
+              style={({ pressed }) => [
+                styles.editMessagesBtn,
+                {
+                  borderColor: colors.border,
+                  backgroundColor: colors.muted,
+                  opacity: pressed ? 0.75 : 1,
+                },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={t.walk.editMessages}
             >
-              {t.walk.editMessages}
-            </Text>
-          </Pressable>
+              <Feather
+                name="message-square"
+                size={13}
+                color={colors.mutedForeground}
+              />
+              <Text
+                style={[
+                  styles.editMessagesBtnText,
+                  { color: colors.mutedForeground },
+                ]}
+              >
+                {t.walk.editMessages}
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           Choose how you want to move.
