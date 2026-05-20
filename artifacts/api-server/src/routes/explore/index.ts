@@ -1394,6 +1394,65 @@ async function postProcessPlaces(
 }
 
 // ---------------------------------------------------------------------------
+// Discovery classification
+// ---------------------------------------------------------------------------
+
+type DiscoveryClass =
+  | "VERIFIED_PLACE"
+  | "APPROXIMATE_SITE"
+  | "INTERPRETIVE_OVERLAY";
+
+const INTERPRETIVE_CATEGORIES = new Set([
+  "waterway remnant",
+  "buried waterway",
+  "transportation remnant",
+  "subsurface",
+]);
+
+const INTERPRETIVE_TEXT_RE =
+  /\b(buried|beneath|underground|corridor|invisible infrastructure|inferred|ghost waterway|filled.{0,6}(creek|canal|river)|ran beneath|flows beneath|once flowed)\b/i;
+
+const APPROXIMATE_TEXT_RE =
+  /\b(site of|former site|demolished|ruins? of|approximate location|once stood|formerly stood|former location)\b/i;
+
+/**
+ * Derives a `discoveryClass` for each place from signals already on the
+ * object — no external API calls.  Sets `place.discoveryClass` in-place.
+ *
+ * Priority:
+ *   INTERPRETIVE_OVERLAY  – category is a known area-phenomenon type, or
+ *                           name/summary/tags contain interpretive language
+ *   APPROXIMATE_SITE      – name/summary indicate a former or demolished entity
+ *   VERIFIED_PLACE        – everything else (default)
+ */
+export function classifyDiscovery(places: any[]): void {
+  for (const p of places) {
+    const category: string = (p.category ?? "").toLowerCase().trim();
+    const name: string = (p.name ?? "").toLowerCase();
+    const summary: string = (p.summary ?? "").toLowerCase();
+    const tagText: string = Array.isArray(p.tags)
+      ? p.tags.join(" ").toLowerCase()
+      : "";
+    const combined = `${name} ${summary} ${tagText}`;
+
+    let cls: DiscoveryClass;
+
+    if (
+      INTERPRETIVE_CATEGORIES.has(category) ||
+      INTERPRETIVE_TEXT_RE.test(combined)
+    ) {
+      cls = "INTERPRETIVE_OVERLAY";
+    } else if (APPROXIMATE_TEXT_RE.test(combined)) {
+      cls = "APPROXIMATE_SITE";
+    } else {
+      cls = "VERIFIED_PLACE";
+    }
+
+    p.discoveryClass = cls;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Wikipedia / Wikimedia photo fetching
 // ---------------------------------------------------------------------------
 
@@ -1660,7 +1719,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v29:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v30:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1845,6 +1904,8 @@ SPECIFICITY RULES — every fact must include at least one: specific year/decade
 
 COORDINATES: 5 decimal places (±1 m). Coordinates and address must agree. Never describe a multi-building phenomenon without picking one surviving example. NEVER write raw GPS coordinates (e.g. "39.96507, -75.17780") in any text field — not in summary, not in facts. The user is standing there; they don't need to read numbers. If you reference a location in text, use the street address or cross-street intersection.
 
+INTERPRETIVE CATEGORIES — COORDINATE RULE: For places of category "waterway remnant", "buried waterway", "transportation remnant", or "subsurface": you MUST set confidence to "low". Do NOT invent a house-number address — use the nearest cross-street intersection only (e.g. "W 48th St & 9th Ave"). Place the pin at the center of the requested area, not at a specific building corner. Write summaries in area-relative language: "beneath this neighborhood", "runs under this block", "in this vicinity". Never claim a specific doorstep for a phenomenon that spans multiple blocks.
+
 NAME–LOCATION COHERENCE — CRITICAL: The place's display name MUST NOT reference a street, avenue, or landmark the place is not actually on. NEVER use patterns like "X near 8th Avenue", "Y on Broadway", "Z at the Hudson piers" unless the place's coordinates are within ~100 m of that street/landmark. If you cannot place the entity on the named street within the search radius, either (a) rename it to use a feature it IS adjacent to, or (b) drop it entirely. This rule exists because narration reads the name aloud — a name claiming the wrong street produces a confusing experience for a user standing somewhere else. Generic descriptive names ("Unmarked Speakeasy Site", "Former Garment Loft") are preferable to a name that lies about location.
 
 HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhood accounts…"). Fewer verified places beats more invented ones. NEVER invent a street name — if you cannot confirm the exact address, anchor to the nearest real cross-street intersection instead (e.g. "NW corner of Green St & N 22nd St"). An invented street name is always worse than an honest intersection.
@@ -1942,6 +2003,10 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
         skipVerification: !walkMode,
       },
     );
+
+    // Classify each place's spatial trust level from signals already on the
+    // object — no external calls, runs in O(n).
+    classifyDiscovery(data.places);
 
     // Walk Mode spatial trust gate: drop any place that Nominatim could not
     // confirm. A missing coordSource means no external source verified this
