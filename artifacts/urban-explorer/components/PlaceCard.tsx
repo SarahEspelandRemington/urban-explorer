@@ -6,12 +6,10 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
-  LayoutAnimation,
   Platform,
   Pressable,
   StyleSheet,
   Text,
-  UIManager,
   View,
 } from "react-native";
 import Animated, {
@@ -35,13 +33,6 @@ import {
   useRatePlace,
   type RatePlaceResponse,
 } from "@workspace/api-client-react";
-
-if (
-  Platform.OS === "android" &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 
 function formatWalkDistance(
   meters: number | undefined,
@@ -277,7 +268,6 @@ export const PlaceCard = React.memo(function PlaceCard({
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     onToggleExpand?.(place.id, expanded ?? false);
   };
 
