@@ -1275,15 +1275,43 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // honored even when called after long awaits.
   const isStillCloseEnough = useCallback(
     (place: WalkPlace, contextLabel: string): boolean => {
+      // Re-read the freshest version of this place from the in-memory pool.
+      // pickNext captured this object up to 15 s ago; a concurrent discover
+      // response may have updated discoveryClass or autoNarrationBlocked since.
+      const freshPlace =
+        placesRef.current.find((q) => q.id === place.id) ?? place;
+
+      // A place downgraded to INTERPRETIVE_OVERLAY after pickNext selected it
+      // must not narrate. This closes the stale-object window: if the server
+      // returns an updated classification while the LLM/TTS fetch is in-flight,
+      // the post-fetch re-check here catches it before enqueueNarration.
+      if (freshPlace.discoveryClass === "INTERPRETIVE_OVERLAY") {
+        if (__DEV__) {
+          console.log(
+            `[${contextLabel}] ABORT (interpretiveOverlay post-pick): "${place.name}"`,
+          );
+        }
+        recordRejection({
+          ts: Date.now(),
+          placeId: place.id,
+          placeName: place.name,
+          reason: "interpretiveOverlay",
+          distance: null,
+          bearingDiff: null,
+        });
+        return false;
+      }
+
       // Defense-in-depth: a server-side address↔coordinate coherence check
       // already blocks auto-narration via pickNext, but the manual playPlace
       // path bypasses pickNext. Re-check here so that even a tapped pin with
       // a strong-evidence spatial mismatch is silently skipped rather than
-      // narrated with a fabricated location anchor.
-      if (place.autoNarrationBlocked) {
+      // narrated with a fabricated location anchor. Use the fresh object so
+      // late-arriving autoNarrationBlocked flags are honored.
+      if (freshPlace.autoNarrationBlocked) {
         if (__DEV__) {
           console.log(
-            `[${contextLabel}] ABORT (autoNarrationBlocked): "${place.name}" — ${place.addressCoherence?.reason ?? "address↔coord mismatch"}`,
+            `[${contextLabel}] ABORT (autoNarrationBlocked): "${place.name}" — ${freshPlace.addressCoherence?.reason ?? "address↔coord mismatch"}`,
           );
         }
         recordRejection({
@@ -1588,9 +1616,23 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       );
       for (const ev of evaluations) {
         if (ev.reason === "ok") continue;
+        // For narrated places, surface any concurrent spatial downgrade so the
+        // debug overlay can show "narrated (interpretiveOverlay)" rather than
+        // hiding the spatial problem behind the narrated flag.
+        let spatialNote: string | undefined;
+        if (ev.reason === "narrated") {
+          const freshP = placesRef.current.find((q) => q.id === ev.id);
+          if (freshP?.discoveryClass === "INTERPRETIVE_OVERLAY") {
+            spatialNote = "interpretiveOverlay";
+          } else if (freshP?.autoNarrationBlocked) {
+            spatialNote = "addressMismatch";
+          }
+        }
         if (__DEV__) {
           if (ev.reason === "narrated")
-            console.log(`  [skip:narrated] "${ev.name}"`);
+            console.log(
+              `  [skip:narrated] "${ev.name}"${spatialNote ? ` (${spatialNote})` : ""}`,
+            );
           else if (ev.reason === "addressMismatch") {
             const p = placesRef.current.find((q) => q.id === ev.id);
             console.log(
@@ -1610,6 +1652,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           reason: ev.reason,
           distance: ev.distance,
           bearingDiff: ev.bearingDiff,
+          spatialNote,
         });
       }
       const blockedBy90Deg =

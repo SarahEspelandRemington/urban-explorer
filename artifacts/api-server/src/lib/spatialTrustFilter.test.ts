@@ -89,6 +89,36 @@ describe("applyLlmPrecisionFilter — rejection cases", () => {
     applyLlmPrecisionFilter([p]);
     expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
   });
+
+  it("rejects a named-street claim in the name even when coordSource is set", () => {
+    // Rule 3: SPECIFIC_LOC_TEXT_RE applies to the NAME universally, regardless
+    // of coordSource. A place whose identity-name asserts a specific street
+    // has an unverifiable coordinate claim even if Nominatim verified nearby
+    // coordinates via an address token.
+    const p = makePlace({
+      name: "Old Warehouse on Market Street",
+      summary: "A historic warehouse building.",
+      coordSource: "nominatim-corrected",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
+
+  it("rejects 'Old Sewer Entrance Grate on West Diamond Street' even when coordSource is set", () => {
+    // Field-test case: this exact place was narrated in Walk Mode because the
+    // old code bypassed SPECIFIC_LOC_TEXT_RE when coordSource was present.
+    // "West Diamond Street" → SPECIFIC_LOC_TEXT_RE matches on the name →
+    // downgrade regardless of coordSource.
+    const p = makePlace({
+      name: "Old Sewer Entrance Grate on West Diamond Street",
+      summary: "A historic sewer infrastructure element.",
+      coordSource: "nominatim-corrected",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -110,9 +140,10 @@ describe("applyLlmPrecisionFilter — pass cases", () => {
   });
 
   it("does not downgrade a verified place whose summary mentions a street but whose name is clean", () => {
-    // For verified places only the NAME intersection check runs. A summary
-    // mentioning a street is acceptable — the user's location determines
-    // whether the 60 m gate blocks narration.
+    // For verified places (coordSource set), both INTERSECTION_NAME_RE and
+    // SPECIFIC_LOC_TEXT_RE run on the NAME. A summary mentioning a nearby
+    // street is not downgraded — describing a location is not the same as
+    // asserting an unverifiable coordinate in the place's identity name.
     const p = makePlace({
       name: "Fairmount Water Works",
       summary:

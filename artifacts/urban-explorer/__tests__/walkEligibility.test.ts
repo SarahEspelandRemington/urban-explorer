@@ -85,6 +85,23 @@ describe("evaluateEligibility", () => {
     expect(result.evaluations[0].reason).toBe("lowScore");
   });
 
+  it("rejects INTERPRETIVE_OVERLAY places even if they are also narrated", () => {
+    // interpretiveOverlay check runs BEFORE the narrated check. A place that
+    // was narrated before being downgraded (e.g. the server updated its
+    // discoveryClass in a later discover call) must show "interpretiveOverlay"
+    // in the debug log, not "narrated", so the spatial reason is not hidden.
+    const narrated = new Map<string, number>([["p1", Date.now()]]);
+    const place = makePlace("p1", 30, 0, {
+      discoveryClass: "INTERPRETIVE_OVERLAY",
+    });
+    const result = evaluateEligibility(
+      [place],
+      baseState({ narratedIds: narrated }),
+    );
+    expect(result.eligibleIds).toEqual([]);
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
   it("rejects places the server flagged with autoNarrationBlocked", () => {
     // Place is close, has good score, no other reason to skip — but the
     // server's address-coherence check flagged it as a wrong-city

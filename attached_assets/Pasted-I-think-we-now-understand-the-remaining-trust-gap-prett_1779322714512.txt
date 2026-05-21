@@ -1,0 +1,98 @@
+I think we now understand the remaining trust-gap pretty clearly, and I want to intentionally bias toward *over-filtering* for now.
+
+Important product direction:
+At this stage, “0 results” is preferable to fabricated or weakly grounded results. We can carefully expand later once the trust model is solid.
+
+What the latest testing suggests:
+The recent fixes improved things substantially — the app is now rejecting more bad results instead of permanently surfacing them.
+
+However, we still have a remaining loophole:
+
+Example:
+“Old Sewer Entrance Grate on West Diamond Street”
+
+This was narrated in Walk Mode even though it appears spatially suspect / likely fabricated.
+
+Your diagnosis looks correct:
+
+* applyLlmPrecisionFilter ran
+* coordSource existed
+* SPECIFIC_LOC_TEXT_RE was bypassed because coordSource was present
+* INTERSECTION_NAME_RE did not catch “West Diamond Street”
+* the item therefore entered nearbyPlaces as trusted
+* Walk Mode narrated it normally
+
+That is a coherent and believable failure path.
+
+Please implement the following carefully and conservatively:
+
+1. Remove the coordSource bypass from SPECIFIC_LOC_TEXT_RE
+   The named-street prose/location check should apply universally, including when coordSource exists.
+
+The current behavior:
+
+* “39th & Market” is caught
+* but “West Diamond Street” can still bypass filtering if coordSource exists
+
+That loophole should close.
+
+Desired behavior:
+Named-street references that are not strongly corroborated should default to INTERPRETIVE_OVERLAY instead of trusted narration candidates.
+
+2. Bias toward suppression for interpretive/place-inferred content
+   For now:
+
+* uncertain demolished sites
+* inferred “former” locations
+* buried infrastructure
+* vague “site of” discoveries
+* prose-derived landmarks
+  should lean heavily toward INTERPRETIVE_OVERLAY unless strongly grounded.
+
+We are intentionally prioritizing trust over density.
+
+3. Strengthen Walk Mode queue validation
+   Please harden the queue/playback lifecycle:
+
+isStillCloseEnough should:
+
+* re-read the current place from placesRef by ID
+* not rely solely on the original object captured during pickNext
+* verify current discoveryClass before enqueueNarration
+* refuse playback for INTERPRETIVE_OVERLAY items
+
+Goal:
+A place downgraded after initial selection should not still narrate because of stale object state.
+
+4. Improve debug visibility
+   Right now, once something becomes narrated, the original spatial concern is effectively hidden.
+
+Please preserve original rejection provenance in diagnostics.
+
+Example desired output:
+
+* narrated (originally flagged: interpretiveOverlay)
+  or
+* narrated (downgraded after selection)
+
+The goal is:
+When a bad narration slips through, we can still understand WHY it should have been rejected.
+
+5. Do NOT broaden discovery logic yet
+   Please avoid:
+
+* increasing density
+* loosening thresholds
+* adding fallback heuristics
+* adding synthetic “interesting nearby” generation
+
+We are intentionally narrowing and stabilizing the system first.
+
+Success criteria:
+
+* fewer narrated discoveries is acceptable
+* silence is acceptable
+* sparse neighborhoods are acceptable
+* false positives are NOT acceptable
+
+The current direction is improving. The important thing now is tightening trust boundaries and eliminating remaining bypass paths rather than expanding coverage.
