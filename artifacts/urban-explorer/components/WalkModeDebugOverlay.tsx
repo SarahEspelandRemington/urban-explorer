@@ -167,7 +167,9 @@ export function WalkModeDebugOverlay() {
                   style={styles.lineDim}
                   numberOfLines={1}
                 >
-                  {r.reason} · {r.placeName.slice(0, 22)}
+                  {r.reason}
+                  {r.spatialNote ? ` (${r.spatialNote})` : ""} ·{" "}
+                  {r.placeName.slice(0, 22)}
                   {r.distance !== null ? ` · ${Math.round(r.distance)}m` : ""}
                   {r.bearingDiff !== null
                     ? ` · ${Math.round(r.bearingDiff)}°`

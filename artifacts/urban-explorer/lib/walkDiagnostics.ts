@@ -43,6 +43,14 @@ export interface DiagRejection {
    *  candidates rejected before any distance lookup). */
   distance: number | null;
   bearingDiff: number | null;
+  /**
+   * When `reason` is "narrated", records a concurrent spatial downgrade so
+   * the debug overlay can show "narrated (interpretiveOverlay)" rather than
+   * hiding the spatial problem behind the narrated flag. Populated by pickNext
+   * when the place is also INTERPRETIVE_OVERLAY or autoNarrationBlocked at
+   * the time of the rejection evaluation.
+   */
+  spatialNote?: string;
 }
 
 export interface DiagState {
