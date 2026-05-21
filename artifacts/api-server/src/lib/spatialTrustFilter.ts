@@ -51,6 +51,24 @@ export const INTERSECTION_NAME_RE =
   /\b\d+(?:st|nd|rd|th)\s*(?:&|and)\s+[A-Z][a-zA-Z]+\b/;
 
 /**
+ * Matches precise-but-unverified location claims in prose:
+ * - "intersection of 34th and Walnut"
+ * - "34th and Walnut"
+ * - "34th St and Walnut St"
+ * - "3400 block Walnut Street"
+ * - "near 3400 block Walnut Street"
+ */
+export const PRECISE_LOCATION_PROSE_RE =
+  /\b(?:intersection\s+of\s+)?(?:\d+(?:st|nd|rd|th)|\d{3,5}\s+block)\s+(?:&|and)\s+[A-Z][a-zA-Z]+\b|\b\d{3,5}\s+block\s+[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]+)*\s+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd|Drive|Dr|Lane|Ln|Way|Parkway|Pkwy|Place|Pl|Court|Ct|Alley)\b/i;
+
+/**
+ * Matches neighborhood/location claims that should be treated cautiously in
+ * LLM-only prose when they appear alongside a far-away coordinate set.
+ */
+export const NAMED_NEIGHBORHOOD_RE =
+  /\b(?:University City|Fairmount|Center City|West Philadelphia|South Philadelphia|Northern Liberties|Old City|Rittenhouse|Society Hill)\b/i;
+
+/**
  * Second-pass spatial trust filter. Runs after classifyDiscovery().
  *
  * Problem: a place classified as VERIFIED_PLACE or APPROXIMATE_SITE may carry
@@ -75,7 +93,9 @@ export const INTERSECTION_NAME_RE =
  *      coordSource. Extends Rule 3 to abbreviated types ("St", "Ave") and
  *      to hyphenated address ranges ("3408–10 Spruce St").
  *   4. If coordSource is absent AND summary contains a named-street ref
- *      (SPECIFIC_LOC_TEXT_RE): downgrade to INTERPRETIVE_OVERLAY.
+ *      (SPECIFIC_LOC_TEXT_RE), a precise intersection claim
+ *      (PRECISE_LOCATION_PROSE_RE), or a named-neighborhood claim
+ *      (NAMED_NEIGHBORHOOD_RE): downgrade to INTERPRETIVE_OVERLAY.
  *
  * Note on rule 3 vs 4: a summary mentioning a nearby street ("Located along
  * Kelly Drive…") is not a location assertion — it is a description. Only
@@ -138,7 +158,11 @@ export function applyLlmPrecisionFilter(places: any[]): void {
     if (p.coordSource !== undefined) continue;
 
     const summaryProse = p.summary ?? "";
-    if (SPECIFIC_LOC_TEXT_RE.test(summaryProse)) {
+    if (
+      SPECIFIC_LOC_TEXT_RE.test(summaryProse) ||
+      PRECISE_LOCATION_PROSE_RE.test(summaryProse) ||
+      NAMED_NEIGHBORHOOD_RE.test(summaryProse)
+    ) {
       p.discoveryClass = "INTERPRETIVE_OVERLAY";
       p.spatialSuppression = "llmCoordWithSpecificLocationText";
     }

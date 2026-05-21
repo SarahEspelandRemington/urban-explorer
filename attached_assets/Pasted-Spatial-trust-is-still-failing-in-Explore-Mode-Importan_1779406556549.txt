@@ -1,0 +1,70 @@
+Spatial trust is still failing in Explore Mode.
+
+Important: please diagnose first before patching.
+
+Current examples from Explore at:
+search/user center: 39.96630, -75.17467
+area label: “34th St & Walnut St vicinity, University City...”
+
+Bad/suspect results appearing near Fairmount:
+1. “Buried Natural Creek Remnant”
+   Text: “Beneath the intersection of 34th and Walnut Streets...”
+   Debug: coords 39.96630, -75.17470, distance 3m, confidence high, coordSrc llm
+
+2. “Walnut Hill Community Association Early Meeting Site...”
+   Text: “Near 3400 block Walnut Street...”
+   Debug: coords 39.96680, -75.17570, distance 104m, confidence medium, coordSrc llm
+
+Legit result mixed in:
+- Bergdoll Mansion appears plausible/local and should remain.
+
+Problem:
+Explore is still allowing LLM-only coordinates to support precise location claims, including:
+- “34th and Walnut”
+- “3400 block Walnut Street”
+- “University City”
+while the coordinates are actually near Fairmount.
+
+This means the current spatial-trust filter still misses:
+- named intersections without ampersand formatting
+- “intersection of X and Y”
+- “3400 block [street]”
+- neighborhood/location mismatch
+- coordSrc=llm with high/medium confidence
+
+Please trace exactly why each suspect result passed:
+- raw place object
+- name/address/summary
+- coordSrc
+- confidence
+- discoveryClass
+- rejection flags
+- whether from server response or client cache
+- which spatial trust regex/rule fired or did not fire
+
+Then implement a narrow fix:
+1. coordSrc=llm + precise location claim must not appear as a normal Explore discovery.
+2. Add handling for:
+   - “intersection of 34th and Walnut”
+   - “34th and Walnut”
+   - “34th St and Walnut St”
+   - “3400 block Walnut Street”
+   - “near 3400 block...”
+   - named neighborhood mismatch, e.g. University City when coordinates are far outside that area
+3. Suppress or downgrade these to INTERPRETIVE_OVERLAY, and exclude INTERPRETIVE_OVERLAY from normal Explore pins/list cards for now.
+4. Apply the same protection to Walk Mode if the shared filter feeds both.
+5. Keep legitimate local verified results such as Bergdoll Mansion.
+
+Bias toward over-filtering. Sparse or zero results are acceptable. False precise discoveries are not.
+
+Add tests using these exact examples.
+
+Do not change UI, prompts, copy, ranking, or visual design in this task.
+
+Run typecheck, lint, format, and tests.
+
+Final summary should include:
+- root cause
+- exact files changed
+- which new patterns are caught
+- whether cached stale results are invalidated
