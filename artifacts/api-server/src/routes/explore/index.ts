@@ -970,8 +970,15 @@ async function verifyAddressCoherence(
   // intersection references like "8th Ave & W 49th St" don't have a street
   // number and are skipped (they geocode to the intersection itself which
   // can be far from the building).
+  //
+  // Address-range handling: the optional group (?:[-–—]\d{1,4})? captures
+  // hyphenated / en-dash ranges like "3408–10" or "3408-10" so that
+  // "3408–10 Spruce Street" is recognised as a numbered address. Without
+  // this, the \S+ slot consumes "–10", leaving "Spruce" as an unmatched
+  // extra token before the street type — the entire regex fails and no
+  // coherence probe is created for the address.
   const ADDRESS_RX =
-    /\b\d{1,5}\s+\S+\s+(ave|avenue|st|street|blvd|boulevard|rd|road|ln|lane|dr|drive|pl|place|ct|court|sq|square|way|pkwy|parkway|hwy|highway)\b/i;
+    /\b\d{1,5}(?:[-–—]\d{1,4})?\s+\S+\s+(ave|avenue|st|street|blvd|boulevard|rd|road|ln|lane|dr|drive|pl|place|ct|court|sq|square|way|pkwy|parkway|hwy|highway)\b/i;
 
   // Also catch placenames that hard-code a street reference — either with a
   // preposition ("near 8th Avenue", "on 9th Ave") OR as a leading ordinal
@@ -1726,7 +1733,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v32:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v33:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );

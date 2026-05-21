@@ -119,6 +119,85 @@ describe("applyLlmPrecisionFilter — rejection cases", () => {
     expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
     expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
   });
+
+  // ---------------------------------------------------------------------------
+  // ADDRESS_RANGE_RE (Rule 3.5) — field-test case: Fairmount GPS 39.966/−75.174
+  // "Former Political Machine Clubhouse, 3408–10 Spruce Street" was narrated
+  // in Walk Mode near Fairmount even though 3408 Spruce is in West Philadelphia
+  // (~2.5 km away). Root cause: the en-dash range format "3408–10" caused
+  // ADDRESS_RX in verifyAddressCoherence to skip the coherence probe entirely.
+  // Rule 3.5 adds a pattern-level backstop for when the full address string is
+  // embedded in the NAME.
+  // ---------------------------------------------------------------------------
+
+  it("rejects 'Former Political Machine Clubhouse, 3408–10 Spruce Street' (en-dash range in name) regardless of coordSource", () => {
+    // Field-test case. When the LLM embeds the full address in the name, the
+    // place is rejected. "Spruce Street" (full-form) is caught by Rule 3
+    // (SPECIFIC_LOC_TEXT_RE) before Rule 3.5 fires — so the suppression reason
+    // is "llmCoordWithSpecificLocationText". The critical check is that
+    // discoveryClass is downgraded regardless of coordSource.
+    const p = makePlace({
+      name: "Former Political Machine Clubhouse, 3408–10 Spruce Street",
+      summary:
+        "A rowhouse used by a Democratic ward organization in the early 20th century.",
+      coordSource: "nominatim-corrected",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    // Rule 3 fires first: SPECIFIC_LOC_TEXT_RE matches "Spruce Street" (full form)
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
+
+  it("rejects '3408–10 Spruce Street' as a standalone place name (en-dash range, full form caught by Rule 3)", () => {
+    // Full-form "Spruce Street" is caught by SPECIFIC_LOC_TEXT_RE (Rule 3).
+    // This confirms address-range names are always downgraded even when the
+    // street type is full-form and coordSource is absent.
+    const p = makePlace({
+      name: "3408–10 Spruce Street",
+      coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    // Rule 3 fires before Rule 3.5 because "Spruce Street" matches SPECIFIC_LOC_TEXT_RE
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
+
+  it("rejects '3408 Spruce St' in name — Rule 3.5 catches abbreviated type missed by Rule 3", () => {
+    // "Spruce St" with abbreviated "St" is NOT caught by SPECIFIC_LOC_TEXT_RE
+    // (which only lists full-form types like "Street"). ADDRESS_RANGE_RE (Rule 3.5)
+    // covers abbreviated forms as a defence-in-depth check. This is the primary
+    // addition of Rule 3.5: abbreviated address forms that slip past Rule 3.
+    const p = makePlace({
+      name: "3408 Spruce St",
+      coordSource: "nominatim-corrected",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("explicitAddressInName");
+  });
+
+  it("rejects en-dash address range with abbreviated type '3408–10 Spruce St' in name — Rule 3.5", () => {
+    // Abbreviated "St" is missed by Rule 3; en-dash range "3408–10" is missed
+    // by ADDRESS_RX in verifyAddressCoherence without the range fix. Rule 3.5
+    // catches the combined case at the pattern level.
+    const p = makePlace({
+      name: "Former Political Machine Clubhouse, 3408–10 Spruce St",
+      coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("explicitAddressInName");
+  });
+
+  it("rejects hyphen address range with abbreviated type '3408-10 Spruce St' in name — Rule 3.5", () => {
+    const p = makePlace({
+      name: "Former Political Machine Clubhouse, 3408-10 Spruce St",
+      coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("explicitAddressInName");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -179,6 +258,38 @@ describe("applyLlmPrecisionFilter — pass cases", () => {
       name: "Fairmount Neighborhood Park",
       summary: "A small green space popular with local residents.",
       coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("VERIFIED_PLACE");
+    expect(p.spatialSuppression).toBeUndefined();
+  });
+
+  it("passes a verified local place whose address field contains a numbered address but whose name is clean", () => {
+    // The address field always contains street references by design; only the
+    // NAME (and for LLM-only places, the summary) is checked. A verified local
+    // building with coordSource set and a clean identity name must not be
+    // downgraded even if its address field contains "2300 Fairmount Ave".
+    // The name "Fairmount Engine Company No. 15" has no street/address pattern.
+    const p = makePlace({
+      name: "Fairmount Engine Company No. 15",
+      summary:
+        "An 1880s firehouse serving the Fairmount neighborhood of Philadelphia.",
+      address: "2300 Fairmount Ave, Philadelphia, PA",
+      coordSource: "nominatim-corrected",
+      discoveryClass: "VERIFIED_PLACE",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("VERIFIED_PLACE");
+    expect(p.spatialSuppression).toBeUndefined();
+  });
+
+  it("passes a place whose name contains a year but no street address (no false match on ADDRESS_RANGE_RE)", () => {
+    // "1887" is 4 digits but "Cornice" is not a street type — no ADDRESS_RANGE_RE match.
+    const p = makePlace({
+      name: "Italianate Rowhouse with 1887 Cornice",
+      summary:
+        "A brick rowhouse near 22nd Street in Fairmount, featuring an ornate 1887 pressed-tin cornice.",
+      coordSource: "nominatim-corrected",
     });
     applyLlmPrecisionFilter([p]);
     expect(p.discoveryClass).toBe("VERIFIED_PLACE");

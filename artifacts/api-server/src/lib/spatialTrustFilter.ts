@@ -17,6 +17,25 @@ export const SPECIFIC_LOC_TEXT_RE =
   /\b(?:[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]*)*|\d+(?:st|nd|rd|th))\s+(?:Street|Avenue|Boulevard|Blvd|Road|Drive|Lane|Way|Parkway|Place|Court|Alley)\b/;
 
 /**
+ * Matches an explicit numbered street address (including address ranges) in a
+ * place's NAME — e.g., "3408–10 Spruce Street", "3408 Spruce St",
+ * "610 8th Ave", "610 8th Avenue".
+ *
+ * This is distinct from SPECIFIC_LOC_TEXT_RE (which covers named-street
+ * references without a leading house number and does not cover abbreviated
+ * street types like "St" or "Ave"). A place whose identity-name contains a
+ * specific numbered address is asserting an unverifiable pinpoint location
+ * regardless of coordSource. The leading house number must be at least 3
+ * digits to avoid false matches on ordinals ("22nd century"), years embedded
+ * in prose, or short room/unit numbers.
+ *
+ * The optional range group (?:[-–—]\d{1,4})? handles hyphenated or en-dash
+ * address ranges common in row-house blocks ("3408–10", "210-12").
+ */
+export const ADDRESS_RANGE_RE =
+  /\b\d{3,5}(?:[-–—]\d{1,4})?\s+[A-Z][a-zA-Z]*(?:\s+[A-Z][a-zA-Z]+)?\s+(?:Street|St|Avenue|Ave|Boulevard|Blvd|Road|Rd|Drive|Dr|Lane|Ln|Way|Parkway|Pkwy|Place|Pl|Court|Ct|Alley)\b/;
+
+/**
  * Matches an ordinal cross-street intersection claim in a place name — e.g.,
  * "39th & Market", "22nd and Chestnut", "at 44th & Spruce".
  *
@@ -51,6 +70,10 @@ export const INTERSECTION_NAME_RE =
  *      downgrade to INTERPRETIVE_OVERLAY regardless of coordSource.
  *   3. If NAME contains a named-street reference (SPECIFIC_LOC_TEXT_RE):
  *      downgrade to INTERPRETIVE_OVERLAY regardless of coordSource.
+ *   3.5 If NAME contains an explicit numbered address / address-range
+ *      (ADDRESS_RANGE_RE): downgrade to INTERPRETIVE_OVERLAY regardless of
+ *      coordSource. Extends Rule 3 to abbreviated types ("St", "Ave") and
+ *      to hyphenated address ranges ("3408–10 Spruce St").
  *   4. If coordSource is absent AND summary contains a named-street ref
  *      (SPECIFIC_LOC_TEXT_RE): downgrade to INTERPRETIVE_OVERLAY.
  *
@@ -90,6 +113,20 @@ export function applyLlmPrecisionFilter(places: any[]): void {
     if (SPECIFIC_LOC_TEXT_RE.test(p.name ?? "")) {
       p.discoveryClass = "INTERPRETIVE_OVERLAY";
       p.spatialSuppression = "llmCoordWithSpecificLocationText";
+      continue;
+    }
+
+    // Rule 3.5: Explicit numbered street address (including address ranges) in
+    // name — e.g. "Former Political Machine Clubhouse, 3408–10 Spruce Street",
+    // "3408 Spruce St", "610 8th Ave". SPECIFIC_LOC_TEXT_RE (Rule 3) covers
+    // full-form street types ("Street", "Avenue", …) but not common
+    // abbreviations like "St" or "Ave". ADDRESS_RANGE_RE extends coverage to
+    // abbreviated types AND to address-range notation ("3408–10"). A place
+    // name that encodes a specific numbered address asserts an unverifiable
+    // pinpoint location regardless of coordSource.
+    if (ADDRESS_RANGE_RE.test(p.name ?? "")) {
+      p.discoveryClass = "INTERPRETIVE_OVERLAY";
+      p.spatialSuppression = "explicitAddressInName";
       continue;
     }
 
