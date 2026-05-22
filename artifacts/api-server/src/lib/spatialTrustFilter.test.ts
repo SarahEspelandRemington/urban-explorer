@@ -198,6 +198,61 @@ describe("applyLlmPrecisionFilter — rejection cases", () => {
     expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
     expect(p.spatialSuppression).toBe("explicitAddressInName");
   });
+
+  // ---------------------------------------------------------------------------
+  // PRECISE_LOCATION_PROSE_RE (Rule 4) — intersection-of / block-style claims
+  // These only fire for LLM-only places (no coordSource). The patterns catch
+  // prose like "intersection of 34th and Walnut" or "3400 block Walnut Street"
+  // embedded in the summary when the place has no Nominatim confirmation.
+  // ---------------------------------------------------------------------------
+
+  it("rejects an LLM-only place whose summary contains 'intersection of 34th and Walnut'", () => {
+    const p = makePlace({
+      name: "Historic Corner Site",
+      summary:
+        "This site stood at the intersection of 34th and Walnut in West Philadelphia.",
+      coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
+
+  it("rejects an LLM-only place whose summary contains '3400 block Walnut Street'", () => {
+    const p = makePlace({
+      name: "Former Pharmacy",
+      summary:
+        "A drugstore that operated on the 3400 block Walnut Street during the early twentieth century.",
+      coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
+
+  it("rejects an LLM-only place whose summary contains a named neighborhood claim (University City)", () => {
+    const p = makePlace({
+      name: "Former Faculty Club",
+      summary:
+        "A private dining club that served University City professors and administrators.",
+      coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
+
+  it("rejects an LLM-only place whose summary contains a named neighborhood claim (Rittenhouse)", () => {
+    const p = makePlace({
+      name: "Lost Mansion",
+      summary:
+        "An estate once situated in the Rittenhouse district that was demolished in the nineteen thirties.",
+      coordSource: undefined,
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(p.spatialSuppression).toBe("llmCoordWithSpecificLocationText");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -290,6 +345,37 @@ describe("applyLlmPrecisionFilter — pass cases", () => {
       summary:
         "A brick rowhouse near 22nd Street in Fairmount, featuring an ornate 1887 pressed-tin cornice.",
       coordSource: "nominatim-corrected",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("VERIFIED_PLACE");
+    expect(p.spatialSuppression).toBeUndefined();
+  });
+
+  it("does NOT downgrade a verified place (coordSource set) whose summary mentions a neighborhood name", () => {
+    // NAMED_NEIGHBORHOOD_RE is Rule 4: applies only to LLM-only places.
+    // A verified place may legitimately describe itself as being in a
+    // neighbourhood without that being a fabricated location claim.
+    const p = makePlace({
+      name: "University of Pennsylvania Campus Building",
+      summary:
+        "A historic academic building in University City, home to several research departments.",
+      coordSource: "nominatim-corrected",
+      discoveryClass: "VERIFIED_PLACE",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("VERIFIED_PLACE");
+    expect(p.spatialSuppression).toBeUndefined();
+  });
+
+  it("does NOT downgrade a verified place (coordSource set) whose summary contains an intersection-of phrase", () => {
+    // Rule 4 fires only when coordSource is absent. A Nominatim-confirmed
+    // place that happens to describe its cross-street context must survive.
+    const p = makePlace({
+      name: "Spruce Hill Community Center",
+      summary:
+        "Community hub at the intersection of 43rd and Spruce, serving West Philadelphia since the nineteen sixties.",
+      coordSource: "nominatim-corrected",
+      discoveryClass: "VERIFIED_PLACE",
     });
     applyLlmPrecisionFilter([p]);
     expect(p.discoveryClass).toBe("VERIFIED_PLACE");

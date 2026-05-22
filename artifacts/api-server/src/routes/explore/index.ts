@@ -224,8 +224,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v29"], // discover — quick mode
-  ["full", "v29"], // discover — full mode
+  ["quick", "v34"], // discover — quick mode
+  ["full", "v34"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -1733,7 +1733,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v33:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v34:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );

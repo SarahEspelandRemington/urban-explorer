@@ -29,14 +29,13 @@ export const snapGrid = (v: number): string =>
 /** 24 h TTL — historical places are stable within this window. */
 export const PLACE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-// v4: bumped to invalidate entries written before the INTERSECTION_NAME_RE
-// check was added to applyLlmPrecisionFilter. Previously, places with
-// coordSource set (e.g. Nominatim matched a nearby address token) bypassed
-// the specific-location-text check, leaving LLM confabulations like
-// "Former Hitching Post Site at 39th & Market" in the cache with a passing
-// discoveryClass. Old v3 keys are unreachable immediately; they expire
-// naturally after 24 h.
-const STORAGE_PREFIX = "@urban-explorer/place-cache:v4:";
+// v5: bumped to invalidate entries written before PRECISE_LOCATION_PROSE_RE
+// and NAMED_NEIGHBORHOOD_RE were added to Rule 4 of applyLlmPrecisionFilter.
+// LLM-only places whose summaries contain intersection-of / block-style prose
+// or named-neighbourhood claims are now downgraded to INTERPRETIVE_OVERLAY,
+// but cached v4 entries still carry the old (passing) discoveryClass.
+// Old v4 keys expire naturally after 24 h; they are unreachable immediately.
+const STORAGE_PREFIX = "@urban-explorer/place-cache:v5:";
 
 /** Hard cap on tiles stored in AsyncStorage to bound disk usage. */
 const MAX_TILES = 60;
