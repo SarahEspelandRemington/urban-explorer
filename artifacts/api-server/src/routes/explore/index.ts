@@ -803,6 +803,75 @@ function scheduleNominatimCall<T>(fn: () => Promise<T>): Promise<T> {
   });
 }
 
+/**
+ * Reverse-geocode a coordinate pair to a human-readable neighbourhood label.
+ *
+ * Used to derive the Explore area header from the actual search-centre
+ * coordinates rather than from the LLM's (potentially hallucinated) location
+ * field.  Results are cached at 3 d.p. (~110 m) so repeated discovers within
+ * the same grid cell are served from in-memory cache with no Nominatim call.
+ *
+ * Returns { label, src } where src is "nominatim" on success and "fallback"
+ * on any network/timeout/no-data failure (label is "Nearby" in that case).
+ */
+async function fetchNeighborhoodLabel(
+  lat: number,
+  lng: number,
+): Promise<{ label: string; src: "nominatim" | "fallback" }> {
+  const cacheKey = `revgeo-nbhd:v1:${lat.toFixed(3)},${lng.toFixed(3)}`;
+  const cached = getLLMCache<{ label: string; src: "nominatim" | "fallback" }>(
+    cacheKey,
+  );
+  if (cached) return cached;
+
+  const params = new URLSearchParams({
+    lat: String(lat),
+    lon: String(lng),
+    format: "jsonv2",
+    addressdetails: "1",
+    zoom: "14", // neighbourhood-level granularity
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const resp = await scheduleNominatimCall(() =>
+      fetch(`${NOMINATIM_BASE}/reverse?${params.toString()}`, {
+        signal: controller.signal,
+        headers: NOMINATIM_HEADERS,
+      }),
+    );
+    clearTimeout(timer);
+    if (!resp.ok) throw new Error(`Nominatim ${resp.status}`);
+    const data = (await resp.json()) as Record<string, any>;
+    const addr = data.address || {};
+    const neighbourhood =
+      addr.neighbourhood ||
+      addr.suburb ||
+      addr.city_district ||
+      addr.quarter ||
+      addr.village;
+    const city =
+      addr.city || addr.town || addr.municipality || addr.county;
+    let label: string;
+    if (neighbourhood && city) {
+      label = `${neighbourhood}, ${city}`;
+    } else if (neighbourhood) {
+      label = neighbourhood;
+    } else if (city) {
+      label = city;
+    } else {
+      const first = (data.display_name || "").split(",")[0].trim();
+      label = first || "Nearby";
+    }
+    const result = { label, src: "nominatim" as const };
+    setLLMCache(cacheKey, result);
+    return result;
+  } catch {
+    clearTimeout(timer);
+    return { label: "Nearby", src: "fallback" as const };
+  }
+}
+
 async function verifyPlaceCoordinates(
   places: any[],
   userLat: number,
@@ -1734,6 +1803,15 @@ router.post("/explore/discover", async (req, res) => {
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   const discoverCacheKey = `${modeKey}:v34:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+
+  // Fire the neighbourhood label lookup immediately so it runs in parallel with
+  // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
+  // this resolves in microseconds (in-memory Map lookup). On a cold first-ever
+  // request for this grid cell it may take ~1 s (one Nominatim call respecting
+  // the 1 req/s ToS rate limiter). We ALWAYS override data.location with this
+  // result — never the LLM's (potentially hallucinated) value.
+  const nbhdLabelPromise = fetchNeighborhoodLabel(latitude, longitude);
+
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
@@ -1755,7 +1833,15 @@ router.post("/explore/discover", async (req, res) => {
         : allCachedPlaces;
       const ratingsMap = await fetchRatingsMap(refreshedPlaces);
       applyRatingSortWithMap(refreshedPlaces, ratingsMap);
-      res.json({ ...cachedDiscover, places: refreshedPlaces });
+      // Override location with Nominatim reverse-geocode of the actual search
+      // centre — never use the LLM-generated value from the cache.
+      const nbhdLabel = await nbhdLabelPromise;
+      res.json({
+        ...cachedDiscover,
+        places: refreshedPlaces,
+        location: nbhdLabel.label,
+        locationSrc: nbhdLabel.src,
+      });
 
       // Background: if any cached places are missing photos (e.g. the original
       // request hit the wall-clock timeout before Wikipedia responded), try again
@@ -1777,10 +1863,28 @@ router.post("/explore/discover", async (req, res) => {
         })();
       }
     } else {
-      res.json(cachedDiscover);
+      const nbhdLabel = await nbhdLabelPromise;
+      res.json({
+        ...cachedDiscover,
+        location: nbhdLabel.label,
+        locationSrc: nbhdLabel.src,
+      });
     }
     return;
   }
+
+  // Fresh (non-cached) path: await the neighbourhood label now — before the
+  // brainstorm and OSM promises fire — so we can pass the Nominatim-derived
+  // address as the effective addressHint for the LLM.  On a warm revgeo cache
+  // this is free.  On a cold first request the ~1 s delay is negligible
+  // compared to the 3–10 s LLM call that follows.
+  const nbhdLabel = await nbhdLabelPromise;
+  // If the client did not supply an addressHint (e.g. GPS-mode discovers never
+  // do), use the Nominatim-derived neighbourhood label.  This anchors the LLM
+  // to the actual location rather than letting it hallucinate a neighbourhood.
+  const effectiveAddressHint =
+    addressHint ??
+    (nbhdLabel.src === "nominatim" ? nbhdLabel.label : undefined);
 
   const osmTimeLimit = isQuick ? 3000 : 4000;
   const osmPromise: Promise<OSMPlace[]> = Promise.race([
@@ -1846,7 +1950,7 @@ router.post("/explore/discover", async (req, res) => {
               },
               {
                 role: "user",
-                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude}${addressHint ? ` (${addressHint})` : ""} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?`,
+                content: `Brainstorm everything you know about the immediate area around ${latitude}, ${longitude}${effectiveAddressHint ? ` (${effectiveAddressHint})` : ""} (within roughly ${radiusFeet} feet). Think out loud — what are the most surprising, specific, or overlooked historical facts about this exact block or intersection?`,
               },
             ],
           },
@@ -2077,10 +2181,12 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     // Guard: only run when addressHint contains at least one ordinal (non-grid
     // areas like named avenues produce no ordinals, so comparisons are
     // meaningless and would produce false positives).
-    if (addressHint) {
+    if (effectiveAddressHint) {
       const ORDINAL_RX = /\b(\d{1,3}(?:st|nd|rd|th))\b/gi;
       const hintOrdinals = new Set(
-        [...addressHint.matchAll(ORDINAL_RX)].map((m) => m[1].toLowerCase()),
+        [...effectiveAddressHint.matchAll(ORDINAL_RX)].map((m) =>
+          m[1].toLowerCase(),
+        ),
       );
       if (hintOrdinals.size > 0) {
         for (const p of data.places) {
@@ -2102,7 +2208,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
             p.autoNarrationBlocked = true;
             p.addressCoherence ??= {
               status: "mismatch",
-              reason: `Hot-path: address "${p.address}" has numbered streets not present in user location "${addressHint}"`,
+              reason: `Hot-path: address "${p.address}" has numbered streets not present in user location "${effectiveAddressHint}"`,
               storedLat: p.latitude,
               storedLon: p.longitude,
             };
@@ -2110,7 +2216,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
               {
                 placeName: p.name,
                 placeAddress: p.address,
-                addressHint,
+                effectiveAddressHint,
                 distToUser: Math.round(distToUser),
               },
               "[address-coherence] HOT-PATH: numbered-street mismatch — blocked from walk narration",
@@ -2134,6 +2240,12 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     setLLMCache(discoverCacheKey, data);
   }
 
+  // Always set location from the Nominatim reverse-geocode of the actual search
+  // centre — never from the LLM's (potentially hallucinated) value.  We do NOT
+  // store this in the discover cache so each response derives it freshly from
+  // the revgeo-nbhd cache keyed to the actual coordinates.
+  data.location = nbhdLabel.label;
+  data.locationSrc = nbhdLabel.src;
   res.json(data);
 
   // Background: run Nominatim verification and silently update the cache so the

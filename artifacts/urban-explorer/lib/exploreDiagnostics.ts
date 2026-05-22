@@ -43,6 +43,11 @@ export interface ExploreSnapshot {
   mapCenter: { latitude: number; longitude: number } | null;
   searchRadius: number;
   areaName: string;
+  /** Source of the area name: "nominatim" = Nominatim reverse-geocode of the
+   *  actual search-centre coordinates, "fallback" = Nominatim failed/timed out
+   *  (label is "Nearby"), "unknown" = pre-fix server version (label came from
+   *  LLM response and may not match the search coordinates). */
+  areaNameSrc: string;
   totalPlaces: number;
   topPlaces: ExploreDebugPlace[];
   selectedPlace: ExploreDebugPlace | null;

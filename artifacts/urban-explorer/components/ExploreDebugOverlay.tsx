@@ -98,7 +98,10 @@ function ExploreContent({ s }: { s: ExploreSnapshot }) {
     <>
       <Row label="mode" value={s.mode} />
       <Row label="radius" value={`${s.searchRadius}m`} />
-      <Row label="area" value={s.areaName.slice(0, 40) || "—"} />
+      <Row
+        label="area"
+        value={`${s.areaName.slice(0, 36) || "—"} · ${s.areaNameSrc}`}
+      />
 
       <SectionTitle>Context</SectionTitle>
       <Row
