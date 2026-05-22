@@ -3,7 +3,13 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -16,6 +22,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import MapView, {
   Callout,
   Marker,
+  type MapMarker,
   PROVIDER_DEFAULT,
   type Region,
 } from "react-native-maps";
@@ -49,6 +56,7 @@ interface Place {
   latitude: number;
   longitude: number;
   distanceMeters?: number;
+  netScore?: number;
   address?: string;
   tags?: string[];
   discoveryClass?:
@@ -63,6 +71,8 @@ interface PlaceMapViewProps {
   userLongitude: number;
   onMapRegionDiscover?: (lat: number, lng: number) => void;
   onPendingCenterChange?: (center: { lat: number; lng: number } | null) => void;
+  onFirstInteraction?: () => void;
+  autoOpenId?: string | null;
   isLoadingMore?: boolean;
 }
 
@@ -91,6 +101,8 @@ export function PlaceMapView({
   userLongitude,
   onMapRegionDiscover,
   onPendingCenterChange,
+  onFirstInteraction,
+  autoOpenId,
   isLoadingMore,
 }: PlaceMapViewProps) {
   const colors = useColors();
@@ -105,6 +117,14 @@ export function PlaceMapView({
     lat: number;
     lng: number;
   } | null>(null);
+  const [leaderPulse, setLeaderPulse] = useState(0);
+  const hintDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hintShownThisSession = useRef(false);
+  const firstInteractionFired = useRef(false);
+  const autoOpenFired = useRef<string | null>(null);
+  const markerRefs = useRef(
+    new Map<string, React.RefObject<MapMarker | null>>(),
+  );
 
   // Clear the pending button once loading begins (either from this button or
   // from an external trigger), so the button doesn't linger during the fetch.
@@ -120,6 +140,54 @@ export function PlaceMapView({
   useEffect(() => {
     onPendingCenterChange?.(pendingCenter);
   }, [pendingCenter, onPendingCenterChange]);
+
+  const leaderPlace = useMemo(() => {
+    const verified = places.filter((place) => {
+      if (place.discoveryClass !== "VERIFIED_PLACE") return false;
+      const dist = place.distanceMeters ?? Infinity;
+      return Number.isFinite(dist);
+    });
+    if (verified.length === 0) return null;
+    return [...verified].sort((a, b) => {
+      const aDist = a.distanceMeters ?? Infinity;
+      const bDist = b.distanceMeters ?? Infinity;
+      if (aDist !== bDist) return aDist - bDist;
+      return (b.netScore ?? 0) - (a.netScore ?? 0);
+    })[0];
+  }, [places]);
+
+  useEffect(() => {
+    if (hintShownThisSession.current || places.length === 0) return;
+    hintShownThisSession.current = true;
+    if (hintDismissTimer.current) clearTimeout(hintDismissTimer.current);
+    hintDismissTimer.current = setTimeout(() => {
+      hintDismissTimer.current = null;
+    }, 4500);
+    return () => {
+      if (hintDismissTimer.current) {
+        clearTimeout(hintDismissTimer.current);
+        hintDismissTimer.current = null;
+      }
+    };
+  }, [places.length]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setLeaderPulse((value) => (value + 1) % 4);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!autoOpenId || autoOpenFired.current === autoOpenId) return;
+    const markerRef = markerRefs.current.get(autoOpenId);
+    if (!markerRef?.current) return;
+    autoOpenFired.current = autoOpenId;
+    const timer = setTimeout(() => {
+      markerRef.current?.showCallout();
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [autoOpenId, places]);
 
   // Geocoded coordinates keyed by place id. Pins start at the AI-provided
   // lat/lng and silently snap to the geocoded position once it resolves.
@@ -227,6 +295,16 @@ export function PlaceMapView({
     onMapRegionDiscover(pendingCenter.lat, pendingCenter.lng);
   }, [pendingCenter, onMapRegionDiscover]);
 
+  const handleFirstInteraction = useCallback(() => {
+    if (firstInteractionFired.current) return;
+    firstInteractionFired.current = true;
+    if (hintDismissTimer.current) {
+      clearTimeout(hintDismissTimer.current);
+      hintDismissTimer.current = null;
+    }
+    onFirstInteraction?.();
+  }, [onFirstInteraction]);
+
   const initialRegion = {
     latitude: userLatitude,
     longitude: userLongitude,
@@ -244,6 +322,8 @@ export function PlaceMapView({
         showsMyLocationButton
         provider={PROVIDER_DEFAULT}
         onRegionChangeComplete={handleRegionChangeComplete}
+        onPanDrag={handleFirstInteraction}
+        onPress={handleFirstInteraction}
       >
         {places.map((place) => {
           // Prefer the geocoded coordinate (Apple/Google Maps native geocoder)
@@ -253,12 +333,18 @@ export function PlaceMapView({
             longitude: place.longitude,
           };
           const isSelectedExplore = selectedMarkerId === place.id;
+          const isLeader = leaderPlace?.id === place.id;
+          if (!markerRefs.current.has(place.id)) {
+            markerRefs.current.set(place.id, React.createRef<MapMarker>());
+          }
+          const markerRef = markerRefs.current.get(place.id)!;
           return (
             <Marker
+              ref={markerRef}
               key={place.id}
               coordinate={markerCoord}
               anchor={{ x: 0.5, y: 0.5 }}
-              tracksViewChanges={selectedMarkerId !== null}
+              tracksViewChanges={selectedMarkerId !== null || isLeader}
               zIndex={isSelectedExplore ? 1 : 0}
               onSelect={() => setSelectedMarkerId(place.id)}
             >
@@ -266,8 +352,32 @@ export function PlaceMapView({
                 style={[
                   styles.pinWrapper,
                   isSelectedExplore && styles.pinWrapperSelected,
+                  isLeader && !isSelectedExplore && styles.pinWrapperLeader,
                 ]}
               >
+                {isLeader && !isSelectedExplore && (
+                  <>
+                    <View
+                      style={[
+                        styles.leaderPulse,
+                        {
+                          borderColor: colors.primary + "20",
+                          opacity: 0.35 + leaderPulse * 0.05,
+                          transform: [{ scale: 1 + leaderPulse * 0.06 }],
+                        },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.leaderPulseInner,
+                        {
+                          borderColor: colors.primary + "26",
+                          opacity: 0.45,
+                        },
+                      ]}
+                    />
+                  </>
+                )}
                 {isSelectedExplore && (
                   <>
                     {/* Outermost: large ambient fill — the "soft radial halo" */}
@@ -304,13 +414,19 @@ export function PlaceMapView({
                       backgroundColor: isSelectedExplore
                         ? colors.primary
                         : place.discoveryClass === "INTERPRETIVE_OVERLAY"
-                          ? colors.primary + "44"
+                          ? colors.primary + "50"
                           : place.discoveryClass === "APPROXIMATE_SITE"
-                            ? colors.primary + "55"
-                            : colors.primary + "77",
+                            ? colors.primary + "66"
+                            : colors.primary + "88",
                       borderColor: isSelectedExplore
                         ? "#ffffff"
                         : colors.background,
+                    },
+                    !isSelectedExplore && {
+                      shadowColor: colors.primary,
+                      shadowOpacity: 0.28,
+                      shadowRadius: 5,
+                      elevation: 4,
                     },
                     isSelectedExplore && {
                       shadowColor: colors.primary,
@@ -419,6 +535,25 @@ export function PlaceMapView({
         </View>
       )}
 
+      {!firstInteractionFired.current && !hintDismissTimer.current && (
+        <Animated.View
+          entering={FadeIn.duration(180)}
+          exiting={FadeOut.duration(180)}
+          pointerEvents="none"
+          style={[
+            styles.hintBubble,
+            {
+              backgroundColor: colors.card + "f2",
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
+            Tap a marker to uncover a story.
+          </Text>
+        </Animated.View>
+      )}
+
       {!isLoadingMore && pendingCenter && (
         <Animated.View
           entering={FadeIn.duration(200)}
@@ -471,6 +606,25 @@ const styles = StyleSheet.create({
   pinWrapperSelected: {
     width: 52,
     height: 52,
+  },
+  pinWrapperLeader: {
+    width: 40,
+    height: 40,
+  },
+  leaderPulse: {
+    position: "absolute",
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  leaderPulseInner: {
+    position: "absolute",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: "transparent",
   },
   pinGlow: {
     position: "absolute",
@@ -529,6 +683,28 @@ const styles = StyleSheet.create({
   topBadgeText: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
+  },
+  hintBubble: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 22,
+    alignSelf: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 18,
+    borderWidth: 1,
+    zIndex: 12,
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+  },
+  hintText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    textAlign: "center",
   },
   searchButtonWrapper: {
     position: "absolute",

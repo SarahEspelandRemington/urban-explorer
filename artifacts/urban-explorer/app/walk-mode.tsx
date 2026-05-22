@@ -702,6 +702,21 @@ export default function WalkModeScreen() {
               </View>
             </Pressable>
             <Pressable
+              onPress={() => {
+                const place = walk.activeNarrationPlace;
+                if (!place) return;
+                if (Platform.OS !== "web")
+                  Haptics.selectionAsync().catch(() => {});
+                navigateToPlace(place);
+              }}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel={`Open details for ${walk.narration.currentPlace}`}
+              style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+            >
+              <Feather name="info" size={16} color={colors.mutedForeground} />
+            </Pressable>
+            <Pressable
               onPress={togglePause}
               hitSlop={16}
               accessibilityRole="button"
