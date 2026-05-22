@@ -132,6 +132,8 @@ export default function ExploreScreen() {
   const [mapLoading, setMapLoading] = useState(false);
   const mapPlacesRef = useRef<DiscoveredPlace[]>([]);
   const mapPendingCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const mapFirstInteractionRef = useRef(false);
+  const autoOpenHandledRef = useRef(false);
 
   const [places, setPlaces] = useState<DiscoveredPlace[]>([]);
   const [areaName, setAreaName] = useState<string>("");
@@ -187,6 +189,29 @@ export default function ExploreScreen() {
       allMapPlaces.find((p) => p.id === expandedId) ?? sortedPlaces[0] ?? null
     );
   }, [expandedId, sortedPlaces, allMapPlaces]);
+
+  const autoOpenPlaceId = useMemo(() => {
+    if (autoOpenHandledRef.current) return null;
+    const candidate = [...sortedPlaces]
+      .filter((place) => place.discoveryClass === "VERIFIED_PLACE")
+      .filter((place) => (place.netScore ?? 0) >= 4)
+      .filter((place) => typeof place.distanceMeters === "number")
+      .sort((a, b) => {
+        const distA = a.distanceMeters ?? Infinity;
+        const distB = b.distanceMeters ?? Infinity;
+        if (distA !== distB) return distA - distB;
+        return (b.netScore ?? 0) - (a.netScore ?? 0);
+      })[0];
+    if (!candidate) return null;
+    return candidate.id;
+  }, [sortedPlaces]);
+
+  useEffect(() => {
+    if (!autoOpenPlaceId || autoOpenHandledRef.current) return;
+    if (expandedId !== null) return;
+    autoOpenHandledRef.current = true;
+    setExpandedId(autoOpenPlaceId);
+  }, [autoOpenPlaceId, expandedId]);
 
   const exploreSnapshot = useMemo((): ExploreSnapshot | null => {
     if (!exploreDebugEnabled || !searchCenterCoords) return null;
@@ -1208,6 +1233,10 @@ export default function ExploreScreen() {
               userLongitude={effectiveLongitude}
               onMapRegionDiscover={handleMapRegionDiscover}
               onPendingCenterChange={handlePendingCenterChange}
+              onFirstInteraction={() => {
+                mapFirstInteractionRef.current = true;
+              }}
+              autoOpenId={autoOpenPlaceId}
               isLoadingMore={mapLoading || discoverMutation.isPending}
             />
           ) : (
