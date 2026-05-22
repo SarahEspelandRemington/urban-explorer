@@ -678,108 +678,132 @@ export function WalkModeMap({
         </Pressable>
       )}
 
-      {selectedPlace && !previewCluster ? (
-        <View
-          style={[
-            styles.selectedCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
-          ]}
-        >
-          <View style={styles.selectedCardBody}>
-            <View style={styles.selectedCardText}>
-              <Text
+      {selectedPlace && !previewCluster
+        ? (() => {
+            const isCurrentlyPlaying =
+              selectedPlace.id === currentlyPlayingPlaceId;
+            return (
+              <View
                 style={[
-                  styles.selectedCardLabel,
+                  styles.selectedCard,
                   {
-                    color:
-                      selectedPlace.id === currentlyPlayingPlaceId
-                        ? colors.primary
-                        : colors.mutedForeground,
+                    backgroundColor: colors.card,
+                    borderColor: isCurrentlyPlaying
+                      ? colors.primary + "60"
+                      : colors.border,
+                    borderLeftColor: isCurrentlyPlaying
+                      ? colors.primary
+                      : colors.border,
+                    borderLeftWidth: isCurrentlyPlaying ? 3 : 1,
+                    opacity: isCurrentlyPlaying ? 1 : 0.88,
                   },
                 ]}
               >
-                {selectedPlace.id === currentlyPlayingPlaceId
-                  ? "NOW PLAYING"
-                  : "PREVIEW"}
-              </Text>
-              <Text
-                numberOfLines={1}
-                style={[styles.selectedName, { color: colors.foreground }]}
-              >
-                {selectedPlace.name}
-              </Text>
-              {(() => {
-                const sub = selectedPlace.summary?.split(/[.!?]/)[0]?.trim();
-                return sub ? (
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.selectedSub,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {sub}
-                  </Text>
-                ) : null;
-              })()}
-            </View>
-            {onOpenPlace ? (
-              <Pressable
-                onPress={() => {
-                  setSelectedPlace(null);
-                  onOpenPlace(selectedPlace);
-                }}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={`Open details for ${selectedPlace.name}`}
-                style={({ pressed }) => [
-                  styles.selectedActionBtn,
-                  {
-                    backgroundColor: pressed
-                      ? colors.muted
-                      : colors.muted + "80",
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Feather name="info" size={15} color={colors.mutedForeground} />
-              </Pressable>
-            ) : null}
-            {onPlayPlace ? (
-              <Pressable
-                onPress={() => {
-                  onPlayPlace(selectedPlace);
-                  setSelectedPlace(null);
-                }}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  narratedIds.has(selectedPlace.id)
-                    ? `Replay story for ${selectedPlace.name}`
-                    : `Play story for ${selectedPlace.name}`
-                }
-                style={({ pressed }) => [
-                  styles.selectedActionBtn,
-                  styles.selectedPlayBtn,
-                  {
-                    backgroundColor: pressed
-                      ? colors.primary + "cc"
-                      : colors.primary,
-                  },
-                ]}
-              >
-                <Feather
-                  name={
-                    narratedIds.has(selectedPlace.id) ? "refresh-cw" : "play"
-                  }
-                  size={15}
-                  color={colors.primaryForeground}
-                />
-              </Pressable>
-            ) : null}
-          </View>
-        </View>
-      ) : null}
+                <View style={styles.selectedCardBody}>
+                  <View style={styles.selectedCardText}>
+                    <Text
+                      style={[
+                        styles.selectedCardLabel,
+                        {
+                          color: isCurrentlyPlaying
+                            ? colors.primary
+                            : colors.mutedForeground,
+                        },
+                      ]}
+                    >
+                      {isCurrentlyPlaying ? "NOW PLAYING" : "PREVIEW"}
+                    </Text>
+                    <Text
+                      numberOfLines={1}
+                      style={[
+                        styles.selectedName,
+                        { color: colors.foreground },
+                      ]}
+                    >
+                      {selectedPlace.name}
+                    </Text>
+                    {(() => {
+                      const sub = selectedPlace.summary
+                        ?.split(/[.!?]/)[0]
+                        ?.trim();
+                      return sub ? (
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            styles.selectedSub,
+                            { color: colors.mutedForeground },
+                          ]}
+                        >
+                          {sub}
+                        </Text>
+                      ) : null;
+                    })()}
+                  </View>
+                  {onOpenPlace ? (
+                    <Pressable
+                      onPress={() => {
+                        setSelectedPlace(null);
+                        onOpenPlace(selectedPlace);
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open details for ${selectedPlace.name}`}
+                      style={({ pressed }) => [
+                        styles.selectedActionBtn,
+                        {
+                          backgroundColor: pressed
+                            ? colors.muted
+                            : colors.muted + "80",
+                          borderColor: colors.border,
+                        },
+                      ]}
+                    >
+                      <Feather
+                        name="info"
+                        size={15}
+                        color={colors.mutedForeground}
+                      />
+                    </Pressable>
+                  ) : null}
+                  {!isCurrentlyPlaying && onPlayPlace ? (
+                    <Pressable
+                      onPress={() => {
+                        onPlayPlace(selectedPlace);
+                        setSelectedPlace(null);
+                      }}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        narratedIds.has(selectedPlace.id)
+                          ? `Replay story for ${selectedPlace.name}`
+                          : `Play story for ${selectedPlace.name}`
+                      }
+                      style={({ pressed }) => [
+                        styles.selectedActionBtn,
+                        styles.selectedPlayBtn,
+                        {
+                          backgroundColor: pressed
+                            ? colors.primary + "cc"
+                            : colors.primary,
+                        },
+                      ]}
+                    >
+                      <Feather
+                        name={
+                          narratedIds.has(selectedPlace.id)
+                            ? "refresh-cw"
+                            : "play"
+                        }
+                        size={15}
+                        color={colors.primaryForeground}
+                      />
+                    </Pressable>
+                  ) : null}
+                </View>
+              </View>
+            );
+          })()
+        : null}
 
       {previewCluster ? (
         <>

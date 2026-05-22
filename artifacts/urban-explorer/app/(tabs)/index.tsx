@@ -71,6 +71,10 @@ interface DiscoveredPlace {
   distanceMeters?: number;
   netScore?: number;
   photoUrl?: string;
+  discoveryClass?:
+    | "VERIFIED_PLACE"
+    | "APPROXIMATE_SITE"
+    | "INTERPRETIVE_OVERLAY";
 }
 
 const DRIFT_THRESHOLD_METERS = 150;
@@ -576,7 +580,9 @@ export default function ExploreScreen() {
             if (requestId !== discoverRequestRef.current) return;
             setPlaces((data?.places as DiscoveredPlace[] | undefined) ?? []);
             setAreaName((data?.location as string | undefined) ?? "");
-            setAreaNameSrc((data?.locationSrc as string | undefined) ?? "unknown");
+            setAreaNameSrc(
+              (data?.locationSrc as string | undefined) ?? "unknown",
+            );
             // Cold-start phase marker — only the first call lands; subsequent
             // discovers are no-ops on the recorder.
             markStartupPhase("exploreFirstResponse");

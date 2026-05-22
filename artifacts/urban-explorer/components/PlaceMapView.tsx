@@ -3,7 +3,13 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -16,6 +22,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import MapView, {
   Callout,
   Marker,
+  type MapMarker,
   PROVIDER_DEFAULT,
   type Region,
 } from "react-native-maps";
@@ -49,6 +56,7 @@ interface Place {
   latitude: number;
   longitude: number;
   distanceMeters?: number;
+  netScore?: number;
   address?: string;
   tags?: string[];
   discoveryClass?:
@@ -114,7 +122,9 @@ export function PlaceMapView({
   const hintShownThisSession = useRef(false);
   const firstInteractionFired = useRef(false);
   const autoOpenFired = useRef<string | null>(null);
-  const markerRefs = useRef(new Map<string, React.RefObject<Marker>>());
+  const markerRefs = useRef(
+    new Map<string, React.RefObject<MapMarker | null>>(),
+  );
 
   // Clear the pending button once loading begins (either from this button or
   // from an external trigger), so the button doesn't linger during the fetch.
@@ -325,7 +335,7 @@ export function PlaceMapView({
           const isSelectedExplore = selectedMarkerId === place.id;
           const isLeader = leaderPlace?.id === place.id;
           if (!markerRefs.current.has(place.id)) {
-            markerRefs.current.set(place.id, React.createRef<Marker>());
+            markerRefs.current.set(place.id, React.createRef<MapMarker>());
           }
           const markerRef = markerRefs.current.get(place.id)!;
           return (
@@ -353,9 +363,7 @@ export function PlaceMapView({
                         {
                           borderColor: colors.primary + "20",
                           opacity: 0.35 + leaderPulse * 0.05,
-                          transform: [
-                            { scale: 1 + leaderPulse * 0.06 },
-                          ],
+                          transform: [{ scale: 1 + leaderPulse * 0.06 }],
                         },
                       ]}
                     />

@@ -850,8 +850,7 @@ async function fetchNeighborhoodLabel(
       addr.city_district ||
       addr.quarter ||
       addr.village;
-    const city =
-      addr.city || addr.town || addr.municipality || addr.county;
+    const city = addr.city || addr.town || addr.municipality || addr.county;
     let label: string;
     if (neighbourhood && city) {
       label = `${neighbourhood}, ${city}`;
