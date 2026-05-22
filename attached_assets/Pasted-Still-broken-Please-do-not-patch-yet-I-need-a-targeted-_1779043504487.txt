@@ -1,0 +1,59 @@
+Still broken. Please do not patch yet — I need a targeted runtime trace.
+
+I am physically still near 23rd/Fairmount, but Walk Mode is surfacing University City / Penn / Locust Walk discoveries as if they are within meters of me.
+
+Example from debug overlay:
+- GPS: 39.96737, -75.17710
+- Selected/top candidate: “Subsurface Locust Walk Trolley Tracks”
+- Debug says distance: 9m
+- But Locust Walk / Penn context is not near my current location.
+
+This means the system still believes a geographically distant discovery has coordinates near my actual GPS after the latest trust fixes.
+
+Please trace this exact failure before editing:
+
+1. For “Subsurface Locust Walk Trolley Tracks,” report the final place object currently entering Walk Mode:
+- name
+- address
+- latitude
+- longitude
+- coordSource
+- _rejectOutOfArea
+- autoNarrationBlocked
+- distance from user
+- source path: discover response, AsyncStorage cache, route initialPlaces, or other
+
+2. Report the raw LLM coordinates before verification.
+
+3. Report the Nominatim query or queries used:
+- combined name/address query
+- address probe
+- name probe
+- any ordinal/street probe
+
+4. Report every Nominatim result accepted or rejected:
+- display_name
+- lat/lon
+- class/type
+- distance from user
+- distance from LLM coordinates
+- why it was accepted or rejected
+
+5. Explain why this place passed the Walk Mode trust gate despite referring to Locust Walk / Penn while I am near 23rd/Fairmount.
+
+6. Check whether this is coming from stale cache:
+- server LLM cache
+- AsyncStorage tile cache
+- route prefetchedPlaces
+- narration queue
+- currently playing state
+- previewCluster
+- any persisted walk state
+
+7. Check whether Nominatim is matching a weak local token and “correcting” the place to a nearby but wrong location.
+
+8. Check whether the name/address contradiction logic actually runs on this item and what it decides.
+
+Please do not work on UI, header design, map styling, prompt tone, or discovery quality right now.
+
+This is still a Walk Mode spatial trust bug. I need the precise root cause before another patch.

@@ -1,0 +1,67 @@
+Before making changes, please create a commit/checkpoint.
+
+I want to make a narrow discovery-quality refinement for Urban Explorer based on field testing.
+
+Goal:
+Temporarily deprioritize or exclude ghost signs / faded wall advertisements / painted building ads from discovery results, especially in Walk Mode.
+
+Reason:
+Ghost signs are historically interesting and visually appealing, but they are currently too fragile for the app’s logistics. They often require very precise visual location, can be hard to geolocate to an exact address, may be easy to miss while walking, and can undermine trust when the app already needs to improve spatial precision.
+
+This is not a philosophical rejection of ghost signs. Treat them as a future content category once geolocation/spatial anchoring is stronger.
+
+Please update discovery-selection/ranking prompts and related heuristics so that:
+
+1. Ghost signs are generally deprioritized or filtered out for now.
+Terms/examples to treat as ghost-sign-like:
+- ghost sign
+- faded painted sign
+- old painted advertisement
+- wall advertisement
+- faded wall ad
+- painted building ad
+- vintage painted signage
+- faded commercial signage
+
+2. Do not over-filter all signage.
+Keep potentially valid discoveries involving signs if they are:
+- official historical markers
+- plaques
+- building names carved into stone
+- old storefront signs still tied to a clear address/business history
+- visible architectural lettering that helps explain the building/place
+- signage with strong spatial anchoring and low ambiguity
+
+3. Main principle:
+Deprioritize discoveries that require the user to hunt visually for a small/uncertain object or depend on highly precise visual positioning that the app may not reliably provide yet.
+
+4. Add this operational rule to the discovery heuristics:
+“Discoveries should not require precision beyond the app’s current trust level. Avoid surfacing items that depend on the user locating a fragile, small, ambiguous, or hard-to-see visual detail while walking.”
+
+5. Preserve existing discovery-quality philosophy:
+Continue prioritizing discoveries that:
+- recontextualize the visible environment
+- are strongly tied to place
+- reveal human/spatial traces
+- change how the user perceives the physical surroundings
+- feel specific, grounded, and spatially meaningful
+
+6. Do not change:
+- geolocation logic
+- audio playback
+- narration queueing
+- UI
+- database schema
+- route logic
+unless absolutely required for this prompt/heuristic update.
+
+7. If there are multiple prompt locations for discovery generation, walk narration, route blurbs, and explore/discover results, apply the ghost-sign guidance consistently where relevant.
+
+8. Update cache/prompt versions if needed so old cached ghost-sign-heavy results do not continue appearing during testing.
+
+Acceptance criteria:
+- Ghost signs / faded wall ads are much less likely to surface in Walk Mode or general discovery results.
+- The app still allows clear, strongly anchored signage-related discoveries when appropriate.
+- The change is scoped to discovery prompt/ranking behavior.
+- No unrelated UI, audio, geolocation, or routing changes are made.
+- Validation/typecheck/lint/tests still pass.

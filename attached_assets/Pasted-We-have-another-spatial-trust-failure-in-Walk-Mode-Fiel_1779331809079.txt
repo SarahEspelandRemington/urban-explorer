@@ -1,0 +1,56 @@
+We have another spatial-trust failure in Walk Mode.
+
+Field test example:
+Actual GPS/debug area: Fairmount/Spring Garden near 22nd–23rd.
+Now Playing:
+“Former Political Machine Clubhouse, 3408–10 Spruce Street”
+
+Detail page confirms:
+address: 3408–10 Spruce St
+map location: West Philadelphia / University City area
+
+But Walk Mode surfaced/narrated it near Fairmount.
+
+This is the same trust bug family as:
+- 39th & Market
+- Walnut near 33rd
+- West Diamond Street
+
+The remaining gap appears to include numbered address ranges and explicit street addresses:
+- “3408–10 Spruce Street”
+- “3408 Spruce St”
+- “[number] [street name] Street”
+- address ranges like “3408–10”
+
+Required behavior:
+If a Walk Mode candidate has explicit address or location text that geocodes materially far from the user/search center, it must be rejected before:
+- becoming a pin
+- becoming eligible
+- entering queue
+- becoming Now Playing
+
+Please diagnose first:
+1. Why did “3408–10 Spruce Street” pass the current spatial-trust filter?
+2. Did the address-range format bypass ADDRESS_RX or SPECIFIC_LOC_TEXT_RE?
+3. Did coordSource again bypass the prose/address check?
+4. Did cache or queued state bypass the newest filter?
+5. Was it classified as VERIFIED_PLACE, APPROXIMATE_SITE, or INTERPRETIVE_OVERLAY?
+
+Then implement a narrow fix:
+- Add address-range handling for patterns like “3408–10 Spruce Street”
+- Ensure explicit numbered addresses are checked even when coordSource exists
+- If the geocoded address is far from the candidate/user/search-center coordinates, downgrade to INTERPRETIVE_OVERLAY or reject from Walk Mode
+- Walk Mode should not auto-narrate these
+- Preserve/debug the rejection reason clearly, e.g. explicitAddressMismatch or addressRangeMismatch
+
+Bias toward over-filtering. Zero results is acceptable. False narration is not.
+
+Add tests for:
+- “Former Political Machine Clubhouse, 3408–10 Spruce Street” near Fairmount GPS should be rejected
+- “3408 Spruce St” near Fairmount GPS should be rejected
+- verified local address near user should still pass
+
+Do not change UI, prompts, discovery tone, or ranking.
+
+Run typecheck, lint, format, and tests.
+Summarize root cause and exact files changed.

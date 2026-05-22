@@ -1,0 +1,67 @@
+Before making changes, please create a commit/checkpoint.
+
+Please make a focused UX refinement to Walk Mode only. Do not change narration logic, proximity scoring, routing, APIs, or map discovery logic unless required for display.
+
+Goal:
+Reduce phone-checking anxiety in Walk Mode by making the active walking screen clearer, calmer, and less map-monitoring-heavy.
+
+Current issue:
+Walk Mode shows many orange/gray dots and debugging-style info. It is not clear what the dot colors mean, and the map invites the user to supervise the app instead of walking naturally.
+
+Please update Walk Mode UI as follows:
+
+1. Hide technical/debug stats from normal Walk Mode UI
+Remove or hide from the normal user-facing screen:
+- prefetch hit rate
+- stale count
+- dedupe count
+- stop count
+- any other developer/debug narration metrics
+
+If useful, move them behind a dev-only flag or console logs.
+
+2. Add a clear Walk status area
+At the top or near the current controls, show a simple status such as:
+- “Walking”
+- “Listening nearby”
+- “Stories will play when something comes up”
+
+Use calm, short language. Avoid long explanations.
+
+3. Clarify pin states visually
+If orange and gray dots remain visible, add a small lightweight legend or labels so the user understands them.
+Suggested meanings, if accurate:
+- Orange = ready / audio available / queued
+- Gray = nearby / loading / not yet ready
+
+If those meanings are not accurate, infer the actual meanings from code and label them correctly.
+
+4. Reduce map-monitoring pressure
+Do not remove the map entirely yet, but make the UI feel less like the user needs to inspect every dot.
+Options:
+- visually de-emphasize inactive/gray pins
+- emphasize only the current/next narration target
+- make the currently playing location clearly highlighted
+- avoid showing too many equally prominent dots at once if possible
+
+5. Make current narration more actionable
+In the Now Playing card, if a story/location is currently playing or queued, allow the user to tap the card or a clear control to view/replay that narration if this is already supported by existing functionality.
+Do not build a major new system. If replay is not currently available, add a clearly scoped TODO/comment and do not invent a complicated solution.
+
+6. Preserve existing behavior
+Do not change:
+- narration generation
+- narration queue logic
+- proximity scoring
+- background audio behavior
+- route logic
+- Explore mode
+- Saved mode
+
+Acceptance criteria:
+- Walk Mode no longer shows developer/debug stats to normal users.
+- User can tell Walk Mode is active.
+- User can understand what visible pin states mean.
+- Current/playing narration is visually clearer.
+- UI feels calmer and less like a debugging dashboard.
+- Existing narration behavior still works.

@@ -1,0 +1,161 @@
+We need a focused “map semantic clarity” pass — not a visual redesign, and not a logic rewrite.
+
+The goal is to make it immediately understandable:
+- what is simply nearby,
+- what the user has selected,
+- and what is actively narrating.
+
+Right now those states blur together, which hurts spatial trust.
+
+Core design principle:
+The map is a calm geographic truth surface. Marker semantics should feel intentional and consistent across Explore and Walk Mode.
+
+Please implement the following.
+
+-----------------------------------
+SEMANTIC MAP LANGUAGE
+-----------------------------------
+
+There are now 4 distinct marker states:
+
+1. USER LOCATION
+Meaning: “You are here.”
+
+Keep current user dot behavior mostly unchanged.
+
+Visual:
+- stable
+- grounded
+- no glow theatrics
+- should NOT visually compete with narration
+
+2. AVAILABLE DISCOVERY
+Meaning: “A nearby place exists here.”
+
+This is the default state for normal discoveries.
+
+Visual:
+- quiet amber marker
+- low visual intensity
+- crisp
+- no glow
+- no pulse
+- should feel ambient, not demanding
+
+3. SELECTED DISCOVERY
+Meaning: “This is the place currently associated with the open info card/modal.”
+
+This is currently unclear in both Explore and Walk Mode.
+
+Please add:
+- subtle static halo/radiance around the selected marker
+- slight visual emphasis increase
+- NO animation
+- should visually link the open card/modal to the map marker
+
+Important:
+There should only ever be ONE selected marker at a time.
+
+4. ACTIVE NARRATION
+Meaning: “Audio is currently talking about this place.”
+
+This should NOT use the same treatment as selected.
+
+Please add:
+- subtle animated audio aura / pulse / radiance
+- restrained and calm
+- not flashy
+- should feel companion-like, not game-like
+
+If a place is BOTH selected and actively narrating:
+- active narration styling wins
+- do NOT stack selected halo + narration aura together
+
+-----------------------------------
+CONSISTENCY ACROSS MODES
+-----------------------------------
+
+Apply the same semantic system to:
+- Explore Mode
+- Walk Mode
+
+The meaning of marker states should remain consistent even if behavior differs between modes.
+
+-----------------------------------
+IMPORTANT CLARIFICATION
+-----------------------------------
+
+In Explore Mode:
+- tapping a marker and opening its info card/modal should visibly associate the marker with the card using the selected-state halo
+
+In Walk Mode:
+- the currently audible story should use the active narration aura
+- a manually tapped preview place should use the selected-state halo
+- these are DIFFERENT states
+
+The goal is to remove ambiguity about:
+- “what I tapped”
+vs
+- “what the app is currently narrating”
+
+-----------------------------------
+DO NOT CHANGE
+-----------------------------------
+
+Do NOT change:
+- discovery logic
+- ranking
+- geocoding
+- verification
+- prompts
+- backend behavior
+- audio pipeline
+- clustering behavior
+- navigation flows
+- map provider
+- card layouts
+
+This is strictly a semantic clarity / visual state pass.
+
+-----------------------------------
+VISUAL TONE
+-----------------------------------
+
+Keep effects restrained.
+
+Avoid:
+- strong glow
+- neon effects
+- gamification
+- “live operations dashboard” feeling
+
+Target:
+- calm
+- grounded
+- editorial
+- companion-like
+- trustworthy
+
+-----------------------------------
+IMPLEMENTATION NOTES
+-----------------------------------
+
+Please first inspect:
+- current marker rendering logic
+- selectedPlace state
+- currentlyPlayingPlaceId / active narration state
+- Explore vs Walk map rendering differences
+
+Then implement the smallest coherent change set possible.
+
+Please run:
+- typecheck
+- lint
+- format
+- tests
+
+Then summarize:
+- exact files changed
+- how selected-state is determined
+- how narration-state is determined
+- any remaining ambiguity you noticed in the current architecture

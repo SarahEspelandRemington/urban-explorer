@@ -32,9 +32,20 @@ export interface NarrationPlace {
   facts: string[];
   /** Specific street address of the place (e.g. "610 8th Ave"). */
   address?: string;
-  /** Approximate block context from the user's GPS reverse-geocode
-   *  (e.g. "W 49th St, Hell's Kitchen, Manhattan"). Used as the
-   *  spatial anchor when no specific place address is available. */
+  /**
+   * Approximate block context for the narration spatial anchor
+   * (e.g. "W 49th St, Hell's Kitchen, Manhattan").
+   *
+   * This MUST represent the place's own location — the cross streets or
+   * neighborhood label at the place's coordinates — NOT the user's current
+   * GPS position. Passing the user's location as this field when the user is
+   * far from the place causes the LLM to synthesize false local context
+   * ("Here in Fairmount —" for a place at 328 Walnut Street).
+   *
+   * Only populated by WalkModeContext when (a) the place has no address AND
+   * (b) the user is physically adjacent (≤ maxQueueDistance) to the place, so
+   * the user's reverse-geocoded block is approximately correct for the place.
+   */
   crossStreets?: string;
 }
 

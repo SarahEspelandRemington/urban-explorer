@@ -1,0 +1,57 @@
+Critical spatial-context mismatch in Explore.
+
+Debug shows:
+- search center: 39.96633, -75.17471
+- user GPS: 39.96633, -75.17471
+- map visibly shows Fairmount / Spring Garden around N 23rd, Green, Clay, Fairmount Ave
+
+But Explore header says:
+“Spruce Hill neighborhood, West Philadelphia...”
+
+And Explore is surfacing:
+“Buried Tributary to the S...”
+Text: “Beneath Spruce Street just east of 36th...”
+
+This means coordinates are correct, but the textual area/context label and discovery context are wrong or stale.
+
+Please diagnose before patching:
+
+1. Where does the Explore area/header label come from?
+- reverse geocode?
+- LLM response?
+- cached tile metadata?
+- previous search state?
+- selected result?
+- map center label?
+
+2. Can areaLabel / neighborhood text be cached separately from coordinates?
+3. Can a previous University City/Spruce Hill search contaminate a later GPS search near Fairmount?
+4. Is the area label sent into the discovery prompt or used as context for generating discoveries?
+5. Are search center coordinates and area label ever allowed to disagree?
+6. Why is the debug showing correct GPS/search center but wrong area text?
+
+Required rule:
+Area/header text must be derived from the same coordinate source as the current search center.
+
+If the app cannot confidently reverse-geocode the current coordinates, show a neutral fallback like:
+“Nearby”
+or
+“Current area”
+
+Do NOT use stale, LLM-generated, or previous-search neighborhood labels as current spatial context.
+
+Also:
+If a discovery text references a neighborhood/street/intersection that conflicts with the current search center, suppress it before rendering or narration.
+
+Acceptance criteria:
+- At 39.96633, -75.17471, Explore must not label the area as Spruce Hill / West Philadelphia.
+- A result about Spruce Street near 36th must not appear as a nearby discovery at 23rd/Fairmount.
+- Debug overlay should show:
+  - area label source
+  - area label timestamp/cache key if cached
+  - whether label coordinates match current search center
+- Bias toward neutral labels over wrong labels.
+
+Do not change UI styling or prompts unless required to stop stale spatial context.
+Run typecheck, lint, format, and tests.
+Summarize root cause and exact files changed.

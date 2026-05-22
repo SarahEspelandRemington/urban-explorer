@@ -4,6 +4,7 @@ import glob from "fast-glob";
 import chokidar from "chokidar";
 import type { FSWatcher } from "chokidar";
 import type { Plugin } from "vite";
+import * as prettier from "prettier";
 
 const MOCKUPS_DIR = "src/components/mockups";
 const GENERATED_MODULE = "src/.generated/mockup-components.ts";
@@ -79,6 +80,28 @@ export function mockupPreviewPlugin(): Plugin {
   let refreshInFlight = false;
   let refreshQueued = false;
 
+  async function formatSource(
+    source: string,
+    filepath: string,
+  ): Promise<string> {
+    try {
+      const config = await prettier.resolveConfig(filepath);
+      return await prettier.format(source, {
+        ...config,
+        filepath,
+      });
+    } catch (err) {
+      console.warn(
+        "[mockup-preview] Prettier formatting failed for",
+        filepath,
+        "—",
+        err instanceof Error ? err.message : String(err),
+        "— writing unformatted output.",
+      );
+      return source;
+    }
+  }
+
   async function refresh(): Promise<boolean> {
     if (refreshInFlight) {
       refreshQueued = true;
@@ -89,10 +112,11 @@ export function mockupPreviewPlugin(): Plugin {
     let changed = false;
     try {
       const components = await discoverComponents();
-      const newSource = generateSource(components);
+      const generatedModuleAbsPath = getGeneratedModuleAbsPath();
+      const rawSource = generateSource(components);
+      const newSource = await formatSource(rawSource, generatedModuleAbsPath);
       if (newSource !== currentSource) {
         currentSource = newSource;
-        const generatedModuleAbsPath = getGeneratedModuleAbsPath();
         mkdirSync(path.dirname(generatedModuleAbsPath), { recursive: true });
         writeFileSync(generatedModuleAbsPath, currentSource);
         changed = true;

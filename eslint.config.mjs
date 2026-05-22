@@ -25,7 +25,8 @@ export default [
   ...tseslint.configs.recommended,
   {
     rules: {
-      "no-useless-assignment": "warn",
+      // Promoted from "warn": detects dead writes that are always overwritten; must fix.
+      "no-useless-assignment": "error",
       "@typescript-eslint/no-namespace": "off",
       "@typescript-eslint/no-empty-object-type": "off",
     },
@@ -38,14 +39,18 @@ export default [
     },
     rules: {
       "react-hooks/rules-of-hooks": "error",
-      "react-hooks/exhaustive-deps": "warn",
+      // Promoted from "warn": missing deps cause stale-closure bugs; must fix.
+      "react-hooks/exhaustive-deps": "error",
       "@typescript-eslint/no-explicit-any": "off",
+      // Promoted from "warn": unused variables indicate dead code; must fix.
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      "no-empty": ["warn", { allowEmptyCatch: true }],
-      "local/no-pii-in-sentry": "warn",
+      // Promoted from "warn": empty blocks hide swallowed errors; must fix.
+      "no-empty": ["error", { allowEmptyCatch: true }],
+      // Promoted from "warn": PII leaks to Sentry are a privacy violation; must fix.
+      "local/no-pii-in-sentry": "error",
     },
   },
   {
@@ -55,8 +60,9 @@ export default [
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      // Promoted from "warn": unused variables indicate dead code; must fix.
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
     },

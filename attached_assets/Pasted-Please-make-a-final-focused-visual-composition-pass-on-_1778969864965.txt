@@ -1,0 +1,139 @@
+Please make a final focused visual-composition pass on Walk Mode using the attached mockup as the primary reference.
+
+This is NOT a logic/routing/geolocation task.
+
+Do not modify:
+- discovery ranking
+- queueing
+- audio
+- routing
+- backend
+- APIs
+- geolocation behavior
+- eligibility
+- narration timing
+
+This pass should focus on:
+- compositional calmness
+- visual hierarchy
+- spacing rhythm
+- tonal coherence
+- reducing the remaining “developer map app” feeling
+
+The current implementation is improved, but still feels like:
+- separate UI elements layered together
+rather than:
+- one cohesive walking experience.
+
+Important:
+The goal is NOT to copy the mockup literally.
+The goal is to achieve the same emotional/compositional feel:
+- calm
+- intentional
+- breathable
+- warm
+- directional
+- companion-like
+- low-supervision
+
+Specific refinements:
+
+1. MAP COMPOSITION
+The map should feel quieter overall.
+
+Please:
+- reduce visual competition between markers further
+- ensure upcoming discoveries visually recede more aggressively
+- avoid marker clustering feeling like “search results”
+- preserve tappability without equal visual weight
+
+2. CONNECTOR REFINEMENT
+The current connector is conceptually correct but visually too weak and slightly misleading.
+
+If retaining the connector:
+- use a softer warm amber tone approximately:
+  rgba(216,154,99,0.45)
+- width approximately:
+  1.5–2
+- rounded caps/joins
+- longer dash spacing such as:
+  [2,8] or [3,10]
+
+Most importantly:
+The connector should feel atmospheric and relational — NOT like navigation.
+
+If no true walking/street geometry is available safely in this pass, avoid making the connector resemble a literal route.
+
+3. REMOVE RAW CATEGORY LABELS
+Do not show taxonomy labels like:
+- place_of_worship
+- amenity
+- tourism
+etc.
+
+If no polished label exists, omit entirely.
+
+4. SPACING + BREATHING ROOM
+The current screen still feels slightly compressed vertically.
+
+Please improve:
+- spacing rhythm
+- negative space
+- separation between top controls, map, and Now Playing card
+- visual breathing room
+
+The mockup succeeds partly because the screen feels calm and spacious.
+
+5. TOP BAR TONE
+The top controls should continue moving away from:
+- utility dashboard
+- developer tool
+- map settings UI
+
+and toward:
+- ambient walking state
+
+“Walking” should feel like the primary state.
+Controls should feel secondary.
+
+6. COLOR + TONE
+Continue evolving toward:
+- deep navy/charcoal
+- warm amber accents
+- restrained glow
+- soft neutrals
+- low analytical feeling
+
+Avoid:
+- harsh orange
+- overly bright utility colors
+- excessive contrast noise
+- cinematic over-darkening
+
+Preserve outdoor readability and glance clarity.
+
+7. OVERALL TEST
+When glancing at Walk Mode, the screen should increasingly communicate:
+
+- where I am
+- what story matters now
+- gentle spatial relationship
+- nearby possibility
+
+NOT:
+- map management
+- nearby search results
+- clustered points of interest
+- dashboard controls
+
+Acceptance criteria:
+- Walk Mode feels compositionally calmer and more cohesive
+- The screen more closely matches the emotional tone of the mockup
+- The app feels less like a developer/location utility
+- The active discovery remains the emotional focal point
+- Upcoming discoveries recede naturally
+- Connector feels intentional but not navigational
+- Raw category labels are gone
+- Existing functionality remains intact
+- No logic/geolocation/routing changes are introduced
+- Typecheck/lint/tests pass

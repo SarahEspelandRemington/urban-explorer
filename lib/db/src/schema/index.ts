@@ -23,4 +23,3 @@ export * from "./place_ratings";
 export * from "./user_place_ratings";
 export * from "./rate_limit_store";
 export * from "./place_photos";
-export * from "./saved_places";

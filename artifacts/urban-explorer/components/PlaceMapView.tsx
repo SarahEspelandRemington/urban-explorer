@@ -127,8 +127,8 @@ export function PlaceMapView({
     Record<string, { latitude: number; longitude: number }>
   >({});
 
-  // Track which marker's callout is open so we can apply the selected-state
-  // halo ring. Clears automatically when the callout is dismissed.
+  // Track which marker was last selected so we can keep the pin highlighted
+  // after the callout is dismissed.
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -261,7 +261,6 @@ export function PlaceMapView({
               tracksViewChanges={selectedMarkerId !== null}
               zIndex={isSelectedExplore ? 1 : 0}
               onSelect={() => setSelectedMarkerId(place.id)}
-              onDeselect={() => setSelectedMarkerId(null)}
             >
               <View
                 style={[

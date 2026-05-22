@@ -147,6 +147,7 @@ building a custom dev client for real-device field testing.
 ## User preferences
 
 - **Always push to GitHub at the end of every session** (or when the user asks). This account may be deleted, so GitHub is the source of truth. Use the GitHub API to push any changed files before closing out.
+- **Walk Mode should follow phone-away trust**: prioritize spatial accuracy and user confidence over narration frequency. Cross-street / barrier correctness comes first, silence is a deliberate product choice when confidence is low, and debug output should explain decisions without driving them.
 
 ## Gotchas
 

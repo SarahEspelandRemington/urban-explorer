@@ -1,0 +1,175 @@
+We now have enough evidence to identify a core architectural issue in discovery generation.
+
+The issue is NOT random hallucination in the abstract.
+
+The issue is that the app is currently treating two fundamentally different classes of discoveries as equivalent:
+
+1. Strong spatial anchors
+    * churches
+    * named buildings
+    * monuments
+    * businesses
+    * ghost signs with exact locations
+    * infrastructure with stable coordinates
+2. Interpretive / inferred historical overlays
+    * buried waterways
+    * labor corridors
+    * “site of”
+    * invisible infrastructure
+    * demolished or approximate entities
+    * historically plausible area narratives
+
+The first category performs relatively well because:
+
+* the entity is geocodable,
+* spatially coherent,
+* externally verifiable,
+* and tied to exact coordinates.
+
+The second category is currently failing because:
+
+* the LLM is being allowed to synthesize historically plausible nearby narratives,
+* without a sufficiently strict geographic verification layer,
+* while still rendering them with the SAME UI certainty and marker treatment.
+
+This creates false trust.
+
+Examples from live testing:
+
+SUCCESSFUL:
+“Olivet Covenant Presbyterian Church”
+
+* real institution
+* exact address
+* coherent map position
+* narration, marker, and UI all aligned
+
+FAILED / SUSPECT:
+“Mill Creek Buried Waterway”
+
+* concept may be historically grounded
+* but the exact surfaced claim/location appears synthesized or insufficiently verified
+* rendered with full certainty anyway
+
+We need to introduce a stricter distinction between:
+“verified place”
+and
+“interpretive overlay.”
+
+GOAL:
+Do NOT remove interpretive discoveries entirely.
+They are important to Streetlit’s emotional identity.
+
+But:
+the app must stop presenting inferred discoveries with the same confidence language and visual certainty as verified places.
+
+PHASE 1 IMPLEMENTATION REQUEST
+
+1. Add discovery confidence classification
+
+Introduce an internal classification layer:
+
+* VERIFIED_PLACE
+* APPROXIMATE_SITE
+* INTERPRETIVE_OVERLAY
+
+This is internal metadata only for now.
+
+Heuristics:
+VERIFIED_PLACE:
+
+* exact address OR
+* stable named institution OR
+* geocoder-confirmed entity OR
+* exact coordinate confidence
+
+APPROXIMATE_SITE:
+
+* “site of”
+* demolished
+* approximate historical location
+* former structures
+
+INTERPRETIVE_OVERLAY:
+
+* buried waterways
+* invisible infrastructure
+* migration corridors
+* inferred neighborhood narratives
+* area-based historical abstractions
+
+2. Tighten Explore Mode acceptance criteria
+
+For Explore Mode:
+DO NOT render discoveries that:
+
+* fail coordinate verification,
+* fail address coherence,
+* OR cannot produce a stable geographic anchor.
+
+This should be STRICTER than current logic.
+
+If an entity cannot survive spatial verification:
+reject it entirely.
+
+3. Reduce LLM freedom for inferred discoveries
+
+For INTERPRETIVE_OVERLAY discoveries:
+the LLM must NOT invent:
+
+* precise locations,
+* exact blocks,
+* specific intersections,
+    unless those are already present in verified source material.
+
+4. UI differentiation (lightweight only)
+
+Do NOT redesign the app.
+
+But add subtle differentiation:
+
+* VERIFIED_PLACE = solid marker (existing behavior)
+* APPROXIMATE_SITE = softer marker treatment
+* INTERPRETIVE_OVERLAY = subdued/less authoritative marker
+
+No animations.
+No new colors.
+No legend.
+
+The goal is subconscious trust calibration.
+
+5. Add Explore debug diagnostics
+
+The new Explore debug overlay should display:
+
+* confidence classification
+* verification source
+* geocoder result
+* address coherence result
+* verification distance delta
+* whether coordinates were adjusted
+* whether the discovery originated from:
+    * hard POI,
+    * historical dataset,
+    * or LLM synthesis
+
+This is critical for debugging spatial trust.
+
+6. DO NOT touch Walk Mode ranking or narration logic right now
+
+This task is about:
+
+* discovery trust,
+* spatial certainty,
+* and Explore Mode verification architecture.
+
+Not UX redesign.
+
+Before implementation:
+please inspect the current Explore generation pipeline carefully and identify:
+
+* where LLM synthesis currently occurs,
+* where coordinate verification occurs,
+* and where discoveries are allowed through despite weak spatial grounding.
+
+We need diagnosis first, then minimal targeted fixes — not another patch cascade.

@@ -1,0 +1,105 @@
+Please diagnose and implement a focused multi-mode debug instrumentation pass.
+
+Problem:
+Spatial trust issues are now appearing outside Walk Mode. In Explore Mode, I am seeing discoveries whose title/location text clearly refers to a different area than the visible map context.
+
+Example:
+Explore shows a card:
+“37th Street Pedestrian T...”
+Snippet: “Opened in the 1950s, the 37th Street tunnel beneath Spruce...”
+Header/location context shows “Spruce St & 37th St area, West Philadelphia...”
+But the visible map appears centered around Fairmount / 23rd / Spring Garden.
+
+This suggests the spatial trust problem is not isolated to Walk Mode.
+
+Goal:
+Add useful debug visibility to Explore/Search/Plan modes so we can trace where each displayed discovery came from and whether its coordinates, address text, and map placement agree.
+
+Do NOT change discovery logic yet.
+Do NOT change prompts, geocoding, ranking, routing, UI styling, or backend behavior yet.
+First add debug instrumentation that will help diagnose the failure.
+
+Please implement:
+
+1. Shared debug toggle
+Add developer/settings toggles for:
+- Walk Debug Overlay if already present
+- Explore Debug Overlay
+- Search Debug Overlay if applicable
+- Plan a Walk Debug Overlay if applicable
+
+Do not expose these prominently in normal user UI.
+
+2. Explore Mode debug overlay
+When enabled, show a compact debug panel for Explore/map mode with:
+
+Current mode:
+- location-based Explore / searched location / map “Search this area” / route-plan source
+
+User/search/map context:
+- user GPS if available
+- current map center coordinates
+- search center coordinates used for the API call
+- visible region/radius/range setting
+- current location label/header text
+
+For selected place:
+- name
+- address/location string
+- latitude/longitude used for marker
+- distance from user GPS
+- distance from search/map center
+- coordSource
+- _rejectOutOfArea
+- autoNarrationBlocked
+- source path: live server response, client cache, route prefetch, search result, etc.
+- cache key/version if available
+
+For result set:
+- number of pins
+- number filtered/rejected if available
+- top 5 place names with distance from search center
+- recent rejection reasons if available
+
+3. Selected marker/card trace
+When a marker card is open, debug should clearly identify:
+- selectedPlace.id
+- selectedPlace.name
+- selected marker coordinates
+- whether the visible selected marker matches the card
+- whether the card is using the same place object as the marker
+
+4. Cross-mode spatial consistency check
+Add debug-only warnings when:
+- place name/address contains a strong location clue that appears far from the marker coordinates
+- marker distance from search center exceeds the selected range
+- place coordinates are near user but address/name references another neighborhood or street
+- selected card location text and marker coordinates disagree
+
+Debug warning only for now; do not block results yet.
+
+5. Plan a Walk debug
+For Plan a Walk, when enabled, show:
+- route start/end coordinates
+- route geometry source
+- places fetched along route
+- each place distance from route corridor
+- whether place came from route prefetch or discover endpoint
+- coordSource/rejection flags
+- whether a place would be eligible for Walk Mode if started
+
+6. Do not overbuild
+Keep this diagnostic and readable.
+No redesign.
+No new visual language.
+No new filtering behavior.
+No major refactors unless needed to share debug helpers.
+
+Acceptance criteria:
+- I can enable Explore debug and understand why a specific marker/card is appearing.
+- I can tell whether the discovery came from user location, searched location, map-center search, cache, or route prefetch.
+- I can see the coordinates used for the marker and compare them to the text/address shown.
+- I can trace whether a selected card corresponds to the selected marker.
+- Existing app behavior remains unchanged.
+- Typecheck, lint, format, and tests pass.
+- Final summary lists exact files changed and any suspected root cause found while wiring the debug data.

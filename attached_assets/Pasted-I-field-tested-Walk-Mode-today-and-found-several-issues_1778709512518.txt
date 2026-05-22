@@ -1,0 +1,33 @@
+I field-tested Walk Mode today and found several issues that need debugging and refinement. Please review the Walk Mode logic holistically, especially map pins, GPS/story matching, story loading, and playback controls.
+
+Key issues to address:
+
+1. Pin styling changed unexpectedly
+- Pins are now showing as tiny orange dots.
+- Please restore them to the larger, more visible pin style we had previously, or create a clearer walk-mode pin style that is easy to see while walking outdoors.
+
+2. Narrated story locations are not precise enough
+- My blue-dot location is accurate, but the narrated stories are often for places that are one street/block away, or down side streets I am not actually walking on.
+- Please tighten the matching logic so narration prioritizes stories on or very near the user’s actual current street/path.
+- Avoid triggering stories simply because they are nearby “as the crow flies” if they are not on the user’s current route or block.
+
+3. Walk Mode should prioritize the direction of travel
+- The app is loading or narrating stories from blocks away, including in the opposite direction from where I am walking.
+- Please refine the loading logic so Walk Mode focuses on stories ahead of the user, based on heading/direction of travel.
+- Stories behind the user or far off to the side should be deprioritized unless there are no better nearby options.
+
+4. Map and story loading do not keep up during the walk
+- As I walk, the map does not consistently follow or “catch up” to my current location.
+- New stories do not reliably load as I move.
+- I often have to stop Walk Mode and restart it to get fresh nearby stories.
+- Please make Walk Mode continuously refresh based on updated GPS location, without requiring a restart.
+
+5. Add manual pin playback controls
+- I want to be able to tap/select any visible pin and manually play its narrative.
+- If a story has already played, I should be able to restart/replay it from the pin.
+- Please add clear UI behavior for selected pins, including a play/replay option.
+
+Overall goal:
+Walk Mode should feel reliable while walking in a city grid. It should follow the user smoothly, prioritize stories on the user’s current path and direction of travel, avoid narrating irrelevant nearby side-street stories, and allow manual replay from pins.
+
+Please inspect the current Walk Mode implementation, identify the likely causes, and propose/code fixes carefully without breaking existing map or story functionality.

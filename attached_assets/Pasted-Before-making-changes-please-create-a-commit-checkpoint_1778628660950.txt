@@ -1,0 +1,78 @@
+Before making changes, please create a commit/checkpoint so I can roll back easily if needed.
+
+Please update the app’s initial location/start screen only.
+
+Goal:
+Restructure the current “Enable Location” start screen so users clearly understand the two primary ways to use the app: Explore and Walk.
+
+Keep:
+- Existing app name and branding
+- Existing colors/theme
+- Existing typography
+- Existing bottom tabs: Explore, Walk, Saved
+- Existing routes/actions/functionality
+- Existing location permission behavior
+
+Do not:
+- Change app icon or loading screen
+- Modify map, walk, saved, search, details, or route screens
+- Add new functionality
+- Remove existing functionality
+- Refactor unrelated files
+
+Screen purpose:
+When the app opens and location access has not yet been granted, users should immediately understand they can either:
+1. Explore places interactively using maps/search
+2. Start a more ambient walking/listening experience
+
+Restructure the screen into two clear mode sections/cards:
+
+1. EXPLORE
+Headline:
+Browse the hidden layers of a place.
+
+Body:
+Search neighborhoods, explore nearby stories, and follow your curiosity.
+
+Actions:
+- Search by Location
+- Allow Location Access
+
+2. WALK
+Headline:
+Put your phone away and wander.
+
+Body:
+Listen as the app quietly reveals stories around you.
+
+Actions:
+- Start Walking
+- Plan a Walk
+
+UX requirements:
+- Make Explore and Walk feel like two intentional modes, not four disconnected buttons.
+- Group actions visually under the correct mode.
+- Preserve current button behavior exactly:
+- Start Walking keeps existing behavior
+- Search by Location keeps existing behavior
+- Allow Location Access keeps existing behavior
+- Plan a Walk keeps existing behavior
+- Keep the current visual system/colors for now.
+- Use generous spacing, clear hierarchy, and readable labels.
+- The screen should feel calmer, clearer, and more intentional, while remaining visually consistent with the rest of the current app.
+
+Suggested layout:
+Top:
+- Existing icon/location symbol
+- “Enable Location”
+- Short explanatory text
+
+Then:
+- Explore card
+- Walk card
+
+Acceptance criteria:
+- The screen clearly explains Explore vs Walk.
+- All four actions work exactly as before.
+- No unrelated screens are changed.
+- There is a rollback checkpoint/commit before the change.

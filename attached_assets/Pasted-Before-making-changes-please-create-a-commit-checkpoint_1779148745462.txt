@@ -1,0 +1,194 @@
+Before making changes, please create a commit/checkpoint.
+
+Please implement a focused Phase 1 Design System Alignment pass for Urban Explorer.
+
+Do NOT rename the app to Streetlit yet.
+Do NOT redesign the app architecture.
+Do NOT change discovery logic, geolocation, Walk Mode spatial verification, routing, audio, prompts, APIs, or backend behavior.
+
+Goal:
+Make the app feel visually more cohesive, elegant, warm, calm, and intentional across existing screens, using the attached Streetlit visual direction as inspiration while preserving current functionality.
+
+Design direction:
+“Grounded utility with editorial warmth.”
+The app should feel like a low-stress, elegant treat: useful, readable, calm, and curious — not a generic map utility, not a moody art app, and not Halloween-orange-on-black.
+
+Use this palette as the Phase 1 foundation:
+
+DARK MODE
+- Background: #081827
+- Card: #102537
+- Foreground: #FFF7E8
+- Muted foreground: #B8AFC0
+- Muted surface: #1A3144
+- Border: #294055
+- Primary amber: #F2A23A
+- Primary foreground: #081827
+- Accent rose: #C77A8F
+- Accent cyan: #4DB7C5
+- Accent green: #A8D85B
+
+LIGHT MODE
+- Background: #FFF8EE
+- Card: #FFFFFF
+- Foreground: #102033
+- Muted foreground: #6F6372
+- Muted surface: #F4E6D6
+- Border: #E7D4C0
+- Primary amber: #E98D32
+- Primary foreground: #FFFFFF
+- Accent purple: #8E668C
+- Accent cyan: #4DB7C5
+- Accent green: #A8D85B
+
+Phase 1 scope:
+Apply visual consistency to existing UI components and screens only.
+
+Screens to include if currently present:
+- loading/start screen
+- opening app screen
+- Explore / map mode
+- search location mode
+- place detail pages
+- Walk Mode intro screen
+- Walk Mode active screen, visual styling only
+- Plan a Walk screens
+- Saved screens if present
+
+Do not change navigation structure or add major new functionality.
+
+Implementation priorities:
+
+1. GLOBAL TOKENS
+Create or update shared design tokens/styles where possible rather than hardcoding values repeatedly.
+Use the palette above consistently for:
+- backgrounds
+- cards
+- text
+- muted text
+- borders
+- primary buttons
+- secondary buttons
+- chips
+- active states
+- focused states
+
+2. COLOR SEMANTICS
+Use amber/orange primarily for:
+- primary CTA buttons
+- active/focused states
+- currently active audio/story states
+- small emphasis moments
+
+Do not use orange for every marker, label, or decorative element.
+Avoid the app feeling orange/black/Halloween.
+
+Use cyan/green/rose/purple sparingly as supporting accents, not category-rainbow map semantics.
+For now, category colors should NOT dominate the map.
+
+3. CARDS
+Make cards feel consistent across the app:
+- dark mode card background: #102537 or nearby
+- subtle border: #294055
+- rounded corners
+- comfortable padding
+- clear hierarchy
+- no heavy shadows
+- no excessive glow
+
+Use restrained warmth, not glassmorphism overload.
+
+4. BUTTONS
+Primary buttons:
+- amber fill
+- high contrast text
+- rounded corners
+- confident but not shouty
+
+Secondary buttons:
+- transparent or muted surface
+- subtle amber/border treatment
+- not visually equal to primary CTA
+
+5. CHIPS / TAGS
+Make chips quieter and more polished.
+Avoid raw taxonomy-looking labels where possible.
+Use muted surfaces and restrained accent text.
+Do not create rainbow chip overload.
+
+6. TYPOGRAPHY
+Keep the current font stack unless there is already a safe serif/display font available.
+Do not introduce custom fonts or external font dependencies.
+
+However:
+- make headlines feel more editorial through size, weight, spacing, and hierarchy
+- preserve readability
+- avoid oversized concept-art typography that reduces usability
+
+7. MAP UI
+Preserve current map functionality.
+Do not change map behavior, clustering logic, location logic, or marker data.
+
+Visual-only guidance:
+- reduce rainbow/category-map feeling where feasible
+- use quieter neutral markers for non-active items
+- reserve warm amber for active/focused/current states
+- preserve map readability and geographic trust
+
+8. WALK MODE
+Do not touch Walk Mode logic.
+Do not change spatial trust code.
+Do not change audio/narration behavior.
+
+Only apply visual consistency:
+- card styling
+- button styling
+- muted states
+- amber active-state styling
+- spacing consistency
+- debug/dev UI should remain dev-only
+
+9. PLAN A WALK
+Do not redesign the flow yet.
+Do not add route editing yet.
+
+Visual goal:
+Plan a Walk should feel like gentle curation, not Google Maps.
+But preserve familiar route-planning clarity.
+
+Apply:
+- warmer cards
+- clearer CTAs
+- calmer input/search styling
+- better visual consistency with Explore and Walk Mode
+
+Do not add/remove discoveries or change routing behavior in this pass.
+
+10. LOADING / OPENING SCREENS
+Move these toward the same warm, calm, curious visual language.
+Avoid language that sounds judgmental or scolding, such as “put your phone away.”
+Use inviting language around curiosity and walking.
+
+Do not rename the product yet.
+
+11. RESTRAINT
+Use one atmospheric effect only: restrained soft glow.
+Reserve it for active/focused states.
+Do not add multiple glow systems, blur effects, gradients, animations, or decorative flourishes.
+
+12. READABILITY
+Do not over-darken the app.
+Preserve outdoor readability, especially on iOS dark mode.
+Avoid low-contrast text.
+Avoid making the app look like a static concept mockup instead of a functioning product.
+
+Acceptance criteria:
+- Existing screens feel visually more like one coherent app.
+- Explore, Walk Mode, Plan a Walk, and Detail screens share the same palette and component language.
+- The app feels warmer, calmer, more elegant, and more intentional.
+- The app remains readable and functional.
+- Category colors do not dominate the map.
+- Amber is used meaningfully, not everywhere.
+- No navigation, backend, geolocation, routing, narration, prompt, or discovery logic changes are made.
+- Typecheck, lint, format, and tests pass.
+- Final summary lists exact files changed.
