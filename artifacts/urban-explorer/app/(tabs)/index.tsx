@@ -142,6 +142,8 @@ export default function ExploreScreen() {
   const [places, setPlaces] = useState<DiscoveredPlace[]>([]);
   const [areaName, setAreaName] = useState<string>("");
   const [areaNameSrc, setAreaNameSrc] = useState<string>("unknown");
+  const [effectiveAddressHintSrc, setEffectiveAddressHintSrc] =
+    useState<string>("unknown");
 
   const allMapPlaces = useMemo(() => {
     const combined = [...places, ...mapPlaces];
@@ -247,6 +249,7 @@ export default function ExploreScreen() {
       searchRadius,
       areaName,
       areaNameSrc,
+      effectiveAddressHintSrc,
       totalPlaces: allMapPlaces.length,
       topPlaces,
       selectedPlace: sel,
@@ -263,6 +266,7 @@ export default function ExploreScreen() {
     searchRadius,
     areaName,
     areaNameSrc,
+    effectiveAddressHintSrc,
     allMapPlaces.length,
   ]);
 
@@ -582,6 +586,10 @@ export default function ExploreScreen() {
             setAreaName((data?.location as string | undefined) ?? "");
             setAreaNameSrc(
               (data?.locationSrc as string | undefined) ?? "unknown",
+            );
+            setEffectiveAddressHintSrc(
+              (data?.effectiveAddressHintSrc as string | undefined) ??
+                "unknown",
             );
             // Cold-start phase marker — only the first call lands; subsequent
             // discovers are no-ops on the recorder.
