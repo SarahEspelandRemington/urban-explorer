@@ -1,0 +1,227 @@
+We need to reset the discovery architecture direction rather than keep patching individual hallucinated results.
+
+Please do NOT edit code yet.
+
+I want a diagnosis and implementation proposal only.
+
+Context:
+Recent testing shows that the current discovery pipeline is not trustworthy enough. It repeatedly produces plausible but unverifiable or fabricated discoveries, often mapped to my real coordinates while text/location context refers to somewhere else entirely.
+
+Example pattern:
+
+* I am in Fairmount / Spring Garden.
+* The app labels or behaves as if I am in West Philly / University City.
+* Fake or unverifiable results reference Walnut, Spruce, 33rd, 34th, 39th, Market, etc.
+* These are sometimes mapped near my real GPS location even though the text clearly belongs elsewhere.
+
+This is happening in Explore and Walk Mode, so the problem is likely upstream/shared, not just one UI mode.
+
+Important product decision:
+For now, zero results are acceptable.
+Sparse results are acceptable.
+False or unverifiable results are not acceptable.
+
+We want to move from:
+
+LLM proposes discoveries
+→ geocoder/regex filters try to catch bad ones
+→ some bad ones survive
+
+to:
+
+Only grounded, externally anchored entities are eligible
+→ LLM may narrate/summarize only after the place is grounded
+
+This is not about improving the prompt tone.
+This is about changing the discovery trust architecture.
+
+Please diagnose the current architecture and propose a “Grounded Discovery Mode” safety architecture for both Explore and Walk.
+
+Questions to answer:
+
+1. Current discovery sources
+
+For both Explore and Walk Mode, identify where discoveries currently come from:
+
+* LLM-generated candidates
+* OSM / Nominatim / geocoder results
+* cached server results
+* client AsyncStorage
+* route prefetch
+* saved places
+* any other source
+
+Please distinguish between:
+
+* places invented/proposed by the LLM
+* places grounded by an external source
+* places whose coordinates were merely corrected after generation
+
+2. Provenance fields
+
+Identify what fields currently exist and how reliable they are:
+
+* coordSrc / coordSource
+* discoveryClass
+* confidence
+* sourceType
+* verification flags
+* geocoder result
+* address coherence result
+* source URL / provenance
+* neighborhood or area label source
+
+If these are inconsistent or insufficient, say so.
+
+3. Current area-label / neighborhood problem
+
+Please specifically investigate why the app sometimes says the user/search area is West Philly / Spruce Hill / University City when the GPS and map center are Fairmount / Spring Garden.
+
+Questions:
+
+* Where does the area label come from?
+* Can it be cached separately from coordinates?
+* Can stale area labels contaminate new discovery requests?
+* Is the area label sent into the LLM prompt?
+* Can search center coordinates and textual area context disagree?
+
+This must be addressed conceptually in the proposal, because wrong area context appears to be generating wrong discoveries.
+
+4. Define “grounded enough”
+
+Please propose a strict definition of “grounded enough to show in Explore” and “grounded enough to narrate in Walk.”
+
+For now, both Explore and Walk should be strict.
+
+A place should likely be eligible only if it has:
+
+* non-LLM coordinates, AND
+* a stable named entity OR exact address, AND
+* external grounding from geocoder/OSM/Wikidata/source-backed record/manual curation, AND
+* no conflicting location text, AND
+* it passes address/location coherence checks.
+
+A place should likely be excluded if it is:
+
+* coordSrc = llm
+* LLM-only coordinates
+* INTERPRETIVE_OVERLAY
+* APPROXIMATE_SITE unless explicitly verified
+* buried waterways / tributaries / vague infrastructure overlays
+* invented or weak “former site” claims
+* vague tunnels, sealed entrances, basement speakeasies, invisible infrastructure
+* anything without clear non-LLM coordinate provenance
+* anything where textual location context conflicts with actual coordinates
+
+5. Walk Mode policy
+
+Walk Mode should be the strictest mode.
+
+For now, Walk Mode should narrate only strongly grounded places.
+
+Allowed examples:
+
+* extant buildings
+* institutions
+* landmarks
+* churches
+* schools
+* factories
+* halls
+* bridges
+* parks
+* theaters
+* monuments
+* verified former sites with strong address/source grounding
+* manually curated trusted places in the future
+
+Not allowed for now:
+
+* buried streams / tributaries / creeks
+* inferred infrastructure remnants
+* vague “site of” claims
+* local-lore-style claims without sources
+* any LLM-only place
+
+If this produces zero Walk Mode results, that is acceptable.
+
+6. Explore Mode policy
+
+Explore should also be strict for now.
+
+Do not let Explore continue showing fabricated or unverifiable discoveries just because it is less risky than Walk.
+
+Eventually Explore may support interpretive layers, but not until the provenance/confidence system is reliable.
+
+For now, please propose how Explore can be limited to grounded places only.
+
+7. LLM role
+
+The LLM should still be used, but only after grounding.
+
+Please propose how the pipeline could work so that:
+
+* grounded entities are selected first
+* then the LLM writes summary/narration/detail copy
+* the LLM does not decide that a place exists
+* the LLM does not invent precise locations
+
+8. Minimal implementation plan
+
+Please propose the smallest safe implementation that creates a grounded-only safety gate.
+
+Possible architecture:
+
+* shared function: isGroundedDiscovery(place)
+* shared function: isGroundedForWalk(place)
+* shared function: getGroundingFailureReason(place)
+* applied before:
+
+  * Explore map pins
+  * Explore list/cards
+  * Walk pins
+  * Walk pickNext
+  * Walk queueing
+  * Walk narration playback
+  * route seed merge
+  * cache read/merge
+  * cache write if appropriate
+
+Debug overlays should show:
+
+* grounded: yes/no
+* grounding failure reason
+* coord source
+* discovery class
+* area label source
+* source path: fresh server/cache/route seed/etc.
+
+9. Out of scope for this plan
+
+Do NOT solve these yet:
+
+* “behind me” / directional timing
+* marker design
+* copy tone
+* UI visual polish
+* discovery density
+* prompt creativity
+* broader interpretive content recovery
+
+Those matter later, but only after grounded discovery works.
+
+10. Deliverable
+
+Please return:
+
+* concise architecture diagnosis
+* where the current pipeline fails
+* proposed grounded-only rule
+* exact files likely to change
+* whether this can be implemented safely in one pass
+* risks / tradeoffs
+* expected effect on result density
+* whether you recommend implementing the minimal safety gate now
+
+Again: do not edit code yet.
+Diagnosis and proposal only.
