@@ -994,7 +994,15 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           console.log(
             `[discover] server fetch tile=${tile} radius=${cfg.discoverRadius}m`,
           );
-        // Build body now (addressHint and includedTypes were computed above).
+        // Build body now (includedTypes were computed above).
+        // addressHint is intentionally NOT sent. The server derives the area
+        // label from its own Nominatim reverse-geocode of the search-centre
+        // coordinates, which is always more reliable than the device OS
+        // geocoder (Expo Location.reverseGeocodeAsync). Sending a client-side
+        // hint previously caused the device geocoder's stale / incorrect
+        // neighbourhood label to override the server's correct Nominatim
+        // result — the root cause of "West Philly content at Fairmount GPS"
+        // field reports.
         const body: Record<string, unknown> = {
           latitude: fetchCenter.latitude,
           longitude: fetchCenter.longitude,
@@ -1004,8 +1012,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           // place it cannot confirm, so only spatially trusted pins are returned.
           walkMode: true,
         };
-        if (cachedAddressHintRef.current)
-          body.addressHint = cachedAddressHintRef.current;
         if (includedTypes.length > 0) body.includeBuildingTypes = includedTypes;
 
         // Kick off a non-blocking reverse-geocode for the NEXT fetch to use.

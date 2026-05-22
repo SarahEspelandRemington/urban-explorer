@@ -48,6 +48,13 @@ export interface ExploreSnapshot {
    *  (label is "Nearby"), "unknown" = pre-fix server version (label came from
    *  LLM response and may not match the search coordinates). */
   areaNameSrc: string;
+  /** Source of the hint string actually injected into the LLM discovery prompt:
+   *  "nominatim" = server used its own Nominatim label (authoritative, expected),
+   *  "client-hint" = Nominatim failed and the device geocoder hint was used as
+   *  a fallback (should be rare and logged),
+   *  "absent" = no hint injected (Nominatim failed and no client hint),
+   *  "unknown" = pre-fix server version. */
+  effectiveAddressHintSrc: string;
   totalPlaces: number;
   topPlaces: ExploreDebugPlace[];
   selectedPlace: ExploreDebugPlace | null;
