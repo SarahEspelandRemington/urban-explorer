@@ -224,11 +224,12 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v34"], // discover — quick mode
-  ["full", "v34"], // discover — full mode
+  ["quick", "v35"], // discover — quick mode  ← bumped: bust cache entries written with wrong area-label context
+  ["full", "v35"], // discover — full mode   ← bumped: bust cache entries written with wrong area-label context
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
+  ["nbhd", "v1"], // neighbourhood label reverse-geocode (formerly revgeo-nbhd:v1:)
   ["suggest404", "v5"], // address-not-found suggestions
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
@@ -818,7 +819,10 @@ async function fetchNeighborhoodLabel(
   lat: number,
   lng: number,
 ): Promise<{ label: string; src: "nominatim" | "fallback" }> {
-  const cacheKey = `revgeo-nbhd:v1:${lat.toFixed(3)},${lng.toFixed(3)}`;
+  // Key uses the "nbhd" prefix (not "revgeo-nbhd") so it is governed by the
+  // ["nbhd", "v1"] entry in LLM_CACHE_CURRENT_VERSIONS and is never
+  // accidentally swept by the broader "revgeo:v12:" cleanup rule.
+  const cacheKey = `nbhd:v1:${lat.toFixed(3)},${lng.toFixed(3)}`;
   const cached = getLLMCache<{ label: string; src: "nominatim" | "fallback" }>(
     cacheKey,
   );
@@ -1532,6 +1536,7 @@ export function classifyDiscovery(places: any[]): void {
 // ---------------------------------------------------------------------------
 
 import { applyLlmPrecisionFilter } from "../../lib/spatialTrustFilter";
+import { resolveEffectiveHint } from "../../lib/areaContext";
 export { applyLlmPrecisionFilter };
 
 // ---------------------------------------------------------------------------
@@ -1801,7 +1806,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v34:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v35:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -1840,6 +1845,10 @@ router.post("/explore/discover", async (req, res) => {
         places: refreshedPlaces,
         location: nbhdLabel.label,
         locationSrc: nbhdLabel.src,
+        // Cached path always derives area context from Nominatim (the cache
+        // was written on a fresh path, which already enforced Nominatim-wins).
+        effectiveAddressHintSrc:
+          nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
       });
 
       // Background: if any cached places are missing photos (e.g. the original
@@ -1867,6 +1876,8 @@ router.post("/explore/discover", async (req, res) => {
         ...cachedDiscover,
         location: nbhdLabel.label,
         locationSrc: nbhdLabel.src,
+        effectiveAddressHintSrc:
+          nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
       });
     }
     return;
@@ -1878,12 +1889,23 @@ router.post("/explore/discover", async (req, res) => {
   // this is free.  On a cold first request the ~1 s delay is negligible
   // compared to the 3–10 s LLM call that follows.
   const nbhdLabel = await nbhdLabelPromise;
-  // If the client did not supply an addressHint (e.g. GPS-mode discovers never
-  // do), use the Nominatim-derived neighbourhood label.  This anchors the LLM
-  // to the actual location rather than letting it hallucinate a neighbourhood.
-  const effectiveAddressHint =
-    addressHint ??
-    (nbhdLabel.src === "nominatim" ? nbhdLabel.label : undefined);
+
+  // Nominatim is always authoritative over any client-supplied addressHint.
+  // The device OS geocoder (Expo Location.reverseGeocodeAsync) can return an
+  // incorrect neighbourhood — e.g. "University City" for coordinates firmly
+  // inside Fairmount — causing the LLM to generate wrong-neighbourhood content
+  // that then gets cached and served for the correct coordinates.
+  const { hint: effectiveAddressHint, src: effectiveAddressHintSrc } =
+    resolveEffectiveHint(nbhdLabel.label, nbhdLabel.src, addressHint);
+
+  // Log when a client hint was present but overridden, so field reports can
+  // confirm the fix is working.
+  if (addressHint && effectiveAddressHintSrc !== "client-hint") {
+    req.log.debug(
+      { clientHint: addressHint, nominatimLabel: nbhdLabel.label },
+      "[area-context] Client addressHint suppressed — Nominatim label is authoritative",
+    );
+  }
 
   const osmTimeLimit = isQuick ? 3000 : 4000;
   const osmPromise: Promise<OSMPlace[]> = Promise.race([
@@ -2245,6 +2267,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   // the revgeo-nbhd cache keyed to the actual coordinates.
   data.location = nbhdLabel.label;
   data.locationSrc = nbhdLabel.src;
+  data.effectiveAddressHintSrc = effectiveAddressHintSrc;
   res.json(data);
 
   // Background: run Nominatim verification and silently update the cache so the
