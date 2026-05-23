@@ -32,7 +32,7 @@ export const INTERPRETIVE_CATEGORIES = new Set([
  * storm-drain infrastructure, and underground/subsurface language.
  */
 export const INTERPRETIVE_TEXT_RE =
-  /\b(buried|beneath|underground|corridor|invisible infrastructure|inferred|ghost waterway|filled.{0,6}(creek|canal|river)|ran beneath|flows beneath|once flowed|ghost sign|faded.{0,10}(sign|painted|ad|advertisement|mural)|painted.{0,10}advertisement|wall.{0,6}ad(vertisement)?|culvert|storm.{0,6}drain|stormwater|subterranean)\b/i;
+  /\b(buried|beneath|underground|subsurface|speakeasy|tunnel|unexcavated|oral histor(?:y|ies)|hidden.{0,6}under|corridor|invisible infrastructure|inferred|ghost waterway|filled.{0,6}(creek|canal|river)|ran beneath|flows beneath|once flowed|ghost sign|faded.{0,10}(sign|painted|ad|advertisement|mural)|painted.{0,10}advertisement|wall.{0,6}ad(vertisement)?|culvert|storm.{0,6}drain|stormwater|subterranean)\b/i;
 
 export const APPROXIMATE_TEXT_RE =
   /\b(site of|former site|demolished|ruins? of|approximate location|once stood|formerly stood|former location)\b/i;
