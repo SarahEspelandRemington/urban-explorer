@@ -272,7 +272,7 @@ jest.mock("../lib/sentryWalk", () => ({
 jest.mock("react-native", () => ({ Platform: { OS: "ios" } }));
 
 const mockFetch = jest.fn();
-global.fetch = mockFetch as typeof fetch;
+globalThis.fetch = mockFetch as typeof fetch;
 
 describe("fetchNarrationPayload — graceful text fallback when Paths.cache is bad", () => {
   const mockPlace = {

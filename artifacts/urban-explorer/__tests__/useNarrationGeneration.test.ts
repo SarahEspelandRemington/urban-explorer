@@ -20,7 +20,7 @@
  *      generation check passes — no late watchdog fire is possible.
  */
 
-(global as { __DEV__?: boolean }).__DEV__ = false;
+(globalThis as { __DEV__?: boolean }).__DEV__ = false;
 
 // ─── Minimal React mock ──────────────────────────────────────────────────────
 //
