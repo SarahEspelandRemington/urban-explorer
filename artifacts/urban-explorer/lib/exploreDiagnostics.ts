@@ -53,7 +53,7 @@ export interface ExploreSnapshot {
    *  "client-hint" = Nominatim failed and the device geocoder hint was used as
    *  a fallback (should be rare and logged),
    *  "absent" = no hint injected (Nominatim failed and no client hint),
-   *  "unknown" = pre-fix server version. */
+   *  "" (empty) = component has not yet received a response (initial state). */
   effectiveAddressHintSrc: string;
   totalPlaces: number;
   topPlaces: ExploreDebugPlace[];

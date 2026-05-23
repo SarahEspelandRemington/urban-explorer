@@ -102,7 +102,7 @@ function ExploreContent({ s }: { s: ExploreSnapshot }) {
         label="area"
         value={`${s.areaName.slice(0, 36) || "—"} · ${s.areaNameSrc}`}
       />
-      <Row label="hint src" value={s.effectiveAddressHintSrc} />
+      <Row label="hint src" value={s.effectiveAddressHintSrc || "—"} />
 
       <SectionTitle>Context</SectionTitle>
       <Row

@@ -143,7 +143,7 @@ export default function ExploreScreen() {
   const [areaName, setAreaName] = useState<string>("");
   const [areaNameSrc, setAreaNameSrc] = useState<string>("unknown");
   const [effectiveAddressHintSrc, setEffectiveAddressHintSrc] =
-    useState<string>("unknown");
+    useState<string>("");
 
   const allMapPlaces = useMemo(() => {
     const combined = [...places, ...mapPlaces];
