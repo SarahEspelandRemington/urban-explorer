@@ -108,6 +108,12 @@ describe("classifyDiscovery", () => {
     expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
   });
 
+  it('classifies "SUBSURFACE" category (uppercase from LLM) as INTERPRETIVE_OVERLAY', () => {
+    const places = [place({ category: "SUBSURFACE" })];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
   it('classifies "transportation remnant" category as INTERPRETIVE_OVERLAY', () => {
     const places = [place({ category: "transportation remnant" })];
     classifyDiscovery(places);
@@ -134,6 +140,126 @@ describe("classifyDiscovery", () => {
 
   it("classifies ghost sign in tags as INTERPRETIVE_OVERLAY", () => {
     const places = [place({ tags: ["ghost sign", "commercial"], summary: "" })];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  // -------------------------------------------------------------------------
+  // Field-tested failure terms (all confirmed absent from old regex)
+  // -------------------------------------------------------------------------
+
+  it('classifies "Speakeasy Passage beneath 40th & Walnut Streetcar Tracks" as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Speakeasy Passage beneath 40th & Walnut Streetcar Tracks",
+        summary:
+          "A hidden speakeasy that once operated beneath the trolley tracks.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "#UNDERGROUND PASSAGE" tag as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Walnut Street Passage",
+        tags: ["#UNDERGROUND PASSAGE", "historic"],
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "#ORAL HISTORY" tag as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Neighborhood Gathering Place",
+        tags: ["#ORAL HISTORY", "community"],
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "hidden under" in summary as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Penn Station Foundations",
+        summary:
+          "The original station footings remain hidden under the current plaza.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "tunnel" in name as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Reading Railroad Tunnel Access",
+        summary: "A disused tunnel entrance below 12th Street.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "unexcavated" in summary as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Colonial Brick Building",
+        summary:
+          "Much of the original foundation remains unexcavated beneath the parking lot.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "oral history" in summary as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "46th & Baltimore Community Corner",
+        summary:
+          "Known through oral history as a gathering place for West Philly jazz musicians.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "oral histories" in summary as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Powelton Village Lot",
+        summary:
+          "Preserved only in oral histories passed down through local families.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies standalone "beneath" in name as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Forgotten Vault beneath City Hall Plaza",
+        summary: "A sealed basement chamber.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "subsurface" as a text signal in summary (no category set)', () => {
+    const places = [
+      place({
+        name: "Vine Street Expressway Underpass",
+        summary:
+          "Significant subsurface infrastructure runs beneath this block.",
+      }),
+    ];
     classifyDiscovery(places);
     expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
   });
@@ -318,5 +444,124 @@ describe("production filter pipeline", () => {
       }),
     ]);
     expect(result).toHaveLength(0);
+  });
+
+  it("speakeasy passage is denied even with coordSource (walk route candidate)", () => {
+    const result = applyFullFilter([
+      place({
+        name: "Speakeasy Passage beneath 40th & Walnut Streetcar Tracks",
+        summary:
+          "A hidden speakeasy that once operated beneath the trolley tracks.",
+        coordSource: "nominatim-corrected",
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("SUBSURFACE category (uppercase from LLM) is denied regardless of coordSource", () => {
+    const result = applyFullFilter([
+      place({ category: "SUBSURFACE", coordSource: "nominatim" }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("#UNDERGROUND PASSAGE tag is denied", () => {
+    const result = applyDenyFilter([
+      place({
+        name: "Walnut Street Passage",
+        tags: ["#UNDERGROUND PASSAGE", "historic"],
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("#ORAL HISTORY tag is denied", () => {
+    const result = applyDenyFilter([
+      place({
+        name: "Community Corner",
+        tags: ["#ORAL HISTORY"],
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it('"hidden under" in summary is denied', () => {
+    const result = applyDenyFilter([
+      place({
+        name: "Station Foundations",
+        summary: "The original footings remain hidden under the current plaza.",
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("ghost sign is denied even with coordSource", () => {
+    const result = applyFullFilter([
+      place({
+        name: "Former J.C. Sly Grocery Ghost Sign",
+        summary: "A faded painted advertisement on the east brick wall.",
+        coordSource: "nominatim",
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("place with discoveryClass:undefined that matches denied term by name is still denied", () => {
+    const raw = [
+      place({
+        name: "Speakeasy Passage beneath 40th & Walnut Streetcar Tracks",
+        summary: "A hidden space beneath the trolley tracks.",
+      }),
+    ];
+    classifyDiscovery(raw);
+    expect(raw[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(filterDeniedPlaces(raw)).toHaveLength(0);
+  });
+
+  it("place with discoveryClass:undefined that matches denied term by summary is still denied", () => {
+    const raw = [
+      place({
+        name: "Generic Street Corner",
+        summary:
+          "Known primarily through oral histories of the local community.",
+      }),
+    ];
+    classifyDiscovery(raw);
+    expect(raw[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(filterDeniedPlaces(raw)).toHaveLength(0);
+  });
+
+  it("places-along-route pipeline: route candidate with denied category is dropped", () => {
+    const routeStylePlaces = [
+      place({
+        name: "Mill Creek Culvert",
+        summary: "A historic culvert that carries the buried creek.",
+        coordSource: undefined,
+      }),
+      place({
+        name: "Clark Park",
+        summary: "A neighbourhood park with a Victorian-era fountain.",
+        coordSource: undefined,
+      }),
+    ];
+    const clones = routeStylePlaces.map((p) => ({ ...p }));
+    classifyDiscovery(clones);
+    const filtered = filterDeniedPlaces(clones);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].name).toBe("Clark Park");
+  });
+
+  it("places-along-route pipeline: speakeasy tunnel candidate is dropped", () => {
+    const routeStylePlaces = [
+      place({
+        name: "Speakeasy Tunnel beneath 40th & Walnut",
+        summary: "An underground passage used during Prohibition.",
+        coordSource: undefined,
+      }),
+    ];
+    const clones = routeStylePlaces.map((p) => ({ ...p }));
+    classifyDiscovery(clones);
+    const filtered = filterDeniedPlaces(clones);
+    expect(filtered).toHaveLength(0);
   });
 });
