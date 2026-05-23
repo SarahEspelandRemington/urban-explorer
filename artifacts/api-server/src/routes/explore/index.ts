@@ -236,7 +236,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["timeline", "v2"], // place timeline
   ["narration", "v17"], // walk narration (short)
   ["deep-narration", "v12"], // deep walk narration
-  ["places-route", "v20"], // places along route
+  ["places-route", "v21"], // places along route
 ];
 
 function getLLMCache<T>(key: string): T | null {
@@ -4031,10 +4031,12 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v20:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v21:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
-    res.json(cached);
+    classifyDiscovery(cached.places);
+    const filteredCached = filterDeniedPlaces(cached.places);
+    res.json({ places: filteredCached });
     return;
   }
 
@@ -4271,7 +4273,9 @@ Return one entry per input place, in the same order. Be concise — these blurbs
     };
   });
 
-  const result = { places: enriched };
+  classifyDiscovery(enriched);
+  const filteredEnriched = filterDeniedPlaces(enriched);
+  const result = { places: filteredEnriched };
   setLLMCache(cacheKey, result);
   res.json(result);
 });

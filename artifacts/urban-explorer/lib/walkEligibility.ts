@@ -42,6 +42,14 @@ export interface EligibilityCandidate {
    *  permanently ineligible for auto-narration regardless of distance or score.
    *  They remain visible as map pins with subdued opacity. */
   discoveryClass?: string;
+  /** Free-text description used as a fallback when discoveryClass is absent
+   *  (e.g. places loaded from an AsyncStorage cache written before the server
+   *  started classifying). Checked against INTERPRETIVE_FALLBACK_RE when
+   *  discoveryClass is undefined. */
+  summary?: string;
+  /** LLM-assigned category string. Checked against
+   *  INTERPRETIVE_FALLBACK_CATEGORIES when discoveryClass is undefined. */
+  category?: string;
 }
 
 export interface EligibilityState {
@@ -84,6 +92,29 @@ export interface EligibilityResult {
     bearingDiff: number | null;
     reason: EligibilityReason;
   }>;
+}
+
+/**
+ * Compact fallback patterns that mirror the server-side INTERPRETIVE_TEXT_RE.
+ * Applied when a place has no discoveryClass set (e.g. loaded from an
+ * AsyncStorage cache written before the server started classifying places).
+ * Keeps Walk Mode safe against old cache entries that pre-date the filter.
+ */
+const INTERPRETIVE_FALLBACK_RE =
+  /\b(buried|beneath|underground|subsurface|speakeasy|tunnel|unexcavated|oral histor(?:y|ies)|hidden.{0,6}under|ghost waterway|ghost sign|once flowed|ran beneath|flows beneath|faded.{0,10}(sign|painted|ad)|culvert|storm.{0,6}drain|stormwater|subterranean)\b/i;
+
+const INTERPRETIVE_FALLBACK_CATEGORIES = new Set([
+  "waterway remnant",
+  "buried waterway",
+  "transportation remnant",
+  "subsurface",
+]);
+
+function looksInterpretive(p: EligibilityCandidate): boolean {
+  const cat = (p.category ?? "").toLowerCase().trim();
+  if (INTERPRETIVE_FALLBACK_CATEGORIES.has(cat)) return true;
+  const combined = `${p.name ?? ""} ${p.summary ?? ""}`.toLowerCase();
+  return INTERPRETIVE_FALLBACK_RE.test(combined);
 }
 
 const DEG = Math.PI / 180;
@@ -151,12 +182,19 @@ export function evaluateEligibility(
 
     let reason: EligibilityReason = "ok";
 
-    if (p.discoveryClass === "INTERPRETIVE_OVERLAY") {
+    if (
+      p.discoveryClass === "INTERPRETIVE_OVERLAY" ||
+      (p.discoveryClass === undefined && looksInterpretive(p))
+    ) {
       // Interpretive overlays are permanently ineligible for auto-narration.
       // They represent inferred area-level phenomena (buried waterways,
       // corridors, etc.) or LLM-only coordinates with specific location claims
       // that cannot be pinpointed. They stay visible on the map (not filtered
       // from the pool) but are never chosen for narration.
+      //
+      // The fallback looksInterpretive() check catches places loaded from an
+      // AsyncStorage cache that was written before the server started setting
+      // discoveryClass, ensuring old entries never sneak through.
       reason = "interpretiveOverlay";
     } else if (narratedIds.has(p.id)) {
       reason = "narrated";
