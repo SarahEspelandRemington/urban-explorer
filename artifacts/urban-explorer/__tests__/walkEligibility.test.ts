@@ -175,6 +175,173 @@ describe("updatePassedTracker", () => {
   });
 });
 
+describe("evaluateEligibility — looksInterpretive() fallback", () => {
+  // These tests verify the client-side INTERPRETIVE_FALLBACK_RE / category
+  // guard that fires when discoveryClass is undefined (e.g. a place loaded
+  // from an AsyncStorage cache written before the server started setting
+  // discoveryClass). All places below are in range with a good score; the
+  // only reason to reject them is the interpretive-text or category match.
+
+  function makeInterpretiveCandidate(
+    overrides: Partial<EligibilityCandidate>,
+  ): EligibilityCandidate {
+    return makePlace("p1", 30, 0, overrides);
+  }
+
+  it("rejects a place with no discoveryClass whose name contains 'buried'", () => {
+    const p = makeInterpretiveCandidate({ name: "Buried Mill Creek" });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose summary contains 'tunnel'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Old Station",
+      summary: "A tunnel runs beneath this block.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose name contains 'underground'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Underground Passage at 40th St",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose summary contains 'oral history'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Community Garden",
+      summary: "According to oral history this site was once a factory.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose summary contains 'oral histories'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Corner Lot",
+      summary: "Oral histories suggest workers lived here.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose summary contains 'subsurface'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Infrastructure Site",
+      summary: "Subsurface waterway remnants detected.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose name contains 'speakeasy'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Speakeasy Passage beneath 40th & Walnut",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose summary contains 'ghost sign'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Brick Wall",
+      summary: "A ghost sign for a hardware store is still visible.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose summary contains 'once flowed'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Flatlands Park",
+      summary: "A creek once flowed through here before being paved over.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose summary contains 'flows beneath'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Walnut Street Plaza",
+      summary: "The old millrace flows beneath the surface here.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose category is 'waterway remnant'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Low Alley",
+      category: "waterway remnant",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose category is 'buried waterway'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Covered Drainage",
+      category: "buried waterway",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose category is 'transportation remnant'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Former Trolley Stop",
+      category: "transportation remnant",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("rejects a place with no discoveryClass whose category is 'subsurface'", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Water Infrastructure",
+      category: "subsurface",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("does NOT block a normal place when discoveryClass is undefined and name/category are clean", () => {
+    const p = makeInterpretiveCandidate({
+      name: "Riverside Cafe",
+      category: "restaurant",
+      summary: "A lively corner cafe opened in the nineteen eighties.",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("ok");
+  });
+
+  it("takes INTERPRETIVE_OVERLAY via discoveryClass over looksInterpretive check", () => {
+    // A place that would NOT match looksInterpretive on its own but has
+    // discoveryClass=INTERPRETIVE_OVERLAY must still be rejected.
+    const p = makeInterpretiveCandidate({
+      name: "Corner Pharmacy",
+      category: "pharmacy",
+      discoveryClass: "INTERPRETIVE_OVERLAY",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("allows a VERIFIED_PLACE even if its name contains 'tunnel'", () => {
+    // discoveryClass is set → skip looksInterpretive, trust the server classification.
+    const p = makeInterpretiveCandidate({
+      name: "Tunnel Theatre",
+      discoveryClass: "VERIFIED_PLACE",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("ok");
+  });
+});
+
 describe("haversineMeters", () => {
   it("returns ~0 for identical coords", () => {
     expect(
