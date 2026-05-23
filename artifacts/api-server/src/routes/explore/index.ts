@@ -1336,8 +1336,13 @@ async function verifyAddressCoherence(
           twoSignal,
         );
       }
-    } else {
+    } else if (addrR || nameR) {
       // Only one probe type returned a result — single-probe evaluation.
+      // Guard: when only a namedPlaceR was set and it already passed the
+      // mismatch check above, both addrR and nameR are undefined here.
+      // Without this guard `(addrR ?? nameR)!` is `undefined` at runtime
+      // and `r.mismatchMeters` throws TypeError. The named-place case needs
+      // no further action — the place is accepted.
       const r = (addrR ?? nameR)!;
       const label = addrR ? "Address" : `Name street reference "${r.probe}"`;
       if (r.mismatchMeters <= COHERENCE_THRESHOLD_M) {
@@ -1757,7 +1762,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v36:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v37:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
