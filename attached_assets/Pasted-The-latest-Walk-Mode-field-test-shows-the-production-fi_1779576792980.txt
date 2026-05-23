@@ -1,0 +1,26 @@
+The latest Walk Mode field test shows the production filter is still not working in the active Walk pipeline.
+Evidence from screenshots:
+* Walk Mode is actively playing: “Speakeasy Passage beneath 40th & Walnut Streetcar Tracks”
+* Detail screen shows category/tag evidence that should be denied:
+    * SUBSURFACE
+    * #UNDERGROUND PASSAGE
+    * #ORAL HISTORY
+    * “unexcavated tunnel”
+    * “hidden under the streetcar tracks”
+* This is exactly the class of result we agreed to hard-block: subsurface/invisible infrastructure, tunnels, oral-history-only speakeasy claims, and unverifiable hidden passages.
+* The debug overlay also shows a Ghost Sign in Recent Rejections, but it appears rejected as tooFar, not as a denied category. That suggests deny-list filtering is either not running first, not running at all on Walk candidates, or not producing visible rejection reasons.
+Please do not write code yet. Diagnose only.
+Answer these specific questions:
+1. Is Walk Mode currently using productionFilter.ts for the candidate that becomes Playing, or is it using a separate path such as places-along-route / narration queue / cached walk candidates?
+2. For the exact candidate “Speakeasy Passage beneath 40th & Walnut Streetcar Tracks,” show where it entered the pipeline and every filter it passed through before becoming Playing.
+3. Why did SUBSURFACE, UNDERGROUND PASSAGE, ORAL HISTORY, “unexcavated tunnel,” and “hidden under” not cause this candidate to be dropped?
+4. Is the production deny-list checking only discoveryClass, or is it also checking category, tags, title, summary, and narration text? If not, that is likely the bug. Also check whether the deny-list checks the category field specifically — the detail screen shows SUBSURFACE as a primary category tag, not just in the name or summary.
+5. Are denied candidates removed before Walk scoring/queueing, or only from Explore responses?
+6. Please show the exact files/functions/lines that determine:
+    * Walk candidate eligibility
+    * Walk narration queue selection
+    * denied category filtering
+    * recent rejection reasons shown in the debug overlay
+		Also confirm: is productionFilter.ts imported and called anywhere in the Walk Mode pipeline at 	all? A grep for its import would answer this directly.
+
+Do not implement yet. First prove whether the active Walk Mode path actually calls the new production filter before a candidate can be queued or narrated.
