@@ -1,0 +1,19 @@
+This plan is directionally right. Please proceed with the smallest durable implementation, with one important adjustment:
+I do not want the Explore Mode Nominatim gate to allow a pool of mostly unverified LLM-coordinate places just because one candidate verified. The field test problem is not only nom×0; it is that individual LLM-sourced candidates with fabricated or mismatched stories are reaching the UI.
+Please revise the production eligibility rule as follows:
+1. For both Explore and Walk, hard-drop denied categories server-side: ghost signs, faded painted ads/wall signs, buried streams, culverts, tunnels, subsurface/invisible infrastructure, and other INTERPRETIVE_OVERLAY items.
+2. For both fresh and cached results, run one shared server-side production filter before returning places.
+3. For Walk Mode, continue dropping any place with coordSource === undefined.
+4. For Explore Mode, do not keep an entire pool just because one item has a coordSource. Either:
+    * drop individual places with coordSource === undefined, or
+    * only allow an unverified place through if it has a trusted non-LLM source/fixture field and is clearly marked approximate.
+5. If the current data model cannot support that trusted-source exception cleanly, use the stricter rule for now: drop individual coordSource === undefined places in Explore too. Keep the client-side INTERPRETIVE_OVERLAY gate in WalkModeContext as a defensive layer even if it becomes redundant. Do not remove it."
+6. Fix effectiveAddressHintSrc debug handling as proposed.
+7. Add tests proving:
+    * ghost signs are dropped in both Explore and Walk
+    * buried/subsurface infrastructure is dropped in both Explore and Walk
+    * cached denied results are filtered before being returned
+    * Explore cannot return coordSrc: llm×5 nom×0
+    * Explore does not return mostly unverified LLM-coordinate pools
+    * Walk cannot narrate a denied category
+Please implement only this bounded change set. Do not refactor unrelated discovery logic or UI.

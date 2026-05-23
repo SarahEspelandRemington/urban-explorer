@@ -1476,60 +1476,11 @@ async function postProcessPlaces(
 // Discovery classification
 // ---------------------------------------------------------------------------
 
-type DiscoveryClass =
-  | "VERIFIED_PLACE"
-  | "APPROXIMATE_SITE"
-  | "INTERPRETIVE_OVERLAY";
-
-const INTERPRETIVE_CATEGORIES = new Set([
-  "waterway remnant",
-  "buried waterway",
-  "transportation remnant",
-  "subsurface",
-]);
-
-const INTERPRETIVE_TEXT_RE =
-  /\b(buried|beneath|underground|corridor|invisible infrastructure|inferred|ghost waterway|filled.{0,6}(creek|canal|river)|ran beneath|flows beneath|once flowed)\b/i;
-
-const APPROXIMATE_TEXT_RE =
-  /\b(site of|former site|demolished|ruins? of|approximate location|once stood|formerly stood|former location)\b/i;
-
-/**
- * Derives a `discoveryClass` for each place from signals already on the
- * object — no external API calls.  Sets `place.discoveryClass` in-place.
- *
- * Priority:
- *   INTERPRETIVE_OVERLAY  – category is a known area-phenomenon type, or
- *                           name/summary/tags contain interpretive language
- *   APPROXIMATE_SITE      – name/summary indicate a former or demolished entity
- *   VERIFIED_PLACE        – everything else (default)
- */
-export function classifyDiscovery(places: any[]): void {
-  for (const p of places) {
-    const category: string = (p.category ?? "").toLowerCase().trim();
-    const name: string = (p.name ?? "").toLowerCase();
-    const summary: string = (p.summary ?? "").toLowerCase();
-    const tagText: string = Array.isArray(p.tags)
-      ? p.tags.join(" ").toLowerCase()
-      : "";
-    const combined = `${name} ${summary} ${tagText}`;
-
-    let cls: DiscoveryClass;
-
-    if (
-      INTERPRETIVE_CATEGORIES.has(category) ||
-      INTERPRETIVE_TEXT_RE.test(combined)
-    ) {
-      cls = "INTERPRETIVE_OVERLAY";
-    } else if (APPROXIMATE_TEXT_RE.test(combined)) {
-      cls = "APPROXIMATE_SITE";
-    } else {
-      cls = "VERIFIED_PLACE";
-    }
-
-    p.discoveryClass = cls;
-  }
-}
+import {
+  classifyDiscovery,
+  filterDeniedPlaces,
+} from "../../lib/productionFilter";
+export { classifyDiscovery, filterDeniedPlaces };
 
 // ---------------------------------------------------------------------------
 // LLM precision claim detection
@@ -1806,7 +1757,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v35:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v36:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -1827,14 +1778,18 @@ router.post("/explore/discover", async (req, res) => {
       Array.isArray(cachedDiscover.places) &&
       cachedDiscover.places.length > 0
     ) {
-      const allCachedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
-      // Walk Mode only returns places whose coordinates were externally confirmed
-      // or corrected by Nominatim. A cached entry written by an earlier Explore
-      // Mode request may contain unverified LLM-coordinate places (coordSource
-      // undefined). Those are safe to show in Explore Mode but not as Walk Mode pins.
-      const refreshedPlaces = walkMode
-        ? allCachedPlaces.filter((p: any) => p.coordSource !== undefined)
-        : allCachedPlaces;
+      let allCachedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
+      // Re-apply production filters on every cache hit so that a deny-list
+      // expansion after a cache entry was written cannot let banned categories
+      // through. Classification is cheap (O(n), no external calls).
+      classifyDiscovery(allCachedPlaces);
+      applyLlmPrecisionFilter(allCachedPlaces);
+      allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
+      // Both Explore and Walk require external coordinate verification.
+      // Unverified LLM-coordinate places must not reach the UI in either mode.
+      const refreshedPlaces = allCachedPlaces.filter(
+        (p: any) => p.coordSource !== undefined,
+      );
       const ratingsMap = await fetchRatingsMap(refreshedPlaces);
       applyRatingSortWithMap(refreshedPlaces, ratingsMap);
       // Override location with Nominatim reverse-geocode of the actual search
@@ -2139,7 +2094,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
       longitude,
       searchRadius,
       {
-        skipVerification: !walkMode,
+        skipVerification: false,
       },
     );
 
@@ -2153,23 +2108,27 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     // rendering as verified discoveries when they claim a precise location.
     applyLlmPrecisionFilter(data.places);
 
-    // Walk Mode spatial trust gate: drop any place that Nominatim could not
-    // confirm. A missing coordSource means no external source verified this
-    // place's location — its coordinates are pure LLM output and must not
-    // appear as Walk Mode map pins. Return fewer results rather than inaccurate ones.
-    if (walkMode) {
-      const before = data.places.length;
-      data.places = data.places.filter((p: any) => p.coordSource !== undefined);
-      if (before !== data.places.length) {
-        logger.info(
-          {
-            dropped: before - data.places.length,
-            kept: data.places.length,
-            tile: `${snapGrid(latitude)},${snapGrid(longitude)}`,
-          },
-          "[walk-mode] dropped unverifiable places — coordSource undefined",
-        );
-      }
+    // Hard-drop denied categories: ghost signs, buried waterways, subsurface
+    // infrastructure, and all other INTERPRETIVE_OVERLAY places. Applies to
+    // both Explore and Walk — prompt-only exclusions are insufficient.
+    data.places = filterDeniedPlaces(data.places);
+
+    // Spatial trust gate: drop any place that Nominatim could not confirm.
+    // A missing coordSource means coordinates are pure LLM output and must
+    // not reach the UI in either mode. Return fewer results rather than
+    // inaccurate ones.
+    const beforeCoord = data.places.length;
+    data.places = data.places.filter((p: any) => p.coordSource !== undefined);
+    if (beforeCoord !== data.places.length) {
+      logger.info(
+        {
+          dropped: beforeCoord - data.places.length,
+          kept: data.places.length,
+          mode: walkMode ? "walk" : "explore",
+          tile: `${snapGrid(latitude)},${snapGrid(longitude)}`,
+        },
+        "[production-filter] dropped unverifiable places — coordSource undefined",
+      );
     }
     // Fetch Wikipedia photos in parallel for all places. Runs concurrently with
     // ratings enrichment (below) and races a wall-clock timeout so it never
@@ -2269,38 +2228,6 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   data.locationSrc = nbhdLabel.src;
   data.effectiveAddressHintSrc = effectiveAddressHintSrc;
   res.json(data);
-
-  // Background: run Nominatim verification and silently update the cache so the
-  // next request for this block gets corrected pin positions. Skipped for Walk
-  // Mode because verification already ran synchronously above.
-  if (!isEmpty && !walkMode) {
-    (async () => {
-      try {
-        await verifyPlaceCoordinates(
-          data.places,
-          latitude,
-          longitude,
-          searchRadius,
-        );
-        await verifyAddressCoherence(
-          data.places,
-          latitude,
-          longitude,
-          searchRadius,
-        );
-        // Re-filter: a corrected coordinate might have moved a place outside radius.
-        const maxDist = searchRadius * 1.1;
-        data.places = data.places.filter(
-          (p: any) =>
-            haversineDistance(latitude, longitude, p.latitude, p.longitude) <=
-            maxDist,
-        );
-        setLLMCache(discoverCacheKey, data);
-      } catch {
-        // Verification failure is non-fatal — cached unverified result is still valid.
-      }
-    })();
-  }
 });
 
 router.post("/explore/suggest-locations", async (req, res) => {
