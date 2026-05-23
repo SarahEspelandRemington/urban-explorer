@@ -1,0 +1,46 @@
+The new Explore map mode visuals are working well overall, but there’s still a UX clarity issue on first arrival.
+
+Right now, users land on the map and see muted discovery pins, but it’s not immediately obvious that the pins are interactive/tappable. The screen feels elegant but slightly inert until a discovery is opened.
+
+I do NOT want a heavy onboarding flow, coach marks, modal tutorial, or visual clutter. Preserve the calm/atmospheric feeling.
+
+Please implement the following subtle improvements:
+
+1. Add a gentle idle emphasis to the highest-confidence nearby discovery pin
+
+* The strongest nearby candidate should softly pulse or emit a faint expanding halo every few seconds
+* Keep this restrained and atmospheric, not game-like
+* Goal: communicate “this is interactive” without explicit instruction
+* Existing selected-state styling is good; this is only for idle state before interaction
+
+2. Add lightweight helper text on initial map arrival
+
+* Show a small transient hint near the bottom of the map:
+    “Tap a marker to uncover a story.”
+* Fade out automatically after ~4–5 seconds OR disappear after first map interaction
+* Only show occasionally / intelligently (not permanently every time)
+
+3. Slightly strengthen the resting pin visual treatment
+    Current pins may be too subdued.
+    Please make them feel slightly more “alive” without increasing visual chaos:
+
+* slightly stronger glow/halo
+* slightly clearer depth/shadow
+* preserve the muted Streetlit palette
+* avoid bright saturated colors
+
+4. Optional but preferred:
+    If there is a HIGH-confidence nearby discovery, automatically open its preview card once when entering Explore map mode.
+
+* Only do this once per session or once per arrival
+* Only if confidence is high
+* Avoid interruptive behavior
+* Goal is to teach the interaction model organically
+
+Important:
+Do NOT redesign the screen.
+Do NOT add clutter.
+This is a signposting/usability refinement, not a feature expansion.
+
+The desired feeling:
+quietly alive, inviting, exploratory, intuitive.
