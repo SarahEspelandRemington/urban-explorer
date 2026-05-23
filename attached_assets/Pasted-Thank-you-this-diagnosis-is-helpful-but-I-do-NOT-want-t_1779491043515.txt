@@ -1,0 +1,121 @@
+Thank you — this diagnosis is helpful, but I do NOT want to implement the full Grounded Discovery Mode proposal yet.
+
+The proposed Layer A–E solution is too broad for the next step.
+
+Please focus only on the one likely root cause you identified:
+
+AREA LABEL / SPATIAL CONTEXT CONTAMINATION
+
+Problem:
+The app appears to use a textual area/neighborhood label such as West Philly / Spruce Hill / University City even when the actual GPS/search center is Fairmount / Spring Garden.
+
+That wrong textual context then appears to influence the LLM into generating places for the wrong part of the city while mapping them near the real coordinates.
+
+This is the highest-priority root cause to isolate.
+
+Please implement ONLY an Area Context Integrity Fix.
+
+Do NOT implement the broader groundedDiscovery architecture yet.
+Do NOT add broad Explore/Walk gating yet.
+Do NOT change `/investigate`.
+Do NOT change UI styling, prompts creatively, marker behavior, detail pages, Walk timing, or discovery density.
+
+Scope for this task:
+
+1. Diagnose and prove the area-label path
+
+Before changing behavior, confirm:
+
+* where the area label is generated
+* where it is cached
+* where it is read
+* whether it comes from memory cache, persistent cache, Nominatim, previous search state, or client state
+* whether the label is injected into the LLM prompt
+* whether the UI header label and prompt label always come from the same coordinate source
+
+Please specifically check whether the current explanation — `toFixed(3)` neighborhood-cache collisions — is sufficient to explain Fairmount being labeled as Spruce Hill / University City. Those are not merely adjacent one-block neighborhoods, so please verify whether stale state or previous-search contamination is also possible.
+
+2. Harden area-label cache
+
+Please update the reverse-geocode / neighborhood label cache so it cannot reuse broad or stale labels incorrectly.
+
+Requirements:
+
+* use a finer cache key, e.g. `toFixed(5)` or equivalent
+* bump the reverse-geocode area-label cache version
+* store the query coordinates with the cached label
+* store the source of the label: memory cache / persistent cache / fresh Nominatim / fallback / absent
+* store timestamp / age if practical
+* when reading from cache, verify the cached label coordinates match the current request coordinates within a strict tolerance
+* if not, discard the cached label and fetch fresh or use a neutral fallback
+
+3. Do not let uncertain labels contaminate prompts
+
+If the app cannot confidently derive the area label from the current search center, do NOT inject a neighborhood label into the discovery prompt.
+
+Use a neutral fallback instead:
+
+* “current area”
+* “nearby”
+* or no neighborhood label
+
+Important:
+Coordinates must be treated as authoritative.
+Textual area labels must never override coordinates.
+
+4. UI/header fallback
+
+If area-label confidence is low or absent, the Explore header should show a neutral label such as:
+
+* “Nearby”
+* “Current area”
+
+It must not show stale labels like Spruce Hill / University City when the map/search center is Fairmount.
+
+5. Debug overlay
+
+Add or expose debug fields showing:
+
+* areaLabel
+* areaLabelSource
+* areaLabelConfidence
+* areaLabelQueryCoords
+* currentSearchCoords
+* cache key/version
+* cache age if available
+* whether the area label was injected into the LLM prompt
+
+This is essential so we can verify whether this root cause is fixed.
+
+6. Tests
+
+Please add tests for:
+
+* cached area label is not reused when coordinates differ beyond tolerance
+* stale West Philly/Spruce Hill label cannot be injected into a Fairmount/Spring Garden request
+* prompt builder does not include an uncertain/mismatched area label
+* neutral fallback is used when label confidence is low
+* coordinates remain authoritative over textual labels
+
+7. Cache invalidation
+
+Please bump any relevant cache keys/versions so stale bad area labels and stale bad discovery results do not continue appearing after the fix.
+
+Acceptance criteria:
+
+* A request at Fairmount/Spring Garden coordinates cannot use a Spruce Hill / University City / West Philly area label.
+* The LLM prompt cannot receive a stale or mismatched area label.
+* The Explore header cannot display a stale/mismatched area label.
+* Debug overlay clearly shows where the current area label came from.
+* No broad groundedDiscovery gate is implemented yet.
+* No Walk timing / marker / UI / prompt-tone changes are made.
+
+Please run typecheck, lint, format, and tests.
+
+Final summary should include:
+
+* exact root cause found
+* whether cache, stale state, Nominatim, or prompt injection caused the mismatch
+* exact files changed
+* cache versions bumped
+* how to verify in the debug overlay
