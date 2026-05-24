@@ -1,0 +1,37 @@
+The Walk Mode OSM-anchor POC is closer, but the latest field test still shows two important failures.
+
+Evidence:
+- The map/pin appears near a real nearby place, Von Colln Field, but the detail screen turns it into “Von Colin Community Center Building,” with unsupported claims about a 1927 community center, social services, job training, and political meeting spaces.
+- The detail screen also shows the address as “Approx. corner of Walnut St & 37th St,” which is University City and not the Fairmount/Von Colln Field location.
+- Debug shows Coverage osm:0 llm:0 even though Walk Mode is playing a candidate.
+- Top candidates still include suspicious interpretive/generated items like Lost Speakeasy, Sealed Trolley Track, and Buried Mill Creek Tributary.
+
+Please do not write code yet. Diagnose only.
+
+Questions:
+1. For the playing candidate “Von Colin Community Center Building,” what was the actual source object?
+   - OSM id?
+   - OSM name?
+   - OSM category/tags?
+   - original coordinates?
+   - candidateSource?
+2. Did the LLM generate the displayed name “Von Colin Community Center Building”?
+3. Did the LLM generate the displayed address “Approx. corner of Walnut St & 37th St”?
+4. In OSM-anchor Walk Mode, are name, address, and coordinates supposed to be locked from the OSM/Nominatim source? If not, why not?
+5. Why does debug show Coverage osm:0 llm:0 while a candidate is playing?
+6. Are Top Candidates showing post-filter playable candidates, rejected diagnostic candidates, or the raw candidate pool?
+7. Why are “Lost Speakeasy,” “Sealed Trolley Track,” and “Buried Mill Creek Tributary” still appearing in Top Candidates? Also confirm: is osmAnchor: true actually being sent in the Walk Mode discover request, and is the server confirming it received that flag for this session?
+
+Desired principle:
+For Walk Mode OSM-anchor POC, the LLM may write style/copy only. It may not invent or rewrite:
+- place name
+- address
+- coordinates
+- founding date
+- former institution
+- historical use
+- community-history claims
+
+Unless those facts are present in trusted fixture/source data.
+
+Please identify the exact files/functions where the LLM response is merged back onto the OSM anchor and whether it can overwrite anchor name/address/coordinates.
