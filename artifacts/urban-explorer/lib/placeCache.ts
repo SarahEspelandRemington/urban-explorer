@@ -16,7 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 //
 // Tile key format mirrors the server's discoverCacheKey exactly so that
 // client-side grid snapping and server-side grid snapping are in sync:
-//   "{snappedLat},{snappedLng}:{radius}{includesSuffix}"
+//   "{snappedLat},{snappedLng}:{radius}{includesSuffix}[{:osm}]"
 //
 // Grid snap: 0.002° ≈ 222 m step → ±111 m coverage per cell.
 // Any two fetch centres within ~111 m of the same grid point share a tile.
@@ -29,13 +29,12 @@ export const snapGrid = (v: number): string =>
 /** 24 h TTL — historical places are stable within this window. */
 export const PLACE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-// v6: bumped to invalidate entries written before the OSM-anchor POC added
-// the client-side `coordSource` trust gate (line 975, WalkModeContext).
-// Places cached by earlier code lack `coordSource`, causing the merge loop
-// to produce merged=0 even for valid locations, silently blocking all
-// narration. Bumping the prefix makes stale keys unreachable immediately
-// so the next walk fetches fresh Overpass-verified entries from the server.
-const STORAGE_PREFIX = "@urban-explorer/place-cache:v6:";
+// v7: bumped to invalidate v6 entries that did not include the `:osm` suffix
+// in the tile key. Without the suffix, Walk Mode osmAnchor requests and
+// Explore Mode LLM requests shared the same cache slot, allowing LLM-generated
+// places (candidateSource: undefined) to be served to Walk Mode even when
+// osmAnchor: true was sent — bypassing the Overpass fetch entirely.
+const STORAGE_PREFIX = "@urban-explorer/place-cache:v7:";
 
 /** Hard cap on tiles stored in AsyncStorage to bound disk usage. */
 const MAX_TILES = 60;
@@ -52,14 +51,18 @@ interface PlaceCacheEntry {
  * @param lng           Fetch centre longitude
  * @param radius        discoverRadius from DENSITY_CONFIG
  * @param includesSuffix  e.g. ":inc=cafe,pub" or ""  (match server format exactly)
+ * @param osmAnchor     When true, appends ":osm" so Walk Mode osmAnchor results
+ *                      are never served from — or written into — the same slot as
+ *                      Explore Mode LLM results for the same grid cell.
  */
 export function buildTileKey(
   lat: number,
   lng: number,
   radius: number,
   includesSuffix: string,
+  osmAnchor?: boolean,
 ): string {
-  return `${snapGrid(lat)},${snapGrid(lng)}:${radius}${includesSuffix}`;
+  return `${snapGrid(lat)},${snapGrid(lng)}:${radius}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
 }
 
 function storageKey(tile: string): string {

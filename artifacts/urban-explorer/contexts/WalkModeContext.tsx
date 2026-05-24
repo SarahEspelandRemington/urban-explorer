@@ -931,6 +931,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         fetchCenter.longitude,
         cfg.discoverRadius,
         includesSuffix,
+        true, // osmAnchor — Walk Mode always uses the OSM-anchor path
       );
 
       // Layer 1 — Session cache (in-memory, instant, zero I/O).
@@ -973,6 +974,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // coordinates. Its absence means the LLM coordinates were never
             // externally verified — the place must not enter candidate scoring.
             if ((p as any).coordSource === undefined) continue;
+            // OSM-anchor POC: only candidateSource: "osm" places may enter
+            // Walk Mode placesRef. Places without this tag came from the LLM
+            // path (Explore Mode or a pre-osmAnchor Walk Mode session) and
+            // must not reach scoring, queue, or narration. The v7 tile key
+            // ensures new cache entries are always osmAnchor responses, but
+            // this gate catches any residual mismatch.
+            if ((p as any).candidateSource !== "osm") continue;
             if (
               haversineMeters(latitude, longitude, p.latitude, p.longitude) <=
               cfg.memoryRadius
@@ -1131,6 +1139,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               // requests, but guard here too so the pool stays clean if the
               // route is called without walkMode or if the filter changes.
               if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
+              // OSM-anchor POC: only Overpass-sourced places may enter placesRef.
+              // The ":osm" tile key ensures the server always runs the osmAnchor
+              // branch (candidateSource: "osm" on every returned place), but this
+              // gate is a hard backstop against any edge-case server mismatch.
+              if ((p as any).candidateSource !== "osm") continue;
               const d = haversineMeters(
                 latitude,
                 longitude,
@@ -1858,6 +1871,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           if (narratedIdsRef.current.has(p.id)) continue;
           if (p.autoNarrationBlocked) continue;
           if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
+          // OSM-anchor POC: belt-and-suspenders — never surface a non-OSM
+          // candidate in the scoring pool even if it somehow reached placesRef.
+          if (p.candidateSource !== "osm") continue;
           const d = haversineMeters(
             loc.latitude,
             loc.longitude,
