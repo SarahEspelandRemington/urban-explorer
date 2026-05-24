@@ -1,0 +1,51 @@
+I want to discuss a very small UI-only change to the Walk Mode “Now Playing” card.
+
+Do not write code yet. Do not edit files yet. Do not refactor. Do not clean up nearby code. Do not change playback behavior. Do not change Walk Mode logic. Do not change eligibility, filtering, narration, caching, location, candidate selection, or any backend behavior.
+
+For now, inspect only and report back.
+
+Requested visual change, if approved later:
+
+1. In Walk Mode, make the three control buttons on the right side of the Now Playing card — info, pause, and play/skip — use the app’s orange action color so they read more clearly as active/tappable.
+2. Remove the headphones icon on the left side of the Now Playing card to balance the stronger emphasis on the controls and reduce visual clutter.
+
+Design intent:
+
+* The three right-side controls should look active and tappable.
+* The headphones icon is redundant because the card already says “Now Playing” and shows the active story title.
+* The card should remain clean, balanced, and visually consistent with the existing Streetlit style.
+* This should be a styling/layout change only.
+
+Please inspect and answer these questions before making any changes:
+
+1. What exact file/component renders the Walk Mode “Now Playing” card?
+2. What exact file/component renders the info, pause, and play/skip buttons?
+3. What exact file/component renders the headphones icon?
+4. Are those icons purely visual, or is the headphones icon tied to any playback/status logic?
+5. Are the three control buttons already using a shared Button/IconButton component or shared theme token?
+6. What existing orange color/token should be used so this matches the rest of the app?
+7. What is the smallest possible change set?
+8. What files would change?
+9. What risks, if any, exist?
+10. What checks would you run afterward?
+
+Important constraints:
+
+* Do not change the card’s behavior.
+* Do not change what the buttons do.
+* Do not change button order.
+* Do not change spacing/layout beyond what is necessary after removing the headphones icon.
+* Do not change text labels.
+* Do not change the bottom nav.
+* Do not change Explore Mode.
+* Do not change Walk candidate logic.
+* Do not touch API/server code.
+* Do not touch tests unless a snapshot/style test fails and you explain why first.
+* Do not make any code changes until I explicitly approve a specific plan.
+
+Please respond with:
+
+1. A short diagnosis.
+2. The exact files/components involved.
+3. A minimal proposed change plan.
+4. A clear “no code changed yet” confirmation.
