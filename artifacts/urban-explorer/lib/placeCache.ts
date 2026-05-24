@@ -29,12 +29,14 @@ export const snapGrid = (v: number): string =>
 /** 24 h TTL — historical places are stable within this window. */
 export const PLACE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-// v8: bumped to invalidate v7 entries that were written by server responses
-// that predated the candidateSource:"osm" stamp on osmAnchor places. Those
-// tiles stored LLM-sourced places (candidateSource: undefined) under the
-// v7+:osm key, causing the Walk pool gate to block all candidates and leaving
-// Walk Mode with zero pins until the 24 h TTL expired.
-const STORAGE_PREFIX = "@urban-explorer/place-cache:v8:";
+// v9: bumped to invalidate v8 entries that were poisoned during the brief
+// window where the new client (v8 prefix) ran but the API server had not yet
+// restarted with the candidateSource:"osm" stamping fix. Those tiles cached
+// LLM-sourced places under the v8+:osm key. A companion cache-write guard
+// (added alongside this bump) now prevents future poisoning by skipping the
+// AsyncStorage write entirely when the server response contains zero OSM-stamped
+// places — ensuring only clean OSM tiles enter the 24 h cache.
+const STORAGE_PREFIX = "@urban-explorer/place-cache:v9:";
 
 /** Hard cap on tiles stored in AsyncStorage to bound disk usage. */
 const MAX_TILES = 60;
