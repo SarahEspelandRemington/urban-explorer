@@ -1,0 +1,21 @@
+Once the current diagnostic/fix is complete, I want to step back and evaluate the discovery architecture before we keep patching filters.
+Do not write code. Do not propose a broad rewrite yet. Please answer this as an architecture assessment.
+Given everything we have diagnosed — fabricated discoveries, wrong-area/40th Street bleed, coordSrc: llm×5 nom×0, Nominatim fig-leaf matches, ghost signs/subsurface results leaking through, and repeated filter bypasses — is the current architecture fundamentally sound?
+Current pattern appears to be: LLM proposes candidate places/stories → filters try to remove bad ones.
+Would it be more reliable to invert this?
+Possible inverted architecture: OSM/Overpass/Nominatim/known fixture data finds real nearby places first → app verifies coordinates/place identity → LLM writes copy only for those real places → LLM is not allowed to invent candidate locations.
+Please assess:
+1. What is the current source of truth for candidate places in Explore and Walk?
+2. In the current architecture, where is the LLM allowed to invent place names, addresses, or coordinates?
+3. Can filters ever make that approach reliable enough, or will we keep playing whack-a-mole? Please cite specific evidence from our own field tests and diagnostic sessions to support your answer, not hypothetical reasoning.
+4. What would an inverted “real place first, LLM copy second” architecture look like using our current codebase?
+5. What functionality would we lose or reduce by moving to OSM/Overpass/fixture-first discovery?
+6. What functionality would become more reliable?
+7. Could we migrate gradually, for example:
+    * Phase 1: disable LLM-invented candidate locations
+    * Phase 2: use OSM/Overpass + fixtures as candidate source
+    * Phase 3: allow LLM only to summarize/explain vetted places
+8. Which current files/functions would be affected?
+9. What would be the smallest proof-of-concept implementation? Specifically: could we test the inverted architecture on a single endpoint or mode — for example, Walk Mode only — without touching Explore?
+10. What tests/debug overlay fields would prove the architecture is working?
+Please be candid. I am not asking for the easiest patch. I am asking whether the current approach is structurally trustworthy for a walking app.

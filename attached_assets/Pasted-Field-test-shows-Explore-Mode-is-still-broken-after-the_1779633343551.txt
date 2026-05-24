@@ -1,0 +1,35 @@
+Field test shows Explore Mode is still broken after the latest fixes.
+Evidence from debug overlay:
+* user GPS 39.96626, -75.17467 ±9m
+* srch ctr 39.96626, -75.17467
+* These coordinates are not University City / 37th & Walnut.
+* But the header/area says University City, Philadelphia near 37th...
+* The selected result is 37th & Walnut Corner Building...
+* Results include University City-style fabricated items.
+* Debug shows coordSrc: llm×5 nom×0 nom-c×0.
+* Debug also shows hint src: unknown, which was supposed to be resolved in a prior session. This suggests the area label fix is not running on this code path.
+* The GPS coordinates place me in Fairmount near 23rd Street. University City / 37th & Walnut is approximately 2km away. This gap is too large for a cache cell collision — the wrong area context is being sourced from somewhere other than current GPS.
+This proves:
+1. The client GPS and search center are correct.
+2. The area label/discovery context is wrong. 
+3. Explore is still returning an all-LLM coordinate pool, despite the intended production filter.
+Do not write code yet. Diagnose only.
+Please answer with exact files/functions/lines:
+1. Given lat=39.96626, lng=-75.17467, where does /explore/discover derive the area label University City, Philadelphia near 37th...?
+2. Is that area label coming from Nominatim, an address hint, cache, LLM, fixture, or fallback?
+3. What is the exact discover cache key for this request, and could it be reusing a stale University City cache entry?
+4. Where is the Explore Mode rule that should prevent coordSrc: llm×5 nom×0 from being returned?
+5. Why did that rule not return an empty pool or drop these candidates?
+6. Is coordinate verification actually running synchronously for Explore Mode on this request?
+7. If not, which code path is bypassing it?
+8. Please add temporary server/client debug logging or identify existing logs that show, for this exact request:
+    * request lat/lng
+    * cache key
+    * cache hit/miss
+    * area label and source
+    * effectiveAddressHint and source
+    * number of candidates before filter
+    * number after production filter
+    * number after coordinate verification
+    * coordSource counts before response
+Do not implement a fix until you prove whether this is a stale cache problem, wrong area-context derivation, or Explore still bypassing coordinate verification.
