@@ -995,7 +995,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
                 (p) => (p as any).candidateSource === "osm",
               ).length,
               llm: allIncoming.filter(
-                (p) => (p as any).candidateSource === "llm",
+                (p) => (p as any).candidateSource !== "osm",
               ).length,
             },
           });
@@ -1097,7 +1097,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               osmCoverage: {
                 osm: allPlaces.filter((p) => p.candidateSource === "osm")
                   .length,
-                llm: allPlaces.filter((p) => p.candidateSource === "llm")
+                llm: allPlaces.filter((p) => p.candidateSource !== "osm")
                   .length,
               },
             });
