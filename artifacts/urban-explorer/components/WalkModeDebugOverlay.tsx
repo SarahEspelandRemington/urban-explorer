@@ -119,8 +119,8 @@ export function WalkModeDebugOverlay() {
                             : ""}
                         </Text>
                         <Text style={styles.lineDim}>
-                          Raw tile osm:{lastDiscoverResult.osmCoverage.osm}{" "}
-                          llm:{lastDiscoverResult.osmCoverage.llm}
+                          Raw tile osm:{lastDiscoverResult.osmCoverage.osm} llm:
+                          {lastDiscoverResult.osmCoverage.llm}
                         </Text>
                       </>
                     ) : (

@@ -1007,12 +1007,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               ).length,
             },
             poolCoverage: {
-              osm: merged.filter(
-                (p) => (p as any).candidateSource === "osm",
-              ).length,
-              llm: merged.filter(
-                (p) => (p as any).candidateSource !== "osm",
-              ).length,
+              osm: merged.filter((p) => (p as any).candidateSource === "osm")
+                .length,
+              llm: merged.filter((p) => (p as any).candidateSource !== "osm")
+                .length,
             },
           });
           if (__DEV__)
@@ -1181,12 +1179,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
                 ).length,
               },
               poolCoverage: {
-                osm: merged.filter(
-                  (p) => (p as any).candidateSource === "osm",
-                ).length,
-                llm: merged.filter(
-                  (p) => (p as any).candidateSource !== "osm",
-                ).length,
+                osm: merged.filter((p) => (p as any).candidateSource === "osm")
+                  .length,
+                llm: merged.filter((p) => (p as any).candidateSource !== "osm")
+                  .length,
               },
             });
           }
