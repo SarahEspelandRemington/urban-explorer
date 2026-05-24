@@ -452,12 +452,15 @@ function getOSMCacheKey(
   return null;
 }
 
+// Returns null when Overpass errored or timed out (transient failure).
+// Returns OSMPlace[] (possibly empty) when Overpass responded successfully —
+// an empty array means the area is genuinely sparse, not a network failure.
 async function fetchNearbyOSMPlaces(
   lat: number,
   lng: number,
   radiusMeters: number,
   quickMode = false,
-): Promise<OSMPlace[]> {
+): Promise<OSMPlace[] | null> {
   const cached = getOSMCacheKey(lat, lng);
   if (cached) return cached.places;
 
@@ -498,10 +501,10 @@ out center body 40;
     });
     clearTimeout(timeout);
 
-    if (!resp.ok) return [];
+    if (!resp.ok) return null;
 
     const json = (await resp.json()) as { elements?: any[] };
-    if (!json.elements) return [];
+    if (!json.elements) return null;
 
     const seen = new Set<string>();
     const results: OSMPlace[] = [];
@@ -549,8 +552,8 @@ out center body 40;
     return finalResults;
   } catch (err) {
     clearTimeout(timeout);
-    logger.warn({ err }, "Overpass fetch failed, returning empty");
-    return [];
+    logger.warn({ err }, "Overpass fetch failed, returning null");
+    return null;
   }
 }
 
@@ -1854,16 +1857,24 @@ router.post("/explore/discover", async (req, res) => {
   if (walkMode && osmAnchor) {
     const nbhdLabel = await nbhdLabelPromise;
 
-    // 1. Fetch OSM candidates — generous timeout, no brainstorm race needed
-    let osmCandidates: OSMPlace[] = await Promise.race([
+    // 1. Fetch OSM candidates — generous timeout, no brainstorm race needed.
+    // null = Overpass errored or timed out (transient); [] = genuinely sparse.
+    // The outer 8 s race guards against fetchNearbyOSMPlaces stalling after
+    // its own internal abort fires (e.g. slow TLS teardown).
+    let overpassErrored = false;
+    const osmRaceResult = await Promise.race([
       fetchNearbyOSMPlaces(
         latitude,
         longitude,
         Math.min(searchRadius, 500),
         false,
-      ).catch(() => [] as OSMPlace[]),
-      new Promise<OSMPlace[]>((resolve) => setTimeout(() => resolve([]), 8000)),
+      ).catch((): null => null),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
     ]);
+    if (osmRaceResult === null) {
+      overpassErrored = true;
+    }
+    let osmCandidates: OSMPlace[] = osmRaceResult ?? [];
 
     // Apply boring-building denylist
     if (effectiveDenylist.size > 0) {
@@ -1886,7 +1897,7 @@ router.post("/explore/discover", async (req, res) => {
     const searchBucket: "r150" | "r300" | "r500" =
       searchRadius <= 150 ? "r150" : searchRadius <= 300 ? "r300" : "r500";
 
-    // 3. Zero density → return early; no LLM fallback by design
+    // 3. Zero density → return early; no LLM fallback by design.
     if (osmCandidateCount[searchBucket] === 0) {
       const emptyResp = {
         places: [],
@@ -1897,11 +1908,17 @@ router.post("/explore/discover", async (req, res) => {
         osmCandidateCount,
         noVerifiedPlacesNearby: true,
       };
-      const SHORT_TTL_MS = 2 * 60 * 1000;
-      llmCache.set(discoverCacheKey, {
-        data: emptyResp,
-        timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
-      });
+      if (!overpassErrored) {
+        // Genuine sparse area: cache with a short 30 s TTL so the next walk
+        // session can retry promptly without hammering Overpass on every tick.
+        const SHORT_TTL_MS = 30 * 1000;
+        llmCache.set(discoverCacheKey, {
+          data: emptyResp,
+          timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
+        });
+      }
+      // Overpass errors: skip the cache write entirely so the next GPS-triggered
+      // discover call retries immediately rather than serving a stale failure.
       res.json(emptyResp);
       return;
     }
@@ -2106,9 +2123,9 @@ Respond in JSON: {"results":[{"id":"...","summary":"One vivid sentence.","facts"
 
   const osmTimeLimit = isQuick ? 3000 : 4000;
   const osmPromise: Promise<OSMPlace[]> = Promise.race([
-    fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick).catch(
-      () => [] as OSMPlace[],
-    ),
+    fetchNearbyOSMPlaces(latitude, longitude, searchRadius, isQuick)
+      .then((r) => r ?? ([] as OSMPlace[]))
+      .catch(() => [] as OSMPlace[]),
     new Promise<OSMPlace[]>((resolve) =>
       setTimeout(() => resolve([]), osmTimeLimit),
     ),
@@ -2899,8 +2916,11 @@ router.post("/explore/investigate-address", async (req, res) => {
     nearbyOSMPlaces = [];
     let osmFetchSucceeded = false;
     try {
-      nearbyOSMPlaces = await fetchNearbyOSMPlaces(lat, lng, 120);
-      osmFetchSucceeded = true;
+      const osmFetchResult = await fetchNearbyOSMPlaces(lat, lng, 120);
+      if (osmFetchResult !== null) {
+        nearbyOSMPlaces = osmFetchResult;
+        osmFetchSucceeded = true;
+      }
     } catch {
       // Non-fatal — proceed without OSM context.
     }
