@@ -29,13 +29,13 @@ export const snapGrid = (v: number): string =>
 /** 24 h TTL — historical places are stable within this window. */
 export const PLACE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-// v5: bumped to invalidate entries written before PRECISE_LOCATION_PROSE_RE
-// and NAMED_NEIGHBORHOOD_RE were added to Rule 4 of applyLlmPrecisionFilter.
-// LLM-only places whose summaries contain intersection-of / block-style prose
-// or named-neighbourhood claims are now downgraded to INTERPRETIVE_OVERLAY,
-// but cached v4 entries still carry the old (passing) discoveryClass.
-// Old v4 keys expire naturally after 24 h; they are unreachable immediately.
-const STORAGE_PREFIX = "@urban-explorer/place-cache:v5:";
+// v6: bumped to invalidate entries written before the OSM-anchor POC added
+// the client-side `coordSource` trust gate (line 975, WalkModeContext).
+// Places cached by earlier code lack `coordSource`, causing the merge loop
+// to produce merged=0 even for valid locations, silently blocking all
+// narration. Bumping the prefix makes stale keys unreachable immediately
+// so the next walk fetches fresh Overpass-verified entries from the server.
+const STORAGE_PREFIX = "@urban-explorer/place-cache:v6:";
 
 /** Hard cap on tiles stored in AsyncStorage to bound disk usage. */
 const MAX_TILES = 60;
