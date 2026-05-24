@@ -11,7 +11,16 @@ const dark = {
 
 function IconHeadphones({ size = 18, color = "#F2A23A" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
       <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3z" />
       <path d="M3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
@@ -21,7 +30,16 @@ function IconHeadphones({ size = 18, color = "#F2A23A" }) {
 
 function IconInfo({ size = 16, color = "#B8AFC0" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="12" cy="12" r="10" />
       <line x1="12" y1="16" x2="12" y2="12" />
       <line x1="12" y1="8" x2="12.01" y2="8" />
@@ -31,7 +49,16 @@ function IconInfo({ size = 16, color = "#B8AFC0" }) {
 
 function IconPause({ size = 18, color = "#FFF7E8" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <rect x="6" y="4" width="4" height="16" />
       <rect x="14" y="4" width="4" height="16" />
     </svg>
@@ -40,7 +67,16 @@ function IconPause({ size = 18, color = "#FFF7E8" }) {
 
 function IconSkip({ size = 18, color = "#FFF7E8" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polygon points="5 4 15 12 5 20 5 4" />
       <line x1="19" y1="5" x2="19" y2="19" />
     </svg>
@@ -62,40 +98,83 @@ const iconBtn: React.CSSProperties = {
 
 export function Current() {
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: dark.background, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: dark.background,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+    >
       <div style={{ width: 420 }}>
-        <p style={{ color: dark.mutedForeground, fontSize: 11, fontFamily: "system-ui, sans-serif", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8, marginLeft: 4 }}>
+        <p
+          style={{
+            color: dark.mutedForeground,
+            fontSize: 11,
+            fontFamily: "system-ui, sans-serif",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            marginBottom: 8,
+            marginLeft: 4,
+          }}
+        >
           Current state
         </p>
-        <div style={{
-          display: "flex",
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 12,
-          padding: "14px 14px",
-          borderRadius: 16,
-          border: `1px solid ${dark.border}`,
-          borderLeft: `3px solid ${dark.borderLeft}`,
-          backgroundColor: dark.card,
-        }}>
-          <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: 12,
-            backgroundColor: dark.primary + "18",
+        <div
+          style={{
             display: "flex",
+            flexDirection: "row",
             alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}>
+            gap: 12,
+            padding: "14px 14px",
+            borderRadius: 16,
+            border: `1px solid ${dark.border}`,
+            borderLeft: `3px solid ${dark.borderLeft}`,
+            backgroundColor: dark.card,
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: dark.primary + "18",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
             <IconHeadphones size={18} color={dark.primary} />
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 11, fontFamily: "system-ui, sans-serif", textTransform: "uppercase", letterSpacing: "0.05em", color: dark.mutedForeground }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontFamily: "system-ui, sans-serif",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: dark.mutedForeground,
+              }}
+            >
               Now Playing
             </p>
-            <p style={{ margin: "2px 0 0", fontSize: 15, fontWeight: 600, fontFamily: "system-ui, sans-serif", color: dark.foreground, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <p
+              style={{
+                margin: "2px 0 0",
+                fontSize: 15,
+                fontWeight: 600,
+                fontFamily: "system-ui, sans-serif",
+                color: dark.foreground,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
               Independence Hall
             </p>
           </div>

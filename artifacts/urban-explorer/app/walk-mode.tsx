@@ -630,20 +630,7 @@ export default function WalkModeScreen() {
                     style={styles.nowPlayingPhoto}
                     resizeMode="cover"
                   />
-                ) : (
-                  <View
-                    style={[
-                      styles.nowPlayingIcon,
-                      { backgroundColor: colors.primary + "18" },
-                    ]}
-                  >
-                    <Feather
-                      name="headphones"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  </View>
-                );
+                ) : null;
               })()}
               <View style={styles.nowPlayingText}>
                 <View style={styles.nowPlayingLabelRow}>
@@ -712,9 +699,12 @@ export default function WalkModeScreen() {
               hitSlop={12}
               accessibilityRole="button"
               accessibilityLabel={`Open details for ${walk.narration.currentPlace}`}
-              style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.primary + "18" },
+              ]}
             >
-              <Feather name="info" size={16} color={colors.mutedForeground} />
+              <Feather name="info" size={16} color={colors.primary} />
             </Pressable>
             <Pressable
               onPress={togglePause}
@@ -725,12 +715,15 @@ export default function WalkModeScreen() {
                   ? t.walkMode.resumeAccessibility
                   : t.walkMode.pauseAccessibility
               }
-              style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.primary + "18" },
+              ]}
             >
               <Feather
                 name={walk.narration.isPaused ? "play" : "pause"}
                 size={18}
-                color={colors.foreground}
+                color={colors.primary}
               />
             </Pressable>
             <Pressable
@@ -742,13 +735,12 @@ export default function WalkModeScreen() {
               hitSlop={16}
               accessibilityRole="button"
               accessibilityLabel={t.walkMode.skipAccessibility}
-              style={[styles.iconBtn, { backgroundColor: colors.muted }]}
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.primary + "18" },
+              ]}
             >
-              <Feather
-                name="skip-forward"
-                size={18}
-                color={colors.foreground}
-              />
+              <Feather name="skip-forward" size={18} color={colors.primary} />
             </Pressable>
           </Animated.View>
         ) : walk.isLoading ? (
