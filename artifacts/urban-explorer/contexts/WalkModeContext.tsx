@@ -989,6 +989,16 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           for (const [id, ts] of narratedIdsRef.current.entries()) {
             if (ts < oneHourAgoC) narratedIdsRef.current.delete(id);
           }
+          recordDiscoverResult({
+            osmCoverage: {
+              osm: allIncoming.filter(
+                (p) => (p as any).candidateSource === "osm",
+              ).length,
+              llm: allIncoming.filter(
+                (p) => (p as any).candidateSource === "llm",
+              ).length,
+            },
+          });
           if (__DEV__)
             console.log(
               `[discover] storage hit tile=${tile} incoming=${allIncoming.length} merged=${merged.length}`,
@@ -1067,16 +1077,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           // results so we don't repopulate the places list or update state after
           // the walk has ended.
           if (!isWalkingRef.current) return;
-          // Record discover diagnostics for the debug overlay (OSM-anchor only).
-          const osmCount = data?.osmCandidateCount as
-            | { r150: number; r300: number; r500: number }
-            | undefined;
-          if (osmCount !== undefined) {
+          // Record discover diagnostics for the debug overlay.
+          // Always called so the Discover section appears even when the server
+          // response comes from a non-OSM-anchor path (osmCandidateCount absent).
+          {
+            const osmCount = data?.osmCandidateCount as
+              | { r150: number; r300: number; r500: number }
+              | undefined;
             const allPlaces = Array.isArray(data?.places)
               ? (data.places as { candidateSource?: string }[])
               : [];
             recordDiscoverResult({
-              osmCandidateCount: osmCount,
+              ...(osmCount !== undefined
+                ? { osmCandidateCount: osmCount }
+                : {}),
               noVerifiedPlacesNearby: data?.noVerifiedPlacesNearby as
                 | boolean
                 | undefined,
