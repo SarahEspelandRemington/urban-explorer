@@ -2381,6 +2381,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         setIsWalking(true);
         addWalkBreadcrumb("walk started");
 
+        // Clear stale diagnostics from any prior walk session so the debug
+        // overlay shows only current-session data (coverage counts, rejections,
+        // candidate snapshots). Must run after the walk is declared started so
+        // the overlay doesn't briefly show leftover state from the previous walk.
+        resetWalkDiagnostics();
+
         // Fetch server-side heading-bias config in the background. Reset first so
         // any stale values from a previous walk are cleared. The fetch races
         // against a 5 s wall-clock so it never blocks walk startup; if it wins
