@@ -1140,7 +1140,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // the HTTP round-trip entirely. Use data.places (the raw server
             // response) rather than the evicted `merged` list so the cache
             // stores the full set of discovered places for this tile.
-            setPlaceCache(tile, data.places as unknown[]);
+            //
+            // Guard: only write if the server response contains at least one
+            // OSM-stamped place. Caching a response where every place is
+            // LLM-sourced (candidateSource !== "osm") would poison the tile
+            // for 24 h — the Walk pool gate would block every candidate and
+            // the user would see zero pins until the TTL expired. Skipping
+            // the write lets the server be retried on the next walk session,
+            // when Overpass may return results or the API server may be fresh.
+            const hasOsmPlace = allIncoming.some(
+              (p) => (p as any).candidateSource === "osm",
+            );
+            if (hasOsmPlace) {
+              setPlaceCache(tile, data.places as unknown[]);
+            }
             fetchedTilesRef.current.add(tile);
             if (__DEV__)
               console.log(
