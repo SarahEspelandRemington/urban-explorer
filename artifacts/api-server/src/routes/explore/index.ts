@@ -3079,7 +3079,7 @@ router.post("/explore/place-detail", async (req, res) => {
   const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
   res.on("close", () => detailController.abort());
 
-  const detailCacheKey = `detail:v6:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const detailCacheKey = `detail:v7:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -3200,6 +3200,36 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
         )
         .trim();
     }
+
+    // Lock anchor fields: always use the canonical request values, never the
+    // LLM's version. The model can paraphrase or subtly rewrite names; the
+    // client sent a verified OSM name that must not be altered.
+    data.name = placeName;
+
+    // Filter nearbyRelated to entries within 2 km of the request coordinates.
+    // LLM-generated coordinates are unreliable and can land in a different
+    // neighbourhood or city entirely.
+    const MAX_NEARBY_DIST_M = 2000;
+    if (Array.isArray(data.nearbyRelated)) {
+      data.nearbyRelated = data.nearbyRelated.filter((r: unknown) => {
+        if (
+          typeof r !== "object" ||
+          r === null ||
+          typeof (r as Record<string, unknown>).latitude !== "number" ||
+          typeof (r as Record<string, unknown>).longitude !== "number"
+        )
+          return false;
+        const { latitude: rLat, longitude: rLng } = r as {
+          latitude: number;
+          longitude: number;
+        };
+        return (
+          haversineDistance(latitude, longitude, rLat, rLng) <=
+          MAX_NEARBY_DIST_M
+        );
+      });
+    }
+
     const photoUrl = await fetchWikipediaPhoto(placeName);
     if (photoUrl) data.photoUrl = photoUrl;
     return data;
@@ -3366,7 +3396,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   const { placeName, category, summary, fact, address, crossStreets } =
     parsed.data;
 
-  const narrationCacheKey = `narration:v17:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v18:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -3396,6 +3426,16 @@ router.post("/explore/walk-narration", async (req, res) => {
       ? ` Nearby: ${crossStreets}.`
       : "";
 
+  // Anchor-data block injected at the top of the system prompt so the model
+  // cannot rewrite the place name or address in the spoken narration.
+  const narrationAnchorBlock = [
+    `VERIFIED ANCHOR DATA — these values are authoritative. Use them verbatim; do not alter, paraphrase, abbreviate, or "correct" them:`,
+    `- Place name: "${placeName}"`,
+    address ? `- Address: ${address}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
   const narrationPromise = openai.chat.completions
     .create({
       model: "gpt-4.1-nano",
@@ -3403,7 +3443,9 @@ router.post("/explore/walk-narration", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You are a knowledgeable, observant local — someone who has spent years paying close attention to this city and speaks plainly about what they know. You're not performing enthusiasm. Something caught your eye, and you're sharing it.
+          content: `${narrationAnchorBlock}
+
+You are a knowledgeable, observant local — someone who has spent years paying close attention to this city and speaks plainly about what they know. You're not performing enthusiasm. Something caught your eye, and you're sharing it.
 
 Your words will be read aloud by a text-to-speech engine. That means every word choice affects how natural it sounds.
 
@@ -3579,7 +3621,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v17:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const narrationCacheKey = `narration:v18:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -3624,6 +3666,16 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
           ? ` Nearby: ${crossStreets}.`
           : "";
 
+      // Same anchor-data block as /walk-narration so the audio path also locks
+      // the canonical name and address against LLM rewriting.
+      const audioAnchorBlock = [
+        `VERIFIED ANCHOR DATA — these values are authoritative. Use them verbatim; do not alter, paraphrase, abbreviate, or "correct" them:`,
+        `- Place name: "${placeName}"`,
+        address ? `- Address: ${address}` : null,
+      ]
+        .filter(Boolean)
+        .join("\n");
+
       const audioNarrationPromise = openai.chat.completions
         .create(
           {
@@ -3632,7 +3684,9 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
             messages: [
               {
                 role: "system",
-                content: `You are a knowledgeable, observant local — someone who has spent years paying close attention to this city and speaks plainly about what they know. You're not performing enthusiasm. Something caught your eye, and you're sharing it.
+                content: `${audioAnchorBlock}
+
+You are a knowledgeable, observant local — someone who has spent years paying close attention to this city and speaks plainly about what they know. You're not performing enthusiasm. Something caught your eye, and you're sharing it.
 
 Your words will be read aloud by a text-to-speech engine. That means every word choice affects how natural it sounds.
 
