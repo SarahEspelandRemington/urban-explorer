@@ -1,0 +1,64 @@
+Planning cache key verification (114 seconds)
+No code yet. Let me read the exact current state of the relevant code paths to give a precise diagnosis:
+
+
+4 actions
+Let me quickly check if recordDiscoverResult is called from anywhere else in the codebase before finalizing the diagnosis:
+
+
+2 actions
+The code on disk is confirmed clean — recordDiscoverResult is called in exactly two places (lines 1000 and 1166 in WalkModeContext.tsx) and both calls now include poolCoverage. There are no other callers. Here is the full diagnosis:
+
+Diagnosis
+1. Does the screenshot prove the pool is empty and no LLM candidates are active?
+Yes, unambiguously. Pins: 0 / Eligible: 0 / Top candidates: none / Rejections: 0 means placesRef.current is empty and the eligibility evaluator has nothing to rank. The LLM-sourced places from the tile are not in the pool and cannot narrate.
+
+2. Why does Coverage osm:0 llm:8 still appear?
+The overlay code is a conditional:
+
+{lastDiscoverResult.poolCoverage !== undefined ? (
+  // NEW: two-line "Pool … / Raw tile …" display
+) : (
+  // OLD FALLBACK: "Coverage osm:N llm:M"  ← what the user sees
+)}
+
+The fallback fires only when poolCoverage is undefined on lastDiscoverResult. In the current code on disk both call sites always set poolCoverage. Therefore the running bundle is not the code currently on disk — the Expo Go app loaded an older bundle that predates the poolCoverage addition.
+
+3. Did the cache version actually change the AsyncStorage namespace for this session?
+No. A v8-prefix change only takes effect when the new JS bundle runs. Since the app is on the old bundle, it is still reading @urban-explorer/place-cache:v7:39.966,-75.174:120:osm — the same stale tile. The v7→v8 bump in placeCache.ts has never executed on the device.
+
+4. What exact cache key/version is this Walk session reading?
+@urban-explorer/place-cache:v7:39.966,-75.174:120:osm
+
+(or whichever v7+:osm tile covers your current coordinates). The Coverage osm:0 llm:8 values are the raw contents of that tile — 8 LLM-sourced places, zero OSM-stamped.
+
+5. Is the overlay showing raw incoming, post-gate accepted, or stale coverage?
+Raw incoming (pre-gate). The old code called recordDiscoverResult before the merge loop, using allPlaces (the full tile contents). It had no concept of poolCoverage. So the number llm:8 is the count of places in the tile as read from AsyncStorage, before any gate was applied.
+
+6. Was noVerifiedPlacesNearby expected to display here?
+No. noVerifiedPlacesNearby is only populated from a live server response. The storage-hit path reads a cached tile, which contains only places[] — the server flag is never stored alongside it. Even with new code running, a cache-hit path cannot show noVerifiedPlacesNearby because it never calls the server.
+
+7. Debug line for cache hit/miss, version, tile key, raw count, accepted count, blocked non-OSM count
+The Metro console already emits most of this:
+
+[discover] storage hit tile=39.966,-75.174:120:osm incoming=7 merged=0
+[discover] server fetch tile=...
+[discover] server OK tile=... incoming=N merged=M
+
+That gives: hit/miss, tile key, raw count (incoming), accepted count (merged). What it does not show is:
+
+The cache prefix/version string actually used when the key was constructed
+How many of the blocked candidates were blocked because candidateSource !== "osm" specifically vs. autoNarrationBlocked vs. memoryRadius
+To add those, the overlay or the [discover] log line would need two things: the resolved storage key (trivially: prefix + tile) and a per-reason breakdown from the merge loop. That's the code addition you'd want once the bundle situation is resolved.
+
+Root cause summary
+Symptom	Cause
+Single-line Coverage (not two-line Pool/Raw tile)	poolCoverage is undefined → old bundle running
+llm:8 while Pins/Eligible = 0	Old code reads v7 tile raw, shows pre-gate counts; gate correctly blocks all 8 LLM places
+Cache version unchanged	v8 prefix only exists in the new bundle; old bundle still opens v7 keys
+No noVerifiedPlacesNearby	Storage-hit path; server never called; flag never available
+What actually happened: The "hard reload" in Expo Go fetched a bundle from Metro, but Metro had been serving the codebase state from before my edits were committed and Metro was restarted. Expo Go received (or fell back to) a cached copy of the pre-poolCoverage bundle.
+
+Proof test: If the new bundle is running, the Discover section will show two lines — Pool … on a bright style and Raw tile … on a dim style. If you see Coverage osm:N llm:M as a single line in any walk session, the old bundle is still running.
+
+Fix: Shake the device → Reload again now that Metro is confirmed running (it was restarted in the previous turn). If the single-line format persists, the Metro server's in-memory module cache may need a full -c clear — in that case, I can add --clear to the dev script, restart the workflow, then revert it.
