@@ -34,7 +34,7 @@ export function WalkModeDebugOverlay() {
     return subscribeWalkDiagnostics(() => setTick((t) => t + 1));
   }, []);
 
-  const { lastSnapshot, rejections } = getWalkDiagnostics();
+  const { lastSnapshot, rejections, lastDiscoverResult } = getWalkDiagnostics();
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { top: 90 }]}>
@@ -97,6 +97,28 @@ export function WalkModeDebugOverlay() {
                     : ""}
                 </Text>
 
+                {/* ── Discover / OSM-anchor stats ─────────────────────── */}
+                {lastDiscoverResult && (
+                  <>
+                    <Text style={styles.sectionTitle}>Discover</Text>
+                    {lastDiscoverResult.osmCandidateCount && (
+                      <Text style={styles.line}>
+                        OSM pool r150:{" "}
+                        {lastDiscoverResult.osmCandidateCount.r150} · r300:{" "}
+                        {lastDiscoverResult.osmCandidateCount.r300} · r500:{" "}
+                        {lastDiscoverResult.osmCandidateCount.r500}
+                      </Text>
+                    )}
+                    <Text style={styles.line}>
+                      Coverage osm:{lastDiscoverResult.osmCoverage.osm} llm:
+                      {lastDiscoverResult.osmCoverage.llm}
+                      {lastDiscoverResult.noVerifiedPlacesNearby
+                        ? " ⚠ noVerified"
+                        : ""}
+                    </Text>
+                  </>
+                )}
+
                 {/* ── Active story state ─────────────────────────────── */}
                 <Text style={styles.sectionTitle}>Playing</Text>
                 <Text
@@ -135,7 +157,13 @@ export function WalkModeDebugOverlay() {
                 ) : (
                   lastSnapshot.topCandidates.map((c, i) => (
                     <Text key={c.id} style={styles.line} numberOfLines={1}>
-                      {i + 1}. {c.name.slice(0, 28)} · {Math.round(c.distance)}m
+                      {i + 1}.{" "}
+                      {c.candidateSource === "osm"
+                        ? "[osm] "
+                        : c.candidateSource === "llm"
+                          ? "[llm] "
+                          : ""}
+                      {c.name.slice(0, 24)} · {Math.round(c.distance)}m
                       {c.bearingDiff !== null
                         ? ` · ${Math.round(c.bearingDiff)}°`
                         : ""}

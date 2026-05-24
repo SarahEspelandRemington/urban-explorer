@@ -48,7 +48,18 @@ export interface DiscoverRequest {
   addressHint?: string;
   /** When true, Nominatim coordinate verification runs synchronously before responding. Only places confirmed or corrected by Nominatim are returned. Places whose coordinates cannot be externally verified are omitted rather than returned with LLM-generated pins. Explore Mode callers should omit this field or set it to false. */
   walkMode?: boolean;
+  /** Walk Mode OSM-anchor mode. When true (and walkMode is also true), Overpass/OSM is the definitive candidate source — the LLM writes copy only and cannot invent place names, addresses, or coordinates. If Overpass returns zero candidates within the search radius, returns an empty places array with noVerifiedPlacesNearby: true. Has no effect when walkMode is false. */
+  osmAnchor?: boolean;
 }
+
+/**
+ * OSM candidate pool sizes at each radius tier, before copy generation and deny-list filtering. Only present when osmAnchor is true.
+ */
+export type DiscoverResponseOsmCandidateCount = {
+  r150?: number;
+  r300?: number;
+  r500?: number;
+};
 
 /**
  * How confident the AI is about this place's existence and details
@@ -85,6 +96,17 @@ export const PlaceSpatialSuppression = {
   interpretiveOverlay: "interpretiveOverlay",
 } as const;
 
+/**
+ * How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path).
+ */
+export type PlaceCandidateSource =
+  (typeof PlaceCandidateSource)[keyof typeof PlaceCandidateSource];
+
+export const PlaceCandidateSource = {
+  osm: "osm",
+  llm: "llm",
+} as const;
+
 export interface Place {
   id: string;
   name: string;
@@ -113,12 +135,20 @@ export interface Place {
   spatialSuppression?: PlaceSpatialSuppression;
   /** URL of a representative photo for this place, when available (sourced from Wikipedia) */
   photoUrl?: string;
+  /** Overpass element reference (e.g. 'node/12345678'). Present only on OSM-anchored Walk Mode discoveries. */
+  osmId?: string;
+  /** How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path). */
+  candidateSource?: PlaceCandidateSource;
 }
 
 export interface DiscoverResponse {
   places: Place[];
   /** Human-readable description of the area */
   location: string;
+  /** OSM candidate pool sizes at each radius tier, before copy generation and deny-list filtering. Only present when osmAnchor is true. */
+  osmCandidateCount?: DiscoverResponseOsmCandidateCount;
+  /** When osmAnchor is true and Overpass returned no candidates within the search radius. The places array will be empty. */
+  noVerifiedPlacesNearby?: boolean;
 }
 
 export interface SuggestLocationsRequest {

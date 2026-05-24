@@ -51,6 +51,8 @@ interface OSMPlace {
   lon: number;
   type: string;
   tags: Record<string, string>;
+  /** Overpass element reference, e.g. "node/12345678". Set in the Overpass parser. */
+  osmId: string;
 }
 
 const OVERPASS_API = "https://overpass-api.de/api/interpreter";
@@ -224,8 +226,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v35"], // discover — quick mode  ← bumped: bust cache entries written with wrong area-label context
-  ["full", "v35"], // discover — full mode   ← bumped: bust cache entries written with wrong area-label context
+  ["quick", "v37"], // discover — quick mode
+  ["full", "v37"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -531,6 +533,7 @@ out center body 40;
         lon: elLon,
         type: osmType === "yes" ? "building" : osmType,
         tags: el.tags || {},
+        osmId: `${(el.type as string | undefined) ?? "node"}/${el.id as string}`,
       });
     }
 
@@ -1736,6 +1739,7 @@ router.post("/explore/discover", async (req, res) => {
     includeBuildingTypes,
     addressHint,
     walkMode,
+    osmAnchor,
   } = parsed.data;
   const isQuick = mode === "quick";
   const requestedRadius = radius ?? (isQuick ? 500 : 300);
@@ -1762,7 +1766,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v37:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  const discoverCacheKey = `${modeKey}:v38:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -1840,6 +1844,239 @@ router.post("/explore/discover", async (req, res) => {
           nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
       });
     }
+    return;
+  }
+
+  // ── OSM-ANCHOR WALK MODE ─────────────────────────────────────────────────
+  // When walkMode && osmAnchor, Overpass is the definitive candidate source.
+  // The LLM writes copy only — it cannot invent place names, addresses, or
+  // coordinates. Zero Overpass results → return empty with noVerifiedPlacesNearby.
+  if (walkMode && osmAnchor) {
+    const nbhdLabel = await nbhdLabelPromise;
+
+    // 1. Fetch OSM candidates — generous timeout, no brainstorm race needed
+    let osmCandidates: OSMPlace[] = await Promise.race([
+      fetchNearbyOSMPlaces(
+        latitude,
+        longitude,
+        Math.min(searchRadius, 500),
+        false,
+      ).catch(() => [] as OSMPlace[]),
+      new Promise<OSMPlace[]>((resolve) => setTimeout(() => resolve([]), 8000)),
+    ]);
+
+    // Apply boring-building denylist
+    if (effectiveDenylist.size > 0) {
+      osmCandidates = osmCandidates.filter((p) => {
+        const building = (p.tags["building"] ?? "").toLowerCase();
+        return !building || !effectiveDenylist.has(building);
+      });
+    }
+
+    // 2. Density counts at three radius tiers (before any radius filter)
+    const countWithin = (r: number) =>
+      osmCandidates.filter(
+        (p) => haversineDistance(latitude, longitude, p.lat, p.lon) <= r,
+      ).length;
+    const osmCandidateCount = {
+      r150: countWithin(150),
+      r300: countWithin(300),
+      r500: countWithin(500),
+    };
+    const searchBucket: "r150" | "r300" | "r500" =
+      searchRadius <= 150 ? "r150" : searchRadius <= 300 ? "r300" : "r500";
+
+    // 3. Zero density → return early; no LLM fallback by design
+    if (osmCandidateCount[searchBucket] === 0) {
+      const emptyResp = {
+        places: [],
+        location: nbhdLabel.label,
+        locationSrc: nbhdLabel.src,
+        effectiveAddressHintSrc:
+          nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
+        osmCandidateCount,
+        noVerifiedPlacesNearby: true,
+      };
+      const SHORT_TTL_MS = 2 * 60 * 1000;
+      llmCache.set(discoverCacheKey, {
+        data: emptyResp,
+        timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
+      });
+      res.json(emptyResp);
+      return;
+    }
+
+    // 4. Limit to candidates within the search radius (10% headroom)
+    const candidates = osmCandidates.filter(
+      (p) =>
+        haversineDistance(latitude, longitude, p.lat, p.lon) <=
+        searchRadius * 1.1,
+    );
+
+    // Helpers for address and copy formatting
+    const buildOsmAddr = (tags: Record<string, string>): string => {
+      const num = tags["addr:housenumber"] ?? "";
+      const street = tags["addr:street"] ?? "";
+      if (num && street) return `${num} ${street}`.trim();
+      if (street) return street;
+      return "";
+    };
+
+    const HINT_TAGS = [
+      "historic",
+      "description",
+      "heritage:description",
+      "start_date",
+      "wikidata",
+      "wikipedia",
+      "operator",
+      "denomination",
+      "alt_name",
+      "architect",
+      "building:material",
+      "building:levels",
+    ] as const;
+
+    const formatForCopy = (p: OSMPlace): Record<string, unknown> => {
+      const obj: Record<string, unknown> = {
+        id: p.osmId,
+        name: p.name,
+        type: p.type,
+      };
+      const addr = buildOsmAddr(p.tags);
+      if (addr) obj.address = addr;
+      for (const key of HINT_TAGS) {
+        const val = p.tags[key];
+        if (val) obj[key] = sanitizeOSMText(val, 120);
+      }
+      return obj;
+    };
+
+    // 5. Call LLM for copy-only (summary, facts, tags, yearBuilt, confidence)
+    type CopyResult = {
+      id: string;
+      summary: string;
+      facts: string[];
+      tags?: string[];
+      yearBuilt?: string;
+      confidence?: string;
+    };
+    let copyResults: CopyResult[] = [];
+    const copyAbort = new AbortController();
+    const copyTimer = setTimeout(() => copyAbort.abort(), 30_000);
+    res.on("close", () => copyAbort.abort());
+
+    const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
+    try {
+      const copyResponse = await openai.chat.completions.create(
+        {
+          model: "gpt-4.1-mini",
+          max_completion_tokens: 3000,
+          messages: [
+            {
+              role: "system",
+              content: `You are a hyper-local urban historian writing brief copy for real places sourced from OpenStreetMap.
+
+MANDATORY RULES:
+1. Return exactly the same number of results as candidates provided.
+2. The "id" in each result MUST exactly match the "id" in the corresponding candidate. Do NOT change, reorder, add, or remove any place.
+3. Do NOT modify the name, latitude, longitude, or address of any place.
+4. Do NOT invent a place that was not in the candidates list.
+5. Write a "summary" (one vivid sentence — the most surprising historical or architectural detail about this specific place).
+6. Write "facts" (2–3 facts, each including at least one specific year/decade, person's name, verifiable detail, or concrete event).
+7. Flag uncertain claims with "Reportedly" or "According to local accounts."
+8. If you know little about a specific place, write what you know about its type, era, and neighbourhood context. Fewer specific facts beat more invented ones.
+9. NEVER write raw GPS coordinates in any text field.
+
+Respond in JSON: {"results":[{"id":"...","summary":"One vivid sentence.","facts":["Fact with year/name/detail","Second distinct fact"],"tags":["3-5 relevant tags"],"yearBuilt":"1920s","confidence":"high|medium|low"}]}`,
+            },
+            {
+              role: "user",
+              content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(candidates.map(formatForCopy))}`,
+            },
+          ],
+          response_format: { type: "json_object" },
+        },
+        { signal: copyAbort.signal },
+      );
+      clearTimeout(copyTimer);
+      const copyContent = copyResponse.choices[0]?.message?.content;
+      if (copyContent) {
+        const copyData = JSON.parse(copyContent) as { results?: unknown[] };
+        if (Array.isArray(copyData?.results)) {
+          copyResults = copyData.results as CopyResult[];
+        }
+      }
+    } catch (err: any) {
+      clearTimeout(copyTimer);
+      if (
+        copyAbort.signal.aborted &&
+        !res.headersSent &&
+        res.socket?.writable
+      ) {
+        res.status(503).json({
+          error: "Discovery service temporarily unavailable. Please try again.",
+        });
+        return;
+      }
+      // Copy failure is non-fatal: OSM coordinates are still correct
+      req.log.warn(
+        { err },
+        "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
+      );
+    }
+
+    // 6. Merge LLM copy onto OSM objects
+    const copyMap = new Map<string, CopyResult>(
+      copyResults.map((r) => [r.id, r]),
+    );
+    let mergedPlaces: any[] = candidates.map((p) => {
+      const copy = copyMap.get(p.osmId);
+      const addr = buildOsmAddr(p.tags);
+      return {
+        id: p.osmId.replace("/", "-"),
+        name: p.name,
+        category: p.type,
+        latitude: p.lat,
+        longitude: p.lon,
+        address: addr || undefined,
+        coordSource: "osm",
+        osmId: p.osmId,
+        candidateSource: "osm",
+        distanceMeters: Math.round(
+          haversineDistance(latitude, longitude, p.lat, p.lon),
+        ),
+        summary: copy?.summary ?? "A notable place in this area.",
+        facts: copy?.facts ?? [],
+        tags: copy?.tags,
+        yearBuilt: copy?.yearBuilt,
+        confidence: copy?.confidence ?? "low",
+      };
+    });
+
+    // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
+    classifyDiscovery(mergedPlaces);
+    applyLlmPrecisionFilter(mergedPlaces);
+    mergedPlaces = filterDeniedPlaces(mergedPlaces);
+
+    // 8. Wikipedia photos (best-effort)
+    await fetchPhotosForPlaces(mergedPlaces);
+
+    // 9. Community ratings sort
+    const anchorRatingsMap = await fetchRatingsMap(mergedPlaces);
+    applyRatingSortWithMap(mergedPlaces, anchorRatingsMap);
+
+    const anchorResp = {
+      places: mergedPlaces,
+      location: nbhdLabel.label,
+      locationSrc: nbhdLabel.src,
+      effectiveAddressHintSrc:
+        nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
+      osmCandidateCount,
+      noVerifiedPlacesNearby: false,
+    };
+    setLLMCache(discoverCacheKey, anchorResp);
+    res.json(anchorResp);
     return;
   }
 
@@ -3960,6 +4197,7 @@ out center body ${overpassLimit};
         el.tags?.man_made ||
         "place";
       results.push({
+        osmId: `${el.type}/${el.id}`,
         name,
         lat: elLat,
         lon: elLon,

@@ -56,6 +56,7 @@ import {
   type EligibilityState,
 } from "@/lib/walkEligibility";
 import {
+  recordDiscoverResult,
   recordRejection,
   recordSelectionSnapshot,
   resetWalkDiagnostics,
@@ -145,6 +146,12 @@ export interface WalkPlace {
   distanceMeters?: number;
   netScore?: number;
   photoUrl?: string;
+  /** Overpass element reference (e.g. 'node/12345678'). Present only on
+   *  OSM-anchored Walk Mode discoveries. */
+  osmId?: string;
+  /** How this place's location was established: osm = Overpass coordinates
+   *  (verified), llm = LLM-generated coordinates (legacy path). */
+  candidateSource?: "osm" | "llm";
   /** Server-side address↔coordinate coherence check has flagged this place
    *  as a strong-evidence mismatch (e.g. wrong-city hallucination). The
    *  place still appears on the map and in lists, but auto-narration must
@@ -1011,6 +1018,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           // runs Nominatim coordinate verification synchronously and drops any
           // place it cannot confirm, so only spatially trusted pins are returned.
           walkMode: true,
+          // OSM-anchor mode: Overpass is the definitive candidate source.
+          // The LLM writes copy only — it cannot invent names or coordinates.
+          osmAnchor: true,
         };
         if (includedTypes.length > 0) body.includeBuildingTypes = includedTypes;
 
@@ -1057,6 +1067,27 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           // results so we don't repopulate the places list or update state after
           // the walk has ended.
           if (!isWalkingRef.current) return;
+          // Record discover diagnostics for the debug overlay (OSM-anchor only).
+          const osmCount = data?.osmCandidateCount as
+            | { r150: number; r300: number; r500: number }
+            | undefined;
+          if (osmCount !== undefined) {
+            const allPlaces = Array.isArray(data?.places)
+              ? (data.places as { candidateSource?: string }[])
+              : [];
+            recordDiscoverResult({
+              osmCandidateCount: osmCount,
+              noVerifiedPlacesNearby: data?.noVerifiedPlacesNearby as
+                | boolean
+                | undefined,
+              osmCoverage: {
+                osm: allPlaces.filter((p) => p.candidateSource === "osm")
+                  .length,
+                llm: allPlaces.filter((p) => p.candidateSource === "llm")
+                  .length,
+              },
+            });
+          }
           if (Array.isArray(data?.places)) {
             // Merge with existing — dedupe by id, then evict anything farther
             // than memoryRadius from the user's current location. Without the
@@ -1806,6 +1837,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           distance: number;
           bearingDiff: number | null;
           score: number;
+          osmId?: string;
+          candidateSource?: "osm" | "llm";
         }> = [];
         for (const p of visible) {
           if (narratedIdsRef.current.has(p.id)) continue;
@@ -1856,6 +1889,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             distance: d,
             bearingDiff: dd,
             score: s,
+            osmId: p.osmId,
+            candidateSource: p.candidateSource,
           });
         }
         // Lower score = better pick, so sort ascending — matches pickNext.
