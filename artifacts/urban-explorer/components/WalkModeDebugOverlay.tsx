@@ -109,13 +109,29 @@ export function WalkModeDebugOverlay() {
                         {lastDiscoverResult.osmCandidateCount.r500}
                       </Text>
                     )}
-                    <Text style={styles.line}>
-                      Coverage osm:{lastDiscoverResult.osmCoverage.osm} llm:
-                      {lastDiscoverResult.osmCoverage.llm}
-                      {lastDiscoverResult.noVerifiedPlacesNearby
-                        ? " ⚠ noVerified"
-                        : ""}
-                    </Text>
+                    {lastDiscoverResult.poolCoverage !== undefined ? (
+                      <>
+                        <Text style={styles.line}>
+                          Pool osm:{lastDiscoverResult.poolCoverage.osm} llm:
+                          {lastDiscoverResult.poolCoverage.llm}
+                          {lastDiscoverResult.noVerifiedPlacesNearby
+                            ? " ⚠ noVerified"
+                            : ""}
+                        </Text>
+                        <Text style={styles.lineDim}>
+                          Raw tile osm:{lastDiscoverResult.osmCoverage.osm}{" "}
+                          llm:{lastDiscoverResult.osmCoverage.llm}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.line}>
+                        Coverage osm:{lastDiscoverResult.osmCoverage.osm} llm:
+                        {lastDiscoverResult.osmCoverage.llm}
+                        {lastDiscoverResult.noVerifiedPlacesNearby
+                          ? " ⚠ noVerified"
+                          : ""}
+                      </Text>
+                    )}
                   </>
                 )}
 

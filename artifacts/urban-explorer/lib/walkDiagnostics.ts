@@ -58,7 +58,10 @@ export interface DiagRejection {
 export interface DiagDiscoverResult {
   osmCandidateCount?: { r150: number; r300: number; r500: number };
   noVerifiedPlacesNearby?: boolean;
+  /** Raw counts from the tile before any candidateSource gate is applied. */
   osmCoverage: { osm: number; llm: number };
+  /** Counts after all Walk Mode gates — what actually entered placesRef. */
+  poolCoverage?: { osm: number; llm: number };
 }
 
 export interface DiagState {
