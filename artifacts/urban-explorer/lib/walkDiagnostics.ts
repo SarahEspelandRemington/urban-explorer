@@ -28,6 +28,8 @@ export interface DiagSelectionSnapshot {
     distance: number;
     bearingDiff: number | null;
     score: number;
+    osmId?: string;
+    candidateSource?: "osm" | "llm";
   }>;
   /** Place chosen by pickNext, or null if nothing eligible. */
   selected: { id: string; name: string; reason: string } | null;
@@ -53,9 +55,16 @@ export interface DiagRejection {
   spatialNote?: string;
 }
 
+export interface DiagDiscoverResult {
+  osmCandidateCount?: { r150: number; r300: number; r500: number };
+  noVerifiedPlacesNearby?: boolean;
+  osmCoverage: { osm: number; llm: number };
+}
+
 export interface DiagState {
   lastSnapshot: DiagSelectionSnapshot | null;
   rejections: DiagRejection[]; // capped, most recent first
+  lastDiscoverResult: DiagDiscoverResult | null;
 }
 
 const REJECTION_CAP = 30;
@@ -63,6 +72,7 @@ const REJECTION_CAP = 30;
 const state: DiagState = {
   lastSnapshot: null,
   rejections: [],
+  lastDiscoverResult: null,
 };
 
 const subscribers = new Set<() => void>();
@@ -97,8 +107,14 @@ export function recordRejection(rej: DiagRejection): void {
   notify();
 }
 
+export function recordDiscoverResult(result: DiagDiscoverResult): void {
+  state.lastDiscoverResult = result;
+  notify();
+}
+
 export function resetWalkDiagnostics(): void {
   state.lastSnapshot = null;
   state.rejections = [];
+  state.lastDiscoverResult = null;
   notify();
 }

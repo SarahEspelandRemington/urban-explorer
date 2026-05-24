@@ -50,6 +50,12 @@ export interface EligibilityCandidate {
   /** LLM-assigned category string. Checked against
    *  INTERPRETIVE_FALLBACK_CATEGORIES when discoveryClass is undefined. */
   category?: string;
+  /** OSM element reference (e.g. 'node/12345678'). Display-only — never
+   *  read by eligibility logic. Present on Walk Mode OSM-anchor discoveries. */
+  osmId?: string;
+  /** How this place's location was established. Display-only — never read
+   *  by eligibility logic. */
+  candidateSource?: "osm" | "llm";
 }
 
 export interface EligibilityState {

@@ -395,6 +395,9 @@ components:
         walkMode:
           type: boolean
           description: "When true, Nominatim coordinate verification runs synchronously before responding. Only places confirmed or corrected by Nominatim are returned. Places whose coordinates cannot be externally verified are omitted rather than returned with LLM-generated pins. Explore Mode callers should omit this field or set it to false."
+        osmAnchor:
+          type: boolean
+          description: "Walk Mode OSM-anchor mode. When true (and walkMode is also true), Overpass/OSM is the definitive candidate source — the LLM writes copy only and cannot invent place names, addresses, or coordinates. If Overpass returns zero candidates within the search radius, returns an empty places array with noVerifiedPlacesNearby: true. Has no effect when walkMode is false."
       required:
         - latitude
         - longitude
@@ -408,6 +411,19 @@ components:
         location:
           type: string
           description: Human-readable description of the area
+        osmCandidateCount:
+          type: object
+          description: "OSM candidate pool sizes at each radius tier, before copy generation and deny-list filtering. Only present when osmAnchor is true."
+          properties:
+            r150:
+              type: integer
+            r300:
+              type: integer
+            r500:
+              type: integer
+        noVerifiedPlacesNearby:
+          type: boolean
+          description: "When osmAnchor is true and Overpass returned no candidates within the search radius. The places array will be empty."
       required:
         - places
         - location
@@ -464,6 +480,13 @@ components:
         photoUrl:
           type: string
           description: "URL of a representative photo for this place, when available (sourced from Wikipedia)"
+        osmId:
+          type: string
+          description: "Overpass element reference (e.g. 'node/12345678'). Present only on OSM-anchored Walk Mode discoveries."
+        candidateSource:
+          type: string
+          enum: [osm, llm]
+          description: "How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path)."
       required:
         - id
         - name
