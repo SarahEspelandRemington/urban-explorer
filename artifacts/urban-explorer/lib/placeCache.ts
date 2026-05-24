@@ -29,12 +29,12 @@ export const snapGrid = (v: number): string =>
 /** 24 h TTL — historical places are stable within this window. */
 export const PLACE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-// v7: bumped to invalidate v6 entries that did not include the `:osm` suffix
-// in the tile key. Without the suffix, Walk Mode osmAnchor requests and
-// Explore Mode LLM requests shared the same cache slot, allowing LLM-generated
-// places (candidateSource: undefined) to be served to Walk Mode even when
-// osmAnchor: true was sent — bypassing the Overpass fetch entirely.
-const STORAGE_PREFIX = "@urban-explorer/place-cache:v7:";
+// v8: bumped to invalidate v7 entries that were written by server responses
+// that predated the candidateSource:"osm" stamp on osmAnchor places. Those
+// tiles stored LLM-sourced places (candidateSource: undefined) under the
+// v7+:osm key, causing the Walk pool gate to block all candidates and leaving
+// Walk Mode with zero pins until the 24 h TTL expired.
+const STORAGE_PREFIX = "@urban-explorer/place-cache:v8:";
 
 /** Hard cap on tiles stored in AsyncStorage to bound disk usage. */
 const MAX_TILES = 60;
