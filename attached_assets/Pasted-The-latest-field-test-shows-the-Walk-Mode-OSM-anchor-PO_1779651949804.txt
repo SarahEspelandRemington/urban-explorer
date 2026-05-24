@@ -1,0 +1,48 @@
+The latest field test shows the Walk Mode OSM-anchor POC is not working as intended.
+
+Evidence from the debug overlay:
+
+* Walk Mode debug now shows the new Discover/Coverage section, so the newer client UI appears to be loaded.
+* But Coverage shows `osm:0 llm:8` and later `osm:0 llm:7`.
+* Walk Mode continues to play LLM-style invented/historical candidates such as:
+
+  * “Former Spruce Street…”
+  * “Buried Mill Creek Remnant”
+  * “Vault Sidewalk Remnant”
+  * “Labor Union Meeting Hall at 3950 39th Street”
+* This is not the expected OSM-anchor behavior.
+
+Expected POC behavior:
+
+* If OSM candidates exist: Walk Mode should use OSM/Overpass/fixture candidates as source of truth and show `osm:N llm:0`.
+* If OSM candidates do not exist: Walk Mode should return no verified places nearby and show no playable LLM fallback.
+* Walk Mode should not continue with `osm:0 llm:N`.
+
+Please do not write code yet. Diagnose only.
+
+Questions:
+
+1. Is the Walk Mode request actually sending `osmAnchor: true` to `/explore/discover`?
+2. On the server, is the `if (walkMode && osmAnchor)` branch actually being reached?
+3. If the branch is reached, why is the response still returning `candidateSource: "llm"` candidates?
+4. If Overpass returns zero OSM candidates, where is the fallback to LLM candidates happening?
+5. Is `Coverage osm:0 llm:8` calculated from the raw candidate pool, post-filter pool, or narrated/eligible pool?
+6. Are old AsyncStorage/session candidates being carried forward even after an OSM-anchor response?
+7. When `osmAnchor: true`, can any candidate with `candidateSource !== "osm"` enter:
+
+   * placesRef
+   * top candidates
+   * queue
+   * Playing
+8. If yes, show the exact bypass.
+
+Please prove the request/response path for one field-test fetch:
+
+* client request body
+* server branch taken
+* candidate count from Overpass
+* candidate count returned
+* candidateSource distribution in the response
+* what gets merged into placesRef
+
+Do not implement a fix until this trace explains why Walk Mode shows `osm:0 llm:8`.
