@@ -1,0 +1,55 @@
+I’m attaching a screenshot of the current opening/entry screen. This is already close to the right direction, so I want to refine it carefully rather than redesign it broadly.
+
+Please do not write code yet. Inspect and propose a visual/copy adjustment first.
+
+What’s working:
+
+* The two-card structure is good.
+* Explore and Walk feel like equal primary choices.
+* The dark navy/orange palette feels aligned with Streetlit.
+* The screen feels calmer and more intentional than a permission/setup screen.
+
+What I want to improve:
+The screen needs stronger Streetlit brand presence and a little more warmth. Right now the top location pin makes it feel slightly generic/location-app-ish. I want the opening screen to feel more like entering Streetlit: curious, calm, intelligent, warm, and place-aware.
+
+Please propose a small visual/copy refinement that keeps the existing structure but adds:
+
+1. App name: “Streetlit”
+2. Tagline: “Walk curious.”
+3. Supporting line: “Small stories hidden in ordinary places.”
+4. Use the existing Streetlit logo/icon if available. If the current top pin icon is only a placeholder, propose replacing it with the Streetlit mark. If no Streetlit mark is available in the codebase, say so.
+5. Keep the two primary cards equal in visual weight:
+
+   * Explore
+     Main copy: “Browse the hidden layers of a place”
+     Subcopy: “See what’s around me.”
+   * Walk
+     Main copy: “Listen to the city unfold around you”
+     Subcopy: “Go for a walk.”
+6. If Search / Investigate Address actions still need to be accessible from this screen, propose a quiet secondary placement below the cards, not additional primary cards.
+
+Tone guidance:
+
+* The Walk card should feel inviting, calm, and audio-led.
+* Avoid phrasing that sounds scolding, prescriptive, or anti-phone, such as “Put your phone away.”
+* The tone should feel aligned with Streetlit: curious, warm, intelligent, gently evocative, and not overly precious.
+
+Constraints:
+
+* Do not change backend logic.
+* Do not change Explore Mode behavior.
+* Do not change Walk Mode behavior.
+* Do not change discovery, filtering, caching, or location logic.
+* Do not remove existing functionality.
+* Do not implement until I approve a mockup.
+* Please show a visual preview/mockup before coding.
+
+Please report:
+
+1. Exact file/component for this opening screen.
+2. Whether the Streetlit logo/icon asset already exists.
+3. Proposed layout adjustment.
+4. Proposed copy.
+5. Any risks.
+6. A visual mockup or screenshot-style preview.
+7. Confirmation that no code has been changed yet.
