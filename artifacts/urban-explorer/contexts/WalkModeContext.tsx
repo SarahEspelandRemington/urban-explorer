@@ -341,8 +341,11 @@ const DENSITY_CONFIG: Record<
     maxQueueDistance: 90,
     // discoverRadius must be ≥ maxQueueDistance + LOOK_AHEAD_METERS (30 m)
     // so newly fetched places are immediately eligible for narration.
-    // Tightened from 140 m to 130 m to match the new maxQueueDistance.
-    discoverRadius: 130,
+    // Expanded from 130 m to 300 m so that OSM-anchor Walk Mode fetches a
+    // wide enough candidate pool to cover major landmarks (e.g. Eastern State
+    // Penitentiary at ~270 m). maxQueueDistance is unchanged — places only
+    // auto-narrate when within 90 m; the larger radius only widens the pool.
+    discoverRadius: 300,
     memoryRadius: 800,
     // Reduced from 100 m: the cooldown (75 s) is the primary anti-spam gate;
     // movement should only prevent narrating the exact same spot twice.
@@ -381,8 +384,11 @@ const DENSITY_CONFIG: Record<
     // or at the near edge of the next block can trigger automatically.
     maxQueueDistance: 60,
     // discoverRadius ≥ maxQueueDistance + LOOK_AHEAD_METERS.
-    // 60 + 30 + 30 m buffer = 120 m.
-    discoverRadius: 120,
+    // Expanded from 120 m to 300 m so that OSM-anchor Walk Mode fetches a
+    // wide enough candidate pool to cover major landmarks across a city block.
+    // maxQueueDistance is unchanged — places only auto-narrate when within
+    // 60 m; the larger radius only widens the pool of visible pins.
+    discoverRadius: 300,
     memoryRadius: 800,
     // Reduced from 40 m: with cooldownMs=25 s already rate-limiting picks,
     // the movement gate just needs to prevent re-narrating the identical spot.
