@@ -55,6 +55,7 @@ Avoid:
 - narrating places across irrelevant streets, barriers, or dead-end paths
 - using proximity alone when heading/path context says the match is weak
 - deleting or filtering out records when a non-destructive flag is enough
+- narrating a place whose copy cannot be grounded in verifiable source data. An OSM pin without a credible story is preferable to an OSM pin with an invented one.
 
 ## Debugging Guidance
 

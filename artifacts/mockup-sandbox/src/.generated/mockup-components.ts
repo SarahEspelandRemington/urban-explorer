@@ -15,8 +15,12 @@ export const modules: ModuleMap = {
     import("../components/mockups/entry-screen/EntryScreen.tsx"),
   "./components/mockups/entry-screen/EntryScreenProposed.tsx": () =>
     import("../components/mockups/entry-screen/EntryScreenProposed.tsx"),
-  "./components/mockups/walk-landing/WalkLanding.tsx": () =>
-    import("../components/mockups/walk-landing/WalkLanding.tsx"),
+  "./components/mockups/header-redesign/LabeledActions.tsx": () =>
+    import("../components/mockups/header-redesign/LabeledActions.tsx"),
+  "./components/mockups/header-redesign/SimplifiedBar.tsx": () =>
+    import("../components/mockups/header-redesign/SimplifiedBar.tsx"),
+  "./components/mockups/header-redesign/WalkFirst.tsx": () =>
+    import("../components/mockups/header-redesign/WalkFirst.tsx"),
   "./components/mockups/now-playing/Current.tsx": () =>
     import("../components/mockups/now-playing/Current.tsx"),
   "./components/mockups/now-playing/CurrentLight.tsx": () =>
@@ -25,12 +29,6 @@ export const modules: ModuleMap = {
     import("../components/mockups/now-playing/Proposed.tsx"),
   "./components/mockups/now-playing/ProposedLight.tsx": () =>
     import("../components/mockups/now-playing/ProposedLight.tsx"),
-  "./components/mockups/header-redesign/LabeledActions.tsx": () =>
-    import("../components/mockups/header-redesign/LabeledActions.tsx"),
-  "./components/mockups/header-redesign/SimplifiedBar.tsx": () =>
-    import("../components/mockups/header-redesign/SimplifiedBar.tsx"),
-  "./components/mockups/header-redesign/WalkFirst.tsx": () =>
-    import("../components/mockups/header-redesign/WalkFirst.tsx"),
   "./components/mockups/style-directions/CoolSignal.tsx": () =>
     import("../components/mockups/style-directions/CoolSignal.tsx"),
   "./components/mockups/style-directions/CuriousNight.tsx": () =>
@@ -43,4 +41,6 @@ export const modules: ModuleMap = {
     import("../components/mockups/style-directions/UrbanGlow.tsx"),
   "./components/mockups/style-directions/WarmEmber.tsx": () =>
     import("../components/mockups/style-directions/WarmEmber.tsx"),
+  "./components/mockups/walk-landing/WalkLanding.tsx": () =>
+    import("../components/mockups/walk-landing/WalkLanding.tsx"),
 };

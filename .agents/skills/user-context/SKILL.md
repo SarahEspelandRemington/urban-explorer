@@ -79,8 +79,8 @@ Through our sessions, the user has become comfortable with:
 
 ## End-of-session rule
 
-Always push changed files to GitHub at the end of every session, or when the
-user asks. This Replit account may be deleted at any time — GitHub is the
+Push to GitHub only when the user explicitly requests it, or when the user has approved all changes made in the session and confirmed they want a push.
+This Replit account may be deleted at any time — GitHub is the
 source of truth. Use the GitHub API (Bearer token from the github connection)
 to push changed files. The user's new personal Replit account pulls from
 GitHub with:
