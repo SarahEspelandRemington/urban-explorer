@@ -1,0 +1,48 @@
+Field test update while walking:
+
+The debug overlay still shows raw LLM candidates, but the number changes as I move: llm:7 → llm:5 → llm:6.
+
+Current screenshot shows:
+
+* Pool osm:0 llm:0
+* Raw tile osm:0 llm:6
+* Pins 0
+* Eligible 0
+* Playing -
+* Queued -
+* Top candidates none
+
+This confirms the client-side gate is blocking LLM candidates from entering the active Walk pool, which is good.
+
+But because the raw LLM count changes as I move, this no longer looks like one stale cache tile. It looks like fresh server responses for new tiles are still returning LLM candidates during Walk Mode OSM-anchor requests.
+
+Please do not write code yet. Diagnose the server path only.
+
+Questions:
+
+1. For these fresh Walk Mode requests, is the API server receiving walkMode: true and osmAnchor: true?
+2. Is the server entering the walkMode && osmAnchor branch?
+3. If yes, why does the response still contain raw candidates without candidateSource:"osm"?
+4. If Overpass returns zero OSM candidates, is the server falling through into the old LLM discovery path instead of returning noVerifiedPlacesNearby:true?
+5. Is there any server-side cache or LLM cache hit that returns before the walkMode && osmAnchor branch?
+6. Please add temporary server logs for one request showing:
+    * request lat/lng/radius
+    * walkMode value
+    * osmAnchor value
+    * cache hit/miss
+    * whether OSM-anchor branch was entered
+    * Overpass candidate count
+    * returned candidateSource counts
+    * whether noVerifiedPlacesNearby was returned
+
+Expected contract:
+For Walk Mode with osmAnchor:true, the server should return only:
+
+* candidateSource:"osm" places, or
+* zero places with noVerifiedPlacesNearby:true
+
+It should never return raw LLM candidates for this mode, even if the client later blocks them.
+
+What you can do while walking
+
+Honestly? You can keep walking, but you don’t need to babysit it. The app is not playing bad stories right now. It’s just silent because the client is rejecting the bad server responses.
