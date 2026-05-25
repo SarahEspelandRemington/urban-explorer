@@ -1,0 +1,26 @@
+This diagnosis makes sense. Please proceed with the smallest version first: Changes 1 and 2 only.
+Approved scope:
+1. Add a computed trustLevel field in formatForCopy:
+    * osm_enriched
+    * osm_standard
+    * osm_bare
+2. Update the OSM-anchor discover prompt so copy rules are conditional on trustLevel.
+Desired behavior:
+* osm_enriched: may use specific historical details when supported by Wikidata, Wikipedia, historic, description, heritage description, or similar trusted tags.
+* osm_standard: may reference factual tags actually present, such as denomination, operator, start_date, architect, material, alt_name, etc. Do not invent dates, former uses, architectural styles, historical roles, community-organizing claims, or founding stories. If start_date is absent, omit year/founding-date claims.
+* osm_bare: no dates, no founding claims, no former uses, no architecture/style claims, no “served as a hub” claims, no specific historical narrative. Use observational, place-aware copy grounded in name/type/coordinates and cautious urban context only.
+Please remove or revise the current rule requiring every fact to include a year/decade/person/event when the source does not provide one. That rule is causing invention.
+Important:
+* Do not change Walk narration yet.
+* Do not change place detail yet.
+* Do not change place timeline yet.
+* Do not change Explore Mode.
+* Do not change candidate sourcing, OSM radius, filtering, caching, or backend architecture.
+* Do not refactor unrelated code.
+Please add or update focused tests proving:
+* osm_bare does not require or produce date/founding/former-use claims in the prompt constraints.
+* osm_standard may use denomination/operator but may not invent founding dates or historical roles.
+* osm_enriched may use supported historical/source-backed fields.
+Also add a test proving that a place with denomination and operator tags but no start_date does not produce a founding date or decade in its output constraints.
+Also, please be careful with examples: avoid replacing invented specifics with broad claims that still imply unsupported history. For example, avoid “churches like this have often been here since before the rowhouses” unless the data supports it. Prefer copy that says what is known and frames what the user can notice.
+After implementation, run format, lint, typecheck, and any relevant prompt-manifest checks. Report exact files changed and whether GitHub was updated.

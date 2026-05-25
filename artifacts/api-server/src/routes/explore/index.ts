@@ -42,6 +42,7 @@ import {
 import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
 
 const router = Router();
 
@@ -1771,7 +1772,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v39:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v40:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -1962,6 +1963,7 @@ router.post("/explore/discover", async (req, res) => {
         id: p.osmId,
         name: p.name,
         type: p.type,
+        trustLevel: computeOsmTrustLevel(p.tags),
       };
       const addr = buildOsmAddr(p.tags);
       if (addr) obj.address = addr;
@@ -2002,13 +2004,18 @@ MANDATORY RULES:
 2. The "id" in each result MUST exactly match the "id" in the corresponding candidate. Do NOT change, reorder, add, or remove any place.
 3. Do NOT modify the name, latitude, longitude, or address of any place.
 4. Do NOT invent a place that was not in the candidates list.
-5. Write a "summary" (one vivid sentence — the most surprising historical or architectural detail about this specific place).
-6. Write "facts" (2–3 facts, each including at least one specific year/decade, person's name, verifiable detail, or concrete event).
-7. Flag uncertain claims with "Reportedly" or "According to local accounts."
-8. If you know little about a specific place, write what you know about its type, era, and neighbourhood context. Fewer specific facts beat more invented ones.
+5–8. COPY RULES — apply based on the "trustLevel" field on each candidate:
+
+${OSM_COPY_RULES.osm_enriched}
+
+${OSM_COPY_RULES.osm_standard}
+
+${OSM_COPY_RULES.osm_bare}
+
+Flag any claim not directly supported by the candidate's tags with "Reportedly" or "According to local accounts."
 9. NEVER write raw GPS coordinates in any text field.
 
-Respond in JSON: {"results":[{"id":"...","summary":"One vivid sentence.","facts":["Fact with year/name/detail","Second distinct fact"],"tags":["3-5 relevant tags"],"yearBuilt":"1920s","confidence":"high|medium|low"}]}`,
+Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
             },
             {
               role: "user",
