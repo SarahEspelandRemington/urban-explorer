@@ -1,0 +1,55 @@
+I want to revisit the opening app entry screen as a small cosmetic/branding improvement. Please do not change backend logic, Explore behavior, Walk behavior, discovery, OSM behavior, caching, API/server code, or navigation behavior yet.
+
+Context:
+This screen currently shows two choices: Explore and Walk. The attached notes identify two issues:
+
+1. There is currently no obvious way to get back to this screen after choosing one of the options. Please note this as a navigation/product question, but do not solve it yet.
+2. The Walk copy “Put your phone away” feels too judgmental and no longer fits the app.
+
+Important branding note:
+Please use the existing Streetlit app icon asset already in the repo:
+`artifacts/urban-explorer/assets/images/icon.png`
+
+Do not ask me for a new branding file unless that asset is missing or unusable.
+
+Desired direction:
+
+* Make the screen feel more like Streetlit and less like a generic location chooser.
+* Replace the generic top pin icon with the existing Streetlit app icon/brand mark from `assets/images/icon.png`, if suitable.
+* Add stronger brand presence:
+
+  * “Streetlit”
+  * “Walk curious.”
+  * “Small stories hidden in ordinary places.”
+* Keep Explore and Walk as equal primary choices.
+* Revise Walk copy to:
+
+  * Main copy: “Listen to the city unfold around you”
+  * Subcopy: “Go for a walk.”
+* Keep Explore copy:
+
+  * Main copy: “Browse the hidden layers of a place”
+  * Subcopy: “See what’s around me.”
+
+Please inspect only first. Do not write code yet.
+
+Please report:
+
+1. Exact file/component for this opening screen.
+2. Whether the current top pin icon is decorative only or has any function.
+3. Whether `artifacts/urban-explorer/assets/images/icon.png` exists and is suitable for this screen.
+4. Where the Explore and Walk card copy lives.
+5. Whether this screen is currently first-run/entry-only or reachable later through navigation.
+6. Proposed layout and copy.
+7. Any risks or dependencies.
+8. A visual mockup or screenshot-style preview before coding.
+9. Confirmation that no code has been changed yet.
+
+Constraints:
+
+* Do not implement until I approve a specific plan.
+* Do not change navigation behavior yet.
+* Do not add a Home tab or return-to-start behavior yet.
+* Do not change Explore Mode behavior.
+* Do not change Walk Mode behavior.
+* Do not touch backend/API/server code.
