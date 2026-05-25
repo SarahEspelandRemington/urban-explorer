@@ -1,0 +1,88 @@
+Please create a new Replit skill called “Runtime Sync Verification.”
+
+Purpose:
+This skill ensures that the app running on my phone through Expo Go is actually testing the current code and current API server. Use this skill whenever a task affects client code, server/API code, cache behavior, environment variables, mobile runtime behavior, deployment behavior, or anything I am expected to test on my phone.
+
+Core principle:
+GitHub green does not prove the phone is running the latest app. Source code on disk does not prove the running API server is current. Force-quitting Expo Go does not prove Metro, the API server, production deployment, AsyncStorage, or server caches are fresh. Before field testing, verify the whole runtime chain.
+
+Required checklist before asking me to test on my phone:
+
+1. Identify the runtime target.
+
+   * Confirm whether Expo Go is pointed at the dev API server or production API server.
+   * Print or identify the active `EXPO_PUBLIC_API_URL`.
+   * Confirm which Replit deployment/server that URL points to.
+   * Do not assume the phone is using the dev server. Verify the actual URL.
+
+2. Confirm client bundle freshness.
+
+   * Confirm Metro/Expo is serving the latest source.
+   * If client code changed, restart Metro with cache cleared, e.g. `npx expo start -c` or the correct Replit equivalent.
+   * Tell me exactly what visual/debug change proves the newest bundle is loaded.
+   * If applicable, provide a simple “old bundle vs new bundle” tell.
+
+3. Confirm API/server freshness.
+
+   * If server/API code changed, restart the API server.
+   * If the phone uses production, confirm whether production has been republished/redeployed after the relevant source changes.
+   * Do not assume source code on disk equals the running server.
+   * Do not assume GitHub green means production is current.
+   * Verify production/dev logs show current expected config values, build identifier, commit, or another unmistakable runtime marker.
+
+4. Confirm production deployment status when production is involved.
+
+   * Check whether the active production deployment predates the current source changes.
+   * If production is stale, say so clearly and request/trigger a new Publish/redeploy as appropriate.
+   * After Publish/redeploy, do not stop at “server is up.”
+   * Verify the new production binary is live by checking startup logs and/or a live API response that would be impossible from the old build.
+   * If deployment logs lag, use a live production request as the source of truth and explain what proves the new build is running.
+
+5. Confirm cache state.
+
+   * Identify relevant client-side cache versions/keys, including AsyncStorage keys.
+   * Identify relevant server-side caches, including in-memory, DB-backed, deployment-warmed, or LLM caches.
+   * If the change invalidates old assumptions, bump cache version or clearly explain how old entries are cleared.
+   * Do not rely on force-quitting Expo Go to clear AsyncStorage or server caches.
+   * If stale cache is suspected, distinguish clearly between raw cached data and active/accepted app state.
+
+6. Confirm request/response contract.
+
+   * For features involving API behavior, trace one live request to the actual URL the phone uses and report:
+
+     * request URL
+     * request body flags
+     * cache hit/miss
+     * server branch taken
+     * response shape
+     * source/count diagnostics where relevant
+   * When possible, verify the live response contains a behavior or field that proves the current code path is active.
+
+7. Confirm test readiness.
+
+   * Before telling me to field-test, provide:
+
+     * what I should do on my phone
+     * whether I need to hard-close Expo Go, reload from the dev menu, scan a new QR code, or do something else
+     * what I should expect to see
+     * what would prove the new client bundle is running
+     * what would prove the current API server is running
+     * what would indicate stale client/server/cache state
+
+8. Separate GitHub, build, deployment, and runtime status.
+
+   * Report these separately:
+
+     * GitHub Actions status
+     * local checks/build status
+     * Metro/client bundle status
+     * API server status
+     * production deployment status
+     * phone/runtime verification status
+   * “GitHub green” means the code passed checks.
+   * “Published” means a deployment was requested.
+   * “Production verified” means the deployed server is actually running the new build.
+   * “Runtime verified” means the phone and API server are actually testing the intended code path.
+
+Default behavior:
+If there is any uncertainty about whether my phone is testing the current code, stop and run this verification checklist before debugging product behavior. Do not diagnose app behavior from field tests until the runtime chain is verified.
