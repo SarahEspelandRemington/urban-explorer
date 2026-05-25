@@ -14,7 +14,6 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useT } from "@/contexts/LocaleContext";
 import { useWalkMode } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
 import { unlockWebSpeech } from "@/hooks/useNarration";
@@ -53,9 +52,7 @@ export default function WalkScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const t = useT();
   const { isWalking } = useWalkMode();
-
   const [recentRoutes, setRecentRoutes] = useState<RecentRoute[]>([]);
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
     null,
@@ -244,39 +241,6 @@ export default function WalkScreen() {
       >
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.foreground }]}>Walk</Text>
-          {__DEV__ ? (
-            <Pressable
-              onPress={() => {
-                if (Platform.OS !== "web")
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/settings-messages");
-              }}
-              style={({ pressed }) => [
-                styles.editMessagesBtn,
-                {
-                  borderColor: colors.border,
-                  backgroundColor: colors.muted,
-                  opacity: pressed ? 0.75 : 1,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t.walk.editMessages}
-            >
-              <Feather
-                name="message-square"
-                size={13}
-                color={colors.mutedForeground}
-              />
-              <Text
-                style={[
-                  styles.editMessagesBtnText,
-                  { color: colors.mutedForeground },
-                ]}
-              >
-                {t.walk.editMessages}
-              </Text>
-            </Pressable>
-          ) : null}
         </View>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
           Choose how you want to move.
@@ -436,82 +400,6 @@ export default function WalkScreen() {
             color={colors.mutedForeground}
           />
         </Pressable>
-
-        <View
-          style={[
-            styles.actionCard,
-            {
-              backgroundColor: colors.card,
-              borderColor: colors.border,
-              borderWidth: StyleSheet.hairlineWidth,
-              opacity: 0.6,
-            },
-          ]}
-          accessibilityRole="text"
-          accessibilityLabel="Guided walks — coming soon"
-        >
-          <View style={[styles.actionIcon, { backgroundColor: colors.muted }]}>
-            <Feather name="map" size={26} color={colors.mutedForeground} />
-          </View>
-          <View style={styles.actionText}>
-            <View style={styles.guidedHeader}>
-              <Text style={[styles.actionTitle, { color: colors.foreground }]}>
-                Guided walks
-              </Text>
-              <View
-                style={[
-                  styles.comingSoonBadge,
-                  {
-                    borderColor: colors.primary + "50",
-                    backgroundColor: colors.muted,
-                  },
-                ]}
-              >
-                <Text
-                  style={[styles.comingSoonText, { color: colors.primary }]}
-                >
-                  SOON
-                </Text>
-              </View>
-            </View>
-            <Text
-              style={[
-                styles.actionDescription,
-                { color: colors.mutedForeground },
-              ]}
-            >
-              Thematic tours built around specific eras, stories, and
-              neighborhoods.
-            </Text>
-            <View style={styles.themeChips}>
-              {[
-                "Hidden Infrastructure",
-                "Jazz Age Midtown",
-                "Waterfront Industry",
-              ].map((theme) => (
-                <View
-                  key={theme}
-                  style={[
-                    styles.themeChip,
-                    {
-                      backgroundColor: colors.muted,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.themeChipText,
-                      { color: colors.mutedForeground },
-                    ]}
-                  >
-                    {theme}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
 
         <View style={styles.recentSection}>
           <Text style={[styles.recentLabel, { color: colors.mutedForeground }]}>
@@ -713,23 +601,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  editMessagesBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  editMessagesBtnText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-  },
   title: {
     fontSize: 28,
     fontFamily: "Inter_700Bold",
     letterSpacing: -0.8,
+    lineHeight: 36,
+    flexShrink: 0,
   },
   subtitle: {
     fontSize: 13,
@@ -852,39 +729,6 @@ const styles = StyleSheet.create({
   welcomeButtonText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-  },
-  guidedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  comingSoonBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  comingSoonText: {
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 0.5,
-  },
-  themeChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 8,
-  },
-  themeChip: {
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  themeChipText: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
   },
   recentSection: {
     gap: 8,
