@@ -1017,7 +1017,7 @@ export default function ExploreScreen() {
                     },
                   ]}
                   accessibilityRole="button"
-                  accessibilityLabel="Investigate a building by address"
+                  accessibilityLabel="Look up an address"
                 >
                   <Feather name="map-pin" size={17} color={colors.foreground} />
                 </Pressable>
@@ -1271,67 +1271,6 @@ export default function ExploreScreen() {
                 <View>
                   {showContent ? (
                     <>
-                      <Pressable
-                        onPress={() => {
-                          if (Platform.OS !== "web")
-                            Haptics.impactAsync(
-                              Haptics.ImpactFeedbackStyle.Light,
-                            );
-                          router.push({
-                            pathname: "/investigate",
-                            params: {
-                              ...(areaName ? { nearLocation: areaName } : {}),
-                              ...(closestPrefill
-                                ? { prefillAddress: closestPrefill }
-                                : {}),
-                            },
-                          });
-                        }}
-                        style={({ pressed }) => [
-                          styles.investigateCard,
-                          {
-                            backgroundColor: colors.card,
-                            borderColor: colors.border,
-                            opacity: pressed ? 0.9 : 1,
-                            transform: [{ scale: pressed ? 0.98 : 1 }],
-                          },
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Investigate an Address"
-                        accessibilityHint="Look up the history of a specific building by address"
-                      >
-                        <View style={styles.cardRow}>
-                          <Feather
-                            name="search"
-                            size={20}
-                            color={colors.foreground}
-                          />
-                          <View style={styles.cardRowText}>
-                            <Text
-                              style={[
-                                styles.investigateCardTitle,
-                                { color: colors.foreground },
-                              ]}
-                            >
-                              {t.explore.investigateTitle}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.investigateCardSubtitle,
-                                { color: colors.mutedForeground },
-                              ]}
-                            >
-                              {t.explore.investigateSubtitle}
-                            </Text>
-                          </View>
-                          <Feather
-                            name="chevron-right"
-                            size={18}
-                            color={colors.mutedForeground}
-                          />
-                        </View>
-                      </Pressable>
-
                       {showRatingPaceWarning ? (
                         <Animated.View
                           entering={FadeIn.duration(250)}
@@ -1678,30 +1617,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     letterSpacing: 0.2,
     flexShrink: 0,
-  },
-  cardRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  cardRowText: {
-    flex: 1,
-  },
-  investigateCard: {
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  investigateCardTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: -0.2,
-  },
-  investigateCardSubtitle: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    marginTop: 2,
   },
   list: {
     padding: 16,
