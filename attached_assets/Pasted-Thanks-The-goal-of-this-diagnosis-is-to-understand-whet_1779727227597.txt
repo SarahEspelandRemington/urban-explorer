@@ -1,0 +1,45 @@
+Thanks. The goal of this diagnosis is to understand whether the zero-discovery result is a radius problem, a query selector problem, a filtering problem, or a genuine OSM data gap. I want to know which before approving any change.
+
+The cache/debug distinction makes sense, but the field-test product result is still not acceptable: I walked about 8 blocks in a dense urban area and got zero discoveries.
+Please do not write code yet. I want a density-focused diagnosis of the Walk Mode OSM-anchor POC.
+The important field result:
+* Walk Mode did not narrate bad LLM candidates, which is good.
+* But it also produced zero usable discoveries across roughly 8 blocks, which means the current OSM-anchor candidate pipeline is too sparse, too filtered, or not reaching usable OSM candidates.
+Please diagnose:
+1. For my Fairmount/Spring Garden coordinates, what does Overpass actually return within:
+    * 120m
+    * 150m
+    * 300m
+    * 500m
+2. Of those returned OSM candidates, how many are rejected and why? Please break down by reason:
+    * missing name
+    * unsupported category
+    * outside radius
+    * filtered as interpretive/denied
+    * missing osmId
+    * no usable address
+    * other
+3. Is Walk Mode currently using cfg.discoverRadius = 120m even when the UX implies a broader “as you go” listening experience? If yes, would 150m, 300m, or lookahead-based fetching provide enough density without compromising spatial trust?
+4. Is the OSM-anchor branch requiring too much from OSM candidates? For example, are real nearby buildings/parks/churches/landmarks being ignored because they lack a certain tag or name?
+5. Does Overpass return real candidates like:
+    * churches
+    * parks/fields
+    * schools
+    * civic buildings
+    * historic tags
+    * named buildings
+    * public art/monuments
+    * neighborhood amenities near this location?
+	Please also check: does the current Overpass query include historic=* as a standalone selector, or only specific historic subtypes? Bergdoll Mansion was found via historic=building specifically — are other historic=* values like historic=yes, historic=memorial, historic=monument also captured?What is the smallest adjustment that would improve density while keeping the core rule: Walk Mode cannot use free-floating LLM-invented places, names, addresses, or coordinates.
+6. Should the next POC be:
+    * OSM-only with a larger radius?
+    * OSM + Nominatim named-place anchors?
+    * OSM + curated fixture anchors?
+    * OSM anchor plus LLM copy only, with stricter field locking?
+    * another approach?
+7. Please provide evidence, not guesses:
+* Overpass result counts
+* accepted/rejected counts
+* sample accepted candidates
+* sample rejected candidates with reasons
+* recommended minimum change
