@@ -460,6 +460,7 @@ async function fetchNearbyOSMPlaces(
   lng: number,
   radiusMeters: number,
   quickMode = false,
+  maxResults = 40,
 ): Promise<OSMPlace[] | null> {
   const cached = getOSMCacheKey(lat, lng);
   if (cached) return cached.places;
@@ -481,8 +482,9 @@ async function fetchNearbyOSMPlaces(
   nwr["name"]["disused:amenity"](around:${r},${lat},${lng});
   nwr["name"]["demolished:building"](around:${r},${lat},${lng});
   nwr["memorial"](around:${r},${lat},${lng});
+  nwr["name"]["leisure"~"^(park|garden|nature_reserve)$"](around:${r},${lat},${lng});
 );
-out center body 40;
+out center body ${maxResults};
 `;
   const controller = new AbortController();
   const abortTimeout = quickMode ? 5000 : 6000;
@@ -540,7 +542,7 @@ out center body 40;
       });
     }
 
-    const finalResults = results.slice(0, 40);
+    const finalResults = results.slice(0, maxResults);
     if (osmCache.size >= OSM_CACHE_MAX_SIZE) {
       const oldest = osmCache.keys().next().value;
       if (oldest) osmCache.delete(oldest);
@@ -1769,7 +1771,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v38:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v39:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -1868,6 +1870,7 @@ router.post("/explore/discover", async (req, res) => {
         longitude,
         Math.min(searchRadius, 500),
         false,
+        80,
       ).catch((): null => null),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
     ]);
