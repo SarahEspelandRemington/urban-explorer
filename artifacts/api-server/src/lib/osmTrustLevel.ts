@@ -71,13 +71,13 @@ osm_enriched — the candidate has wikidata, wikipedia, historic, description, o
 
   osm_standard: `\
 osm_standard — the candidate has denomination, operator, start_date, architect, building:material, or alt_name, but none of the enriched tags.
-  summary: One sentence grounded in the factual tags that are present — what the place is and what is verifiably known about it from the tags.
-  facts: 1–2 facts using only information present in the tags. Do NOT invent founding dates, former uses, architectural styles not in the tags, historical roles, or community-organizing claims. If start_date is absent, omit any year, decade, or founding-date claim entirely. Use language like "is listed as", "is operated by", or "is a [denomination] congregation."
+  summary: One sentence grounded in the factual tags that are present — what the place is and something small but true about its presence here, using only what the tags confirm.
+  facts: 1–2 facts using only information present in the tags. Do NOT invent founding dates, former uses, architectural styles not in the tags, historical roles, or community-organizing claims. If start_date is absent, omit any year, decade, or founding-date claim entirely. Do NOT write research disclaimers, explanations of absent data, or apologies for limited information — express what is known and let silence carry what is not. Prefer language like "is listed as", "is operated by", "is a [denomination] congregation", "sits within", "marks one of the neighborhood's mapped [type]s", or "its presence on this block".
   yearBuilt: Include only if start_date is present in the tags. Otherwise omit.`,
 
   osm_bare: `\
 osm_bare — the candidate has only name, type/category, and coordinates.
-  summary: One observational sentence describing what the place is and what the user can notice or understand about it. No dates, no founding claims, no former uses, no architectural style claims, no "served as a hub" or "hosted" claims. Use language like "is mapped as", "appears to be", or "this [type] is listed here as."
-  facts: 1–2 brief observational facts grounded in the place's current type, visible context, or present use. No invented history.
+  summary: One observational sentence about what the place is and what the user sees or senses being there — its block, its scale, its type. No dates, no founding claims, no former uses, no architectural style claims, no "served as a hub" or "hosted" claims. Do NOT write research disclaimers or explain what records are unavailable. Use language like "is mapped as", "sits at", "marks the corner of", or "appears to be".
+  facts: 1–2 brief observational facts grounded in the place's current type, visible context, or present use. No invented history. Do NOT write disclaimers about limited documentation.
   yearBuilt: Omit entirely.`,
 };
