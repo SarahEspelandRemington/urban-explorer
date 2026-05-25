@@ -1,0 +1,68 @@
+Field test after the Walk Mode density changes still produced zero discoveries in Fairmount.
+
+Screenshot evidence:
+
+* GPS: `39.96629, -75.17466`
+* Pins: `0`
+* Eligible: `0`
+* Pool: `osm:0 llm:0`
+* Raw tile: `osm:0 llm:7`
+* Playing: `-`
+* Queued: `-`
+* Top candidates: `(none)`
+* 0 stories so far
+
+This is not the desired outcome. It is good that no LLM candidates enter the active pool, but Walk Mode is still producing zero usable OSM discoveries.
+
+Please do not write code yet. Diagnose only.
+
+Questions:
+
+1. Did the latest Walk Mode density changes actually reach the running app/server?
+
+   * Confirm the active Walk discovery radius is now 300m, not 120m.
+   * The debug screenshot still appears to show a `:120:osm` tile pattern from prior logs; please confirm the current tile/radius being used.
+
+2. For this exact coordinate `39.96629, -75.17466`, what does Overpass return at the currently active Walk discovery radius?
+
+   * raw OSM count
+   * named OSM count
+   * accepted OSM count
+   * sample accepted OSM candidates
+
+3. Why does the server/client still show `Raw tile osm:0 llm:7`?
+
+   * Is the server still returning LLM candidates for an OSM-anchor Walk request?
+   * Is a server-side cache hit returning old LLM data?
+   * Is the request not entering the OSM-anchor branch?
+   * Is the client still using an old radius/cache key?
+
+4. If the OSM query returns real candidates but the pool is still `osm:0`, where are they being dropped?
+   Please break down rejected OSM candidates by reason:
+
+   * outside radius
+   * missing name
+   * missing osmId
+   * unsupported category
+   * denied/interpretable category
+   * not within narration gate
+   * other
+
+5. If the server returns zero OSM candidates, why does it also return `Raw tile llm:7` instead of `noVerifiedPlacesNearby:true` with no LLM candidates?
+
+Expected behavior:
+
+* If OSM candidates exist: `Raw tile osm:N llm:0`, `Pool osm:N llm:0`
+* If no OSM candidates exist: `Raw tile osm:0 llm:0`, `Pool osm:0 llm:0`, with `noVerifiedPlacesNearby`
+* It should not show `Raw tile osm:0 llm:7` in Walk Mode OSM-anchor requests.
+
+Please trace one live request for this exact coordinate and report:
+
+* request body
+* active radius
+* cache key
+* cache hit/miss
+* server branch taken
+* Overpass result count
+* response candidateSource counts
+* client accepted pool counts
