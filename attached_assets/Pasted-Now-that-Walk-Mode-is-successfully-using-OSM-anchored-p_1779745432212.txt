@@ -1,0 +1,47 @@
+Now that Walk Mode is successfully using OSM-anchored places, I want to improve the copy so it is more trustworthy while preserving the Streetlit voice.
+Please do not write code yet. Diagnose and propose only.
+Problem: OSM anchors prove that a place exists at a coordinate, but they do not verify specific historical claims. The current copy is much better than invented places, but it can still overstate or invent history, dates, architecture, community role, or former uses.
+Goal: Make OSM-anchor copy more conservative unless specific historical facts are verified from trusted source/fixture data.
+Important: Please first identify whether the app uses separate prompts/functions for:
+1. Walk narration scripts/audio copy
+2. Place detail screen copy
+3. Explore discovery card copy
+4. Place-detail enrichment/facts/tags
+Do not edit any prompt until you identify which prompt controls which user-facing surface.
+Desired principle: For OSM-only places, the LLM may write observational, place-aware copy based on:
+* OSM name
+* OSM category/tags
+* verified address/coordinates
+* visible/common urban context
+* cautious general framing
+But it may not invent or assert:
+* founding dates
+* former uses
+* demolished buildings
+* specific ethnic/community history
+* civil-rights/political/community-organizing claims
+* architectural style/details
+* named historical events
+* “served as a hub” claims
+* “hosted meetings/programs” claims unless those facts are present in trusted source data or curated fixture fields.
+For OSM-only places, copy should use cautious language when appropriate:
+* “is mapped as”
+* “is listed as”
+* “appears to”
+* “places like this often…”
+* “without a verified historical note attached, this is best understood as…”
+Please inspect and report:
+1. Which files/functions generate Walk narration script copy.
+2. Which files/functions generate place detail copy.
+3. Which files/functions generate Explore card/summary copy.
+4. What data fields are passed to the LLM for OSM-anchor places.
+5. Whether the prompts currently distinguish OSM-only anchors from curated/source-backed places.
+6. Whether the LLM can currently invent dates, historical roles, architecture, or former uses.
+7. Where we can add a trust/source-level distinction:
+    * OSM-only
+    * OSM + source/fixture
+    * curated/historical fixture
+8. The smallest prompt/schema change to prevent overclaiming while preserving a warm Streetlit voice.
+9. Whether Walk narration and detail copy should use the same trust rules or slightly different wording.
+10. A before/after example using “Olivet Covenant Presbyterian Church.  10a. Does the current OSM data for Olivet Covenant Presbyterian Church include any fields beyond name, amenity tag, and coordinates — for example wikipedia, wikidata, start_date, denomination, or operator? If so, those fields should be passed to the LLM as trusted context, because they represent verified OSM-community knowledge rather than LLM inference.
+Do not implement until I approve a specific plan.
