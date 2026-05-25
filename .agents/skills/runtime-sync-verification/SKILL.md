@@ -41,15 +41,27 @@ When the phone uses the production URL (`city-explorer-guide-sarahremington.repl
 4. After Publish: do **not** stop at "server is up." Verify the new binary is live with a live API request that would be impossible from the old build. If deployment logs lag, the live response is the source of truth — explain what about the response proves the new code path is active.
 
 **Verifying new build is live (production):**
+
 ```javascript
 // Example: fire a known-differentiating request and check the response shape
-const r = await fetch('https://city-explorer-guide-sarahremington.replit.app/api/explore/discover', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ latitude: LAT, longitude: LNG, radius: 300, walkMode: true, osmAnchor: true }),
-});
+const r = await fetch(
+  "https://city-explorer-guide-sarahremington.replit.app/api/explore/discover",
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      latitude: LAT,
+      longitude: LNG,
+      radius: 300,
+      walkMode: true,
+      osmAnchor: true,
+    }),
+  },
+);
 const data = await r.json();
-const osmCount = (data.places ?? []).filter(p => p.candidateSource === 'osm').length;
+const osmCount = (data.places ?? []).filter(
+  (p) => p.candidateSource === "osm",
+).length;
 // osmCount > 0 proves the osmAnchor branch is running — impossible from old build
 ```
 
@@ -86,15 +98,15 @@ Before telling the user to field-test, provide all of the following:
 
 Always report these as distinct items — never conflate them:
 
-| Status | What it means |
-|---|---|
-| **GitHub Actions green** | Code passed CI checks |
-| **Local checks pass** | lint/typecheck/format passed in dev |
-| **Metro/bundle current** | Expo Go is serving the latest source |
-| **Dev API server current** | Dev server rebuilt with latest source |
-| **Production deployed** | A Publish was requested |
-| **Production verified** | Deployed server is actually running the new build |
-| **Runtime verified** | Phone + API server are testing the intended code path |
+| Status                     | What it means                                         |
+| -------------------------- | ----------------------------------------------------- |
+| **GitHub Actions green**   | Code passed CI checks                                 |
+| **Local checks pass**      | lint/typecheck/format passed in dev                   |
+| **Metro/bundle current**   | Expo Go is serving the latest source                  |
+| **Dev API server current** | Dev server rebuilt with latest source                 |
+| **Production deployed**    | A Publish was requested                               |
+| **Production verified**    | Deployed server is actually running the new build     |
+| **Runtime verified**       | Phone + API server are testing the intended code path |
 
 ---
 
