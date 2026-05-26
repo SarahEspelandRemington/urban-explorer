@@ -1,0 +1,43 @@
+Step A appears to be working technically: Bergdoll-Kemble Mansion is now receiving OSM-enriched tags in the detail flow, and Olivet is receiving OSM-standard tags.
+However, the detail page now has a user-facing presentation problem: internal OSM metadata is leaking into display tags/chips.
+Examples now visible on the Bergdoll detail page:
+* #WIKIDATA:Q4891444
+* #WIKIPEDIA:EN:BERGDOLL MANSION
+* #BUILDING:LEVELS:3
+* #ADDRESS
+* #NAME
+Examples on Olivet:
+* #DENOMINATION:PRESBYTERIAN
+* #OPERATOR:PRESBYTERIAN CHURCH (U.S.A.)
+* #TYPE:PLACE_OF_WORSHIP
+That is not acceptable user-facing Streetlit copy. OSM tags should be available internally for grounding, but they should not appear raw as hashtags.
+Please diagnose only first. Do not write code yet.
+Questions:
+1. Are these chips coming from:
+    * the discover response tags array,
+    * the place-detail response,
+    * direct mapping from osmTags,
+    * or LLM-generated tags after it sees the OSM grounding block?
+2. Did Step A accidentally make osmTags visible as display tags?
+3. Where exactly are these chips rendered?
+4. What is the smallest safe fix to prevent raw OSM keys/values from rendering as user-facing chips?
+5. Can we preserve osmTags for prompt grounding while generating separate, human-facing display tags?
+
+Please also check whether the LLM is generating these raw OSM-style tags itself after seeing the grounding block, or whether they are being passed directly from osmTags into the tags display field. The fix is different depending on the answer: if the LLM is generating them, the prompt needs an explicit instruction to produce only human-readable display tags; if they are being mapped directly from osmTags, the fix is to keep osmTags out of the tags field entirely.
+
+Desired behavior:
+* Keep osmTags and trustLevel internal.
+* Do not display raw OSM metadata as hashtag chips.
+* Do not display Wikidata IDs or Wikipedia slugs as chips.
+* Do not display generic internal tags like #ADDRESS, #NAME, or #TYPE:PLACE_OF_WORSHIP.
+* Convert only useful grounded concepts into human-readable tags, if appropriate.
+    * Example for Bergdoll: #HISTORIC BUILDING, #MANSION, maybe #FAIRMOUNT
+    * Example for Olivet: #PRESBYTERIAN, #PLACE OF WORSHIP
+* Do not invent historical tags.
+* Do not loosen anti-hallucination rules.
+* Do not change Walk candidate sourcing.
+* Do not change Explore Mode.
+* Do not change /investigate.
+* Do not add Wikipedia/Wikidata fetching yet.
+* Do not redesign the full detail page yet.
+After diagnosing the chip issue, please also confirm whether Step B — fetching the explicit OSM wikipedia article summary — is still the right next enrichment step for Bergdoll-style places.
