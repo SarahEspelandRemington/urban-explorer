@@ -1,5 +1,6 @@
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { setOsmHints, type OsmTrustLevel } from "@/lib/osmHintsCache";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,6 +24,9 @@ interface Place {
   latitude: number;
   longitude: number;
   distanceMeters?: number;
+  osmId?: string;
+  trustLevel?: string;
+  osmTags?: Record<string, string>;
 }
 
 interface PlaceMapViewProps {
@@ -185,6 +189,12 @@ export function PlaceMapView({
 
   const handleCardPress = () => {
     if (!selectedPlace) return;
+    if (selectedPlace.osmId && selectedPlace.trustLevel) {
+      setOsmHints(selectedPlace.osmId, {
+        trustLevel: selectedPlace.trustLevel as OsmTrustLevel,
+        osmTags: (selectedPlace.osmTags as Record<string, string>) ?? {},
+      });
+    }
     router.push({
       pathname: "/place-detail",
       params: {
@@ -195,6 +205,7 @@ export function PlaceMapView({
         yearBuilt: selectedPlace.yearBuilt || "",
         summary: selectedPlace.summary,
         facts: JSON.stringify(selectedPlace.facts),
+        osmId: selectedPlace.osmId || "",
       },
     });
   };
