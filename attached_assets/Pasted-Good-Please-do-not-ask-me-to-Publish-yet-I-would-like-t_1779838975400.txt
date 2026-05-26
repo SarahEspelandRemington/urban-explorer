@@ -1,0 +1,76 @@
+Good. Please do not ask me to Publish yet. I would like to batch this work and Publish once after the next phase is ready.
+First, please confirm the display-tag cleanup is complete and green in the current codebase:
+* sanitizeDisplayTags() is active in dev/source.
+* the OSM discover cache key is osm:v42.
+* tests/lint/typecheck are still green.
+* no raw OSM metadata should appear as user-facing display tags.
+Then please initiate Phase B planning only. Do not write Phase B code yet.
+Phase B goal: Safely enrich OSM-anchored detail pages when an explicit OSM wikipedia tag exists.
+Important: This is not Wikipedia name search. Do not search by place name. Only follow explicit OSM wikipedia tags already present in osmTags.
+Example: If osmTags.wikipedia is en:Bergdoll_Mansion, fetch the Wikipedia summary for exactly that article title/language and inject the fetched summary into the detail prompt as verified source context.
+Please propose the smallest safe Phase B implementation plan.
+Questions to answer:
+1. Prerequisites:
+    * Confirm Phase A fields are available to the detail endpoint.
+    * Confirm the display-tag sanitizer is in place so raw tags like WIKIDATA:Q4891444 and WIKIPEDIA:EN:BERGDOLL_MANSION cannot appear as user-facing chips.
+2. Wikipedia tag parsing:
+    * How will you parse explicit OSM wikipedia values like en:Bergdoll_Mansion?
+    * How will malformed values be handled?
+    * How will non-English language codes be handled?
+    * Do not guess article titles from placeName.
+3. Wikipedia summary fetch:
+    * Which Wikipedia endpoint will be used?
+    * What fields will be retrieved?
+        * title
+        * extract
+        * description, if present
+        * thumbnail/source image, if present
+        * canonical URL, if available
+    * Do not fetch or scrape full article text.
+    * Do not use Wikipedia search.
+4. Caching and failure behavior:
+    * Where will fetched summaries be cached?
+    * What TTL do you recommend?
+    * What happens if Wikipedia returns 404, timeout, malformed response, or no extract?
+    * The fallback must be Phase A behavior, not an error.
+5. Detail prompt integration:
+    * How will the fetched Wikipedia summary be injected into buildDetailUserTurn()?
+    * The prompt must distinguish:
+        * OSM tags = verified map/source-pointer metadata
+        * Wikipedia summary = fetched source content
+    * The LLM may use the fetched summary as factual grounding.
+    * The LLM must not invent claims beyond the fetched summary and OSM tags.
+    * The prompt should not say or imply it fetched Wikidata unless Wikidata fetching is actually implemented.
+6. Photo behavior:
+    * If an explicit wikipedia tag exists, can the existing Wikipedia photo lookup use that exact article title instead of guessing from placeName?
+    * If yes, include that in Phase B.
+    * If no, explain why.
+7. User-facing display:
+    * Do not display raw wikidata, wikipedia, article slugs, or source URLs as tags/chips.
+    * Wikipedia content should improve summary/history/facts, not leak technical metadata into the UI.
+    * Do not redesign the detail page sections yet.
+8. Tests: Please propose tests for:
+    * Bergdoll-Kemble Mansion with wikipedia=en:Bergdoll_Mansion
+    * successful summary fetch
+    * fetch failure fallback to Phase A
+    * malformed wikipedia tag
+    * non-English language code handling
+    * no Wikipedia search/name-search is performed
+    * raw Wikipedia/Wikidata metadata does not appear as display tags
+9. Runtime:
+    * Exact files involved
+    * Whether codegen/spec sync is needed
+    * Whether Publish/redeploy is required before phone testing
+    * What dev probe and production probe would prove Phase B is active
+Constraints:
+* Do not build Wikipedia name search.
+* Do not use Wikidata lookup yet unless you explain why it is necessary and keep it out of this phase.
+* Do not loosen anti-hallucination rules.
+* Do not change Walk candidate sourcing.
+* Do not change Explore Mode.
+* Do not change /investigate.
+* Do not redesign the detail page UI.
+* Do not change route architecture or osmHintsCache unless absolutely necessary.
+* Do not implement until I approve the specific plan.
+* Do not fetch Wikipedia summaries during the Walk Mode discovery/narration pipeline. Wikipedia enrichment should only run when a user actively opens a detail page, not during background tile fetching or narration queuing."
+Output requested: A concise Phase B implementation plan with exact files, risks, tests, and runtime verification steps.
