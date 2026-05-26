@@ -36,7 +36,6 @@ function ModeCard({
           : "0 2px 12px rgba(0,0,0,0.22)",
       }}
     >
-      {/* Icon + mode label — visually bonded */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <div
           style={{
@@ -66,8 +65,6 @@ function ModeCard({
           {modeLabel}
         </span>
       </div>
-
-      {/* Bold action headline */}
       <span
         style={{
           fontSize: 18,
@@ -80,8 +77,6 @@ function ModeCard({
       >
         {headline}
       </span>
-
-      {/* Soft explanatory line */}
       <span
         style={{
           fontSize: 13,
@@ -97,7 +92,30 @@ function ModeCard({
   );
 }
 
-export function EntryScreenProposed() {
+function StreetlampMark({ size = 20 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 20 20"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: "block", flexShrink: 0 }}
+    >
+      {/* pole */}
+      <rect x="9.25" y="8" width="1.5" height="10" rx="0.75" fill="#F2A23A" opacity="0.9" />
+      {/* arm */}
+      <path d="M10 9 Q10 5.5 6.5 5.5" stroke="#F2A23A" strokeWidth="1.4" strokeLinecap="round" fill="none" opacity="0.9" />
+      {/* lamp head */}
+      <ellipse cx="6.5" cy="5.5" rx="2" ry="1.2" fill="#F2A23A" />
+      {/* glow dots */}
+      <circle cx="6.5" cy="3.8" r="0.7" fill="#F2A23A" opacity="0.35" />
+      <circle cx="6.5" cy="3.0" r="0.45" fill="#F2A23A" opacity="0.18" />
+    </svg>
+  );
+}
+
+export function EntryScreenBrandC() {
   return (
     <div
       style={{
@@ -122,51 +140,49 @@ export function EntryScreenProposed() {
           overflowY: "auto",
         }}
       >
-        <div style={{ height: 24 }} />
+        <div style={{ height: 40 }} />
 
-        {/* ── Brand mark (app icon tile) ──────────────────────────── */}
-        <img
-          src="/__mockup/images/streetlit-icon.png"
-          width={72}
-          height={72}
-          style={{ borderRadius: 18, objectFit: "cover" }}
-          alt="Streetlit"
-        />
-
-        <div style={{ height: 14 }} />
-
-        {/* ── App name ───────────────────────────────────────────── */}
-        <span
+        {/* ── C: Small accent mark inline with wordmark ─────────────── */}
+        <div
           style={{
-            fontSize: 28,
-            fontWeight: 700,
-            color: PRIMARY,
-            fontFamily: "'Inter', sans-serif",
-            letterSpacing: "-0.6px",
-            lineHeight: "34px",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 8,
           }}
         >
-          Streetlit
-        </span>
+          <StreetlampMark size={28} />
+          <span
+            style={{
+              fontSize: 36,
+              fontWeight: 700,
+              color: FOREGROUND,
+              fontFamily: "'Inter', sans-serif",
+              letterSpacing: "-0.9px",
+              lineHeight: "36px",
+            }}
+          >
+            Streetlit
+          </span>
+        </div>
 
-        <div style={{ height: 6 }} />
+        <div style={{ height: 10 }} />
 
         {/* ── Tagline ────────────────────────────────────────────── */}
         <span
           style={{
-            fontSize: 15,
+            fontSize: 13,
             fontWeight: 400,
-            color: FOREGROUND,
+            color: MUTED_FG,
             fontFamily: "'Inter', sans-serif",
             letterSpacing: "0.1px",
+            fontStyle: "italic",
           }}
         >
           Walk curious.
         </span>
 
-        <div style={{ height: 32 }} />
+        <div style={{ height: 36 }} />
 
-        {/* ── Mode cards ─────────────────────────────────────────── */}
         <ModeCard
           icon={<Compass size={16} color={PRIMARY} strokeWidth={2} />}
           modeLabel="Explore"
@@ -186,7 +202,6 @@ export function EntryScreenProposed() {
 
         <div style={{ height: 24 }} />
 
-        {/* ── Search link ────────────────────────────────────────── */}
         <span
           style={{
             fontSize: 13,

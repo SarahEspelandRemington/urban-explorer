@@ -36,7 +36,6 @@ function ModeCard({
           : "0 2px 12px rgba(0,0,0,0.22)",
       }}
     >
-      {/* Icon + mode label — visually bonded */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <div
           style={{
@@ -66,8 +65,6 @@ function ModeCard({
           {modeLabel}
         </span>
       </div>
-
-      {/* Bold action headline */}
       <span
         style={{
           fontSize: 18,
@@ -80,8 +77,6 @@ function ModeCard({
       >
         {headline}
       </span>
-
-      {/* Soft explanatory line */}
       <span
         style={{
           fontSize: 13,
@@ -97,7 +92,7 @@ function ModeCard({
   );
 }
 
-export function EntryScreenProposed() {
+export function EntryScreenBrandB() {
   return (
     <div
       style={{
@@ -122,51 +117,73 @@ export function EntryScreenProposed() {
           overflowY: "auto",
         }}
       >
-        <div style={{ height: 24 }} />
+        <div style={{ height: 20 }} />
 
-        {/* ── Brand mark (app icon tile) ──────────────────────────── */}
-        <img
-          src="/__mockup/images/streetlit-icon.png"
-          width={72}
-          height={72}
-          style={{ borderRadius: 18, objectFit: "cover" }}
-          alt="Streetlit"
-        />
+        {/* ── B: Larger icon mark with ambient glow ring ───────────── */}
+        <div style={{ position: "relative", width: 104, height: 104 }}>
+          {/* outer glow ring */}
+          <div
+            style={{
+              position: "absolute",
+              inset: -8,
+              borderRadius: 30,
+              background: `radial-gradient(ellipse at center, ${PRIMARY}22 0%, transparent 70%)`,
+            }}
+          />
+          {/* amber border ring */}
+          <div
+            style={{
+              position: "absolute",
+              inset: -3,
+              borderRadius: 26,
+              border: `1.5px solid ${PRIMARY}44`,
+            }}
+          />
+          <img
+            src="/__mockup/images/streetlit-icon.png"
+            width={104}
+            height={104}
+            style={{
+              borderRadius: 24,
+              objectFit: "cover",
+              display: "block",
+              position: "relative",
+            }}
+            alt="Streetlit"
+          />
+        </div>
 
-        <div style={{ height: 14 }} />
+        <div style={{ height: 16 }} />
 
-        {/* ── App name ───────────────────────────────────────────── */}
         <span
           style={{
-            fontSize: 28,
+            fontSize: 30,
             fontWeight: 700,
             color: PRIMARY,
             fontFamily: "'Inter', sans-serif",
-            letterSpacing: "-0.6px",
-            lineHeight: "34px",
+            letterSpacing: "-0.7px",
+            lineHeight: "36px",
           }}
         >
           Streetlit
         </span>
 
-        <div style={{ height: 6 }} />
+        <div style={{ height: 5 }} />
 
-        {/* ── Tagline ────────────────────────────────────────────── */}
         <span
           style={{
-            fontSize: 15,
+            fontSize: 14,
             fontWeight: 400,
             color: FOREGROUND,
             fontFamily: "'Inter', sans-serif",
-            letterSpacing: "0.1px",
+            opacity: 0.85,
           }}
         >
           Walk curious.
         </span>
 
-        <div style={{ height: 32 }} />
+        <div style={{ height: 30 }} />
 
-        {/* ── Mode cards ─────────────────────────────────────────── */}
         <ModeCard
           icon={<Compass size={16} color={PRIMARY} strokeWidth={2} />}
           modeLabel="Explore"
@@ -186,7 +203,6 @@ export function EntryScreenProposed() {
 
         <div style={{ height: 24 }} />
 
-        {/* ── Search link ────────────────────────────────────────── */}
         <span
           style={{
             fontSize: 13,
