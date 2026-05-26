@@ -143,7 +143,7 @@ export function EntryScreenProposed() {
 
         {/* ── Brand mark ─────────────────────────────────────────── */}
         <img
-          src="/streetlit-icon.png"
+          src="/__mockup/images/streetlit-icon.png"
           width={72}
           height={72}
           style={{ borderRadius: 18, objectFit: "cover" }}
