@@ -1,0 +1,60 @@
+This diagnosis is helpful. I agree with the sequencing: Step A first, then Step B later.
+
+Please do not implement yet. Please propose the smallest safe Step A implementation plan only.
+
+Approved direction for planning:
+Pass existing OSM evidence into the place-detail endpoint so detail pages are no longer blind to tags already collected during OSM-anchor discovery.
+
+Step A goal:
+For OSM-anchored places, pass the existing OSM tags and trustLevel into /explore/place-detail, without adding new external API calls yet.
+
+Please propose exactly how you would implement Step A:
+
+1. Data flow:
+   - Where does the client currently store the OSM tags/trustLevel from the discovery result?
+   - Are osmTags, trustLevel, wikidata, and wikipedia available on the client place object at the moment the user opens detail?
+   - If not, what minimum field passthrough is needed?
+
+2. API/spec changes:
+   - What exact fields would be added to GetPlaceDetailBody?
+   - Proposed names and types, for example:
+     - trustLevel?: "osm_enriched" | "osm_standard" | "osm_bare"
+     - osmTags?: Record<string, string>
+     - osmId?: string
+   - Would codegen/spec-sync be required?
+
+3. Detail prompt changes:
+   - How would the prompt use trustLevel and osmTags?
+   - How would it prevent OSM-only tags from becoming overclaimed history?
+   - How would it handle explicit wikidata / wikipedia tags before Step B fetches article content?
+   - For now, please treat wikidata / wikipedia tags as source pointers, not as fetched source content.
+
+4. UI/section behavior:
+   - Would this change the current detail page layout, or only the content?
+   - Would Quick Facts still show if the only facts are directory-like?
+   - If section changes are needed, separate them as a later Step C — do not include them in Step A unless absolutely necessary.
+
+5. Testing:
+   - What unit or integration tests would prove:
+     - detail receives trustLevel
+     - detail receives OSM tags
+     - osm_standard does not invent founding dates
+     - osm_enriched can mention that a Wikipedia/Wikidata pointer exists without pretending content was fetched
+   - What test case would you use for Bergdoll-Kemble Mansion?
+   - What test case would you use for Olivet?
+
+6. Runtime:
+   - Would this require Publish/redeploy to test in Expo Go?
+   - What live production probe would prove Step A is active?
+
+Constraints:
+- Do not add Wikipedia/Wikidata API fetching yet.
+- Do not build name-search enrichment.
+- Do not loosen anti-hallucination rules.
+- Do not change Walk candidate sourcing.
+- Do not change Explore Mode.
+- Do not change /investigate.
+- Do not change UI section layout yet unless you explain why first.
+- Do not implement until I approve the specific plan.
+
+Please return a concise implementation plan with exact files involved, expected risks, and whether you recommend implementing Step A before Step B.
