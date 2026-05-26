@@ -148,6 +148,18 @@ export const DiscoverPlacesResponse = zod.object({
         .describe(
           "How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore\/Walk path).",
         ),
+      trustLevel: zod
+        .enum(["osm_enriched", "osm_standard", "osm_bare"])
+        .optional()
+        .describe(
+          "OSM trust classification for this place. Present only on OSM-anchored candidates (candidateSource: osm).",
+        ),
+      osmTags: zod
+        .record(zod.string(), zod.string())
+        .optional()
+        .describe(
+          "Curated subset of raw OSM hint tags (e.g. wikidata, wikipedia, denomination, start_date). Present only on OSM-anchored candidates (candidateSource: osm).",
+        ),
     }),
   ),
   location: zod.string().describe("Human-readable description of the area"),
@@ -308,6 +320,18 @@ export const GetPlaceDetailBody = zod.object({
   latitude: zod.number(),
   longitude: zod.number(),
   category: zod.string().optional(),
+  trustLevel: zod
+    .enum(["osm_enriched", "osm_standard", "osm_bare"])
+    .optional()
+    .describe(
+      "OSM trust level from discover. Controls grounding rules applied in the detail prompt.",
+    ),
+  osmTags: zod
+    .record(zod.string(), zod.string())
+    .optional()
+    .describe(
+      "Curated OSM hint tags from discover. Injected as verified source material into the detail prompt.",
+    ),
 });
 
 export const GetPlaceDetailResponse = zod.object({
