@@ -152,6 +152,12 @@ export interface WalkPlace {
   /** How this place's location was established: osm = Overpass coordinates
    *  (verified), llm = LLM-generated coordinates (legacy path). */
   candidateSource?: "osm" | "llm";
+  /** OSM trust classification from discover. Passed through to the detail
+   *  endpoint so the detail prompt can ground its response in tag data. */
+  trustLevel?: string;
+  /** Curated OSM hint tags from discover (e.g. wikidata, denomination,
+   *  start_date). Stored in osmHintsCache keyed by osmId. */
+  osmTags?: Record<string, string>;
   /** Server-side address↔coordinate coherence check has flagged this place
    *  as a strong-evidence mismatch (e.g. wrong-city hallucination). The
    *  place still appears on the map and in lists, but auto-narration must
