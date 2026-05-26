@@ -43,6 +43,7 @@ import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
+import { sanitizeDisplayTags } from "../../lib/sanitizeDisplayTags";
 
 const router = Router();
 
@@ -160,7 +161,8 @@ const OSM_CACHE_DISTANCE = 200;
 const osmSuggestionsCache = new Map<string, LLMCacheEntry<OSMPlace[]>>();
 
 function osmSuggestionsBucketKey(lat: number, lng: number): string {
-  return `${lat.toFixed(3)},${lng.toFixed(3)}`;
+  // osm:v42: invalidates entries cached before the display-tag sanitizer was added.
+  return `osm:v42:${lat.toFixed(3)},${lng.toFixed(3)}`;
 }
 
 function getCachedOSMPlaces(lat: number, lng: number): OSMPlace[] | null {
@@ -2014,6 +2016,7 @@ ${OSM_COPY_RULES.osm_bare}
 
 Flag any claim not directly supported by the candidate's tags with "Reportedly" or "According to local accounts."
 9. NEVER write raw GPS coordinates in any text field.
+10. DISPLAY TAGS — the "tags" array must contain only short, human-readable descriptor phrases a general audience would understand (e.g. "historic mansion", "place of worship", "Victorian building", "art deco", "immigrant heritage"). NEVER put raw database identifiers, Wikidata IDs (e.g. Q4891444), Wikipedia slugs, OSM field names (wikidata, wikipedia, building:levels, denomination, operator), key:value pairs, or any technical metadata in tags. Tags are user-visible copy, not metadata echo.
 
 Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
             },
@@ -2084,7 +2087,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         ),
         summary: copy?.summary ?? "A notable place in this area.",
         facts: copy?.facts ?? [],
-        tags: copy?.tags,
+        tags: sanitizeDisplayTags(copy?.tags),
         yearBuilt: copy?.yearBuilt,
         confidence: copy?.confidence ?? "low",
       };
