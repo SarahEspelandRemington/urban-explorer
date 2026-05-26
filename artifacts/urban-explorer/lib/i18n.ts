@@ -488,7 +488,7 @@ const en: Strings = {
     walkSubtext: "Skip ahead — explore on foot with audio",
     exploreHeadline: "Browse the hidden layers of a place.",
     exploreBody: "See what's around me.",
-    walkHeadline: "Put your phone away and wander.",
+    walkHeadline: "Listen to the city unfold around you.",
     walkBody: "Go for a walk.",
   },
   languageModal: {
