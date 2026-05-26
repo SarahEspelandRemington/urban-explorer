@@ -1,0 +1,38 @@
+I agree with the osmHintsCache approach. Please proceed with that approach for Step A, with the constraints below.
+Approved approach:
+* Use a small module-level osmHintsCache keyed by osmId.
+* Store only the curated hint data:
+    * trustLevel
+    * osmTags
+* Pass only osmId through route params to the place-detail screen.
+* On the detail screen, look up osmId in osmHintsCache and pass the hints to /explore/place-detail when available.
+Important constraints:
+* The cache must be optional. If no cache entry exists, detail should fall back to current behavior without error.
+* Do not pass large osmTags JSON through route params.
+* Do not store the full raw OSM tag set; use only the curated hint tags.
+* Do not add Wikipedia/Wikidata API fetching yet.
+* Do not build name-search enrichment.
+* Do not loosen anti-hallucination rules.
+* Do not change Walk candidate sourcing.
+* Do not change Explore Mode.
+* Do not change /investigate.
+* Do not redesign the detail page UI or section layout.
+* Do not implement Step B.
+Please implement Step A only:
+1. Add trustLevel and curated osmTags to OSM-anchored discover response places.
+2. Add trustLevel and osmTags optional fields to the place-detail request schema.
+3. Create/use osmHintsCache keyed by osmId.
+4. Store hints when OSM discover results are received.
+5. Pass osmId through all existing navigation paths to /place-detail.
+6. Detail screen retrieves hints from osmHintsCache and includes them in the detail request when present.
+7. Detail prompt injects the verified OSM data block when osmTags is present.
+8. Treat wikidata / wikipedia tags as source pointers only; do not claim article/entity content was fetched.
+9. Bump the detail cache key from v7 to v8.
+10. Add focused tests for prompt construction and fallback behavior.Please also add a test confirming that when osmId is present in route params but has no corresponding osmHintsCache entry, the detail screen makes a normal request without trustLevel or osmTags and does not throw or show an error.
+Please run codegen/spec sync, format, lint, typecheck, and relevant tests. Then report:
+* exact files changed
+* generated files changed
+* detail cache key
+* tests added
+* whether GitHub was updated
+* whether Publish/redeploy is required before phone testing

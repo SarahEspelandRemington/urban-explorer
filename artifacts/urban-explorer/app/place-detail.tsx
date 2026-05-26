@@ -2,6 +2,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { getOsmHints } from "@/lib/osmHintsCache";
 import React from "react";
 import {
   ActivityIndicator,
@@ -59,6 +60,9 @@ export default function PlaceDetailScreen() {
     facts: string;
     address: string;
     photoUrl: string;
+    /** OSM element reference (e.g. 'node/12345678'). Used to look up curated
+     *  OSM hint tags from osmHintsCache and pass them to the detail request. */
+    osmId?: string;
     /** Uniqueness token injected by related-place navigation so expo-router treats
      *  each drill-down as a distinct stack entry rather than reusing the existing
      *  place-detail entry. Never read at runtime; only present in the URL. */
@@ -96,12 +100,16 @@ export default function PlaceDetailScreen() {
 
   React.useEffect(() => {
     if (params.name) {
+      const osmHints = params.osmId ? getOsmHints(params.osmId) : null;
       detailMutation.mutate({
         data: {
           placeName: params.name,
           latitude: lat,
           longitude: lng,
           category: params.category,
+          ...(osmHints
+            ? { trustLevel: osmHints.trustLevel, osmTags: osmHints.osmTags }
+            : {}),
         },
       });
     }

@@ -154,8 +154,6 @@ export function EntryScreenBrandA() {
         {/* ── Tagline ────────────────────────────────────────────── */}
         <span
           style={{
-            fontSize: 15,
-            fontWeight: 400,
             color: MUTED_FG,
             fontFamily: "'Inter', sans-serif",
             letterSpacing: "0.4px",

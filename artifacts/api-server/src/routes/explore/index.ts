@@ -2060,6 +2060,12 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
     let mergedPlaces: any[] = candidates.map((p) => {
       const copy = copyMap.get(p.osmId);
       const addr = buildOsmAddr(p.tags);
+      const placeTrustLevel = computeOsmTrustLevel(p.tags);
+      const placeOsmTags: Record<string, string> = {};
+      for (const key of HINT_TAGS) {
+        const val = p.tags[key];
+        if (val) placeOsmTags[key] = sanitizeOSMText(val, 120);
+      }
       return {
         id: p.osmId.replace("/", "-"),
         name: p.name,
@@ -2070,6 +2076,9 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         coordSource: "osm",
         osmId: p.osmId,
         candidateSource: "osm",
+        trustLevel: placeTrustLevel,
+        osmTags:
+          Object.keys(placeOsmTags).length > 0 ? placeOsmTags : undefined,
         distanceMeters: Math.round(
           haversineDistance(latitude, longitude, p.lat, p.lon),
         ),
@@ -3076,6 +3085,51 @@ What is this building? What was it originally? What should I look at?`,
   res.json(result);
 });
 
+/**
+ * Build the user-turn content for /explore/place-detail.
+ *
+ * When the request carries OSM trust metadata (collected during discover),
+ * a verified OSM data block is appended so the model can ground its response
+ * in confirmed tag data rather than relying solely on training memory.
+ *
+ * Anti-hallucination rules are NOT relaxed: the block is labelled as the
+ * *only* confirmed source for factual claims. Wikidata/Wikipedia tags are
+ * treated as source pointers only — the model must not claim to have fetched
+ * article or entity content.
+ */
+export function buildDetailUserTurn(
+  placeName: string,
+  category: string | undefined,
+  latitude: number,
+  longitude: number,
+  trustLevel?: string,
+  osmTags?: Record<string, string>,
+): string {
+  const base = `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located in this area of ${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+
+  if (!trustLevel || !osmTags || Object.keys(osmTags).length === 0) {
+    return base;
+  }
+
+  const tagLines = Object.entries(osmTags)
+    .map(([k, v]) => `  ${k}: ${v}`)
+    .join("\n");
+
+  if (trustLevel === "osm_enriched") {
+    const hasPointer = osmTags.wikidata || osmTags.wikipedia;
+    const pointerNote = hasPointer
+      ? `\n\nSOURCE POINTER NOTE: The wikidata and/or wikipedia values above are external record identifiers — they confirm a documented source exists for this place. Do NOT claim to have read the Wikipedia article or fetched Wikidata content. You may note that a Wikipedia or Wikidata record exists if directly relevant, but do not describe content from those sources as if you retrieved it.`
+      : "";
+    return `${base}\n\nVERIFIED SOURCE TAGS (from OpenStreetMap — use as factual anchors for documented history):\n${tagLines}${pointerNote}`;
+  }
+
+  if (trustLevel === "osm_standard") {
+    return `${base}\n\nVERIFIED TAG DATA (from OpenStreetMap — use only these confirmed facts):\n${tagLines}\n\nDo NOT invent founding dates, architectural styles, historical roles, or community claims beyond what these tags explicitly state. If start_date is absent from this block, omit any date or founding-year claim entirely.`;
+  }
+
+  return base;
+}
+
 router.post("/explore/place-detail", async (req, res) => {
   const parsed = GetPlaceDetailBody.safeParse(req.body);
   if (!parsed.success) {
@@ -3083,13 +3137,14 @@ router.post("/explore/place-detail", async (req, res) => {
     return;
   }
 
-  const { placeName, latitude, longitude, category } = parsed.data;
+  const { placeName, latitude, longitude, category, trustLevel, osmTags } =
+    parsed.data;
 
   const detailController = new AbortController();
   const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
   res.on("close", () => detailController.abort());
 
-  const detailCacheKey = `detail:v7:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const detailCacheKey = `detail:v8:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -3160,7 +3215,14 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
           },
           {
             role: "user",
-            content: `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located in this area of ${latitude.toFixed(3)}, ${longitude.toFixed(3)}`,
+            content: buildDetailUserTurn(
+              placeName,
+              category,
+              latitude,
+              longitude,
+              trustLevel,
+              osmTags,
+            ),
           },
         ],
         response_format: { type: "json_object" },

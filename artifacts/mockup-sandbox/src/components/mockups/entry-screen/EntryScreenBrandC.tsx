@@ -103,9 +103,24 @@ function StreetlampMark({ size = 20 }: { size?: number }) {
       style={{ display: "block", flexShrink: 0 }}
     >
       {/* pole */}
-      <rect x="9.25" y="8" width="1.5" height="10" rx="0.75" fill="#F2A23A" opacity="0.9" />
+      <rect
+        x="9.25"
+        y="8"
+        width="1.5"
+        height="10"
+        rx="0.75"
+        fill="#F2A23A"
+        opacity="0.9"
+      />
       {/* arm */}
-      <path d="M10 9 Q10 5.5 6.5 5.5" stroke="#F2A23A" strokeWidth="1.4" strokeLinecap="round" fill="none" opacity="0.9" />
+      <path
+        d="M10 9 Q10 5.5 6.5 5.5"
+        stroke="#F2A23A"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        fill="none"
+        opacity="0.9"
+      />
       {/* lamp head */}
       <ellipse cx="6.5" cy="5.5" rx="2" ry="1.2" fill="#F2A23A" />
       {/* glow dots */}

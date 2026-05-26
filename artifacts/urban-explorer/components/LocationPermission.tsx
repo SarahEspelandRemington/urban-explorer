@@ -145,13 +145,16 @@ export function LocationPermission({
           exiting={Platform.OS !== "web" ? FadeOutUp.duration(300) : undefined}
         >
           <Image
-            source={require("@/assets/images/icon.png")}
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
+            source={require("@/assets/images/icon.png") as number}
             style={styles.brandIcon}
           />
           <Text style={[styles.brandName, { color: colors.foreground }]}>
             Streetlit
           </Text>
-          <Text style={[styles.brandTagline, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.brandTagline, { color: colors.mutedForeground }]}
+          >
             Walk curious.
           </Text>
           <Text

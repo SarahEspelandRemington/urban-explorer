@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Feather } from "@expo/vector-icons";
+import { setOsmHints, type OsmTrustLevel } from "@/lib/osmHintsCache";
 import * as Haptics from "expo-haptics";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
@@ -63,6 +64,9 @@ interface Place {
     | "VERIFIED_PLACE"
     | "APPROXIMATE_SITE"
     | "INTERPRETIVE_OVERLAY";
+  osmId?: string;
+  trustLevel?: string;
+  osmTags?: Record<string, string>;
 }
 
 interface PlaceMapViewProps {
@@ -241,6 +245,12 @@ export function PlaceMapView({
 
   const navigateToDetail = useCallback(
     (place: Place) => {
+      if (place.osmId && place.trustLevel) {
+        setOsmHints(place.osmId, {
+          trustLevel: place.trustLevel as OsmTrustLevel,
+          osmTags: (place.osmTags as Record<string, string>) ?? {},
+        });
+      }
       router.push({
         pathname: "/place-detail",
         params: {
@@ -253,6 +263,7 @@ export function PlaceMapView({
           facts: JSON.stringify(place.facts),
           address: place.address || "",
           tags: JSON.stringify(place.tags || []),
+          osmId: place.osmId || "",
         },
       });
     },

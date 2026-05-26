@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { setOsmHints, type OsmTrustLevel } from "@/lib/osmHintsCache";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -64,7 +65,16 @@ export default function WalkModeScreen() {
     summary?: string | null;
     facts?: string[] | null;
     address?: string | null;
+    osmId?: string | null;
+    trustLevel?: string | null;
+    osmTags?: Record<string, string> | null;
   }) => {
+    if (place.osmId && place.trustLevel) {
+      setOsmHints(place.osmId, {
+        trustLevel: place.trustLevel as OsmTrustLevel,
+        osmTags: place.osmTags ?? {},
+      });
+    }
     router.push({
       pathname: "/place-detail",
       params: {
@@ -77,6 +87,7 @@ export default function WalkModeScreen() {
         summary: place.summary ?? "",
         facts: JSON.stringify(place.facts ?? []),
         address: place.address ?? "",
+        osmId: place.osmId ?? "",
       },
     });
   };
