@@ -107,6 +107,23 @@ export const PlaceCandidateSource = {
   llm: "llm",
 } as const;
 
+/**
+ * OSM trust classification for this place. Present only on OSM-anchored candidates (candidateSource: osm).
+ */
+export type PlaceTrustLevel =
+  (typeof PlaceTrustLevel)[keyof typeof PlaceTrustLevel];
+
+export const PlaceTrustLevel = {
+  osm_enriched: "osm_enriched",
+  osm_standard: "osm_standard",
+  osm_bare: "osm_bare",
+} as const;
+
+/**
+ * Curated subset of raw OSM hint tags (e.g. wikidata, wikipedia, denomination, start_date). Present only on OSM-anchored candidates (candidateSource: osm).
+ */
+export type PlaceOsmTags = { [key: string]: string };
+
 export interface Place {
   id: string;
   name: string;
@@ -139,6 +156,10 @@ export interface Place {
   osmId?: string;
   /** How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path). */
   candidateSource?: PlaceCandidateSource;
+  /** OSM trust classification for this place. Present only on OSM-anchored candidates (candidateSource: osm). */
+  trustLevel?: PlaceTrustLevel;
+  /** Curated subset of raw OSM hint tags (e.g. wikidata, wikipedia, denomination, start_date). Present only on OSM-anchored candidates (candidateSource: osm). */
+  osmTags?: PlaceOsmTags;
 }
 
 export interface DiscoverResponse {
@@ -231,11 +252,32 @@ export interface AddressInvestigationResponse {
   searchSuggestions?: string[];
 }
 
+/**
+ * OSM trust level from discover. Controls grounding rules applied in the detail prompt.
+ */
+export type PlaceDetailRequestTrustLevel =
+  (typeof PlaceDetailRequestTrustLevel)[keyof typeof PlaceDetailRequestTrustLevel];
+
+export const PlaceDetailRequestTrustLevel = {
+  osm_enriched: "osm_enriched",
+  osm_standard: "osm_standard",
+  osm_bare: "osm_bare",
+} as const;
+
+/**
+ * Curated OSM hint tags from discover. Injected as verified source material into the detail prompt.
+ */
+export type PlaceDetailRequestOsmTags = { [key: string]: string };
+
 export interface PlaceDetailRequest {
   placeName: string;
   latitude: number;
   longitude: number;
   category?: string;
+  /** OSM trust level from discover. Controls grounding rules applied in the detail prompt. */
+  trustLevel?: PlaceDetailRequestTrustLevel;
+  /** Curated OSM hint tags from discover. Injected as verified source material into the detail prompt. */
+  osmTags?: PlaceDetailRequestOsmTags;
 }
 
 export type PlaceDetailResponseNearbyRelatedItem = {
