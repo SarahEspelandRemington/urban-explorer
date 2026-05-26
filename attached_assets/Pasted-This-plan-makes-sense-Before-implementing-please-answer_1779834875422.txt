@@ -1,0 +1,43 @@
+This plan makes sense. Before implementing, please answer one question only — do not write any code yet:
+Does passing osmTags as a JSON-serialized navigation route param have any known size limits in Expo Router that could cause silent failures on device? Is there a cleaner alternative — for example, storing osmTags in a React context or a cache keyed by osmId — that would avoid serializing into route params entirely?
+Please answer that question first. If route params are confirmed safe, or if you recommend a cleaner alternative, explain the tradeoff and wait for my approval before proceeding.
+Once I confirm the approach, please proceed with Step A only.
+Approved scope: Pass existing OSM evidence into the place-detail endpoint so detail pages are no longer blind to tags already collected during OSM-anchor discovery.
+Implement only Step A:
+
+Add optional trustLevel and osmTags fields to the discover Place schema and PlaceDetailRequest.
+Include the curated OSM HINT_TAGS subset and computed trustLevel on OSM-anchored discover response places.
+Thread trustLevel, osmTags, and osmId through the client navigation path into place-detail using whichever approach you confirmed above.
+Inject a verified OSM data block into the detail prompt when osmTags is present.
+Treat wikidata / wikipedia tags as source pointers only. Do not claim article/entity content was fetched.
+Bump the detail cache key from v7 to v8.
+Add focused tests for the detail prompt grounding block.
+
+Constraints:
+
+Do not add Wikipedia/Wikidata API fetching yet.
+Do not build name-search enrichment.
+Do not change Walk candidate sourcing.
+Do not change Explore Mode.
+Do not change /investigate.
+Do not redesign the detail page UI or section layout yet.
+Do not loosen anti-hallucination rules.
+Do not pass the full raw OSM tag set; use only the curated hint tags.
+Do not implement Step B.
+
+Please run:
+
+codegen/spec sync
+format
+lint
+typecheck
+relevant API server tests
+
+Then report:
+
+exact files changed
+generated files changed
+final detail cache key
+tests added
+whether GitHub was updated
+whether Publish/redeploy is required before phone testing
