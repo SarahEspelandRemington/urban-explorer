@@ -3,6 +3,7 @@ import * as Location from "expo-location";
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -143,14 +144,21 @@ export function LocationPermission({
           }
           exiting={Platform.OS !== "web" ? FadeOutUp.duration(300) : undefined}
         >
-          <View
-            style={[
-              styles.iconCircle,
-              { backgroundColor: colors.primary + "18" },
-            ]}
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={styles.brandIcon}
+          />
+          <Text style={[styles.brandName, { color: colors.foreground }]}>
+            Streetlit
+          </Text>
+          <Text style={[styles.brandTagline, { color: colors.mutedForeground }]}>
+            Walk curious.
+          </Text>
+          <Text
+            style={[styles.brandSubtitle, { color: colors.mutedForeground }]}
           >
-            <Feather name="map-pin" size={36} color={colors.primary} />
-          </View>
+            Small stories hidden in ordinary places.
+          </Text>
           {showSearch && (
             <>
               <Animated.Text
@@ -543,12 +551,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     gap: 14,
   },
-  iconCircle: {
+  brandIcon: {
     width: 72,
     height: 72,
-    borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 16,
+  },
+  brandName: {
+    fontSize: 28,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.8,
+    marginTop: 4,
+  },
+  brandTagline: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: -0.2,
+    marginTop: 2,
+  },
+  brandSubtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 18,
+    marginTop: 2,
     marginBottom: 4,
   },
   title: {
