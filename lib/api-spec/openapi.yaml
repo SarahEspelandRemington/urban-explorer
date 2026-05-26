@@ -487,6 +487,15 @@ components:
           type: string
           enum: [osm, llm]
           description: "How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path)."
+        trustLevel:
+          type: string
+          enum: [osm_enriched, osm_standard, osm_bare]
+          description: "OSM trust classification for this place. Present only on OSM-anchored candidates (candidateSource: osm)."
+        osmTags:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Curated subset of raw OSM hint tags (e.g. wikidata, wikipedia, denomination, start_date). Present only on OSM-anchored candidates (candidateSource: osm)."
       required:
         - id
         - name
@@ -641,6 +650,15 @@ components:
           type: number
         category:
           type: string
+        trustLevel:
+          type: string
+          enum: [osm_enriched, osm_standard, osm_bare]
+          description: "OSM trust level from discover. Controls grounding rules applied in the detail prompt."
+        osmTags:
+          type: object
+          additionalProperties:
+            type: string
+          description: "Curated OSM hint tags from discover. Injected as verified source material into the detail prompt."
       required:
         - placeName
         - latitude
