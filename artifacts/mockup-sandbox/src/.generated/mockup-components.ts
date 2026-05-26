@@ -11,18 +11,16 @@ export const modules: ModuleMap = {
     import("../components/mockups/color-exploration/MossOlive.tsx"),
   "./components/mockups/color-exploration/SlateBlue.tsx": () =>
     import("../components/mockups/color-exploration/SlateBlue.tsx"),
-  "./components/mockups/style-directions/CoolSignal.tsx": () =>
-    import("../components/mockups/style-directions/CoolSignal.tsx"),
-  "./components/mockups/style-directions/CuriousNight.tsx": () =>
-    import("../components/mockups/style-directions/CuriousNight.tsx"),
-  "./components/mockups/style-directions/FieldNotes.tsx": () =>
-    import("../components/mockups/style-directions/FieldNotes.tsx"),
-  "./components/mockups/style-directions/SoftDepth.tsx": () =>
-    import("../components/mockups/style-directions/SoftDepth.tsx"),
-  "./components/mockups/style-directions/UrbanGlow.tsx": () =>
-    import("../components/mockups/style-directions/UrbanGlow.tsx"),
-  "./components/mockups/style-directions/WarmEmber.tsx": () =>
-    import("../components/mockups/style-directions/WarmEmber.tsx"),
+  "./components/mockups/entry-screen/EntryScreen.tsx": () =>
+    import("../components/mockups/entry-screen/EntryScreen.tsx"),
+  "./components/mockups/entry-screen/EntryScreenBrandA.tsx": () =>
+    import("../components/mockups/entry-screen/EntryScreenBrandA.tsx"),
+  "./components/mockups/entry-screen/EntryScreenBrandB.tsx": () =>
+    import("../components/mockups/entry-screen/EntryScreenBrandB.tsx"),
+  "./components/mockups/entry-screen/EntryScreenBrandC.tsx": () =>
+    import("../components/mockups/entry-screen/EntryScreenBrandC.tsx"),
+  "./components/mockups/entry-screen/EntryScreenProposed.tsx": () =>
+    import("../components/mockups/entry-screen/EntryScreenProposed.tsx"),
   "./components/mockups/header-redesign/LabeledActions.tsx": () =>
     import("../components/mockups/header-redesign/LabeledActions.tsx"),
   "./components/mockups/header-redesign/SimplifiedBar.tsx": () =>
@@ -37,16 +35,18 @@ export const modules: ModuleMap = {
     import("../components/mockups/now-playing/Proposed.tsx"),
   "./components/mockups/now-playing/ProposedLight.tsx": () =>
     import("../components/mockups/now-playing/ProposedLight.tsx"),
-  "./components/mockups/entry-screen/EntryScreen.tsx": () =>
-    import("../components/mockups/entry-screen/EntryScreen.tsx"),
-  "./components/mockups/entry-screen/EntryScreenBrandA.tsx": () =>
-    import("../components/mockups/entry-screen/EntryScreenBrandA.tsx"),
-  "./components/mockups/entry-screen/EntryScreenBrandB.tsx": () =>
-    import("../components/mockups/entry-screen/EntryScreenBrandB.tsx"),
-  "./components/mockups/entry-screen/EntryScreenBrandC.tsx": () =>
-    import("../components/mockups/entry-screen/EntryScreenBrandC.tsx"),
-  "./components/mockups/entry-screen/EntryScreenProposed.tsx": () =>
-    import("../components/mockups/entry-screen/EntryScreenProposed.tsx"),
+  "./components/mockups/style-directions/CoolSignal.tsx": () =>
+    import("../components/mockups/style-directions/CoolSignal.tsx"),
+  "./components/mockups/style-directions/CuriousNight.tsx": () =>
+    import("../components/mockups/style-directions/CuriousNight.tsx"),
+  "./components/mockups/style-directions/FieldNotes.tsx": () =>
+    import("../components/mockups/style-directions/FieldNotes.tsx"),
+  "./components/mockups/style-directions/SoftDepth.tsx": () =>
+    import("../components/mockups/style-directions/SoftDepth.tsx"),
+  "./components/mockups/style-directions/UrbanGlow.tsx": () =>
+    import("../components/mockups/style-directions/UrbanGlow.tsx"),
+  "./components/mockups/style-directions/WarmEmber.tsx": () =>
+    import("../components/mockups/style-directions/WarmEmber.tsx"),
   "./components/mockups/walk-landing/WalkLanding.tsx": () =>
     import("../components/mockups/walk-landing/WalkLanding.tsx"),
 };

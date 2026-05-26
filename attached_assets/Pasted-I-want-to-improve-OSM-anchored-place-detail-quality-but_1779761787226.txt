@@ -1,0 +1,47 @@
+I want to improve OSM-anchored place detail quality, but safely. Please do not write code yet. Diagnose and propose only.
+
+Context:
+Walk Mode is now correctly using OSM-anchored candidates and trustLevel rules are preventing invented dates and history. That is good. However, detail pages for osm_standard places like Olivet Covenant Presbyterian Church are now too generic — Quick Facts repeat directory information, and History is either bland or uses cautious but unsupported generalizations.
+
+The goal is richer, source-backed detail pages without loosening the anti-hallucination rules.
+
+Before proposing anything, please answer these two questions in order. Do not proceed to question 2 until you have answered question 1.
+
+Question 1 — Existing Wikidata/Wikipedia tag usage:
+For OSM candidates that already have wikidata or wikipedia tags in their OSM data:
+
+- Is the app currently fetching and using that data anywhere in the detail page, Walk narration, or discovery copy?
+- Is the Wikidata or Wikipedia API being called at any point in the current pipeline?
+- If yes, show exactly where and what data is retrieved.
+- If no, say that clearly.
+- For Bergdoll-Kemble Mansion specifically, which has wikidata=Q4891444 and wikipedia=en:Bergdoll_Mansion in OSM — is that data currently being used, or is it being passed to the LLM as a raw tag string only?
+
+This is the highest-priority question because if the app already has Wikidata/Wikipedia tags for well-documented places and is not fetching them, that is a small, safe, high-value fix that requires no new infrastructure.
+
+Do not perform live external API calls yet unless you are only confirming whether existing code already does so. First report whether the current code has any Wikidata/Wikipedia fetch path.
+
+Question 2 — Only answer this after question 1 is complete:
+For OSM candidates that do not have Wikidata or Wikipedia tags, such as Olivet Covenant Presbyterian Church:
+
+- What would a Wikipedia name-search enrichment step look like?
+- What are the realistic failure modes — wrong matches, no matches, stale data?
+- How much new infrastructure would it require?
+- Is it worth building now, or is wiring up existing Wikidata/Wikipedia tags a better first step?
+
+Additionally, please report:
+
+1. Which file/function generates the detail page summary, Quick Facts, History, and Time Travel sections.
+2. What fields are currently passed into detail page generation for an OSM-anchored place.
+3. Whether the detail generator currently receives trustLevel, raw OSM tags, or any enrichment data beyond name/category/coordinates.
+4. For Olivet specifically — what the app currently knows from OSM, why the Quick Facts are technically true but not useful, and what would be needed to make the detail page genuinely interesting.
+
+Constraints:
+
+- Do not loosen anti-hallucination rules.
+- Do not allow the LLM to invent historical facts from OSM-only data.
+- Do not change Walk candidate sourcing, Explore Mode, or /investigate.
+- Do not implement anything until I approve a specific plan.
+- If your answer to Question 1 reveals that existing Wikidata/Wikipedia tags are not being used, propose that fix first and separately before any broader enrichment work.
+
+Output requested:
+A clear recommendation for the smallest next step, with exact files involved and whether it requires a redeploy to test.
