@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { setOsmHints, type OsmTrustLevel } from "@/lib/osmHintsCache";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -78,6 +79,9 @@ interface PlaceCardProps {
     communityRating?: CommunityRating;
     photoUrl?: string;
     note?: string;
+    osmId?: string;
+    trustLevel?: string;
+    osmTags?: Record<string, string>;
   };
   index: number;
   expanded?: boolean;
@@ -247,6 +251,12 @@ export const PlaceCard = React.memo(function PlaceCard({
   };
 
   const navigateToDetail = () => {
+    if (place.osmId && place.trustLevel) {
+      setOsmHints(place.osmId, {
+        trustLevel: place.trustLevel as OsmTrustLevel,
+        osmTags: (place.osmTags as Record<string, string>) ?? {},
+      });
+    }
     router.push({
       pathname: "/place-detail",
       params: {
@@ -260,6 +270,7 @@ export const PlaceCard = React.memo(function PlaceCard({
         facts: JSON.stringify(place.facts),
         address: place.address || "",
         photoUrl: place.photoUrl || "",
+        osmId: place.osmId || "",
       },
     });
   };
