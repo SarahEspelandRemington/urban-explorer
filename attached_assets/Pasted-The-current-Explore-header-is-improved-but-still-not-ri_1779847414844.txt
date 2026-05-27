@@ -1,0 +1,70 @@
+The current Explore header is improved, but still not right.
+
+Problem:
+The header now shows the rounded icon plus a large live-text sans-serif “streetlit.” This is too heavy for the Explore/home header and does not reflect the serif Streetlit wordmark/brand identity we designed.
+
+The header should feel editorial and elegant, not like a utility app logo.
+
+Please revise narrowly.
+
+Goal:
+In the Explore/home header, use ONLY a compact serif “streetlit” wordmark.
+
+No icon.
+No tagline.
+No “WALK CURIOUS.”
+No vertical lockup.
+No splash asset.
+No rounded icon.
+
+Implementation requirement:
+For StreetlitLogo variant="header", render live text only:
+
+streetlit
+
+Style direction:
+- serif if available in the app fonts
+- closer to the designed wordmark than the current bold sans-serif
+- “street” in warm cream / foreground
+- “lit” in amber / primary
+- all lowercase
+- no subtitle
+- no decorative line
+- no image asset for the wordmark
+
+Suggested sizing:
+- font size around 34–38 px
+- not bold sans-serif
+- weight should feel elegant, not heavy
+- align naturally with the header controls
+- preserve the line “Small stories hidden in ordinary places.” beneath it
+
+Important:
+If the app already has a serif font available, use it.
+If no serif font is available, inspect available fonts and choose the closest elegant option. Do not add a new font dependency in this pass.
+
+Keep the existing icon-based variants for login/splash/icon usage. The icon is okay there. It is just too much for the Explore header.
+
+Do not change:
+- app.config.js
+- splash/native config
+- login screen logo
+- navigation
+- discovery logic
+- map behavior
+- Walk Mode
+- backend
+- GitHub sync
+
+Acceptance criteria:
+- Explore header shows a serif/text-only “streetlit”
+- no icon appears in the Explore header logo
+- no tagline appears in the Explore header logo
+- “lit” remains amber
+- the header feels lighter and more editorial
+- typecheck, lint, format, and tests pass
+
+Final summary:
+- exact files changed
+- font used for the header wordmark
+- confirm the icon is no longer used in the Explore header

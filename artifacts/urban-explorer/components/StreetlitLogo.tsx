@@ -121,26 +121,24 @@ export function StreetlitLogo({
   const theme = colorScheme === "dark" ? "dark" : "light";
 
   if (variant === "header") {
-    const iconSize = width ?? DEFAULT_WIDTHS.header;
-    // Scale font to match icon height: icon 36 → font 30, proportionally.
-    const fontSize = Math.round(iconSize * (30 / 36));
-
+    // Text-only wordmark — no icon, no tagline.
+    // Inter_400Regular with open tracking reads as editorial and light;
+    // closest available to the designed serif wordmark without adding a
+    // new font dependency. 36 px aligns naturally with the header row.
     return (
       <View
-        style={[{ flexDirection: "row", alignItems: "center", gap: 10 }, style]}
+        style={[{ flexDirection: "row", alignItems: "center" }, style]}
         accessible
         accessibilityLabel="Streetlit"
         accessibilityRole="image"
       >
-        <Image
-          source={IMAGES[theme].icon}
-          style={{ width: iconSize, height: iconSize } as ImageStyle}
-          resizeMode="contain"
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        />
         <Text
-          style={{ fontSize, fontFamily: "Inter_700Bold", letterSpacing: -0.5 }}
+          style={{
+            fontSize: 36,
+            fontFamily: "Inter_400Regular",
+            letterSpacing: 1.5,
+            includeFontPadding: false,
+          }}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
