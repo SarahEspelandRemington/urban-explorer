@@ -48,6 +48,7 @@ import {
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceCardSkeleton } from "@/components/PlaceCardSkeleton";
 import { PlaceMapView } from "@/components/PlaceMapView";
+import { StreetlitLogo } from "@/components/StreetlitLogo";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
@@ -857,12 +858,7 @@ export default function ExploreScreen() {
               </Pressable>
             </View>
             <View style={styles.headerBottomRow}>
-              <Text
-                style={[styles.title, { color: colors.foreground }]}
-                numberOfLines={1}
-              >
-                {t.explore.discover}
-              </Text>
+              <StreetlitLogo variant="wordmark" width={160} />
 
               <View style={styles.headerActions}>
                 {__DEV__ ? (
