@@ -1,0 +1,107 @@
+Great. Please proceed with the remaining Streetlit logo integration, but keep the scope narrow and visual only.
+
+Current confirmed state:
+- Assets are already extracted and committed in:
+  artifacts/urban-explorer/assets/branding/
+- No StreetlitLogo component exists yet.
+- No screens currently use the logo.
+- app.config.js still points to old icon/splash assets.
+- Working tree is clean.
+
+Please do ONLY the following in this pass:
+
+1. Create a shared StreetlitLogo component
+
+Create:
+artifacts/urban-explorer/components/StreetlitLogo.tsx
+
+The component should:
+- render PNG assets from artifacts/urban-explorer/assets/branding/
+- preserve aspect ratio
+- not tint, recolor, crop, distort, or filter the images
+- choose dark/light logo variants using the current app theme/color scheme
+- accept a simple prop for variant:
+  - "wordmark"
+  - "lockup"
+  - "vertical"
+  - "icon"
+  - "splash"
+- accept optional width/height/style props if appropriate
+
+Use this asset mapping:
+
+WORDMARK:
+- dark mode: streetlit-wordmark-dark.png
+- light mode: streetlit-wordmark-light.png
+
+LOCKUP:
+- dark mode: streetlit-lockup-dark.png
+- light mode: streetlit-lockup-light.png
+
+VERTICAL:
+- dark mode: streetlit-vertical-lockup-dark.png
+- light mode: streetlit-vertical-lockup-light.png
+
+SPLASH:
+- dark mode: streetlit-splash-dark.png
+- light mode: streetlit-splash-light.png
+
+ICON:
+- streetlit-icon-rounded-512.png
+
+2. Use the logo in the login/loading/start screen only
+
+Replace the current placeholder compass/icon branding on:
+artifacts/urban-explorer/app/login.tsx
+
+Use the StreetlitLogo component.
+
+Preferred:
+- use the “splash” or “vertical” variant if space allows
+- otherwise use “lockup”
+- keep the current screen structure mostly intact
+- do not redesign the screen
+
+3. Use the logo lightly on Walk landing only if there is an obvious existing branding/header spot
+
+If there is a clean place on the Walk landing screen to use the wordmark or lockup without disrupting layout, add it.
+
+If it would require layout redesign, skip it and report that you skipped it.
+
+4. Do NOT change these in this pass
+
+Do not change:
+- app.config.js
+- Expo app icon
+- splash config
+- bundle/app name
+- package name
+- notification text
+- i18n locale files
+- Urban Explorer references in system/internal text
+- navigation
+- discovery logic
+- map behavior
+- Walk Mode logic
+- backend/API
+- Git history
+
+This is only:
+- shared logo component
+- visible in-app logo usage in one or two appropriate places
+
+5. After implementation
+
+Run:
+- typecheck
+- lint
+- format
+- tests
+
+Then summarize:
+- exact files changed
+- where StreetlitLogo lives
+- where it is used
+- which asset variants are used
+- whether any old visible placeholder logo remains on login/start/loading
+- confirm app.config.js was not changed

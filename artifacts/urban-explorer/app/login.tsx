@@ -1,4 +1,3 @@
-import { Feather } from "@expo/vector-icons";
 import React from "react";
 import {
   ActivityIndicator,
@@ -13,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { useLoginFlow } from "@/lib/loginFlow";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
+import { StreetlitLogo } from "@/components/StreetlitLogo";
 
 export default function LoginScreen() {
   const { refreshUser, isLoading: isAuthLoading } = useAuth();
@@ -35,11 +35,7 @@ export default function LoginScreen() {
       ]}
     >
       <View style={styles.content}>
-        <View
-          style={[styles.iconWrap, { backgroundColor: colors.primary + "18" }]}
-        >
-          <Feather name="compass" size={40} color={colors.primary} />
-        </View>
+        <StreetlitLogo variant="vertical" width={160} style={styles.logo} />
 
         <Text style={[styles.title, { color: colors.foreground }]}>
           {t.login.title}
@@ -100,12 +96,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     gap: 16,
   },
-  iconWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
+  logo: {
     marginBottom: 8,
   },
   title: {
