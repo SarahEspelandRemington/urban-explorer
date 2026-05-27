@@ -1,0 +1,195 @@
+Please integrate the Streetlit logo asset package into the app.
+
+I will upload/provide this zip file:
+
+streetlit_logo_asset_package.zip
+
+It contains these files:
+
+* streetlit-app-icon-1024.png
+* streetlit-icon-rounded-1024.png
+* streetlit-icon-rounded-512.png
+* streetlit-app-icon-512-preview.png
+* streetlit-logo-source-from-deck.png
+* streetlit-wordmark-dark.png
+* streetlit-wordmark-light.png
+* streetlit-lockup-dark.png
+* streetlit-lockup-light.png
+* streetlit-splash-dark.png
+* streetlit-splash-light.png
+* streetlit-vertical-lockup-dark.png
+* streetlit-vertical-lockup-light.png
+* README.md
+* REPLIT_PROMPT.txt
+
+Please unzip the package and place the assets in the appropriate app asset directory.
+
+Suggested destination:
+artifacts/urban-explorer/assets/branding/
+
+If the project already has a better existing asset convention, use that, but keep the files together in a clearly named branding folder.
+
+Important:
+Do NOT redesign the app.
+Do NOT change navigation, discovery logic, prompts, map behavior, audio behavior, Walk Mode logic, or backend behavior.
+This is a branding asset integration pass only.
+
+Implementation requirements:
+
+1. Create a single reusable StreetlitLogo component
+
+Create one shared component, for example:
+
+components/StreetlitLogo.tsx
+
+This component should be the single source of truth for rendering Streetlit logo assets.
+
+It should support:
+
+* type="wordmark"
+* type="lockup"
+* type="vertical"
+* type="icon"
+* type="splash"
+
+It should automatically choose dark or light assets based on the current app theme.
+
+Use these mappings:
+
+WORDMARK:
+
+* dark mode: streetlit-wordmark-dark.png
+* light mode: streetlit-wordmark-light.png
+
+HORIZONTAL LOCKUP:
+
+* dark mode: streetlit-lockup-dark.png
+* light mode: streetlit-lockup-light.png
+
+VERTICAL LOCKUP:
+
+* dark mode: streetlit-vertical-lockup-dark.png
+* light mode: streetlit-vertical-lockup-light.png
+
+SPLASH:
+
+* dark mode: streetlit-splash-dark.png
+* light mode: streetlit-splash-light.png
+
+ICON:
+
+* streetlit-icon-rounded-512.png for in-app icon use
+* streetlit-app-icon-1024.png for app icon/native config use if appropriate
+
+Do not tint these images in code.
+Do not recolor them.
+Do not apply filters.
+Render the PNG assets as provided.
+
+2. Use the logo with restraint
+
+Do not put the full logo everywhere.
+
+Use the assets only where branding is appropriate, such as:
+
+* loading/startup screen
+* app splash/loading treatment if currently present
+* Explore/home header only if it improves the layout
+* Walk landing screen only if appropriate
+* About/settings area if one exists
+* app icon/native config if currently configured through Expo
+
+The app should feel branded, not cluttered.
+
+3. Recommended placement rules
+
+Use streetlit-splash-dark.png / streetlit-splash-light.png:
+
+* on loading/startup screens where there is enough space
+
+Use streetlit-lockup-dark.png / streetlit-lockup-light.png:
+
+* where a horizontal brand lockup is appropriate
+
+Use streetlit-vertical-lockup-dark.png / streetlit-vertical-lockup-light.png:
+
+* only on larger/introductory surfaces where vertical spacing allows
+
+Use streetlit-wordmark-dark.png / streetlit-wordmark-light.png:
+
+* for compact branding moments where the icon is not needed
+
+Use streetlit-icon-rounded-512.png:
+
+* for small in-app icon/avatar/brand mark use only
+
+Use streetlit-app-icon-1024.png:
+
+* only for Expo/app icon config if that config is already present and straightforward to update
+
+4. Theme behavior
+
+Verify:
+
+* dark mode uses dark-mode assets
+* light mode uses light-mode assets
+* assets remain legible on their intended backgrounds
+* no accidental white box or dark box appears around transparent assets
+* no stretching or distortion
+* aspect ratios are preserved
+
+5. Replace old branding references carefully
+
+Search for existing references to:
+
+* Urban Explorer text branding
+* old placeholder logo assets
+* old app icon references
+* old splash/logo references
+
+Replace only the appropriate brand/image references.
+
+Do not rename the entire app package, bundle ID, repository, routes, or internal namespaces unless explicitly required. This is visual branding, not a technical rename.
+
+6. Expo app icon
+
+Inspect app.config.js / app.json / Expo config.
+
+If the app icon is currently configurable from an asset path, update it to:
+
+artifacts/urban-explorer/assets/branding/streetlit-app-icon-1024.png
+
+Only do this if it is safe and does not require broader native changes.
+
+Do not change splash configuration unless it is already image-based and straightforward. If splash config is ambiguous, report back instead of guessing.
+
+7. Clean implementation
+
+Please:
+
+* keep asset imports centralized where possible
+* avoid hardcoding many scattered image paths
+* use the shared StreetlitLogo component wherever practical
+* keep the old assets only if still needed; otherwise note which old assets appear unused
+* do not delete old assets unless you are certain they are obsolete
+
+8. Validation
+
+Run:
+
+* typecheck
+* lint
+* format
+* tests
+
+9. Final summary
+
+After implementation, please summarize:
+
+* where the assets were placed
+* exact files changed
+* where StreetlitLogo lives
+* where the logo is now used
+* whether app icon config was updated
+* whether splash/loading config was updated
+* whether any old Urban Explorer or placeholder branding references remain

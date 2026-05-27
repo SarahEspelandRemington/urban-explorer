@@ -1,0 +1,28 @@
+Please wire the supplied Streetlit logo assets into the app.
+
+Scope: branding/assets implementation only. Do not redesign flows, navigation, discovery logic, map behavior, prompts, audio, or backend behavior.
+
+Assets supplied:
+- streetlit-app-icon-1024.png
+- streetlit-icon-rounded-1024.png
+- streetlit-icon-rounded-512.png
+- streetlit-lockup-dark.png
+- streetlit-lockup-light.png
+- streetlit-wordmark-dark.png
+- streetlit-wordmark-light.png
+- streetlit-splash-dark.png
+- streetlit-splash-light.png
+- streetlit-vertical-lockup-dark.png
+- streetlit-vertical-lockup-light.png
+
+Requirements:
+1. Add these assets under the app's assets/images or appropriate branding asset folder.
+2. Create one shared reusable component/helper, e.g. StreetlitLogo, that chooses the correct logo asset by theme.
+3. Do not tint or recolor the logo in code. Render the provided PNGs as-is.
+4. Use dark variants on dark UI surfaces and light variants on light UI surfaces.
+5. Use the icon-only asset in tight spaces; use the wordmark/lockup only where there is enough room.
+6. Update old/placeholder logo references where appropriate, especially loading/splash/home branding surfaces.
+7. If Expo app icon config is already centralized, update it to streetlit-app-icon-1024.png only if safe.
+8. Keep logo usage restrained. The app should feel branded, not cluttered.
+9. Run typecheck, lint, format, and tests.
+10. Summarize exact files changed and remaining old branding references, if any.
