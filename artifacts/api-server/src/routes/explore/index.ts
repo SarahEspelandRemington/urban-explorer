@@ -44,6 +44,11 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
 import { sanitizeDisplayTags } from "../../lib/sanitizeDisplayTags";
+import {
+  type WikipediaSummary,
+  parseWikipediaOsmTag,
+  buildWikiPromptBlock,
+} from "../../lib/wikipediaEnrichment";
 
 const router = Router();
 
@@ -1514,6 +1519,115 @@ const photoCache = new Map<string, { url: string | null; ts: number }>();
 const PHOTO_CACHE_HIT_TTL = 60 * 60 * 1000; // 1 hour for successful lookups
 const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404 — retry sooner)
 
+// ---------------------------------------------------------------------------
+// Wikipedia summary cache — in-memory, keyed wiki:v1:{lang}:{encoded_title}
+// ---------------------------------------------------------------------------
+
+/** 4-hour TTL applied to both successful fetches and permanent failures
+ *  (404, empty extract, malformed JSON) so a bad OSM tag doesn't hammer
+ *  Wikipedia on every detail request.  Transient errors (timeout, abort)
+ *  are NOT cached — they may succeed on the next attempt. */
+const WIKIPEDIA_SUMMARY_CACHE_TTL_MS = 4 * 60 * 60 * 1000;
+
+const wikipediaSummaryCache = new Map<
+  string,
+  { data: WikipediaSummary | null; ts: number }
+>();
+
+/**
+ * Fetch a Wikipedia article summary via the REST v1 summary endpoint.
+ *
+ * Cache key: wiki:v1:{lang}:{encoded_title}
+ *
+ * Only called when `osmTags.wikipedia` is well-formed — never guesses from
+ * place names.  Always falls back gracefully: any failure returns null so
+ * the detail endpoint continues with Phase-A (OSM-only) behaviour.
+ */
+async function fetchWikipediaSummary(
+  lang: string,
+  title: string,
+  signal?: AbortSignal,
+): Promise<WikipediaSummary | null> {
+  const encodedTitle = encodeURIComponent(title);
+  const cacheKey = `wiki:v1:${lang}:${encodedTitle}`;
+
+  const cached = wikipediaSummaryCache.get(cacheKey);
+  if (
+    cached !== undefined &&
+    Date.now() - cached.ts < WIKIPEDIA_SUMMARY_CACHE_TTL_MS
+  ) {
+    return cached.data;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+  const fetchSignal = signal
+    ? AbortSignal.any([controller.signal, signal])
+    : controller.signal;
+
+  try {
+    const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodedTitle}`;
+    const resp = await fetch(url, {
+      signal: fetchSignal,
+      headers: {
+        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+        Accept: "application/json",
+      },
+    });
+    clearTimeout(timer);
+
+    if (!resp.ok) {
+      // Permanent failure (404, 5xx) — cache null to avoid hammering Wikipedia.
+      wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
+      logger.info(
+        { lang, title, status: resp.status },
+        "[wikipedia] summary fetch non-ok — caching null",
+      );
+      return null;
+    }
+
+    let raw: {
+      title?: string;
+      extract?: string;
+      description?: string;
+      thumbnail?: { source?: string };
+      content_urls?: { desktop?: { page?: string } };
+    };
+    try {
+      raw = (await resp.json()) as typeof raw;
+    } catch {
+      // Malformed JSON — cache null.
+      wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
+      return null;
+    }
+
+    if (!raw.extract || raw.extract.trim().length === 0) {
+      // No useful text — cache null.
+      wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
+      return null;
+    }
+
+    const summary: WikipediaSummary = {
+      title: raw.title ?? title,
+      extract: raw.extract.trim(),
+      lang,
+      ...(raw.description ? { description: raw.description } : {}),
+      ...(raw.thumbnail?.source ? { thumbnailUrl: raw.thumbnail.source } : {}),
+      ...(raw.content_urls?.desktop?.page
+        ? { articleUrl: raw.content_urls.desktop.page }
+        : {}),
+    };
+
+    wikipediaSummaryCache.set(cacheKey, { data: summary, ts: Date.now() });
+    logger.info({ lang, title }, "[wikipedia] fetched summary");
+    return summary;
+  } catch {
+    clearTimeout(timer);
+    // Timeout / network error — do NOT cache null (transient).
+    return null;
+  }
+}
+
 /**
  * Attempt to find a representative photo for a place name via the Wikipedia
  * REST summary API. Returns the thumbnail URL or null when none is available.
@@ -1530,8 +1644,15 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
 async function fetchWikipediaPhoto(
   placeName: string,
   externalSignal?: AbortSignal,
+  articleTitle?: string,
+  articleLang?: string,
 ): Promise<string | null> {
-  const cacheKey = placeName.toLowerCase().trim();
+  // When an explicit OSM wikipedia article title is provided, use a separate
+  // cache key so a stale/wrong placeName-guessed photo cannot bleed through.
+  const cacheKey =
+    articleTitle && articleLang
+      ? `wiki:photo:v1:${articleLang}:${articleTitle.toLowerCase().replace(/ /g, "_")}`
+      : placeName.toLowerCase().trim();
 
   // --- L1: in-process cache ---
   const cached = photoCache.get(cacheKey);
@@ -1578,8 +1699,10 @@ async function fetchWikipediaPhoto(
 
   let photoUrl: string | null = null;
   try {
-    const encoded = encodeURIComponent(placeName.replace(/ /g, "_"));
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
+    const fetchTitle = articleTitle ?? placeName;
+    const fetchLang = articleLang ?? "en";
+    const encoded = encodeURIComponent(fetchTitle.replace(/ /g, "_"));
+    const url = `https://${fetchLang}.wikipedia.org/api/rest_v1/page/summary/${encoded}`;
     const resp = await fetch(url, {
       signal: fetchSignal,
       headers: {
@@ -3107,11 +3230,16 @@ export function buildDetailUserTurn(
   longitude: number,
   trustLevel?: string,
   osmTags?: Record<string, string>,
+  wikipediaSummary?: WikipediaSummary,
 ): string {
   const base = `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located in this area of ${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
 
+  const wikiBlock = wikipediaSummary
+    ? `\n\n${buildWikiPromptBlock(wikipediaSummary)}`
+    : "";
+
   if (!trustLevel || !osmTags || Object.keys(osmTags).length === 0) {
-    return base;
+    return wikiBlock ? `${base}${wikiBlock}` : base;
   }
 
   const tagLines = Object.entries(osmTags)
@@ -3119,18 +3247,29 @@ export function buildDetailUserTurn(
     .join("\n");
 
   if (trustLevel === "osm_enriched") {
+    const osmSection = `VERIFIED SOURCE TAGS (from OpenStreetMap — use as factual anchors for documented history):\n${tagLines}`;
+    if (wikiBlock) {
+      // Wikipedia content was actually fetched — drop the source-pointer warning
+      // (which exists to prevent the LLM from *claiming* it fetched content it
+      // didn't). Here it genuinely did, so the warning would be misleading.
+      return `${base}\n\n${osmSection}${wikiBlock}`;
+    }
     const hasPointer = osmTags.wikidata || osmTags.wikipedia;
     const pointerNote = hasPointer
       ? `\n\nSOURCE POINTER NOTE: The wikidata and/or wikipedia values above are external record identifiers — they confirm a documented source exists for this place. Do NOT claim to have read the Wikipedia article or fetched Wikidata content. You may note that a Wikipedia or Wikidata record exists if directly relevant, but do not describe content from those sources as if you retrieved it.`
       : "";
-    return `${base}\n\nVERIFIED SOURCE TAGS (from OpenStreetMap — use as factual anchors for documented history):\n${tagLines}${pointerNote}`;
+    return `${base}\n\n${osmSection}${pointerNote}`;
   }
 
   if (trustLevel === "osm_standard") {
-    return `${base}\n\nVERIFIED TAG DATA (from OpenStreetMap — use only these confirmed facts):\n${tagLines}\n\nDo NOT invent founding dates, architectural styles, historical roles, or community claims beyond what these tags explicitly state. If start_date is absent from this block, omit any date or founding-year claim entirely.`;
+    return (
+      `${base}\n\nVERIFIED TAG DATA (from OpenStreetMap — use only these confirmed facts):\n${tagLines}\n\n` +
+      `Do NOT invent founding dates, architectural styles, historical roles, or community claims beyond what these tags explicitly state. If start_date is absent from this block, omit any date or founding-year claim entirely.` +
+      wikiBlock
+    );
   }
 
-  return base;
+  return `${base}${wikiBlock}`;
 }
 
 router.post("/explore/place-detail", async (req, res) => {
@@ -3147,7 +3286,8 @@ router.post("/explore/place-detail", async (req, res) => {
   const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
   res.on("close", () => detailController.abort());
 
-  const detailCacheKey = `detail:v8:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  // detail:v9: invalidates entries cached before Wikipedia summary enrichment was added.
+  const detailCacheKey = `detail:v9:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -3176,6 +3316,22 @@ router.post("/explore/place-detail", async (req, res) => {
   // concurrent miss for the same key waits on this one call instead of
   // making a duplicate request.
   const buildDetail = async (): Promise<any> => {
+    // Fetch Wikipedia summary before the LLM call so it can be injected into
+    // the prompt. Only follows an explicit OSM wikipedia tag — never guesses
+    // an article title from placeName.
+    let wikiSummary: WikipediaSummary | undefined;
+    if (osmTags?.wikipedia) {
+      const parsed = parseWikipediaOsmTag(osmTags.wikipedia);
+      if (parsed) {
+        const result = await fetchWikipediaSummary(
+          parsed.lang,
+          parsed.title,
+          detailController.signal,
+        );
+        wikiSummary = result ?? undefined;
+      }
+    }
+
     const response = await openai.chat.completions.create(
       {
         model: "gpt-4.1-mini",
@@ -3225,6 +3381,7 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
               longitude,
               trustLevel,
               osmTags,
+              wikiSummary,
             ),
           },
         ],
@@ -3305,7 +3462,12 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
       });
     }
 
-    const photoUrl = await fetchWikipediaPhoto(placeName);
+    const photoUrl = await fetchWikipediaPhoto(
+      placeName,
+      undefined,
+      wikiSummary?.title,
+      wikiSummary?.lang,
+    );
     if (photoUrl) data.photoUrl = photoUrl;
     return data;
   };
