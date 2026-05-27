@@ -1,0 +1,37 @@
+This Phase B plan looks good. Approved to implement Phase B with the constraints below.
+Approved scope:
+* Follow only explicit OSM wikipedia tags already present in osmTags.
+* Parse values like en:Bergdoll_Mansion.
+* Fetch the Wikipedia REST summary for that exact language/article title.
+* Inject the fetched Wikipedia summary into buildDetailUserTurn() as verified source context.
+* Use the fetched summary only as grounding for detail copy.
+* Fall back to Phase A behavior if the tag is malformed, the fetch fails, the article is missing, the response is malformed, or the extract is absent.
+* Bump the detail cache key from detail:v8 to detail:v9.
+* Also confirm that the Wikipedia summary cache (wiki:v1:...) has a separate TTL from the detail cache, and that a failed/null Wikipedia fetch is cached as null to prevent repeated failed requests within the TTL window.
+* Add the proposed tests.
+Clarifications:
+* Do not use Wikipedia name search.
+* Do not infer or guess article titles from placeName.
+* Do not fetch full article text.
+* Do not add Wikidata lookup in this phase.
+* Use a Wikipedia summary cache keyed by the exact language/article slug, e.g. wiki:v1:{lang}:{encoded_title}, not by placeName or osmId.
+* If updating photo behavior, prefer the explicit OSM Wikipedia article title over a placeName guess. Make sure the photo cache cannot accidentally return a stale/wrong placeName-guessed image when an explicit Wikipedia tag is available.
+* Do not expose Wikipedia slugs, Wikidata IDs, URLs, or raw OSM metadata as user-facing chips/tags.
+* Do not change Walk candidate sourcing.
+* Do not change Explore Mode.
+* Do not change /investigate.
+* Do not redesign the detail page UI.
+* Do not change route architecture or osmHintsCache unless absolutely necessary.
+Please run:
+* format
+* lint
+* typecheck
+* relevant API tests
+* prompt-manifest update if needed
+Then report:
+* exact files changed
+* final detail cache key
+* tests added
+* whether GitHub was updated
+* whether Publish/redeploy is required before phone testing
+* how to verify Bergdoll-Kemble Mansion in production after Publish
