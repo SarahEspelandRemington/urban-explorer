@@ -858,7 +858,7 @@ export default function ExploreScreen() {
               </Pressable>
             </View>
             <View style={styles.headerBottomRow}>
-              <StreetlitLogo variant="wordmark" width={160} />
+              <StreetlitLogo variant="header" />
 
               <View style={styles.headerActions}>
                 {__DEV__ ? (

@@ -1,0 +1,70 @@
+The current Explore header logo treatment is not working.
+
+Problem:
+The logo now appears as a tiny wordmark/tagline treatment in the Explore header. It is too small, too delicate, and does not read as an actual app logo. It also competes with the line “Small stories hidden in ordinary places.”
+
+Please fix this narrowly.
+
+Goal:
+Use a clear, compact Streetlit header brand mark in Explore/home.
+
+Requirements:
+
+1. Do NOT use the vertical lockup or any version with the “WALK CURIOUS” tagline in the Explore header.
+
+2. Create a compact Explore header logo treatment using:
+- streetlit-icon-rounded-512.png
+- streetlit-wordmark-dark.png / streetlit-wordmark-light.png
+
+The header mark should visually read as:
+[icon] streetlit
+
+No tagline.
+
+3. Add this as a supported variant in StreetlitLogo if needed.
+
+Preferred:
+- add variant="header"
+- header variant renders the rounded icon plus wordmark side by side
+- theme-aware wordmark asset selection
+- icon remains the same rounded icon asset
+- no tinting
+- no recoloring
+- preserve aspect ratios
+
+4. Use this new header logo in app/(tabs)/index.tsx Explore/home header.
+
+5. Sizing guidance:
+- icon: approximately 34–40 px
+- wordmark: approximately 105–135 px wide
+- horizontal gap: 8–10 px
+- total lockup should feel like a real app header logo, not a tiny badge
+- align visually with the top row controls
+- keep “Small stories hidden in ordinary places.” beneath the logo/header row
+
+6. If the header becomes too crowded:
+- keep the logo left-aligned
+- preserve the existing right-side controls
+- reduce only the logo width slightly
+- do NOT remove the soul line
+- do NOT redesign the whole header
+
+7. Do not change:
+- app.config.js
+- Expo splash/icon config
+- login screen logo
+- navigation
+- discovery logic
+- map behavior
+- Walk Mode
+- backend
+- GitHub sync
+
+8. After implementation:
+Run typecheck, lint, format, and tests.
+
+Then summarize:
+- exact files changed
+- whether StreetlitLogo gained a header variant
+- where the Explore header now uses it
+- confirm the vertical/tagline logo is no longer used in Explore header
