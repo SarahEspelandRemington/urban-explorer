@@ -1,0 +1,72 @@
+The Explore header logo is still not correct.
+
+Current problem:
+The header still shows the “WALK CURIOUS” tagline under the Streetlit wordmark. This is not acceptable in the Explore/home header.
+
+The Explore header should show a compact app logo only:
+[rounded icon] streetlit
+
+No tagline.
+No “WALK CURIOUS.”
+No vertical lockup.
+No splash asset.
+No poster-style logo.
+
+Please fix narrowly.
+
+Diagnosis to confirm first:
+1. Inspect the actual image being used by StreetlitLogo variant="header".
+2. Confirm whether streetlit-wordmark-dark.png / streetlit-wordmark-light.png include the “WALK CURIOUS” tagline baked into the image.
+3. If they do, do NOT use those image assets for the Explore header.
+
+Implementation requirement:
+For StreetlitLogo variant="header", render:
+- streetlit-icon-rounded-512.png as the icon
+- the word “streetlit” as live text in React Native, not as an image asset
+
+Header text styling:
+- display text: streetlit
+- all lowercase
+- “street” in warm cream / foreground
+- “lit” in amber / primary
+- no subtitle
+- no tagline
+- no decorative line
+- no WALK CURIOUS text
+
+Suggested sizing:
+- icon: 36–40 px
+- text font size: approx. 28–32 px
+- horizontal gap: 10–12 px
+- vertically center icon and text
+- total lockup should align naturally with the header controls
+
+Important:
+Keep the existing StreetlitLogo variants for login/splash/vertical use. The tagline is okay on login or intro-style surfaces. It is NOT okay in the Explore header.
+
+Update only:
+- components/StreetlitLogo.tsx
+- app/(tabs)/index.tsx only if needed
+
+Do not change:
+- app.config.js
+- splash/native config
+- login screen logo
+- navigation
+- discovery logic
+- map behavior
+- Walk Mode
+- backend
+- GitHub sync
+
+Acceptance criteria:
+- Explore header shows only icon + “streetlit”
+- Explore header does NOT show “WALK CURIOUS”
+- Explore header does NOT use vertical or splash logo assets
+- “Small stories hidden in ordinary places.” remains below the header
+- typecheck, lint, format, and tests pass
+
+Final summary:
+- confirm whether the wordmark asset had the tagline baked in
+- confirm how variant="header" now renders
+- list exact files changed

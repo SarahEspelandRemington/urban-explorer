@@ -10,12 +10,15 @@ import icon from "../assets/branding/streetlit-icon-rounded-512.png";
 import React from "react";
 import {
   Image,
+  Text,
   View,
   type ImageStyle,
   type StyleProp,
   type ViewStyle,
   useColorScheme,
 } from "react-native";
+
+import { useColors } from "@/hooks/useColors";
 
 export type StreetlitLogoVariant =
   | "wordmark"
@@ -31,7 +34,7 @@ interface StreetlitLogoProps {
    * For single-image variants (wordmark, lockup, vertical, splash, icon):
    *   rendered width in pixels; height is derived via `aspectRatio`.
    * For the `header` variant:
-   *   controls the icon square size (default 36 px); wordmark scales
+   *   controls the icon square size (default 36 px); text size scales
    *   proportionally beside it.
    * Defaults per variant:
    *   wordmark → 200, lockup → 220, vertical → 160, splash → 280,
@@ -65,12 +68,12 @@ const DEFAULT_WIDTHS: Record<StreetlitLogoVariant, number> = {
   vertical: 160,
   splash: 280,
   icon: 48,
-  header: 36, // icon side; wordmark width derived from this
+  header: 36,
 };
 
 /**
  * Estimated width-to-height aspect ratios per single-image variant.
- * Not used for `header` (which composes two images into a row View).
+ * Not used for `header` (which composes an image and live text).
  *
  *   wordmark  — wide shallow text strip           (~4.5 : 1)
  *   lockup    — horizontal icon + wordmark        (~3.5 : 1)
@@ -84,32 +87,28 @@ const ASPECT_RATIOS: Record<StreetlitLogoVariant, number> = {
   vertical: 0.75,
   splash: 1,
   icon: 1,
-  header: 1, // unused; header renders its own layout
+  header: 1,
 };
-
-/**
- * Gap between the icon and the wordmark in the `header` variant (px).
- * Wordmark width relative to the icon size — at the default 36 px icon the
- * wordmark renders at 36 × 3.33 ≈ 120 px, totalling ~164 px.
- */
-const HEADER_GAP = 8;
-const HEADER_WORDMARK_RATIO = 10 / 3; // wordmark_width = iconSize × ratio ≈ 3.33
 
 /**
  * Renders the Streetlit logo in the appropriate variant and colour scheme.
  * Automatically selects dark or light assets; never tints or recolours.
  *
  * Variants:
- *   header   — [rounded-icon]  [wordmark]  side by side; use in screen headers
- *   wordmark — text-only wordmark strip
+ *   header   — compact app mark for screen headers:
+ *              [rounded-icon] + live text "street" (foreground) + "lit" (primary).
+ *              Uses live text, not the wordmark image asset, so the tagline
+ *              baked into the wordmark PNG never appears here.
+ *   wordmark — wordmark/tagline image strip (includes tagline — use on
+ *              login/splash/intro surfaces only, not in tight headers)
  *   lockup   — horizontal icon + wordmark (pre-composed asset)
  *   vertical — icon stacked above wordmark (pre-composed asset)
  *   splash   — full-bleed splash composition
  *   icon     — rounded-square badge
  *
  * Usage:
- *   <StreetlitLogo variant="header" />
- *   <StreetlitLogo variant="vertical" />
+ *   <StreetlitLogo variant="header" />          // Explore/home header
+ *   <StreetlitLogo variant="vertical" />        // login screen
  *   <StreetlitLogo variant="wordmark" width={160} />
  */
 export function StreetlitLogo({
@@ -118,19 +117,17 @@ export function StreetlitLogo({
   style,
 }: StreetlitLogoProps) {
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-  const theme = isDark ? "dark" : "light";
+  const colors = useColors();
+  const theme = colorScheme === "dark" ? "dark" : "light";
 
   if (variant === "header") {
     const iconSize = width ?? DEFAULT_WIDTHS.header;
-    const wordmarkWidth = Math.round(iconSize * HEADER_WORDMARK_RATIO);
+    // Scale font to match icon height: icon 36 → font 30, proportionally.
+    const fontSize = Math.round(iconSize * (30 / 36));
 
     return (
       <View
-        style={[
-          { flexDirection: "row", alignItems: "center", gap: HEADER_GAP },
-          style,
-        ]}
+        style={[{ flexDirection: "row", alignItems: "center", gap: 10 }, style]}
         accessible
         accessibilityLabel="Streetlit"
         accessibilityRole="image"
@@ -142,13 +139,14 @@ export function StreetlitLogo({
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         />
-        <Image
-          source={IMAGES[theme].wordmark}
-          style={{ width: wordmarkWidth, height: iconSize } as ImageStyle}
-          resizeMode="contain"
+        <Text
+          style={{ fontSize, fontFamily: "Inter_700Bold", letterSpacing: -0.5 }}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
-        />
+        >
+          <Text style={{ color: colors.foreground }}>{"street"}</Text>
+          <Text style={{ color: colors.primary }}>{"lit"}</Text>
+        </Text>
       </View>
     );
   }
