@@ -76,6 +76,7 @@ export type NarrationFallbackReason =
   | "playback_status_error"
   | "playback_watchdog"
   | "text_speak_error"
+  | "text_speak_watchdog"
   | "text_web_error"
   | "text_empty";
 

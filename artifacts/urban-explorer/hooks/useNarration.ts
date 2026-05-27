@@ -113,6 +113,12 @@ export function useNarration() {
   const AUDIO_WATCHDOG_MS = 60_000;
   const audioWatchdogFireRef = useRef<(() => void) | null>(null);
 
+  // Watchdog for the native Speech.speak fallback path. Unlike the expo-audio
+  // path, expo-speech does not guarantee that onDone / onError / onStopped
+  // fire — on certain iOS versions and device states they can be silently
+  // dropped, leaving speakingRef=true forever and deadlocking the queue.
+  const speechWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const armAudioWatchdog = useCallback((ms: number, fire: () => void) => {
     if (audioWatchdogRef.current) clearTimeout(audioWatchdogRef.current);
     audioWatchdogStartRef.current = Date.now();
@@ -150,6 +156,13 @@ export function useNarration() {
     }
     audioWatchdogFireRef.current = null;
     audioWatchdogRemainingRef.current = 0;
+  }, []);
+
+  const clearSpeechWatchdog = useCallback(() => {
+    if (speechWatchdogRef.current) {
+      clearTimeout(speechWatchdogRef.current);
+      speechWatchdogRef.current = null;
+    }
   }, []);
 
   // Tear down whatever is currently playing (audio player or speech engine)
@@ -411,11 +424,34 @@ export function useNarration() {
         console.log(
           `[Speech.speak] starting "${item.placeName}" (${fallbackText.length} chars, gen=${myGen})`,
         );
+
+      // Proportional watchdog: expo-speech does not guarantee that onDone /
+      // onError / onStopped fire on all iOS versions and device states. If
+      // none of them arrive before the deadline, we force the same
+      // finish/unblock path so speakingRef does not stay true forever.
+      // Budget: ~80 ms per character at rate 0.9, plus 8 s headroom for TTS
+      // engine startup and slow devices. The generation check prevents
+      // double-calling onFinish() if the watchdog fires and a Speech
+      // callback still arrives later.
+      const speechWatchdogMs = fallbackText.length * 80 + 8_000;
+      speechWatchdogRef.current = setTimeout(() => {
+        if (speechGenRef.current !== myGen) return;
+        if (__DEV__)
+          console.log(
+            `[Speech.speak] watchdog fired — forcing finish gen=${myGen}`,
+          );
+        try {
+          trackNarrationFallback("text_speak_watchdog");
+        } catch {}
+        onFinish();
+      }, speechWatchdogMs);
+
       Speech.speak(fallbackText, {
         language: "en-US",
         rate: 0.9,
         pitch: 1.05,
         onDone: () => {
+          clearSpeechWatchdog();
           if (__DEV__) console.log(`[Speech.speak] onDone gen=${myGen}`);
           onFinish();
         },
@@ -428,6 +464,7 @@ export function useNarration() {
           // Guard with the generation check so a stop() for a previous utterance
           // doesn't corrupt the new one. Do NOT call processQueue here —
           // stop() and skip() handle that after bumping the generation counter.
+          clearSpeechWatchdog();
           if (__DEV__)
             console.log(
               `[Speech.speak] onStopped gen=${myGen} current=${speechGenRef.current}`,
@@ -439,6 +476,7 @@ export function useNarration() {
           setCurrentPlaceId(null);
         },
         onError: (err) => {
+          clearSpeechWatchdog();
           if (__DEV__) console.log(`[Speech.speak] onError gen=${myGen}:`, err);
           if (__DEV__) console.warn("Speech error:", err);
           // Surface the silent skip to the audio-fallback dashboard. An
@@ -459,7 +497,7 @@ export function useNarration() {
         trackNarrationPlayed("text");
       } catch {}
     }
-  }, [teardownActive, armAudioWatchdog]);
+  }, [teardownActive, armAudioWatchdog, clearSpeechWatchdog]);
 
   // Public API: play a text narration (used by web, and as a fallback on
   // native when the audio endpoint failed).
@@ -497,6 +535,7 @@ export function useNarration() {
     }
     queueRef.current = [];
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    clearSpeechWatchdog();
     teardownActive();
     if (Platform.OS === "web") {
       window.speechSynthesis.cancel();
@@ -509,7 +548,7 @@ export function useNarration() {
     setIsPaused(false);
     setCurrentPlace(null);
     setCurrentPlaceId(null);
-  }, [teardownActive]);
+  }, [teardownActive, clearSpeechWatchdog]);
 
   const pause = useCallback(() => {
     if (currentPlayerRef.current) {
@@ -588,6 +627,7 @@ export function useNarration() {
   teardownAllRef.current = () => {
     speechGenRef.current++;
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    clearSpeechWatchdog();
     for (const queued of queueRef.current) {
       if (queued.cleanup) {
         try {
@@ -619,6 +659,7 @@ export function useNarration() {
     // playback is ignored and doesn't race with the next processQueue() call.
     speechGenRef.current++;
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    clearSpeechWatchdog();
     teardownActive();
     if (Platform.OS === "web") {
       window.speechSynthesis.cancel();
@@ -631,7 +672,7 @@ export function useNarration() {
     setCurrentPlace(null);
     setCurrentPlaceId(null);
     setTimeout(() => processQueue(), 100);
-  }, [processQueue, teardownActive]);
+  }, [processQueue, teardownActive, clearSpeechWatchdog]);
 
   return {
     enqueue,
