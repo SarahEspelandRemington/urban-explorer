@@ -1,0 +1,69 @@
+The new bottom nav icons are not appearing in Expo Go.
+
+Current screenshot still shows the old icons:
+- Explore: compass
+- Walk: walking person
+- Saved: bookmark
+
+So the implementation may not be reaching the rendered tab bar.
+
+Please diagnose before editing.
+
+Known recent implementation:
+- New component: artifacts/urban-explorer/components/StreetlitTabIcon.tsx
+- New assets: artifacts/urban-explorer/assets/icons/streetlit-tab-*.svg
+- Updated file: artifacts/urban-explorer/app/(tabs)/_layout.tsx
+- New dependency: react-native-svg ~15.11.2
+- Local commit: cb4b5ec87f18bc7312a9ebba8d50e807e5c0d115
+
+Please check:
+
+1. Is Expo Go rendering ClassicTabLayout or NativeTabLayout right now?
+   - Add a temporary DEV-only console.log if needed:
+     "TAB_LAYOUT_RENDERED: ClassicTabLayout"
+     "TAB_LAYOUT_RENDERED: NativeTabLayout"
+   - Do not leave noisy logs in final code unless they are DEV-only.
+
+2. In the actually rendered branch, what icon components are being used for:
+   - Explore
+   - Walk
+   - Saved
+
+3. Confirm whether the new StreetlitTabIcon components are imported and referenced in the rendered branch.
+
+4. Confirm whether Expo Go picked up react-native-svg successfully:
+   - no Metro/module resolution errors
+   - no runtime errors hidden in logs
+
+5. Confirm whether Metro is serving latest local code:
+   - latest commit should be cb4b5ec87f18bc7312a9ebba8d50e807e5c0d115 or later
+   - confirm app/(tabs)/_layout.tsx contains the custom icon references
+
+Do not change GitHub.
+Do not change navigation structure.
+Do not change tab labels, layout, Walk Mode, discovery, maps, backend, app.config.js, or branding/header.
+
+If the problem is that NativeTabLayout is rendering and cannot use custom SVG icons:
+- report that clearly
+- propose the smallest safe fix
+- likely option: disable NativeTabLayout for now / force ClassicTabLayout so the custom icons render consistently in Expo Go and normal testing
+
+If the problem is stale Metro:
+- tell me exactly how to restart/reload/clear cache
+
+If the problem is that the custom icons are only wired in the wrong branch:
+- wire them into the actually rendered branch if possible
+- otherwise explain the limitation
+
+After any fix:
+- run typecheck
+- lint
+- format
+- tests
+
+Then summarize:
+- which tab layout branch Expo Go was rendering
+- why the old icons were still appearing
+- exact files changed
+- confirmation that the custom icons now render in the active tab layout
+- confirmation that no GitHub sync was attempted
