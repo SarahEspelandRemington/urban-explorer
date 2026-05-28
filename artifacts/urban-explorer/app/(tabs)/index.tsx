@@ -796,12 +796,12 @@ export default function ExploreScreen() {
             onWalkMode={() => {
               if (Platform.OS !== "web")
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/walk-mode");
+              router.push("/walk");
             }}
             onWalkPlan={() => {
               if (Platform.OS !== "web")
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/walk-plan");
+              router.push("/walk");
             }}
           />
         </Animated.View>

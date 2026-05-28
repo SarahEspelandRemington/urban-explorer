@@ -1,0 +1,81 @@
+Please make a narrow UX/navigation change only.
+
+Goal:
+When the user taps Walk from the opening/home experience or bottom tab bar, they should land on the Walk chooser / Walk landing screen, not immediately start Wander Walk Mode.
+
+Product intent:
+“Walk” is a mode family with at least two choices:
+1. Wander — listen as you move, no route needed
+2. Plan a route — choose where you’re going and get a walking route/audio experience
+3. Guided walks — coming soon / disabled if currently present
+
+Right now, tapping Walk appears to jump directly into Wander mode. That makes it hard to access Plan a Route and makes Walk feel like only one behavior.
+
+Please diagnose first, then implement the smallest safe change.
+
+Diagnosis:
+1. Identify all entry points that navigate to Walk:
+   - bottom tab Walk button
+   - opening/home Walk card
+   - Explore “Start listening nearby” banner, if present
+   - any other Walk CTA
+2. Identify which screen is the Walk chooser / Walk landing screen.
+3. Identify which route currently starts immediate Wander Walk Mode.
+4. Report the current navigation paths before editing.
+
+Implementation requirements:
+1. Bottom tab Walk should navigate to the Walk chooser / Walk landing screen.
+2. Opening/home Walk card should navigate to the Walk chooser / Walk landing screen.
+3. Explore “Start listening nearby” banner can either:
+   - navigate to the Walk chooser, preferred for now, or
+   - remain a direct Wander shortcut only if it is clearly labeled as such.
+   
+   My preference for this pass: route it to the Walk chooser too, unless that conflicts with existing architecture.
+4. The Walk chooser should clearly offer:
+   - Wander / Listen as you wander
+   - Plan a route / Choose where you’re going
+   - Guided walks / Coming soon, if that already exists
+5. Do not auto-start Wander mode unless the user explicitly taps the Wander option.
+6. Do not change Walk Mode logic, location logic, narration logic, discovery logic, backend/API behavior, or map behavior.
+7. Do not redesign the visual system in this pass.
+8. Do not touch app.config.js, splash, app icon, GitHub sync, or branding assets.
+
+Copy guidance:
+Keep existing copy if already close, but preferred labels are:
+
+Walk screen title:
+Walk
+
+Subtitle:
+Choose how you want to move.
+
+Wander card:
+Label: WANDER
+Title: Listen as you wander.
+Description: Stories narrate automatically as you move through the neighborhood. No route needed.
+
+Plan a route card:
+Label: PLAN A ROUTE
+Title: Choose where you're going.
+Description: Pick a start and end point, get a walking route, and discover what's along the way.
+
+Guided walks card, if present:
+Label: GUIDED WALKS
+Title: Follow a curated experience.
+Description: Thematic tours built around specific eras, stories, or neighborhoods.
+State: Coming soon / disabled
+
+Validation:
+Run:
+- typecheck
+- lint
+- format
+- tests
+
+After implementation, report:
+1. exact files changed
+2. all Walk entry points found
+3. where each entry point now navigates
+4. whether any direct-to-Wander entry points remain
+5. confirmation that Wander only starts after the user explicitly taps Wander
+6. validation results
