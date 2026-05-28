@@ -3,16 +3,13 @@ import Constants from "expo-constants";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
+import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
-import {
-  ExploreTabIcon,
-  SavedTabIcon,
-  WalkTabIcon,
-} from "@/components/StreetlitTabIcon";
+import { SavedTabIcon } from "@/components/StreetlitTabIcon";
 
 function NativeTabLayout() {
   const t = useT();
@@ -80,14 +77,18 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: t.tabs.explore,
-          tabBarIcon: ({ color }) => <ExploreTabIcon color={color} size={26} />,
+          tabBarIcon: ({ color }) => (
+            <Feather name="compass" size={26} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="walk"
         options={{
           title: t.tabs.walk,
-          tabBarIcon: ({ color }) => <WalkTabIcon color={color} size={26} />,
+          tabBarIcon: ({ color }) => (
+            <Feather name="headphones" size={26} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
