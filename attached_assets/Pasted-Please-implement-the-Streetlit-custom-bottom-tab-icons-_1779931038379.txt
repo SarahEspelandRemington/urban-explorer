@@ -1,0 +1,79 @@
+Please implement the Streetlit custom bottom tab icons using the attached asset package:
+
+streetlit_tab_icon_assets.zip
+
+Scope:
+Bottom tab bar icons only.
+
+Do NOT change:
+- Explore header logo
+- app branding/header treatment
+- navigation structure
+- tab labels
+- tab spacing/layout
+- discovery logic
+- Walk Mode logic
+- map behavior
+- backend
+- app.config.js
+- splash/icon config
+- GitHub sync
+
+Asset package contents:
+- streetlit-tab-explore.svg
+- streetlit-tab-walk.svg
+- streetlit-tab-saved.svg
+- README.md
+- preview.html
+
+Please place the SVG assets in an appropriate app asset directory, preferably:
+
+artifacts/urban-explorer/assets/icons/
+
+If the project already has a better convention for custom icons, use that convention, but keep these three files together and clearly named.
+
+Important implementation notes:
+- The SVGs use currentColor.
+- Do not create separate dark/light versions.
+- Do not hardcode orange or inactive colors inside the SVGs.
+- Use the existing active/inactive tab color tokens from the app theme.
+- Keep the labels Explore / Walk / Saved unchanged.
+- Keep the current tab layout unchanged.
+
+Icon mapping:
+- Explore tab → streetlit-tab-explore.svg
+- Walk tab → streetlit-tab-walk.svg
+- Saved tab → streetlit-tab-saved.svg
+
+Acceptance criteria:
+- Bottom nav Explore uses the custom compass/navigation-arrow icon.
+- Bottom nav Walk no longer uses a walking-person icon.
+- Bottom nav Walk uses the selected path + story dot + three audio-line icon.
+- Bottom nav Saved uses the custom bookmark icon.
+- All three icons are optically balanced in size.
+- Active/inactive color behavior still works.
+- No unrelated UI or logic changes.
+
+Before editing:
+Please report:
+1. where the current bottom tab icons are defined
+2. how SVGs are currently handled in this Expo/React Native app, if at all
+3. whether you will use react-native-svg, an existing icon wrapper, or another existing project pattern
+4. exact files you expect to touch
+
+If SVG support is not currently configured:
+- do not install new packages without explaining the need first
+- report the safest implementation path before editing
+
+After implementation:
+Run:
+- typecheck
+- lint
+- format
+- tests
+
+Then summarize:
+- exact files changed
+- where the SVG assets were placed
+- how each tab icon was wired
+- confirmation that only bottom nav icon visuals changed

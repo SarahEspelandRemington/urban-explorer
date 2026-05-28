@@ -2,13 +2,16 @@ import { BlurView } from "expo-blur";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
-import { SymbolView } from "expo-symbols";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
+import {
+  ExploreTabIcon,
+  SavedTabIcon,
+  WalkTabIcon,
+} from "@/components/StreetlitTabIcon";
 
 function NativeTabLayout() {
   const t = useT();
@@ -76,36 +79,21 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: t.tabs.explore,
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="safari" tintColor={color} size={24} />
-            ) : (
-              <Feather name="compass" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color }) => <ExploreTabIcon color={color} size={22} />,
         }}
       />
       <Tabs.Screen
         name="walk"
         options={{
           title: t.tabs.walk,
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="figure.walk" tintColor={color} size={24} />
-            ) : (
-              <MaterialCommunityIcons name="walk" size={24} color={color} />
-            ),
+          tabBarIcon: ({ color }) => <WalkTabIcon color={color} size={22} />,
         }}
       />
       <Tabs.Screen
         name="saved"
         options={{
           title: t.tabs.saved,
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="bookmark" tintColor={color} size={24} />
-            ) : (
-              <Feather name="bookmark" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color }) => <SavedTabIcon color={color} size={22} />,
         }}
       />
     </Tabs>
