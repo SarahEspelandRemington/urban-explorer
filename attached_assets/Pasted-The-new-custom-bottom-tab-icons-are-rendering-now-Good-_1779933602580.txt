@@ -1,0 +1,57 @@
+The new custom bottom tab icons are rendering now. Good.
+
+Please do a very small visual polish pass only on the bottom tab icons.
+
+What to fix
+1. Increase icon size slightly
+- The current custom icons read too small in the bottom tab bar.
+- Increase the rendered icon size modestly so they feel more legible and balanced.
+- Target: visually closer to the scale of standard iOS tab icons.
+- Do not make them oversized; just one step larger.
+
+2. Correct visual centering / alignment
+- The icons may be slightly visually off-center or skewed, especially the Walk icon.
+- Ensure each icon is centered correctly within its tab button.
+- Check both geometric centering and visual centering.
+- The Walk icon should feel upright and balanced, not tilted or drifting.
+
+3. Normalize the trio as a family
+- Explore, Walk, and Saved should feel like the same icon family:
+  - same visual weight
+  - same approximate optical size
+  - same vertical alignment
+  - same stroke treatment
+- Preserve the existing icon concepts.
+- Do not redesign the concepts in this pass.
+
+Important constraints
+- Do not change tab labels.
+- Do not change tab layout or navigation structure.
+- Do not change colors.
+- Do not change Explore or Saved icon concepts.
+- Do not redesign Walk in this pass beyond optical alignment / minor geometry cleanup if needed.
+- Do not touch Walk Mode, Explore logic, discovery, backend, app.config.js, or GitHub.
+
+Likely file to edit
+- artifacts/urban-explorer/components/StreetlitTabIcon.tsx
+
+If needed, also check:
+- artifacts/urban-explorer/app/(tabs)/_layout.tsx
+but only for rendered size / alignment props, not structural changes.
+
+Implementation guidance
+- Slightly increase the size prop used for the custom icons in the tab bar.
+- Review the SVG viewBox / width / height / stroke alignment so the icons are not visually tiny inside their box.
+- For Walk specifically, make minor path-position adjustments if necessary so it sits squarely and does not feel skewed.
+
+After changes
+- run typecheck
+- run lint
+- run format
+- run tests
+
+Then report back:
+1. exact files changed
+2. previous icon render size vs new size
+3. whether any SVG geometry was adjusted
+4. confirmation that no GitHub sync was attempted

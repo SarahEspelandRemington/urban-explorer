@@ -35,12 +35,12 @@ export function WalkTabIcon({ color, size }: TabIconProps) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <Path d="M4.5 18.2H8.9c1.5 0 2.7-1.2 2.7-2.7s-1.2-2.7-2.7-2.7H6.3c-1.5 0-2.7-1.2-2.7-2.7s1.2-2.7 2.7-2.7h5.9" />
-      <Path d="M12.2 7.4h2.3c1.6 0 2.9-1.3 2.9-2.9V3.1" />
-      <Circle cx={10.6} cy={7.4} r={1.8} />
-      <Path d="M10.6 3.7V2.3" />
-      <Path d="M7.6 4.5L6.6 3.5" />
-      <Path d="M13.6 4.5L14.6 3.5" />
+      <Path d="M5.9 18.2H10.3c1.5 0 2.7-1.2 2.7-2.7s-1.2-2.7-2.7-2.7H7.7c-1.5 0-2.7-1.2-2.7-2.7s1.2-2.7 2.7-2.7h5.9" />
+      <Path d="M13.6 7.4h2.3c1.6 0 2.9-1.3 2.9-2.9V3.1" />
+      <Circle cx={12} cy={7.4} r={1.8} />
+      <Path d="M12 3.7V2.3" />
+      <Path d="M9 4.5L8 3.5" />
+      <Path d="M15 4.5L16 3.5" />
     </Svg>
   );
 }

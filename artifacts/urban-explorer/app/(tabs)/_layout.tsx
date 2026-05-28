@@ -80,21 +80,21 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: t.tabs.explore,
-          tabBarIcon: ({ color }) => <ExploreTabIcon color={color} size={22} />,
+          tabBarIcon: ({ color }) => <ExploreTabIcon color={color} size={26} />,
         }}
       />
       <Tabs.Screen
         name="walk"
         options={{
           title: t.tabs.walk,
-          tabBarIcon: ({ color }) => <WalkTabIcon color={color} size={22} />,
+          tabBarIcon: ({ color }) => <WalkTabIcon color={color} size={26} />,
         }}
       />
       <Tabs.Screen
         name="saved"
         options={{
           title: t.tabs.saved,
-          tabBarIcon: ({ color }) => <SavedTabIcon color={color} size={22} />,
+          tabBarIcon: ({ color }) => <SavedTabIcon color={color} size={26} />,
         }}
       />
     </Tabs>

@@ -35,6 +35,8 @@ export const modules: ModuleMap = {
     import("../components/mockups/now-playing/Proposed.tsx"),
   "./components/mockups/now-playing/ProposedLight.tsx": () =>
     import("../components/mockups/now-playing/ProposedLight.tsx"),
+  "./components/mockups/walk-landing/WalkLanding.tsx": () =>
+    import("../components/mockups/walk-landing/WalkLanding.tsx"),
   "./components/mockups/style-directions/CoolSignal.tsx": () =>
     import("../components/mockups/style-directions/CoolSignal.tsx"),
   "./components/mockups/style-directions/CuriousNight.tsx": () =>
@@ -47,6 +49,4 @@ export const modules: ModuleMap = {
     import("../components/mockups/style-directions/UrbanGlow.tsx"),
   "./components/mockups/style-directions/WarmEmber.tsx": () =>
     import("../components/mockups/style-directions/WarmEmber.tsx"),
-  "./components/mockups/walk-landing/WalkLanding.tsx": () =>
-    import("../components/mockups/walk-landing/WalkLanding.tsx"),
 };
