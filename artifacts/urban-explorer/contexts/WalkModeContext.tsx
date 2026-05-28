@@ -2306,6 +2306,39 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           );
         return;
       }
+
+      // Re-validate eligibility just before committing to narration. Between
+      // pickNext's scoring pass and now the GPS tick may have fired again,
+      // the heading may have rotated, or the user may have moved far enough
+      // for a different place to be the right choice. A stale pick is
+      // dropped silently — the next interval tick will try again.
+      {
+        const effLoc = loc ?? currentLocationRef.current;
+        if (!effLoc) return;
+        const heading = velocityHeadingRef.current ?? deviceHeadingRef.current;
+        const velAge =
+          velocityHeadingTimestampRef.current !== null
+            ? Date.now() - velocityHeadingTimestampRef.current
+            : Infinity;
+        const recheck = evaluateEligibility([next], {
+          loc: effLoc,
+          heading,
+          velocityHeadingFresh: velAge < VELOCITY_HEADING_STALE_MS,
+          narratedIds: narratedIdsRef.current,
+          cfg: {
+            maxQueueDistance: cfg.maxQueueDistance,
+            netScoreFloor: cfg.netScoreFloor,
+          },
+        });
+        if (recheck.evaluations[0]?.reason !== "ok") {
+          if (__DEV__)
+            console.log(
+              `[maybeNarrate] DROP re-validation: "${next.name}" → ${recheck.evaluations[0]?.reason}`,
+            );
+          return;
+        }
+      }
+
       if (__DEV__)
         console.log(
           `[maybeNarrate] PASSED — fetching narration for "${next.name}"`,
