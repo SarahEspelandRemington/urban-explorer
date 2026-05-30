@@ -48,3 +48,10 @@ Thumbs.db
 .cache/
 .local/
 ci-dashboard.html
+
+# Repo export artifacts
+*.bundle
+replit-local-*.tar.gz
+
+# Replit agent session metadata
+.agents/agent_assets_metadata.toml
