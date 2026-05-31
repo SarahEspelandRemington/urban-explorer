@@ -1,0 +1,99 @@
+Explore Mode is still returning “Nothing found nearby” even near my real location in Fairmount / Spring Garden / Philadelphia, where there should be many discoveries.
+
+Screenshot evidence:
+- GPS accuracy shows about ±10m
+- Header says “North Philadelphia, Philadelphia”
+- Explore returns “Nothing found nearby”
+- Range is Medium · 300m
+
+This suggests a broader Explore pipeline issue, not just the Chicago Loop manual-search issue.
+
+Please diagnose only. Do not make code changes yet.
+
+Goal:
+Find why Explore returns zero results for my current GPS location even though the area should have discoveries.
+
+Please inspect the most recent live Explore request from Expo Go and report:
+
+1. Client/location state
+- What latitude/longitude did the client use?
+- Was Explore mode using live GPS, manual search, or map-pan?
+- What accuracy was sent?
+- What radius was sent?
+- Did the client send any addressHint or areaName?
+- What API base URL did Expo Go use?
+
+2. Area label / reverse geocode
+- Why does the header show “North Philadelphia, Philadelphia”?
+- What reverse-geocode result produced that label?
+- Is this label only cosmetic, or is it used as prompt/discovery context?
+- Is there a more precise neighborhood/area label available for Fairmount/Spring Garden?
+- Could the broad/incorrect area label be causing the LLM to generate poor candidates?
+
+3. Server request
+For the most recent Explore request, confirm:
+- endpoint hit
+- latitude
+- longitude
+- radius
+- cache key
+- cache hit or miss
+- whether cache key is v46
+
+4. Generation and filtering counts
+Please trace counts through the pipeline:
+- raw LLM places
+- after postProcessPlaces
+- after verifyPlaceCoordinates
+- after filterDeniedPlaces
+- after coordSource gate
+- final data.places.length
+
+5. Candidate names and drop reasons
+For every generated candidate, report:
+- name
+- claimed address/location text
+- discoveryClass
+- coordSource, if any
+- whether Nominatim combined query succeeded
+- whether address-only retry ran
+- whether it got nominatim-confirmed or nominatim-corrected
+- exact reason dropped, if dropped:
+  - no coordSource
+  - outside radius / outside acceptance window
+  - _rejectOutOfArea
+  - addressMismatch
+  - INTERPRETIVE_OVERLAY
+  - autoNarrationBlocked
+  - spatialSuppression
+  - duplicate
+  - missing coordinates
+  - other
+
+6. Overpass / OSM anchor
+- Did Overpass run for this request?
+- Did it timeout?
+- Did it return any anchors?
+- If Overpass timed out, does the LLM lose local grounding and generate candidates too far away?
+- Is there a fallback anchor source if Overpass times out?
+
+7. Cache
+- Is the app serving a cached empty result?
+- If yes, when was it created?
+- Does cache key v46 avoid old empty results?
+- Would clearing/restarting the API cache change anything?
+
+8. UI
+- Confirm whether server response is actually { places: [] }
+- Or whether places are returned but filtered client-side
+
+9. Do not implement yet
+After diagnosis, propose the smallest safe fix.
+
+Constraints:
+- Do not loosen spatial trust broadly.
+- Do not remove the coordSource gate.
+- Do not remove Walk Mode protections.
+- Do not change UI copy.
+- Do not push/pull/merge/rebase/reset.
+- Do not use GitHub API.

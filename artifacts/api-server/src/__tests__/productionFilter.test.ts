@@ -440,7 +440,11 @@ describe("production filter pipeline", () => {
     ]);
   });
 
-  it("Explore cannot return coordSrc: llm×5 nom×0 — all unverified places are dropped", () => {
+  it("coordSource undefined (unprobed/error): all places are dropped by coordSource gate", () => {
+    // Places with no coordSource at all (verification never ran or an
+    // unexpected code path). These are distinct from coordSource="llm"
+    // (Nominatim was probed but returned zero results, which IS an expected
+    // outcome and those places survive to Explore).
     const result = applyFullFilter([
       place({ name: "Building A" }),
       place({ name: "Building B" }),
@@ -666,13 +670,21 @@ describe("address-only retry path — coordSource pipeline contracts", () => {
     expect(result[0].coordSource).toBe("nominatim-corrected");
   });
 
-  it("both combined and address-only fail: coordSource stays undefined, place is dropped", () => {
-    // Neither query returns usable results → verifyPlaceCoordinates leaves
-    // coordSource unset → the coordSource gate in postProcessPlaces drops it.
+  it("both combined and address-only fail: coordSource='llm', autoNarrationBlocked=true, place survives to Explore", () => {
+    // Neither query returns usable Nominatim results → verifyPlaceCoordinates
+    // sets coordSource="llm" and autoNarrationBlocked=true. The place is an
+    // obscure historical site not in OSM; it survives the coordSource gate so
+    // Explore can show it as a low-confidence discovery.
     const result = applyFullFilter([
-      place({ name: "LLM-Invented Historic Corner" }), // no coordSource
+      place({
+        name: "LLM-Only Historic Corner",
+        coordSource: "llm",
+        autoNarrationBlocked: true,
+      }),
     ]);
-    expect(result).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].coordSource).toBe("llm");
+    expect(result[0].autoNarrationBlocked).toBe(true);
   });
 
   it("INTERPRETIVE_OVERLAY is denied even when address-only confirmation sets coordSource", () => {
@@ -685,6 +697,110 @@ describe("address-only retry path — coordSource pipeline contracts", () => {
         summary: "A waterway that once flowed beneath these streets.",
         coordSource: "nominatim-confirmed",
       }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// coordSource "llm" tier — Nominatim-unprobed Explore-only places
+//
+// When verifyPlaceCoordinates probes Nominatim and receives zero results for
+// both the combined name+address query and the address-only retry, it sets:
+//   coordSource      = "llm"
+//   autoNarrationBlocked = true
+//
+// "llm" is NOT the same as undefined:
+//   undefined = verification never ran (error / unprobed state) → always dropped
+//   "llm"     = Nominatim was probed but had no POI entry → allowed in Explore
+//
+// Contracts:
+//   1. coordSource="llm" passes the coordSource gate (Explore receives it).
+//   2. autoNarrationBlocked=true is preserved so Walk walkEligibility blocks it.
+//   3. Mixed pool: llm + nominatim-confirmed/corrected all reach Explore.
+//   4. _rejectOutOfArea (Nominatim found the address elsewhere) is distinct —
+//      those places are dropped by postProcessPlaces before reaching this gate.
+//   5. INTERPRETIVE_OVERLAY with coordSource="llm" is still denied by the deny
+//      filter (which runs before the coordSource gate).
+// ---------------------------------------------------------------------------
+
+describe("coordSource 'llm' tier — Nominatim-unprobed Explore-only places", () => {
+  it("coordSource='llm' passes the coordSource gate and reaches Explore", () => {
+    // verifyPlaceCoordinates probed Nominatim, got zero results → coordSource="llm".
+    // The production filter allows it through so Explore can show the place.
+    const result = applyFullFilter([
+      place({
+        name: "Former Fairmount Almshouse",
+        coordSource: "llm",
+        autoNarrationBlocked: true,
+      }),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].coordSource).toBe("llm");
+  });
+
+  it("autoNarrationBlocked=true is preserved on coordSource='llm' places", () => {
+    // The flag must reach the client so Walk Mode walkEligibility blocks these
+    // places from auto-narration as a defence-in-depth layer.
+    const result = applyFullFilter([
+      place({
+        name: "Former Fairmount Almshouse",
+        coordSource: "llm",
+        autoNarrationBlocked: true,
+      }),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].autoNarrationBlocked).toBe(true);
+  });
+
+  it("mixed pool: llm-sourced and nominatim-verified places all survive to Explore", () => {
+    // Fairmount scenario: well-known landmarks confirmed by Nominatim plus
+    // obscure historical sites Nominatim has no record of — both reach Explore.
+    const result = applyFullFilter([
+      place({
+        name: "Eastern State Penitentiary",
+        coordSource: "nominatim-confirmed",
+      }),
+      place({
+        name: "Former Almshouse Site",
+        coordSource: "llm",
+        autoNarrationBlocked: true,
+      }),
+      place({
+        name: "Fairmount Water Works",
+        coordSource: "nominatim-corrected",
+      }),
+    ]);
+    expect(result).toHaveLength(3);
+    expect(result.map((p) => p.coordSource)).toEqual([
+      "nominatim-confirmed",
+      "llm",
+      "nominatim-corrected",
+    ]);
+  });
+
+  it("coordSource='llm' INTERPRETIVE_OVERLAY is still denied by the deny filter", () => {
+    // The deny filter (classifyDiscovery + filterDeniedPlaces) runs before the
+    // coordSource gate; a buried-waterway place is dropped regardless of
+    // whether coordSource is "llm" or "nominatim-confirmed".
+    const result = applyFullFilter([
+      place({
+        name: "Buried Stream beneath Fairmount",
+        summary: "A waterway that once flowed beneath these streets.",
+        coordSource: "llm",
+        autoNarrationBlocked: true,
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("coordSource undefined is still dropped — distinct from 'llm'", () => {
+    // undefined means verification never ran (unexpected/unprobed state).
+    // 'llm' means Nominatim was probed but had no record.
+    // Both are Explore-unsafe from a Walk perspective, but only 'llm' is allowed
+    // through to Explore. undefined remains a hard drop.
+    const result = applyFullFilter([
+      place({ name: "Unprobed Place" }), // coordSource: undefined
     ]);
     expect(result).toHaveLength(0);
   });

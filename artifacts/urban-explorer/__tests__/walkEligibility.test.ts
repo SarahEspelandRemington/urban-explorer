@@ -120,6 +120,18 @@ describe("evaluateEligibility", () => {
     expect(result.evaluations[0].reason).toBe("ok");
   });
 
+  it("rejects coordSource='llm' places via autoNarrationBlocked (Explore-only tier)", () => {
+    // verifyPlaceCoordinates sets autoNarrationBlocked=true on all "llm"-sourced
+    // places (Nominatim returned zero results — coordinates are LLM-only).
+    // WalkModeContext excludes these from the candidate pool before they reach
+    // evaluateEligibility, but autoNarrationBlocked=true provides defence-in-depth
+    // so they are blocked here even if they somehow reach eligibility scoring.
+    const place = makePlace("p1", 30, 0, { autoNarrationBlocked: true });
+    const result = evaluateEligibility([place], baseState());
+    expect(result.eligibleIds).toEqual([]);
+    expect(result.evaluations[0].reason).toBe("addressMismatch");
+  });
+
   it("rejects places whose declared address geocodes far from claimed lat/lng", () => {
     // Place at NYC center, but its "address" geocoded 500m east.
     const place = makePlace("p1", 30, 0, {

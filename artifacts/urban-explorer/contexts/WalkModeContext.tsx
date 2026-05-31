@@ -981,11 +981,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // from showing in debug candidate counts as "blocked" entries.
             if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
             // Walk Mode spatial trust gate (mirrors Layer 3 and server path):
-            // drop any place without a coordSource. coordSource is set by
-            // verifyPlaceCoordinates when Nominatim confirms or corrects the
-            // coordinates. Its absence means the LLM coordinates were never
-            // externally verified — the place must not enter candidate scoring.
-            if ((p as any).coordSource === undefined) continue;
+            // drop any place without a verified coordSource. coordSource is set
+            // by verifyPlaceCoordinates: "nominatim-confirmed"/"nominatim-corrected"
+            // mean Nominatim externally verified the coordinates. "llm" means
+            // Nominatim was probed but returned zero results — coordinates are
+            // LLM-only and must not enter Walk candidate scoring.
+            // undefined = verification never ran (error/unprobed state).
+            if (
+              (p as any).coordSource === undefined ||
+              (p as any).coordSource === "llm"
+            )
+              continue;
             // OSM-anchor POC: only candidateSource: "osm" places may enter
             // Walk Mode placesRef. Places without this tag came from the LLM
             // path (Explore Mode or a pre-osmAnchor Walk Mode session) and
@@ -2533,6 +2539,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           ? initialPlaces.filter(
               (p) =>
                 (p as any).coordSource !== undefined &&
+                (p as any).coordSource !== "llm" &&
                 (p as any).discoveryClass !== "INTERPRETIVE_OVERLAY",
             )
           : [];

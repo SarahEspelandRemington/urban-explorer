@@ -961,7 +961,20 @@ async function verifyPlaceCoordinates(
             );
           }
         }
-        if (results.length === 0) return;
+        if (results.length === 0) {
+          // Nominatim has no POI entry for this place (obscure historical site,
+          // demolished building, former use with no OSM node). This is NOT
+          // necessarily a hallucination — the address simply is not in the OSM
+          // database. Mark it as "llm"-sourced (coordinates are LLM-only, not
+          // externally verified) and flag it ineligible for Walk auto-narration.
+          // It will still appear in Explore as a low-confidence discovery.
+          //
+          // Distinct from _rejectOutOfArea (Nominatim DID find the address but
+          // it belongs elsewhere — that path above is unchanged and still drops).
+          p.coordSource = "llm";
+          p.autoNarrationBlocked = true;
+          return;
+        }
 
         // Among all returned results, pick the one closest to the user
         // that is still within the plausible search area.  We do NOT pick
@@ -1924,7 +1937,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v46:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v47:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
