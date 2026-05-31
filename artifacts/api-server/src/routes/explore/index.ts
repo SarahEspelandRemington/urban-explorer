@@ -933,10 +933,34 @@ async function verifyPlaceCoordinates(
         const query = [p.name?.trim(), p.address?.trim()]
           .filter(Boolean)
           .join(" ");
-        const results = await nominatimSearch(query, 5, {
+        let results = await nominatimSearch(query, 5, {
           countrycodes: "us",
           viewbox,
         });
+
+        // Retry with address-only when the combined name+address query returns
+        // nothing. Real well-known landmarks (e.g. "Rookery Building
+        // 209 S LaSalle St Chicago") can fail Nominatim's strict combined
+        // parser even though geocoding the address string alone succeeds.
+        // Only retry when:
+        //   • the primary query was a name+address combination (not name-alone
+        //     or address-alone), so we do not repeat an identical query; AND
+        //   • the place carries a non-empty address field to use as the
+        //     fallback query string.
+        // The acceptance window (MAX_ACCEPT_DIST_M) is intentionally unchanged
+        // — do not broaden the geographic radius here.
+        if (results.length === 0) {
+          const addrOnly = p.address?.trim() ?? "";
+          const wasCombinedQuery = !!p.name?.trim() && !!addrOnly;
+          if (wasCombinedQuery) {
+            results = await scheduleNominatimCall(() =>
+              nominatimSearch(addrOnly, 5, {
+                countrycodes: "us",
+                viewbox,
+              }),
+            );
+          }
+        }
         if (results.length === 0) return;
 
         // Among all returned results, pick the one closest to the user
@@ -982,21 +1006,24 @@ async function verifyPlaceCoordinates(
           bestLon,
         );
         if (moveBy > COORD_CORRECTION_THRESHOLD_M) {
+          // Nominatim disagrees with the LLM pin by more than a city-block
+          // half-width — move the pin to the Nominatim-grounded location.
           p.latitude = bestLat;
           p.longitude = bestLon;
           p.confidence = "low";
           p.coordSource = "nominatim-corrected";
+        } else {
+          // Nominatim found a matching result within the correction threshold —
+          // the LLM-proposed pin is already accurate (e.g. a well-known
+          // landmark like the Willis Tower or the Chicago Board of Trade).
+          // Do not move the coordinates, but mark the place as confirmed so it
+          // survives the coordSource gate in both Explore and Walk modes.
+          // The viewbox + MAX_ACCEPT_DIST_M acceptance window already scopes
+          // the lookup to the user's neighbourhood, so a generic nearby token
+          // match in a different part of the city is excluded before we reach
+          // this branch.
+          p.coordSource = "nominatim-confirmed";
         }
-        // If Nominatim's best result is within the correction threshold
-        // (≤ COORD_CORRECTION_THRESHOLD_M of the LLM coordinates), we do NOT
-        // treat it as externally verified.  A close result is ambiguous: it
-        // may be a real confirmation, but it may equally be a spurious nearby
-        // match (e.g. a street segment) that happens to land close to the
-        // hallucinated pin — the very failure mode seen in field testing where
-        // places named after distant landmarks appeared at the user's GPS
-        // position.  Walk Mode drops places without coordSource; only
-        // corrections that materially move the pin to a Nominatim-grounded
-        // location survive the trust gate.
       }),
     ),
   );
@@ -1897,7 +1924,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v41:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v46:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call

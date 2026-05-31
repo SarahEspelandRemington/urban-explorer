@@ -317,23 +317,27 @@ describe("filterDeniedPlaces", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Shared pipeline helpers — used by both describe blocks below.
+// ---------------------------------------------------------------------------
+
+function applyDenyFilter(rawPlaces: TestPlace[]): TestPlace[] {
+  const clones: TestPlace[] = rawPlaces.map((p) => ({ ...p }));
+  classifyDiscovery(clones);
+  return filterDeniedPlaces(clones) as TestPlace[];
+}
+
+function applyFullFilter(rawPlaces: TestPlace[]): TestPlace[] {
+  const afterDeny = applyDenyFilter(rawPlaces);
+  return afterDeny.filter((p) => p.coordSource !== undefined);
+}
+
+// ---------------------------------------------------------------------------
 // Combined pipeline: classifyDiscovery + filterDeniedPlaces + coordSource gate
 // Proves that denied categories and LLM-only coordinates cannot survive
 // the production filter in either Explore or Walk Mode.
 // ---------------------------------------------------------------------------
 
 describe("production filter pipeline", () => {
-  function applyDenyFilter(rawPlaces: TestPlace[]): TestPlace[] {
-    const clones: TestPlace[] = rawPlaces.map((p) => ({ ...p }));
-    classifyDiscovery(clones);
-    return filterDeniedPlaces(clones) as TestPlace[];
-  }
-
-  function applyFullFilter(rawPlaces: TestPlace[]): TestPlace[] {
-    const afterDeny = applyDenyFilter(rawPlaces);
-    return afterDeny.filter((p) => p.coordSource !== undefined);
-  }
-
   it("drops ghost sign in Explore Mode (no coordSource)", () => {
     const result = applyFullFilter([
       place({ name: "Ghost Sign — Chestnut Street" }),
@@ -380,7 +384,7 @@ describe("production filter pipeline", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("keeps a real building with coordSource (eligible for Walk and Explore)", () => {
+  it("keeps a real building with coordSource=nominatim-corrected (eligible for Walk and Explore)", () => {
     const result = applyFullFilter([
       place({
         name: "Drexel University Main Building",
@@ -388,6 +392,52 @@ describe("production filter pipeline", () => {
       }),
     ]);
     expect(result).toHaveLength(1);
+  });
+
+  it("keeps a well-known landmark with coordSource=nominatim-confirmed (Chicago Loop fix)", () => {
+    // Represents the case where the LLM already placed a pin accurately —
+    // Nominatim confirms the location within the correction threshold so the
+    // pin is not moved but coordSource is set to "nominatim-confirmed".
+    // This place must survive the coordSource gate (was previously dropped).
+    const result = applyFullFilter([
+      place({
+        name: "Willis Tower",
+        coordSource: "nominatim-confirmed",
+        latitude: 41.8789,
+        longitude: -87.6359,
+      }),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].coordSource).toBe("nominatim-confirmed");
+  });
+
+  it("nominatim-confirmed place is still denied when category is INTERPRETIVE_OVERLAY", () => {
+    // Nominatim confirmation does not exempt a place from the deny list.
+    const result = applyFullFilter([
+      place({
+        name: "Buried Creek Beneath the Loop",
+        summary: "A waterway that once flowed beneath this block.",
+        coordSource: "nominatim-confirmed",
+      }),
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("mixed pool: nominatim-confirmed survives, unverified is dropped", () => {
+    // Chicago Loop scenario: famous landmark (confirmed) + LLM-only place (no coordSource).
+    const result = applyFullFilter([
+      place({
+        name: "Chicago Board of Trade",
+        coordSource: "nominatim-confirmed",
+      }),
+      place({ name: "Some Vague Historic Corner" }), // no coordSource — dropped
+      place({ name: "Rookery Building", coordSource: "nominatim-confirmed" }),
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result.map((p) => p.name)).toEqual([
+      "Chicago Board of Trade",
+      "Rookery Building",
+    ]);
   });
 
   it("Explore cannot return coordSrc: llm×5 nom×0 — all unverified places are dropped", () => {
@@ -563,5 +613,79 @@ describe("production filter pipeline", () => {
     classifyDiscovery(clones);
     const filtered = filterDeniedPlaces(clones);
     expect(filtered).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Address-only retry path — pipeline contract
+//
+// verifyPlaceCoordinates retries with address-only when the combined
+// name+address Nominatim query returns 0 results.  These tests verify the
+// pipeline contracts that the retry path must satisfy:
+//
+//   1. Retry succeeds, pin is already accurate (moveBy ≤ threshold):
+//      coordSource = "nominatim-confirmed", place survives coordSource gate.
+//   2. Retry succeeds, pin is wrong (moveBy > threshold):
+//      coordSource = "nominatim-corrected", place survives coordSource gate.
+//   3. Both combined and address-only fail:
+//      coordSource remains undefined, place is dropped by coordSource gate.
+//   4. Retry confirms an INTERPRETIVE_OVERLAY place:
+//      coordSource gate is irrelevant — deny filter rejects it first.
+// ---------------------------------------------------------------------------
+
+describe("address-only retry path — coordSource pipeline contracts", () => {
+  it("retry succeeds, moveBy ≤ threshold: coordSource='nominatim-confirmed', place survives", () => {
+    // Combined "Rookery Building 209 S LaSalle St Chicago" → 0 results.
+    // Address-only "209 S LaSalle St Chicago" → result within threshold.
+    // verifyPlaceCoordinates sets coordSource = "nominatim-confirmed".
+    const result = applyFullFilter([
+      place({
+        name: "Rookery Building",
+        coordSource: "nominatim-confirmed",
+        latitude: 41.8796,
+        longitude: -87.6322,
+      }),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].coordSource).toBe("nominatim-confirmed");
+  });
+
+  it("retry succeeds, moveBy > threshold: coordSource='nominatim-corrected', place survives", () => {
+    // Combined "Chicago Board of Trade 141 W Jackson" → 0 results.
+    // Address-only "141 W Jackson Chicago" → result >80m from LLM pin.
+    // verifyPlaceCoordinates sets coordSource = "nominatim-corrected".
+    const result = applyFullFilter([
+      place({
+        name: "Chicago Board of Trade",
+        coordSource: "nominatim-corrected",
+        latitude: 41.8779,
+        longitude: -87.632,
+      }),
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].coordSource).toBe("nominatim-corrected");
+  });
+
+  it("both combined and address-only fail: coordSource stays undefined, place is dropped", () => {
+    // Neither query returns usable results → verifyPlaceCoordinates leaves
+    // coordSource unset → the coordSource gate in postProcessPlaces drops it.
+    const result = applyFullFilter([
+      place({ name: "LLM-Invented Historic Corner" }), // no coordSource
+    ]);
+    expect(result).toHaveLength(0);
+  });
+
+  it("INTERPRETIVE_OVERLAY is denied even when address-only confirmation sets coordSource", () => {
+    // The deny filter (classifyDiscovery + filterDeniedPlaces) runs before the
+    // coordSource gate, so a buried-waterway place cannot survive regardless of
+    // how it was geocoded.
+    const result = applyFullFilter([
+      place({
+        name: "Buried Chicago River Tributary",
+        summary: "A waterway that once flowed beneath these streets.",
+        coordSource: "nominatim-confirmed",
+      }),
+    ]);
+    expect(result).toHaveLength(0);
   });
 });
