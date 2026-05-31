@@ -12,6 +12,7 @@ interface TestPlace {
   tags?: string[];
   coordSource?: string;
   discoveryClass?: string;
+  autoNarrationBlocked?: boolean;
 }
 
 function place(overrides: Partial<TestPlace> = {}): TestPlace {
