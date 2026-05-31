@@ -55,3 +55,9 @@ replit-local-*.tar.gz
 
 # Replit agent session metadata
 .agents/agent_assets_metadata.toml
+
+# Replit prompt/session dump files
+attached_assets/Pasted-*.txt
+
+# Replit agent memory/session notes
+.agents/memory/
