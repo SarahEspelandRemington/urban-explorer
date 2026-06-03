@@ -992,13 +992,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               (p as any).coordSource === "llm"
             )
               continue;
-            // OSM-anchor POC: only candidateSource: "osm" places may enter
-            // Walk Mode placesRef. Places without this tag came from the LLM
-            // path (Explore Mode or a pre-osmAnchor Walk Mode session) and
-            // must not reach scoring, queue, or narration. The v7 tile key
-            // ensures new cache entries are always osmAnchor responses, but
-            // this gate catches any residual mismatch.
-            if ((p as any).candidateSource !== "osm") continue;
+            // Accept Overpass-sourced places (candidateSource:"osm") OR
+            // LLM-sourced places that Nominatim externally verified. When
+            // Overpass is unavailable (IP-blocked) the server falls back to
+            // the LLM path; those places carry coordSource:"nominatim-confirmed"
+            // or "nominatim-corrected" and are as spatially trustworthy as
+            // OSM-anchored candidates. The coordSource gate above already
+            // ensures only Nominatim-verified places reach this point.
+            if (
+              (p as any).candidateSource !== "osm" &&
+              (p as any).coordSource !== "nominatim-confirmed" &&
+              (p as any).coordSource !== "nominatim-corrected"
+            )
+              continue;
             if (
               haversineMeters(latitude, longitude, p.latitude, p.longitude) <=
               cfg.memoryRadius
@@ -1110,6 +1116,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           // the walk has ended.
           if (!isWalkingRef.current) return;
           if (Array.isArray(data?.places)) {
+            // When Overpass was unavailable the server fell back to the LLM
+            // path and flags the response. The candidateSource gate is relaxed
+            // in this case so coordSource:"llm" places (real but not in
+            // Nominatim) can enter the Walk pool — the server already cleared
+            // autoNarrationBlocked on them and kept the ordinal mismatch check.
+            const isOverpassFallback = (data as any).overpassFallback === true;
             // Merge with existing — dedupe by id, then evict anything farther
             // than memoryRadius from the user's current location. Without the
             // eviction the queue grows unbounded over a long walk, slowing
@@ -1138,11 +1150,18 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               // requests, but guard here too so the pool stays clean if the
               // route is called without walkMode or if the filter changes.
               if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
-              // OSM-anchor POC: only Overpass-sourced places may enter placesRef.
-              // The ":osm" tile key ensures the server always runs the osmAnchor
-              // branch (candidateSource: "osm" on every returned place), but this
-              // gate is a hard backstop against any edge-case server mismatch.
-              if ((p as any).candidateSource !== "osm") continue;
+              // Accept Overpass-sourced places (candidateSource:"osm") OR
+              // LLM-sourced places that Nominatim externally verified. When
+              // Overpass is unavailable (overpassFallback flag) also accept
+              // coordSource:"llm" places — the server cleared autoNarrationBlocked
+              // on them and the ordinal-mismatch check still applies.
+              if (
+                (p as any).candidateSource !== "osm" &&
+                (p as any).coordSource !== "nominatim-confirmed" &&
+                (p as any).coordSource !== "nominatim-corrected" &&
+                !(isOverpassFallback && (p as any).coordSource === "llm")
+              )
+                continue;
               const d = haversineMeters(
                 latitude,
                 longitude,
@@ -1167,7 +1186,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // the write lets the server be retried on the next walk session,
             // when Overpass may return results or the API server may be fresh.
             const hasOsmPlace = allIncoming.some(
-              (p) => (p as any).candidateSource === "osm",
+              (p) =>
+                (p as any).candidateSource === "osm" ||
+                (p as any).coordSource === "nominatim-confirmed" ||
+                (p as any).coordSource === "nominatim-corrected",
             );
             if (hasOsmPlace) {
               setPlaceCache(tile, data.places as unknown[]);
