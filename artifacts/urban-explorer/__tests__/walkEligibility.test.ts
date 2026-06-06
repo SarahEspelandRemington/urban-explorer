@@ -354,6 +354,93 @@ describe("evaluateEligibility — looksInterpretive() fallback", () => {
   });
 });
 
+describe("evaluateEligibility — lowQuality (Tier 4 suppression)", () => {
+  it("rejects a Tier-4 place with reason lowQuality", () => {
+    const p = makePlace("p1", 30, 0, { discoveryTier: 4 });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.eligibleIds).toEqual([]);
+    expect(result.evaluations[0].reason).toBe("lowQuality");
+  });
+
+  it("includes discoveryRejectionReason in the evaluation when reason is lowQuality", () => {
+    const p = makePlace("p1", 30, 0, {
+      discoveryTier: 4,
+      discoveryRejectionReason: "noHistoricalDepth",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("lowQuality");
+    expect(result.evaluations[0].discoveryRejectionReason).toBe(
+      "noHistoricalDepth",
+    );
+  });
+
+  it("discoveryRejectionReason is undefined in evaluation when reason is not lowQuality", () => {
+    // A Tier-1 place should be eligible; evaluation discoveryRejectionReason must be absent.
+    const p = makePlace("p1", 30, 0, { discoveryTier: 1 });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("ok");
+    expect(result.evaluations[0].discoveryRejectionReason).toBeUndefined();
+  });
+
+  it("Tier-1 place is not suppressed", () => {
+    const p = makePlace("p1", 30, 0, { discoveryTier: 1 });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.eligibleIds).toEqual(["p1"]);
+  });
+
+  it("Tier-2 place is not suppressed", () => {
+    const p = makePlace("p1", 30, 0, { discoveryTier: 2 });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.eligibleIds).toEqual(["p1"]);
+  });
+
+  it("Tier-3 place is not suppressed", () => {
+    const p = makePlace("p1", 30, 0, { discoveryTier: 3 });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.eligibleIds).toEqual(["p1"]);
+  });
+
+  it("place with no discoveryTier is not suppressed by lowQuality", () => {
+    const p = makePlace("p1", 30, 0);
+    // discoveryTier not set → no lowQuality rejection
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("ok");
+  });
+
+  it("narrated takes precedence over lowQuality", () => {
+    // A Tier-4 place that was already narrated should show 'narrated', not 'lowQuality'.
+    const narrated = new Map<string, number>([["p1", Date.now()]]);
+    const p = makePlace("p1", 30, 0, { discoveryTier: 4 });
+    const result = evaluateEligibility(
+      [p],
+      baseState({ narratedIds: narrated }),
+    );
+    expect(result.evaluations[0].reason).toBe("narrated");
+  });
+
+  it("interpretiveOverlay takes precedence over lowQuality", () => {
+    // A place that is both INTERPRETIVE_OVERLAY and Tier 4 → interpretiveOverlay wins.
+    const p = makePlace("p1", 30, 0, {
+      discoveryTier: 4,
+      discoveryClass: "INTERPRETIVE_OVERLAY",
+    });
+    const result = evaluateEligibility([p], baseState());
+    expect(result.evaluations[0].reason).toBe("interpretiveOverlay");
+  });
+
+  it("Tier-4 place behind 90° is still lowQuality (lowQuality evaluated before behind90)", () => {
+    // heading=0, place is due south (180° bearing) → bearingDiff ≈ 180°.
+    // With velocityHeadingFresh=true, behind90 would normally apply.
+    // But lowQuality fires first → should see lowQuality, not behind90.
+    const p = makePlace("p1", 0, -50, { discoveryTier: 4 }); // south of user
+    const result = evaluateEligibility(
+      [p],
+      baseState({ heading: 0, velocityHeadingFresh: true }),
+    );
+    expect(result.evaluations[0].reason).toBe("lowQuality");
+  });
+});
+
 describe("haversineMeters", () => {
   it("returns ~0 for identical coords", () => {
     expect(

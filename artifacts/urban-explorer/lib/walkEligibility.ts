@@ -17,6 +17,7 @@ export type EligibilityReason =
   | "tooFar"
   | "behind90"
   | "lowScore"
+  | "lowQuality"
   | "addressMismatch"
   | "interpretiveOverlay"
   | "passed"
@@ -56,6 +57,14 @@ export interface EligibilityCandidate {
   /** How this place's location was established. Display-only — never read
    *  by eligibility logic. */
   candidateSource?: "osm" | "llm";
+  /** Server-assigned discovery quality tier (1–4). When 4, the place is
+   *  metadata-only (no historical depth) and is suppressed from auto-narration
+   *  with reason `lowQuality`. Absent when the classifier was not confident. */
+  discoveryTier?: number;
+  /** Server-assigned rejection reason for Tier-4 places (e.g. "metadataOnly",
+   *  "noHistoricalDepth", "genericBusinessDescription"). Display-only — never
+   *  read by eligibility logic beyond the presence of `discoveryTier === 4`. */
+  discoveryRejectionReason?: string;
 }
 
 export interface EligibilityState {
@@ -97,6 +106,10 @@ export interface EligibilityResult {
     distance: number;
     bearingDiff: number | null;
     reason: EligibilityReason;
+    /** Populated when reason === "lowQuality". Mirrors
+     *  `EligibilityCandidate.discoveryRejectionReason` so callers
+     *  (debug overlay, diagnostics) don't need to re-look up the place. */
+    discoveryRejectionReason?: string;
   }>;
 }
 
@@ -204,6 +217,11 @@ export function evaluateEligibility(
       reason = "interpretiveOverlay";
     } else if (narratedIds.has(p.id)) {
       reason = "narrated";
+    } else if (p.discoveryTier === 4) {
+      // Tier-4 places are metadata-only (no historical depth) and are
+      // permanently suppressed from auto-narration.  They remain visible
+      // on the map as pins — this gate only affects the narration queue.
+      reason = "lowQuality";
     } else if (p.autoNarrationBlocked) {
       // Server-side strong-evidence mismatch — block auto-narration but keep
       // the place in the pool so it still shows on the map.
@@ -236,6 +254,8 @@ export function evaluateEligibility(
       distance: dist,
       bearingDiff: diff,
       reason,
+      discoveryRejectionReason:
+        reason === "lowQuality" ? p.discoveryRejectionReason : undefined,
     });
     if (reason === "ok") eligibleIds.push(p.id);
   }

@@ -79,6 +79,8 @@ export const DiscoverPlacesBody = zod.object({
     ),
 });
 
+export const discoverPlacesResponsePlacesItemDiscoveryTierMax = 4;
+
 export const DiscoverPlacesResponse = zod.object({
   places: zod.array(
     zod.object({
@@ -159,6 +161,20 @@ export const DiscoverPlacesResponse = zod.object({
         .optional()
         .describe(
           "Curated subset of raw OSM hint tags (e.g. wikidata, wikipedia, denomination, start_date). Present only on OSM-anchored candidates (candidateSource: osm).",
+        ),
+      discoveryTier: zod
+        .number()
+        .min(1)
+        .max(discoverPlacesResponsePlacesItemDiscoveryTierMax)
+        .optional()
+        .describe(
+          "Deterministic quality tier assigned server-side at response time (including on cache hits). 1=hidden story (transformation+year or social movement), 2=visible curiosity (architectural detail or adaptive reuse), 3=contextual (neighbourhood\/infrastructure), 4=metadata only (no historical depth — suppressed from Walk Mode auto-narration). Absent when the classifier did not confidently classify.",
+        ),
+      discoveryRejectionReason: zod
+        .string()
+        .optional()
+        .describe(
+          "Debug label explaining why Tier 4 was assigned (e.g. metadataOnly, noHistoricalDepth, genericBusinessDescription). Present only when discoveryTier is 4. Shown in the Walk Mode debug overlay.",
         ),
     }),
   ),

@@ -1542,6 +1542,7 @@ import {
   filterDeniedPlaces,
 } from "../../lib/productionFilter";
 export { classifyDiscovery, filterDeniedPlaces };
+import { applyDiscoveryTier } from "../../lib/discoveryTier";
 
 // ---------------------------------------------------------------------------
 // LLM precision claim detection
@@ -1937,7 +1938,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v48:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v49:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -1963,6 +1964,9 @@ router.post("/explore/discover", async (req, res) => {
       // expansion after a cache entry was written cannot let banned categories
       // through. Classification is cheap (O(n), no external calls).
       classifyDiscovery(allCachedPlaces);
+      // Apply discovery tier on every cache hit so pre-change cached entries
+      // receive tier classification on the way out (no cache bump needed).
+      applyDiscoveryTier(allCachedPlaces);
       applyLlmPrecisionFilter(allCachedPlaces);
       allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
       // Both Explore and Walk require external coordinate verification.
@@ -2278,6 +2282,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
 
     // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
     classifyDiscovery(mergedPlaces);
+    applyDiscoveryTier(mergedPlaces);
     applyLlmPrecisionFilter(mergedPlaces);
     mergedPlaces = filterDeniedPlaces(mergedPlaces);
 
@@ -2579,6 +2584,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     // Classify each place's spatial trust level from signals already on the
     // object — no external calls, runs in O(n).
     classifyDiscovery(data.places);
+    applyDiscoveryTier(data.places);
 
     // Second pass: downgrade any non-interpretive place whose name/summary
     // contains a specific street reference but has no verified coordinate

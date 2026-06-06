@@ -179,12 +179,17 @@ export function WalkModeDebugOverlay() {
                         : c.candidateSource === "llm"
                           ? "[llm] "
                           : ""}
-                      {c.name.slice(0, 24)} · {Math.round(c.distance)}m
+                      {c.name.slice(0, 20)} · {Math.round(c.distance)}m
                       {c.bearingDiff !== null
                         ? ` · ${Math.round(c.bearingDiff)}°`
                         : ""}
                       {" · s="}
                       {Math.round(c.score)}
+                      {c.discoveryTier === 4
+                        ? ` ⚑T4:${c.discoveryRejectionReason ?? "?"}`
+                        : c.discoveryTier !== undefined
+                          ? ` T${c.discoveryTier}`
+                          : ""}
                     </Text>
                   ))
                 )}
@@ -212,8 +217,12 @@ export function WalkModeDebugOverlay() {
                   numberOfLines={1}
                 >
                   {r.reason}
-                  {r.spatialNote ? ` (${r.spatialNote})` : ""} ·{" "}
-                  {r.placeName.slice(0, 22)}
+                  {r.reason === "lowQuality" && r.discoveryRejectionReason
+                    ? ` (${r.discoveryRejectionReason})`
+                    : r.spatialNote
+                      ? ` (${r.spatialNote})`
+                      : ""}{" "}
+                  · {r.placeName.slice(0, 22)}
                   {r.distance !== null ? ` · ${Math.round(r.distance)}m` : ""}
                   {r.bearingDiff !== null
                     ? ` · ${Math.round(r.bearingDiff)}°`

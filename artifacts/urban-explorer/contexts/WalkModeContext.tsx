@@ -1779,6 +1779,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           distance: ev.distance,
           bearingDiff: ev.bearingDiff,
           spatialNote,
+          discoveryRejectionReason: ev.discoveryRejectionReason,
         });
       }
       const blockedBy90Deg =

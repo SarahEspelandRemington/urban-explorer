@@ -30,6 +30,10 @@ export interface DiagSelectionSnapshot {
     score: number;
     osmId?: string;
     candidateSource?: "osm" | "llm";
+    /** Deterministic quality tier from the server-side classifier (1–4). */
+    discoveryTier?: number;
+    /** Debug label for why Tier 4 was assigned (e.g. "metadataOnly"). */
+    discoveryRejectionReason?: string;
   }>;
   /** Place chosen by pickNext, or null if nothing eligible. */
   selected: { id: string; name: string; reason: string } | null;
@@ -53,6 +57,12 @@ export interface DiagRejection {
    * the time of the rejection evaluation.
    */
   spatialNote?: string;
+  /**
+   * When `reason` is "lowQuality", the specific Tier-4 rule that fired
+   * (e.g. "metadataOnly", "noHistoricalDepth", "genericBusinessDescription").
+   * Populated from `EligibilityResult.evaluations[n].discoveryRejectionReason`.
+   */
+  discoveryRejectionReason?: string;
 }
 
 export interface DiagDiscoverResult {
