@@ -69,6 +69,16 @@ function getDeploymentDomain() {
     return stripProtocol(process.env.EXPO_PUBLIC_DOMAIN);
   }
 
+  // This script is a Replit-specific static Expo deployment script and
+  // requires a live deployment domain. In CI there is no domain, so skip
+  // gracefully rather than failing the build.
+  if (process.env.CI) {
+    console.log(
+      "No deployment domain found in CI environment — skipping Expo static build.",
+    );
+    process.exit(0);
+  }
+
   console.error(
     "ERROR: No deployment domain found. Set REPLIT_INTERNAL_APP_DOMAIN, REPLIT_DEV_DOMAIN, or EXPO_PUBLIC_DOMAIN",
   );
