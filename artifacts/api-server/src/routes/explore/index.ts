@@ -234,8 +234,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v37"], // discover — quick mode
-  ["full", "v37"], // discover — full mode
+  ["quick", "v50"], // discover — quick mode
+  ["full", "v50"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -1938,7 +1938,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v49:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v50:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2147,7 +2147,10 @@ router.post("/explore/discover", async (req, res) => {
       "building:levels",
     ] as const;
 
-    const formatForCopy = (p: OSMPlace): Record<string, unknown> => {
+    const formatForCopy = (
+      p: OSMPlace,
+      wikiSummary?: WikipediaSummary | null,
+    ): Record<string, unknown> => {
       const obj: Record<string, unknown> = {
         id: p.osmId,
         name: p.name,
@@ -2159,6 +2162,12 @@ router.post("/explore/discover", async (req, res) => {
       for (const key of HINT_TAGS) {
         const val = p.tags[key];
         if (val) obj[key] = sanitizeOSMText(val, 120);
+      }
+      // Inject the first 500 chars of the Wikipedia extract when available.
+      // The copy LLM uses this as factual grounding (rule 11 in the system
+      // prompt). Truncated to keep the batch JSON within the token budget.
+      if (wikiSummary?.extract) {
+        obj.wikipediaContent = wikiSummary.extract.slice(0, 500);
       }
       return obj;
     };
@@ -2176,6 +2185,53 @@ router.post("/explore/discover", async (req, res) => {
     const copyAbort = new AbortController();
     const copyTimer = setTimeout(() => copyAbort.abort(), 30_000);
     res.on("close", () => copyAbort.abort());
+
+    // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
+    // wikipedia= tag. Fetches run in parallel (Promise.all) and are backed by
+    // the shared in-memory cache (wiki:v1:{lang}:{title}) also used by the
+    // detail-page Phase B path — a subsequent detail-page tap for the same
+    // place is a free cache hit with no second Wikipedia API call.
+    // Total added latency: ~200–400 ms for the slowest single fetch, which is
+    // negligible before the 3–30 s copy LLM call that follows. If any fetch
+    // times out or fails, the candidate silently falls through to the
+    // thin-copy path unchanged.
+    const wikiMap = new Map<string, WikipediaSummary>();
+    {
+      type WikiJob = { osmId: string; lang: string; title: string };
+      const jobs: WikiJob[] = candidates
+        .map((c): WikiJob | null => {
+          const tag = c.tags["wikipedia"];
+          if (!tag) return null;
+          const parsed = parseWikipediaOsmTag(tag);
+          if (!parsed) return null;
+          return { osmId: c.osmId, lang: parsed.lang, title: parsed.title };
+        })
+        .filter((x): x is WikiJob => x !== null);
+
+      if (jobs.length > 0) {
+        req.log.debug(
+          { count: jobs.length },
+          "[osm-anchor] pre-fetching Wikipedia summaries",
+        );
+        const settled = await Promise.all(
+          jobs.map(({ osmId, lang, title }) =>
+            fetchWikipediaSummary(lang, title, copyAbort.signal).then((s) => ({
+              osmId,
+              summary: s,
+            })),
+          ),
+        );
+        for (const { osmId, summary } of settled) {
+          if (summary) wikiMap.set(osmId, summary);
+        }
+        if (wikiMap.size > 0) {
+          req.log.info(
+            { enriched: wikiMap.size, total: jobs.length },
+            "[osm-anchor] Wikipedia enrichment ready",
+          );
+        }
+      }
+    }
 
     const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
     try {
@@ -2204,12 +2260,13 @@ ${OSM_COPY_RULES.osm_bare}
 Flag any claim not directly supported by the candidate's tags with "Reportedly" or "According to local accounts."
 9. NEVER write raw GPS coordinates in any text field.
 10. DISPLAY TAGS — the "tags" array must contain only short, human-readable descriptor phrases a general audience would understand (e.g. "historic mansion", "place of worship", "Victorian building", "art deco", "immigrant heritage"). NEVER put raw database identifiers, Wikidata IDs (e.g. Q4891444), Wikipedia slugs, OSM field names (wikidata, wikipedia, building:levels, denomination, operator), key:value pairs, or any technical metadata in tags. Tags are user-visible copy, not metadata echo.
+11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content.
 
 Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
             },
             {
               role: "user",
-              content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(candidates.map(formatForCopy))}`,
+              content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(candidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
             },
           ],
           response_format: { type: "json_object" },

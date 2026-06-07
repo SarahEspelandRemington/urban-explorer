@@ -347,6 +347,82 @@ describe("classifyDiscoveryTier — unclassified", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Bergdoll-Kemble Mansion — Wikipedia enrichment classification fixture
+//
+// These tests verify two things:
+//  1. Without Wikipedia content the thin OSM-only summary classifies as T4
+//     (the pre-enrichment baseline that the Architecture B change fixes).
+//  2. After Wikipedia enrichment the copy LLM produces a summary with a year
+//     and transformation language, which the classifier correctly scores T1.
+//  3. A failed/null Wikipedia fetch leaves classifier behaviour unchanged.
+//
+// The "enriched" summary below is representative of what gpt-4.1-mini
+// produces when given the real en:Bergdoll_Mansion Wikipedia extract (1882
+// construction date, brewer Louis Bergdoll, National Register listing) as the
+// `wikipediaContent` field — it contains both a year AND transformation
+// language, satisfying T1-A.
+// ---------------------------------------------------------------------------
+
+describe("classifyDiscoveryTier — Bergdoll-Kemble Mansion enrichment", () => {
+  it("thin OSM-only summary (no Wikipedia) → T4 metadataOnly", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "Bergdoll-Kemble Mansion is noted for its architectural prominence in the Fairmount neighborhood.",
+        [],
+        { name: "Bergdoll-Kemble Mansion" },
+      ),
+    );
+    expect(result.tier).toBe(4);
+    expect(result.rejectionReason).toBe("metadataOnly");
+  });
+
+  it("Wikipedia-enriched summary → T1 hiddenPast (year + transformation)", () => {
+    // Mirrors a realistic copy LLM output when the wikipedia= extract for
+    // en:Bergdoll_Mansion is injected as `wikipediaContent`.
+    const result = classifyDiscoveryTier(
+      place(
+        "Built in 1882 for Philadelphia brewer Louis Bergdoll, the mansion later passed through multiple owners and is now listed on the National Register of Historic Places.",
+        [
+          "Originally constructed for Louis Bergdoll, a wealthy German-American brewer.",
+          "After Bergdoll's death the property changed hands several times before receiving historic designation.",
+        ],
+        { name: "Bergdoll-Kemble Mansion" },
+      ),
+    );
+    expect(result.tier).toBe(1);
+    expect(result.reason).toBe("hiddenPast");
+  });
+
+  it("null Wikipedia fetch (timeout/404) preserves T4 — thin-copy path unchanged", () => {
+    // When fetchWikipediaSummary returns null, formatForCopy omits the
+    // wikipediaContent field and the copy LLM generates the same thin summary
+    // as before the change. The classifier must return T4 as before.
+    const result = classifyDiscoveryTier(
+      place(
+        "A historic building at 2305 North 22nd Street in Philadelphia, Pennsylvania.",
+        [],
+        { name: "Bergdoll-Kemble Mansion" },
+      ),
+    );
+    expect(result.tier).toBe(4);
+    expect(result.rejectionReason).toBe("metadataOnly");
+  });
+
+  it("Wikipedia stub with no historical signals does not auto-promote → T4", () => {
+    // Guard: even if a wikipedia= tag is present, an article that only
+    // describes current function (no year, no transformation) keeps its T4.
+    const result = classifyDiscoveryTier(
+      place(
+        "A commercial office building providing administrative services to local businesses.",
+        ["Opened in recent years.", "Houses several professional tenants."],
+        { name: "Some Office Building" },
+      ),
+    );
+    expect(result.tier).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // applyDiscoveryTier — in-place mutation
 // ---------------------------------------------------------------------------
 
