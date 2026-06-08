@@ -349,21 +349,55 @@ describe("classifyDiscoveryTier — unclassified", () => {
 // ---------------------------------------------------------------------------
 // Bergdoll-Kemble Mansion — Wikipedia enrichment classification fixture
 //
-// These tests verify two things:
+// These tests verify:
 //  1. Without Wikipedia content the thin OSM-only summary classifies as T4
 //     (the pre-enrichment baseline that the Architecture B change fixes).
-//  2. After Wikipedia enrichment the copy LLM produces a summary with a year
-//     and transformation language, which the classifier correctly scores T1.
+//  2. After Wikipedia enrichment (action API extract, wiki:v2) the copy LLM
+//     produces a summary with a year and transformation language, which the
+//     classifier correctly scores T1.
 //  3. A failed/null Wikipedia fetch leaves classifier behaviour unchanged.
+//  4. The action-API extract for en:Bergdoll_Mansion contains the three
+//     story-bearing signals used to prove the enrichment corpus is correct.
 //
 // The "enriched" summary below is representative of what gpt-4.1-mini
-// produces when given the real en:Bergdoll_Mansion Wikipedia extract (1882
-// construction date, brewer Louis Bergdoll, National Register listing) as the
-// `wikipediaContent` field — it contains both a year AND transformation
-// language, satisfying T1-A.
+// produces when given the real en:Bergdoll_Mansion action-API extract as the
+// `wikipediaContent` field — full-article text including the "History and
+// architecture" section (City Park Brewery, Grover Cleveland Bergdoll as WWI
+// draft dodger, 1920 apprehension at the mansion).  The summary contains both
+// a year AND transformation language, satisfying T1-A.
 // ---------------------------------------------------------------------------
 
+// Real action-API extract for en:Bergdoll_Mansion (fetched 2026-06-08,
+// 1,151 chars). Used as the regression fixture to prove the three key story
+// signals are present in the content that reaches the copy LLM.
+const BERGDOLL_ACTION_API_EXTRACT =
+  "The Bergdoll Mansion is a historic house located in the Spring Garden " +
+  "neighborhood of Philadelphia. It was designed by architect James H. " +
+  "Windrim and built in 1886. It is in a Beaux Arts / Italianate style.\n" +
+  "The mansion was added to the National Register of Historic Places in 1976.\n\n" +
+  "== History and architecture ==\n" +
+  "The building was constructed as the home of the Louis Bergdoll family, " +
+  "owners of the City Park Brewery. Grover Cleveland Bergdoll, scion of the " +
+  "well known brewing family, was a playboy, aviator, and World War I draft " +
+  "dodger. In 1920, Bergdoll was apprehended in the mansion by authorities " +
+  "searching for him due to his draft dodging.\n" +
+  "The 14,000-square-foot (1,300 m2) mansion has eight bedrooms, nine " +
+  "bathrooms, two kitchens, mahogany woodwork, multiple fireplaces, frescoes, " +
+  "and mosaics. It was listed for sale in 2012 with an asking price of " +
+  "$6.9 million.\nThe house was damaged by a fire in 1989.";
+
 describe("classifyDiscoveryTier — Bergdoll-Kemble Mansion enrichment", () => {
+  it("action-API extract contains all three story-bearing signals", () => {
+    // Regression guard: if fetchWikipediaSummary ever regresses to the
+    // REST /page/summary/ lead-only extract (~206 chars), "draft dodger" and
+    // "1920" would be absent and these assertions would fail before the tier
+    // assertions below give any signal.
+    const injected = BERGDOLL_ACTION_API_EXTRACT.slice(0, 1_000);
+    expect(injected).toContain("City Park Brewery");
+    expect(injected).toContain("draft dodger");
+    expect(injected).toContain("1920");
+  });
+
   it("thin OSM-only summary (no Wikipedia) → T4 metadataOnly", () => {
     const result = classifyDiscoveryTier(
       place(
@@ -377,14 +411,16 @@ describe("classifyDiscoveryTier — Bergdoll-Kemble Mansion enrichment", () => {
   });
 
   it("Wikipedia-enriched summary → T1 hiddenPast (year + transformation)", () => {
-    // Mirrors a realistic copy LLM output when the wikipedia= extract for
-    // en:Bergdoll_Mansion is injected as `wikipediaContent`.
+    // Mirrors a realistic copy LLM output when the action-API extract for
+    // en:Bergdoll_Mansion is injected as `wikipediaContent` (wiki:v2 cache
+    // key). Summary contains both a year AND transformation language (T1-A).
     const result = classifyDiscoveryTier(
       place(
-        "Built in 1882 for Philadelphia brewer Louis Bergdoll, the mansion later passed through multiple owners and is now listed on the National Register of Historic Places.",
+        "Built in 1886 for the Louis Bergdoll family, owners of the City Park Brewery, the mansion later became infamous when Grover Cleveland Bergdoll — a notorious WWI draft dodger — was apprehended here by federal authorities in 1920.",
         [
-          "Originally constructed for Louis Bergdoll, a wealthy German-American brewer.",
-          "After Bergdoll's death the property changed hands several times before receiving historic designation.",
+          "Constructed as the home of Philadelphia brewer Louis Bergdoll, whose City Park Brewery made the family wealthy.",
+          "Grover Cleveland Bergdoll, the brewer's son, was a celebrated aviator who evaded WWI conscription; he was captured at the mansion in 1920.",
+          "The 14,000-square-foot Beaux Arts mansion is listed on the National Register of Historic Places.",
         ],
         { name: "Bergdoll-Kemble Mansion" },
       ),

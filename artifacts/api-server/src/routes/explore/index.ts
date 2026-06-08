@@ -234,8 +234,8 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v50"], // discover — quick mode
-  ["full", "v50"], // discover — full mode
+  ["quick", "v51"], // discover — quick mode
+  ["full", "v51"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -1561,8 +1561,13 @@ const PHOTO_CACHE_HIT_TTL = 60 * 60 * 1000; // 1 hour for successful lookups
 const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404 — retry sooner)
 
 // ---------------------------------------------------------------------------
-// Wikipedia summary cache — in-memory, keyed wiki:v1:{lang}:{encoded_title}
+// Wikipedia summary cache — in-memory, keyed wiki:v2:{lang}:{encoded_title}
 // ---------------------------------------------------------------------------
+// v2: switched from REST /page/summary/ (lead paragraph only) to the action
+// API (prop=extracts&explaintext=1) which returns the full article text,
+// including named sections like "History and architecture".  This gives the
+// copy LLM access to story-bearing content (brewery history, notable events,
+// family narratives) rather than only architectural metadata.
 
 /** 4-hour TTL applied to both successful fetches and permanent failures
  *  (404, empty extract, malformed JSON) so a bad OSM tag doesn't hammer
@@ -1576,9 +1581,12 @@ const wikipediaSummaryCache = new Map<
 >();
 
 /**
- * Fetch a Wikipedia article summary via the REST v1 summary endpoint.
+ * Fetch a Wikipedia article's full plain-text extract via the action API
+ * (prop=extracts&explaintext=1).  Returns the complete article body rather
+ * than only the lead paragraph, so named sections such as "History and
+ * architecture" are available to the copy LLM.
  *
- * Cache key: wiki:v1:{lang}:{encoded_title}
+ * Cache key: wiki:v2:{lang}:{encoded_title}
  *
  * Only called when `osmTags.wikipedia` is well-formed — never guesses from
  * place names.  Always falls back gracefully: any failure returns null so
@@ -1590,7 +1598,7 @@ async function fetchWikipediaSummary(
   signal?: AbortSignal,
 ): Promise<WikipediaSummary | null> {
   const encodedTitle = encodeURIComponent(title);
-  const cacheKey = `wiki:v1:${lang}:${encodedTitle}`;
+  const cacheKey = `wiki:v2:${lang}:${encodedTitle}`;
 
   const cached = wikipediaSummaryCache.get(cacheKey);
   if (
@@ -1601,13 +1609,21 @@ async function fetchWikipediaSummary(
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 3000);
+  const timer = setTimeout(() => controller.abort(), 5000);
   const fetchSignal = signal
     ? AbortSignal.any([controller.signal, signal])
     : controller.signal;
 
   try {
-    const url = `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodedTitle}`;
+    const params = new URLSearchParams({
+      action: "query",
+      prop: "extracts",
+      explaintext: "1",
+      redirects: "1",
+      titles: title,
+      format: "json",
+    });
+    const url = `https://${lang}.wikipedia.org/w/api.php?${params.toString()}`;
     const resp = await fetch(url, {
       signal: fetchSignal,
       headers: {
@@ -1618,21 +1634,22 @@ async function fetchWikipediaSummary(
     clearTimeout(timer);
 
     if (!resp.ok) {
-      // Permanent failure (404, 5xx) — cache null to avoid hammering Wikipedia.
+      // Permanent failure — cache null to avoid hammering Wikipedia.
       wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
       logger.info(
         { lang, title, status: resp.status },
-        "[wikipedia] summary fetch non-ok — caching null",
+        "[wikipedia] action-api fetch non-ok — caching null",
       );
       return null;
     }
 
     let raw: {
-      title?: string;
-      extract?: string;
-      description?: string;
-      thumbnail?: { source?: string };
-      content_urls?: { desktop?: { page?: string } };
+      query?: {
+        pages?: Record<
+          string,
+          { pageid?: number; title?: string; extract?: string }
+        >;
+      };
     };
     try {
       raw = (await resp.json()) as typeof raw;
@@ -1642,25 +1659,38 @@ async function fetchWikipediaSummary(
       return null;
     }
 
-    if (!raw.extract || raw.extract.trim().length === 0) {
-      // No useful text — cache null.
+    const pages = raw.query?.pages;
+    const page = pages ? Object.values(pages)[0] : undefined;
+
+    // pageid === -1 means the article was not found (missing page).
+    if (!page || page.pageid === -1 || !page.extract) {
+      wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
+      logger.info(
+        { lang, title },
+        "[wikipedia] action-api page missing or empty — caching null",
+      );
+      return null;
+    }
+
+    const extract = page.extract.trim();
+    if (extract.length === 0) {
       wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
       return null;
     }
 
+    const canonicalTitle = page.title ?? title;
     const summary: WikipediaSummary = {
-      title: raw.title ?? title,
-      extract: raw.extract.trim(),
+      title: canonicalTitle,
+      extract,
       lang,
-      ...(raw.description ? { description: raw.description } : {}),
-      ...(raw.thumbnail?.source ? { thumbnailUrl: raw.thumbnail.source } : {}),
-      ...(raw.content_urls?.desktop?.page
-        ? { articleUrl: raw.content_urls.desktop.page }
-        : {}),
+      articleUrl: `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(canonicalTitle)}`,
     };
 
     wikipediaSummaryCache.set(cacheKey, { data: summary, ts: Date.now() });
-    logger.info({ lang, title }, "[wikipedia] fetched summary");
+    logger.info(
+      { lang, title, extractLen: extract.length },
+      "[wikipedia] fetched full extract",
+    );
     return summary;
   } catch {
     clearTimeout(timer);
@@ -1938,7 +1968,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v50:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v51:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${walkMode && osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2163,11 +2193,14 @@ router.post("/explore/discover", async (req, res) => {
         const val = p.tags[key];
         if (val) obj[key] = sanitizeOSMText(val, 120);
       }
-      // Inject the first 500 chars of the Wikipedia extract when available.
+      // Inject the first 1,000 chars of the Wikipedia extract when available.
       // The copy LLM uses this as factual grounding (rule 11 in the system
-      // prompt). Truncated to keep the batch JSON within the token budget.
+      // prompt). 1,000 chars is enough to capture full named sections (e.g.
+      // "History and architecture") that carry story-bearing content such as
+      // family history, notable events, or contextual narrative — content the
+      // REST /page/summary/ lead-paragraph never included.
       if (wikiSummary?.extract) {
-        obj.wikipediaContent = wikiSummary.extract.slice(0, 500);
+        obj.wikipediaContent = wikiSummary.extract.slice(0, 1_000);
       }
       return obj;
     };
@@ -2188,7 +2221,7 @@ router.post("/explore/discover", async (req, res) => {
 
     // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
     // wikipedia= tag. Fetches run in parallel (Promise.all) and are backed by
-    // the shared in-memory cache (wiki:v1:{lang}:{title}) also used by the
+    // the shared in-memory cache (wiki:v2:{lang}:{title}) also used by the
     // detail-page Phase B path — a subsequent detail-page tap for the same
     // place is a free cache hit with no second Wikipedia API call.
     // Total added latency: ~200–400 ms for the slowest single fetch, which is
@@ -2260,7 +2293,7 @@ ${OSM_COPY_RULES.osm_bare}
 Flag any claim not directly supported by the candidate's tags with "Reportedly" or "According to local accounts."
 9. NEVER write raw GPS coordinates in any text field.
 10. DISPLAY TAGS — the "tags" array must contain only short, human-readable descriptor phrases a general audience would understand (e.g. "historic mansion", "place of worship", "Victorian building", "art deco", "immigrant heritage"). NEVER put raw database identifiers, Wikidata IDs (e.g. Q4891444), Wikipedia slugs, OSM field names (wikidata, wikipedia, building:levels, denomination, operator), key:value pairs, or any technical metadata in tags. Tags are user-visible copy, not metadata echo.
-11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content.
+11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content. Standalone attribution facts — "designed by architect X", "built in year Y", "listed on the National Register", "in a Beaux Arts style" — are NOT sufficient on their own for a discovery-worthy summary. Only use them to anchor a broader story: explain why the architect matters, what else they built, who commissioned the building and why, or what notable events occurred here. If the Wikipedia content contains only architectural metadata with no narrative context (no notable people, no events, no transformation over time), reflect that in a lower-confidence summary rather than dressing up dry facts as a compelling discovery.
 
 Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
             },
