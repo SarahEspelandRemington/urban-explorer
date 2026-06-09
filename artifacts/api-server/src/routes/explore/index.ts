@@ -62,7 +62,10 @@ interface OSMPlace {
   osmId: string;
 }
 
-const OVERPASS_API = "https://overpass-api.de/api/interpreter";
+const OVERPASS_PROVIDERS = [
+  "https://overpass.openstreetmap.fr/api/interpreter",
+  "https://overpass-api.de/api/interpreter",
+];
 
 const DEFAULT_BORING_BUILDING_TYPES = [
   "garage",
@@ -166,8 +169,8 @@ const OSM_CACHE_DISTANCE = 200;
 const osmSuggestionsCache = new Map<string, LLMCacheEntry<OSMPlace[]>>();
 
 function osmSuggestionsBucketKey(lat: number, lng: number): string {
-  // osm:v42: invalidates entries cached before the display-tag sanitizer was added.
-  return `osm:v42:${lat.toFixed(3)},${lng.toFixed(3)}`;
+  // osm:v43: invalidates entries cached before the Overpass provider race was added.
+  return `osm:v43:${lat.toFixed(3)},${lng.toFixed(3)}`;
 }
 
 function getCachedOSMPlaces(lat: number, lng: number): OSMPlace[] | null {
@@ -495,23 +498,31 @@ async function fetchNearbyOSMPlaces(
 out center body ${maxResults};
 `;
   const controller = new AbortController();
-  const abortTimeout = quickMode ? 5000 : 6000;
+  const abortTimeout = quickMode ? 5000 : 10000;
   const timeout = setTimeout(() => controller.abort(), abortTimeout);
 
-  try {
-    const resp = await fetch(OVERPASS_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
-      },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+  const fetchOpts = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+    },
+    body: `data=${encodeURIComponent(query)}`,
+    signal: controller.signal,
+  };
 
-    if (!resp.ok) return null;
+  try {
+    const { resp, provider } = await Promise.any(
+      OVERPASS_PROVIDERS.map((url) =>
+        fetch(url, fetchOpts).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return { resp: r, provider: url };
+        }),
+      ),
+    );
+    clearTimeout(timeout);
+    logger.info({ provider }, "[overpass] provider responded");
 
     const json = (await resp.json()) as { elements?: any[] };
     if (!json.elements) return null;
@@ -2082,7 +2093,7 @@ router.post("/explore/discover", async (req, res) => {
         false,
         80,
       ).catch((): null => null),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000)),
     ]);
     if (osmRaceResult === null) {
       overpassErrored = true;
@@ -4640,22 +4651,30 @@ out center body ${overpassLimit};
 `;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9000);
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  const fetchOpts = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+    },
+    body: `data=${encodeURIComponent(query)}`,
+    signal: controller.signal,
+  };
 
   try {
-    const resp = await fetch(OVERPASS_API, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
-        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
-      },
-      body: `data=${encodeURIComponent(query)}`,
-      signal: controller.signal,
-    });
+    const { resp, provider } = await Promise.any(
+      OVERPASS_PROVIDERS.map((url) =>
+        fetch(url, fetchOpts).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return { resp: r, provider: url };
+        }),
+      ),
+    );
     clearTimeout(timeout);
-    if (!resp.ok)
-      return { places: [], osmCandidatesCap, corridorCap, lengthCap };
+    logger.info({ provider }, "[overpass] route-bbox provider responded");
 
     const json = (await resp.json()) as { elements?: any[] };
     if (!json.elements)
