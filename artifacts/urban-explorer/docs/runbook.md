@@ -1,0 +1,402 @@
+# Streetlit — Operational Runbook
+
+> Last updated: 2026-06-09. Documentation only — does not affect any app code.
+
+---
+
+## 1. Repo structure (high level)
+
+```
+urban-explorer/                   ← GitHub repo root = Replit workspace root
+├── artifacts/
+│   ├── api-server/               ← Express 5 API backend (Node 24, TypeScript)
+│   │   ├── src/routes/explore/   ← All discovery, narration, walk, route endpoints
+│   │   └── config/               ← walk-config.json, boring-building-types.json
+│   ├── urban-explorer/           ← Expo / React Native mobile app (SDK 54)
+│   │   ├── app/                  ← expo-router file-based screens
+│   │   ├── components/           ← Shared UI components
+│   │   ├── contexts/             ← WalkModeContext, SettingsContext, etc.
+│   │   ├── lib/                  ← walkEligibility, audio helpers, etc.
+│   │   ├── constants/            ← colors.ts, categories.ts, buildingTypeGroups.ts
+│   │   ├── app.config.js         ← Expo dynamic config (bundle ID, plugins, EAS ID)
+│   │   ├── eas.json              ← EAS build profiles (development, development-simulator)
+│   │   └── docs/                 ← This file and field-testing notes
+│   └── mockup-sandbox/           ← Dev-only Vite canvas preview server (not deployed)
+├── lib/
+│   ├── api-spec/                 ← OpenAPI spec (source of truth for API contracts)
+│   ├── api-zod/                  ← Generated Zod schemas
+│   ├── api-client-react/         ← Generated React Query hooks
+│   └── db/                       ← Drizzle ORM schema (PostgreSQL)
+├── scripts/                      ← CI dashboard, prompt-manifest checker, etc.
+├── pnpm-workspace.yaml           ← Workspace catalog and package discovery
+└── .github/workflows/            ← CI pipeline (typecheck, lint, format, privacy tests)
+```
+
+---
+
+## 2. How the API server runs in Replit
+
+Workflow name: **`artifacts/api-server: API Server`**
+
+Command: `pnpm --filter @workspace/api-server run dev`
+
+- Runs `esbuild` to produce `artifacts/api-server/dist/index.mjs`, then starts it with `node --enable-source-maps`.
+- Binds to the `PORT` environment variable (assigned by Replit; proxied through the shared reverse proxy at `/api`).
+- Required environment variables (set in Replit Secrets):
+  - `AI_INTEGRATIONS_OPENAI_BASE_URL` and `AI_INTEGRATIONS_OPENAI_API_KEY` — provisioned automatically by the Replit OpenAI integration.
+  - `SESSION_SECRET` — long random string; add manually via Replit Secrets.
+- Database: Replit-provisioned PostgreSQL; schema managed by Drizzle (`pnpm --filter db push`).
+- Logs visible in the Replit workflow panel. Use `req.log` in route handlers; `logger` singleton elsewhere. Never `console.log`.
+
+---
+
+## 3. How the Expo client runs in Replit / Expo Go
+
+Workflow name: **`artifacts/urban-explorer: expo`**
+
+The dev script starts Metro Bundler in **Expo Go mode** (`--go` flag) and serves it over the Replit proxy:
+
+```
+expo start --go --localhost --port $PORT --max-workers 4
+```
+
+- The Replit preview pane shows a QR code or direct link.
+- Scanning with the Expo Go app on a phone loads the JS bundle over the network.
+- **This mode uses Expo Go as the native runtime.** It does not use the EAS dev client.
+- Known limitation: Walk Mode native features (background location, lock-screen audio) do not work correctly in Expo Go. See §10.
+
+The `--go` flag is intentionally left in place so the Replit preview pane remains usable for UI development. Do not remove it until you are ready to retire Expo Go as a testing surface.
+
+---
+
+## 4. Current production API URL
+
+```
+https://city-explorer-guide-sarahremington.replit.app
+```
+
+All API endpoints are under `/api/`:
+
+- `POST /api/explore/discover` — Walk Mode and Explore discovery
+- `POST /api/explore/walk-narration` — narration text
+- `POST /api/explore/walk-narration-audio` — TTS audio
+- `GET  /api/explore/walk-config` — Walk Mode runtime parameters
+- `GET  /api/healthz` — health check
+
+---
+
+## 5. Mobile API URL configuration
+
+The mobile app points to production by default. The URL is injected at Metro startup via the dev script:
+
+```
+EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-https://city-explorer-guide-sarahremington.replit.app}
+```
+
+To point a local dev session at a different API, set `EXPO_PUBLIC_API_URL` in the environment before starting Metro. The app reads it via `process.env.EXPO_PUBLIC_API_URL` at bundle time — it is baked into the JS bundle, not resolved at runtime.
+
+---
+
+## 6. How to redeploy production
+
+1. Push or merge changes to the `main` branch on GitHub.
+2. Open the **Deployments** panel in Replit.
+3. Click **Redeploy** (or the equivalent publish action).
+4. Wait for the healthcheck to go green — the production container restarts and runs the new build.
+
+The production container runs: `node --enable-source-maps artifacts/api-server/dist/index.mjs`
+
+It does **not** pick up changes automatically on push. A manual redeploy trigger is required each time.
+
+---
+
+## 7. How to verify production is running the latest code
+
+**Step 1 — Check the GitHub HEAD commit:**
+
+```bash
+# In the repo, after pushing:
+git log --oneline -3
+```
+
+The latest commit SHA should match what you pushed.
+
+**Step 2 — Hit the healthcheck:**
+
+```bash
+curl https://city-explorer-guide-sarahremington.replit.app/api/healthz
+# Expected: {"status":"ok"}
+```
+
+**Step 3 — Check production logs for the new deployment marker:**
+
+After a redeploy, the production log stream will show:
+
+```
+[Info] starting up user application
+[info] Loaded BORING_BUILDING_TYPES from config file ...
+```
+
+This is the new process starting. Any log lines with the old pid are pre-redeploy.
+
+**Step 4 — For Overpass specifically, verify the OSM anchor path is active:**
+
+```bash
+curl -s -X POST https://city-explorer-guide-sarahremington.replit.app/api/explore/discover \
+  -H "Content-Type: application/json" \
+  -d '{"latitude":39.966,"longitude":-75.174,"walkMode":true,"osmAnchor":true,"searchRadius":300}' \
+  | python3 -c "
+import json,sys; d=json.load(sys.stdin)
+print('overpassFallback:', d.get('overpassFallback','ABSENT — OSM path OK'))
+print('osmCandidateCount:', d.get('osmCandidateCount'))
+print('places:', len(d.get('places',[])))
+"
+```
+
+Expected output (OSM anchor path working):
+
+```
+overpassFallback: ABSENT — OSM path OK
+osmCandidateCount: {'r150': N, 'r300': N, 'r500': N}
+places: 20–30
+```
+
+If `overpassFallback: True` appears, Overpass is unavailable and the LLM fallback is active.
+
+---
+
+## 8. How to run checks before pushing
+
+All of these must pass before pushing. Run them from the workspace root:
+
+```bash
+pnpm run typecheck        # TypeScript — all packages
+pnpm run lint             # ESLint + conflict markers + prompt-manifest check
+pnpm run format:check     # Prettier — fails if any file is unformatted
+pnpm run format           # Auto-fix formatting (run this, then re-check)
+```
+
+If you modify `artifacts/api-server/src/routes/explore/index.ts` in any way that changes an LLM cache-key version token (e.g. `osm:v43` → `osm:v44`), you must also run:
+
+```bash
+pnpm run update:prompt-manifest
+```
+
+Then commit the updated `scripts/prompt-manifest.json` alongside your code change. The lint check (`check:prompt-manifest`) will fail on CI if you forget this.
+
+**Privacy tests** (run separately if you touch Sentry-related code):
+
+```bash
+pnpm --filter @workspace/urban-explorer run test
+```
+
+---
+
+## 9. Current EAS dev-client status
+
+| Item                                            | Status                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| `expo-dev-client` package                       | ✅ Installed — `~6.0.20` in `package.json`                         |
+| `expo-dev-client` plugin                        | ✅ Registered — first entry in `app.config.js` plugins array       |
+| EAS project ID                                  | ✅ Set — `9b30343d-86e4-4227-9d0c-01b5a4376780` in `app.config.js` |
+| Bundle identifier                               | ✅ `com.urbanexplorer.app`                                         |
+| `eas.json`                                      | ✅ Created — `artifacts/urban-explorer/eas.json`                   |
+| `development` profile (physical device)         | ✅ Present — requires Apple Developer account                      |
+| `development-simulator` profile (iOS Simulator) | ✅ Present — no Apple Developer account needed                     |
+| EAS build run                                   | ❌ Not yet triggered — no dev client binary exists yet             |
+| Apple Developer account                         | ❌ Not yet — needed for physical device build only                 |
+
+---
+
+## 10. Current known runtime issues
+
+### Native crash in Expo Go (Walk Mode)
+
+**Symptom:** Walk Mode triggers repeated native crash-reconnect cycles in Expo Go (15+ crashes observed). Metro log shows a reconnection loop, not a JS error.
+
+**Root cause:** `react-native-maps` version mismatch. The project uses `1.18.0`; Expo SDK 54's Expo Go binary ships `1.20.1`. The native bridge diverges between the JS bundle and the runtime binary.
+
+**Fix:** Build a dev client using EAS (see §13). The dev client embeds exactly the native modules declared in `package.json`, eliminating the mismatch. Upgrading `react-native-maps` to `1.20.1` to continue using Expo Go is not recommended because Walk Mode also relies on background location and lock-screen audio, which Expo Go cannot run correctly.
+
+**Workaround until dev client is built:** Walk Mode cannot be tested in Expo Go. All other screens work normally.
+
+---
+
+### Overpass provider race — live and production-verified
+
+**Current state (as of 2026-06-09):** The Overpass provider race is live in production.
+
+- `overpass-api.de` (the original single endpoint) is IP-throttled from Replit's production container — every request timed out at 6s with `AbortError`.
+- The fix races `overpass.openstreetmap.fr` (primary) and `overpass-api.de` (fallback) using `Promise.any()`.
+- The French instance (`openstreetmap.fr`) responds from production. Confirmed by post-redeploy production logs: `[osm-anchor] Wikipedia enrichment ready`, `overpassFallback: ABSENT`, `osmCandidateCount.r300 = 24`.
+- The `[overpass] provider responded` log line was added for ongoing monitoring. If it goes silent and `[osmAnchor] Overpass unavailable` reappears, the FR instance has also been blocked and a third provider or self-hosted alternative will be needed.
+
+**Timeout chain (current):**
+
+| Layer                             | Value                       |
+| --------------------------------- | --------------------------- |
+| Overpass QL `[timeout:N]`         | `9s` (server-enforced)      |
+| `AbortController`                 | `10s` (client-side abort)   |
+| Outer `Promise.race` null-resolve | `12s` (belt-and-suspenders) |
+
+---
+
+### OSM-anchor discovery vs LLM-fallback discovery
+
+Walk Mode runs two distinct paths depending on Overpass availability:
+
+**OSM-anchor path (current normal state):**
+
+- Fetches real map data from Overpass → verified lat/lng for all returned places
+- LLM brainstorm is seeded with real OSM place names and tags → higher accuracy
+- `coordSource: "osm"` on all places → no `autoNarrationBlocked`
+- `osmCandidateCount` populated in response
+- `overpassFallback` absent from response
+
+**LLM-fallback path (triggered if Overpass fails):**
+
+- LLM invents place names with no OSM grounding
+- Nominatim name-search used to verify coordinates → `coordSource: "nominatim-confirmed"` or `"llm"`
+- `autoNarrationBlocked: true` on unverified places unless `overpassFallbackMode` clears it
+- `verifyAddressCoherence` provides a second filter (geocodes the place address; rejects if it lands in a different city)
+- `overpassFallback: true` present in response
+- Response time typically 23–51s
+
+---
+
+### Cold discover requests are slow; cached requests are fast
+
+The LLM step (even on the OSM-anchor path) takes 5–25s on a cache miss. Results are cached in memory (15-minute TTL) and also in the PostgreSQL database (persisted across restarts). After the first request for a tile, all subsequent requests return in under 500ms.
+
+Walk Mode issues one discover call per grid tile as you walk. The first time you visit a new tile, there will be a brief delay. Revisiting the same tile (or areas near where others have walked) is instant.
+
+---
+
+## 11. Do not touch casually
+
+These areas have subtle behaviour that is easy to break and hard to diagnose in the field:
+
+| Area                                                                                             | Why                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `offAxisPenaltyDeg`, `offAxisPenaltyMeters`, `maxQueueDistance`, `discoverRadius` in walk-config | Carefully tuned for urban canyon heading accuracy. Changes affect what auto-narrates during a walk.                                                                                                                          |
+| `pickNext` in `WalkModeContext.tsx`                                                              | Contains the 90° hard exclusion gate and directional scoring. Logic is tightly coupled to GPS-velocity vs compass fallback.                                                                                                  |
+| Overpass query shape in `fetchNearbyOSMPlaces`                                                   | The 13-clause union query is balanced for coverage vs speed. Adding broad clauses (e.g. bare `nwr["name"]`) can cause multi-second Overpass responses.                                                                       |
+| LLM cache-key version tokens (`osm:v43`, etc.)                                                   | Bumping a version evicts all cached results for that namespace from the DB. Correct to do after logic changes, destructive if done accidentally. After bumping, run `pnpm run update:prompt-manifest` and commit both files. |
+| `OVERPASS_PROVIDERS` array order                                                                 | FR is first intentionally — it is the provider that works from production IP. Do not swap the order without re-verifying both providers from the production container.                                                       |
+| Privacy scrubbing in Sentry calls                                                                | Governed by the `no-pii-in-sentry` ESLint rule and a dedicated test suite. Adding new location or user data to Sentry events without going through the scrubber is a privacy violation.                                      |
+| `postProcessPlaces` pipeline                                                                     | `verifyPlaceCoordinates` → `verifyAddressCoherence` → quality filters run in strict order. Reordering or skipping steps changes what places reach the client.                                                                |
+| `newArchEnabled: true` in `app.config.js`                                                        | New Architecture is on. Any native package added must be verified as New Arch compatible before installing.                                                                                                                  |
+
+---
+
+## 12. Immediate next-step checklist
+
+- [ ] **Build the iOS Simulator dev client** — eliminates the Expo Go native crash so Walk Mode can be tested (see §13)
+- [ ] **Field-test Walk Mode on a real device** — requires the physical-device EAS build (`development` profile), which requires an Apple Developer account
+- [ ] **Monitor `[overpass] provider responded` in production logs** — confirms which provider is serving Overpass data on an ongoing basis
+- [ ] **Session plan tasks T002–T008** — narration spatial anchor, `getEligibleCandidates` with reason tags, re-validation guard, "passed" badge, debug overlay, tests, GitHub push
+
+---
+
+## 13. How to build the iOS Simulator dev client on a Mac
+
+### Prerequisites (one-time)
+
+```bash
+# Install EAS CLI globally
+npm install -g eas-cli
+
+# Log in with your Expo account (free account, no Apple Developer account needed)
+eas login
+```
+
+Xcode must be installed on your Mac (available from the Mac App Store, free).
+
+### Build the simulator binary
+
+Run from the Expo project root (wherever you have the repo checked out locally):
+
+```bash
+cd path/to/urban-explorer/artifacts/urban-explorer
+eas build --platform ios --profile development-simulator
+```
+
+This runs the build remotely on EAS infrastructure (~15–25 minutes). When it finishes, EAS provides a download link for a `.tar.gz` containing the `.app` bundle. No Apple Developer account or signing certificates are required for simulator builds.
+
+**Profile used** (`artifacts/urban-explorer/eas.json`):
+
+```json
+"development-simulator": {
+  "developmentClient": true,
+  "distribution": "internal",
+  "ios": {
+    "simulator": true
+  }
+}
+```
+
+### Install into the iOS Simulator
+
+```bash
+# Extract the downloaded archive, then install:
+xcrun simctl install booted UrbanExplorer.app
+
+# Launch the app:
+xcrun simctl launch booted com.urbanexplorer.app
+```
+
+The Simulator must already be running (open Xcode → open Simulator, or `open -a Simulator`).
+
+### Start Metro for dev-client mode
+
+```bash
+cd path/to/urban-explorer/artifacts/urban-explorer
+npx expo start --dev-client
+```
+
+The simulator app shows a connection screen and auto-connects to Metro on the same machine. From this point, all JS/TS edits hot-reload instantly — no rebuild needed.
+
+> **Important:** Use `--dev-client`, not `--go`. The dev client binary refuses connections from a `--go` Metro server.
+
+### When to rebuild the dev client
+
+A new EAS build is required whenever the **native layer** changes:
+
+- Upgrading `react-native-maps`, `expo-location`, `expo-audio`, or any other package with native code
+- Adding a new package that contains native code
+- Adding a new entry to the `plugins` array in `app.config.js`
+- Changing `infoPlist`, `UIBackgroundModes`, permissions, or `bundleIdentifier`
+- Upgrading the Expo SDK
+- Toggling `newArchEnabled`
+
+All other changes (JS/TS files, styles, screens, API changes) hot-reload without a rebuild.
+
+### Physical device build (future — requires Apple Developer account)
+
+When you have an Apple Developer Program membership ($99/year):
+
+```bash
+# Register your iPhone's UDID with EAS
+eas device:create
+
+# Build for physical device
+eas build --platform ios --profile development
+```
+
+**Profile used**:
+
+```json
+"development": {
+  "developmentClient": true,
+  "distribution": "internal",
+  "ios": {
+    "simulator": false,
+    "resourceClass": "m-medium"
+  },
+  "android": {
+    "buildType": "apk"
+  }
+}
+```
+
+EAS manages certificates and provisioning profiles automatically. Install the resulting build by scanning the QR code EAS provides, then trust the developer certificate in iOS Settings → General → VPN & Device Management.
