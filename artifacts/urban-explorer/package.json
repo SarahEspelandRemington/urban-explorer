@@ -65,6 +65,6 @@
     "expo-speech": "~14.0.8",
     "expo-task-manager": "~14.0.9",
     "react-native-maps": "1.18.0",
-    "react-native-svg": "~15.11.2"
+    "react-native-svg": "~15.12.1"
   }
 }
