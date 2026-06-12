@@ -242,7 +242,7 @@ const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
-  ["nbhd", "v1"], // neighbourhood label reverse-geocode (formerly revgeo-nbhd:v1:)
+  ["nbhd", "v2"], // neighbourhood label reverse-geocode (formerly revgeo-nbhd:v1:)
   ["suggest404", "v5"], // address-not-found suggestions
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
@@ -847,9 +847,9 @@ async function fetchNeighborhoodLabel(
   lng: number,
 ): Promise<{ label: string; src: "nominatim" | "fallback" }> {
   // Key uses the "nbhd" prefix (not "revgeo-nbhd") so it is governed by the
-  // ["nbhd", "v1"] entry in LLM_CACHE_CURRENT_VERSIONS and is never
+  // ["nbhd", "v2"] entry in LLM_CACHE_CURRENT_VERSIONS and is never
   // accidentally swept by the broader "revgeo:v12:" cleanup rule.
-  const cacheKey = `nbhd:v1:${lat.toFixed(3)},${lng.toFixed(3)}`;
+  const cacheKey = `nbhd:v2:${lat.toFixed(3)},${lng.toFixed(3)}`;
   const cached = getLLMCache<{ label: string; src: "nominatim" | "fallback" }>(
     cacheKey,
   );
@@ -860,7 +860,7 @@ async function fetchNeighborhoodLabel(
     lon: String(lng),
     format: "jsonv2",
     addressdetails: "1",
-    zoom: "14", // neighbourhood-level granularity
+    zoom: "18", // building-level granularity — returns addr.neighbourhood reliably
   });
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 4000);
