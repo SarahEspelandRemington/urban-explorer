@@ -92,6 +92,9 @@ export default function PlaceDetailScreen() {
   const saved = isPlaceSaved(placeId);
   const iconName = getCategoryIcon(params.category || "");
   const categoryColor = getCategoryColor(params.category || "", colors);
+  const osmTrustLevel = params.osmId
+    ? getOsmHints(params.osmId)?.trustLevel
+    : undefined;
 
   const detailMutation = useGetPlaceDetail();
   const timelineMutation = useGetPlaceTimeline();
@@ -346,29 +349,35 @@ export default function PlaceDetailScreen() {
             </Animated.View>
           ))}
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <PlaceTimeline
-            eras={timelineMutation.data?.eras}
-            isLoading={timelineMutation.isPending}
-            error={timelineMutation.isError}
-            onLoad={handleLoadTimeline}
-            onRetry={() => {
-              setTimelineLoaded(false);
-              timelineMutation.reset();
-              // Actually re-fire the request — reset() alone only cleared the
-              // error state; without mutate() no new network call is made.
-              timelineMutation.mutate({
-                data: {
-                  placeName: params.name,
-                  latitude: lat,
-                  longitude: lng,
-                  category: params.category,
-                  yearBuilt: params.yearBuilt || undefined,
-                },
-              });
-            }}
-            hasLoaded={timelineLoaded}
-          />
+          {osmTrustLevel !== "osm_bare" ? (
+            <>
+              <View
+                style={[styles.divider, { backgroundColor: colors.border }]}
+              />
+              <PlaceTimeline
+                eras={timelineMutation.data?.eras}
+                isLoading={timelineMutation.isPending}
+                error={timelineMutation.isError}
+                onLoad={handleLoadTimeline}
+                onRetry={() => {
+                  setTimelineLoaded(false);
+                  timelineMutation.reset();
+                  // Actually re-fire the request — reset() alone only cleared the
+                  // error state; without mutate() no new network call is made.
+                  timelineMutation.mutate({
+                    data: {
+                      placeName: params.name,
+                      latitude: lat,
+                      longitude: lng,
+                      category: params.category,
+                      yearBuilt: params.yearBuilt || undefined,
+                    },
+                  });
+                }}
+                hasLoaded={timelineLoaded}
+              />
+            </>
+          ) : null}
 
           {detailMutation.isPending ? (
             <View style={styles.detailLoading}>
