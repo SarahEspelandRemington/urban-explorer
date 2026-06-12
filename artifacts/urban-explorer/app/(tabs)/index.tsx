@@ -625,6 +625,7 @@ export default function ExploreScreen() {
             longitude: lng,
             radius: 500,
             mode: "quick" as const,
+            osmAnchor: true,
           },
         },
         {
