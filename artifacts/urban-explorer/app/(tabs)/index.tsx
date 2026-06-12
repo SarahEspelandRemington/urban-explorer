@@ -547,6 +547,12 @@ export default function ExploreScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permission?.granted, !!manualCoords]);
 
+  // Always-current mirror of `location` state. Lets handleDiscover read the
+  // live value even when its useCallback closure is stale (e.g. simulator GPS
+  // delivers the fix after the callback was last created).
+  const locationRef = useRef(location);
+  locationRef.current = location;
+
   const discoverRequestRef = useRef(0);
   const discoverAt = useCallback(
     (
@@ -668,7 +674,7 @@ export default function ExploreScreen() {
       discoverAt(manualCoords.latitude, manualCoords.longitude);
       return;
     }
-    let loc = location;
+    let loc = locationRef.current;
     if (!loc) {
       loc = await getLocation();
     }
