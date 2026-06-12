@@ -294,7 +294,7 @@ These areas have subtle behaviour that is easy to break and hard to diagnose in 
 - [ ] **Build the iOS Simulator dev client** — eliminates the Expo Go native crash so Walk Mode can be tested (see §13)
 - [ ] **Field-test Walk Mode on a real device** — requires the physical-device EAS build (`development` profile), which requires an Apple Developer account
 - [ ] **Monitor `[overpass] provider responded` in production logs** — confirms which provider is serving Overpass data on an ongoing basis
-- [ ] **Session plan tasks T002–T008** — narration spatial anchor, `getEligibleCandidates` with reason tags, re-validation guard, "passed" badge, debug overlay, tests, GitHub push
+- [x] **Walk Mode rebuild (T001–T008)** — address coherence rejection (`verifyAddressCoherence`), narration spatial anchor + `crossStreets`, `walkEligibility.ts` with reason tags, `maybeNarrate` re-validation guard (stale/behind90/addressMismatch), `narrationIsPassed` badge, Settings-gated `WalkModeDebugOverlay`, 370 tests passing, pushed to GitHub
 
 ---
 
