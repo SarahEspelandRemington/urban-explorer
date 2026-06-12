@@ -580,6 +580,7 @@ export default function ExploreScreen() {
             latitude: lat,
             longitude: lng,
             radius: r,
+            osmAnchor: true,
             ...(typeof accuracy === "number" && Number.isFinite(accuracy)
               ? { accuracy }
               : {}),

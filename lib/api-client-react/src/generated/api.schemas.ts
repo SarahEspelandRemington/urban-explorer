@@ -48,7 +48,7 @@ export interface DiscoverRequest {
   addressHint?: string;
   /** When true, Nominatim coordinate verification runs synchronously before responding. Only places confirmed or corrected by Nominatim are returned. Places whose coordinates cannot be externally verified are omitted rather than returned with LLM-generated pins. Explore Mode callers should omit this field or set it to false. */
   walkMode?: boolean;
-  /** Walk Mode OSM-anchor mode. When true (and walkMode is also true), Overpass/OSM is the definitive candidate source — the LLM writes copy only and cannot invent place names, addresses, or coordinates. If Overpass returns zero candidates within the search radius, returns an empty places array with noVerifiedPlacesNearby: true. Has no effect when walkMode is false. */
+  /** OSM-anchor mode. When true, Overpass/OSM is the definitive candidate source — the LLM writes copy only and cannot invent place names, addresses, or coordinates. If Overpass returns zero candidates within the search radius, returns an empty places array with noVerifiedPlacesNearby: true. If Overpass is unavailable, the server falls back to the standard LLM discovery path. Both Explore Mode and Walk Mode callers may set this field to true. */
   osmAnchor?: boolean;
 }
 
