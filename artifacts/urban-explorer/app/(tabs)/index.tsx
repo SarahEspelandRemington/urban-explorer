@@ -685,7 +685,7 @@ export default function ExploreScreen() {
         loc.coords.accuracy,
       );
     }
-  }, [location, manualCoords, discoverAt, getLocation]);
+  }, [manualCoords, discoverAt, getLocation]);
 
   const handleManualLocation = useCallback(
     (query: string) => {
