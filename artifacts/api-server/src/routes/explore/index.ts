@@ -1551,8 +1551,9 @@ async function postProcessPlaces(
 import {
   classifyDiscovery,
   filterDeniedPlaces,
+  suppressApproxDuplicates,
 } from "../../lib/productionFilter";
-export { classifyDiscovery, filterDeniedPlaces };
+export { classifyDiscovery, filterDeniedPlaces, suppressApproxDuplicates };
 import { applyDiscoveryTier } from "../../lib/discoveryTier";
 
 // ---------------------------------------------------------------------------
@@ -2009,6 +2010,7 @@ router.post("/explore/discover", async (req, res) => {
       // receive tier classification on the way out (no cache bump needed).
       applyDiscoveryTier(allCachedPlaces);
       applyLlmPrecisionFilter(allCachedPlaces);
+      suppressApproxDuplicates(allCachedPlaces);
       allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
       // Both Explore and Walk require external coordinate verification.
       // Unverified LLM-coordinate places must not reach the UI in either mode.
@@ -2385,6 +2387,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
     classifyDiscovery(mergedPlaces);
     applyDiscoveryTier(mergedPlaces);
     applyLlmPrecisionFilter(mergedPlaces);
+    suppressApproxDuplicates(mergedPlaces);
     mergedPlaces = filterDeniedPlaces(mergedPlaces);
 
     // 8. Wikipedia photos (best-effort)

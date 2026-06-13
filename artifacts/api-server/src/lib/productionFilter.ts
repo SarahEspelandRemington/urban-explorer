@@ -87,3 +87,134 @@ export function classifyDiscovery(places: any[]): void {
 export function filterDeniedPlaces(places: any[]): any[] {
   return places.filter((p) => p.discoveryClass !== "INTERPRETIVE_OVERLAY");
 }
+
+// ── suppressApproxDuplicates ─────────────────────────────────────────────────
+
+/**
+ * Haversine distance in metres between two WGS-84 coordinates.
+ * Self-contained so productionFilter.ts has no dependency on route helpers.
+ */
+function approxDistanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * Words too generic to serve as a meaningful link between two place names.
+ * Words shorter than 5 characters are already excluded by significantKeywords.
+ */
+const APPROX_SUPPRESS_STOPWORDS = new Set([
+  "house",
+  "building",
+  "former",
+  "place",
+  "block",
+  "corner",
+  "center",
+  "centre",
+  "church",
+  "school",
+  "market",
+  "union",
+  "north",
+  "south",
+  "east",
+  "west",
+  "historic",
+  "historical",
+  "mansion",
+  "estate",
+  "lodge",
+  "street",
+  "avenue",
+  "boulevard",
+  "parkway",
+  "drive",
+]);
+
+/**
+ * Extracts significant keywords from a place name: tokens that are at least
+ * 5 characters long and not in the stopword set. Used to detect shared proper
+ * nouns (family names, unique identifiers) between two place names.
+ */
+function significantKeywords(name: string, stopwords: Set<string>): Set<string> {
+  return new Set(
+    name
+      .toLowerCase()
+      .split(/[\s\-–—,.()''""/]+/)
+      .filter((w) => w.length >= 5 && !stopwords.has(w)),
+  );
+}
+
+/**
+ * Suppresses APPROXIMATE_SITE places that are LLM extrapolations derived from
+ * a nearby osm_enriched VERIFIED_PLACE in the same result set.
+ *
+ * This targets the pattern where the LLM, seeded with an OSM + Wikipedia-
+ * enriched place, invents a nearby "former site" entity whose historical
+ * content is already covered by the verified place's facts array.
+ *
+ * A place is suppressed when ALL of the following hold:
+ *   1. Its discoveryClass is APPROXIMATE_SITE.
+ *   2. It does NOT itself have trustLevel "osm_enriched" (not independently
+ *      OSM-backed).
+ *   3. At least one significant keyword (≥5 chars, not a stopword) from its
+ *      name also appears in the name of an osm_enriched VERIFIED_PLACE within
+ *      `thresholdMeters`.
+ *
+ * Suppressed places are promoted to INTERPRETIVE_OVERLAY (with
+ * spatialSuppression: "approxDuplicateOfNearbyVerified") so that the
+ * subsequent filterDeniedPlaces() call removes them from the response.
+ *
+ * Must be called after classifyDiscovery() and applyLlmPrecisionFilter(),
+ * and before filterDeniedPlaces().  Pure synchronous — no external calls.
+ */
+export function suppressApproxDuplicates(
+  places: any[],
+  thresholdMeters = 200,
+): void {
+  const enrichedVerified = places.filter(
+    (p) =>
+      p.discoveryClass === "VERIFIED_PLACE" && p.trustLevel === "osm_enriched",
+  );
+  if (enrichedVerified.length === 0) return;
+
+  for (const approx of places) {
+    if (approx.discoveryClass !== "APPROXIMATE_SITE") continue;
+    if (approx.trustLevel === "osm_enriched") continue;
+
+    const approxKw = significantKeywords(approx.name ?? "", APPROX_SUPPRESS_STOPWORDS);
+    if (approxKw.size === 0) continue;
+
+    for (const verified of enrichedVerified) {
+      const dist = approxDistanceMeters(
+        approx.latitude,
+        approx.longitude,
+        verified.latitude,
+        verified.longitude,
+      );
+      if (dist > thresholdMeters) continue;
+
+      const verifiedKw = significantKeywords(
+        verified.name ?? "",
+        APPROX_SUPPRESS_STOPWORDS,
+      );
+      if ([...approxKw].some((kw) => verifiedKw.has(kw))) {
+        approx.discoveryClass = "INTERPRETIVE_OVERLAY";
+        approx.spatialSuppression = "approxDuplicateOfNearbyVerified";
+        break;
+      }
+    }
+  }
+}

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { classifyDiscovery, filterDeniedPlaces } from "../lib/productionFilter";
+import {
+  classifyDiscovery,
+  filterDeniedPlaces,
+  suppressApproxDuplicates,
+} from "../lib/productionFilter";
 
 interface TestPlace {
   id: string;
@@ -12,6 +16,8 @@ interface TestPlace {
   tags?: string[];
   coordSource?: string;
   discoveryClass?: string;
+  spatialSuppression?: string;
+  trustLevel?: string;
   autoNarrationBlocked?: boolean;
 }
 
@@ -804,5 +810,73 @@ describe("coordSource 'llm' tier — Nominatim-unprobed Explore-only places", ()
       place({ name: "Unprobed Place" }), // coordSource: undefined
     ]);
     expect(result).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// suppressApproxDuplicates
+// ---------------------------------------------------------------------------
+
+describe("suppressApproxDuplicates", () => {
+  it("promotes APPROXIMATE_SITE to INTERPRETIVE_OVERLAY when it shares a keyword with a nearby osm_enriched VERIFIED_PLACE", () => {
+    const places = [
+      place({
+        name: "Bergdoll-Kemble Mansion",
+        discoveryClass: "VERIFIED_PLACE",
+        trustLevel: "osm_enriched",
+        latitude: 39.9658,
+        longitude: -75.1744,
+      }),
+      place({
+        name: "Bergdoll Family Brewery Site",
+        discoveryClass: "APPROXIMATE_SITE",
+        latitude: 39.9665, // ~80 m from the mansion
+        longitude: -75.1755,
+      }),
+    ];
+    suppressApproxDuplicates(places);
+    expect(places[1].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+    expect(places[1].spatialSuppression).toBe("approxDuplicateOfNearbyVerified");
+    expect(places[0].discoveryClass).toBe("VERIFIED_PLACE"); // unchanged
+  });
+
+  it("does NOT suppress when the APPROXIMATE_SITE is beyond the distance threshold", () => {
+    const places = [
+      place({
+        name: "Bergdoll-Kemble Mansion",
+        discoveryClass: "VERIFIED_PLACE",
+        trustLevel: "osm_enriched",
+        latitude: 39.9658,
+        longitude: -75.1744,
+      }),
+      place({
+        name: "Bergdoll Family Brewery Site",
+        discoveryClass: "APPROXIMATE_SITE",
+        latitude: 39.970, // ~1.2 km away — beyond 200 m threshold
+        longitude: -75.190,
+      }),
+    ];
+    suppressApproxDuplicates(places);
+    expect(places[1].discoveryClass).toBe("APPROXIMATE_SITE");
+  });
+
+  it("does NOT suppress when no significant keyword overlaps between the two names", () => {
+    const places = [
+      place({
+        name: "Bergdoll-Kemble Mansion",
+        discoveryClass: "VERIFIED_PLACE",
+        trustLevel: "osm_enriched",
+        latitude: 39.9658,
+        longitude: -75.1744,
+      }),
+      place({
+        name: "Fairmount Water Works",
+        discoveryClass: "APPROXIMATE_SITE",
+        latitude: 39.9660, // close, but no keyword overlap
+        longitude: -75.1746,
+      }),
+    ];
+    suppressApproxDuplicates(places);
+    expect(places[1].discoveryClass).toBe("APPROXIMATE_SITE");
   });
 });
