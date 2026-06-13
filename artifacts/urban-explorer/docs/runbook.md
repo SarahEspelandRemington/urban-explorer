@@ -400,3 +400,62 @@ eas build --platform ios --profile development
 ```
 
 EAS manages certificates and provisioning profiles automatically. Install the resulting build by scanning the QR code EAS provides, then trust the developer certificate in iOS Settings → General → VPN & Device Management.
+
+---
+
+## 14. Simulator freshness / runtime evidence
+
+### Core rules
+
+- **The Simulator / Expo Go always calls the production API by default.** `EXPO_PUBLIC_API_URL` is set to `https://city-explorer-guide-sarahremington.replit.app` by the dev workflow script.
+- **Local API server changes are invisible to the Simulator** unless `EXPO_PUBLIC_API_URL` is explicitly overridden to point at the local dev server before Metro starts.
+- **Server / API changes require a production deploy** before the Simulator can verify them. Changing `artifacts/api-server/` and reloading Expo Go will not pick up those changes.
+- **Client changes require Metro to re-bundle.** Reload Expo Go (shake → Reload, or press R in the Metro terminal) after any JS/TS edit.
+- **`EXPO_PUBLIC_*` variables are baked into the JS bundle at Metro start time.** They are not resolved at runtime. If you change a `EXPO_PUBLIC_*` value, you must stop and restart the Metro workflow — a hot reload is not enough.
+- **Diagnose stale Simulator behavior before assuming the code failed.** Work through the checklist below before filing a bug.
+
+### Required runtime evidence template
+
+Include this block in every test report that involves the Simulator or Expo Go:
+
+```
+## Runtime Evidence
+- Tested surface:         [ Simulator (Expo Go) | Simulator (dev client) | Physical device ]
+- Metro URL:              https://$REPLIT_EXPO_DEV_DOMAIN  (local port 23584)
+- API base URL in bundle: <value of EXPO_PUBLIC_API_URL at Metro start>
+- API target:             [ production | local dev (port 8080) ]
+- Code source / commit:   local HEAD <SHA>  /  GitHub HEAD: <SHA>
+- Freshness step:         [ Expo Go reload (R) | --reset-cache restart | Simulator erase ]
+- Evidence observed:      <visible UI change or log line confirming the change is live>
+```
+
+### Fresh Simulator test checklist
+
+Run through this before testing any change:
+
+1. **Identify the change type:** client code, API server code, or both.
+2. **If you changed API server code:** deploy to production first (`Deployments → Redeploy`). The Simulator cannot see local dev-server changes.
+3. **If you changed an `EXPO_PUBLIC_*` env var:** stop the Expo workflow and restart it so Metro re-reads the variable.
+4. **If you changed client code:** reload Expo Go (shake the device → Reload, or press R in the Metro terminal).
+5. **If stale behavior persists after a reload:** restart the Expo workflow with `--reset-cache` to clear Metro's on-disk transform cache:
+   ```bash
+   pnpm --filter @workspace/urban-explorer exec expo start --go --localhost --port $PORT --max-workers 4 --reset-cache
+   ```
+6. **If AsyncStorage / persisted app state may be involved** (saved places, route history, banner dismissals, settings flags): erase Simulator content — iOS Simulator → **Device → Erase All Content and Settings**.
+7. **Record runtime evidence** (template above) before calling a test result valid.
+
+### AsyncStorage keys that persist across app restarts
+
+These are the keys the app writes to `AsyncStorage` and that survive killing and relaunching the app in Simulator. They are only cleared by erasing Simulator content.
+
+| Key | What it holds |
+| --- | --- |
+| `urban-explorer.notificationLocale` | Locale preference |
+| `walk_banner_dismissed` | Walk Mode banner state |
+| `walk_welcome_dismissed` | Walk Mode welcome state |
+| `@urban_explorer_saved` | Saved places |
+| `recentWalkRoutes` | Recent walk routes |
+| `walk_show_prefetch_stats` | Prefetch stats overlay toggle |
+| `walk_debug_overlay_enabled` | Walk Mode debug overlay toggle |
+| `explore_debug_overlay_enabled` | Explore debug overlay toggle |
+| Custom message keys (`customMessages.ts`) | Discovery / detail message overrides |
