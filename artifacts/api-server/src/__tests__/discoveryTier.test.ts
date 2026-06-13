@@ -450,7 +450,10 @@ describe("classifyDiscoveryTier — Bergdoll-Kemble Mansion enrichment", () => {
     const result = classifyDiscoveryTier(
       place(
         "A commercial office building providing administrative services to local businesses.",
-        ["Opened in recent years.", "Houses several professional tenants."],
+        [
+          "Opened in recent years.",
+          "Houses several professional office suites.",
+        ],
         { name: "Some Office Building" },
       ),
     );
