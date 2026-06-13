@@ -134,7 +134,7 @@ export function StreetlitLogo({
       >
         <Text
           style={{
-            fontSize: 36,
+            fontSize: 32,
             fontFamily: "Inter_400Regular",
             letterSpacing: 1.5,
             includeFontPadding: false,

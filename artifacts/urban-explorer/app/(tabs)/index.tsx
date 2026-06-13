@@ -1721,7 +1721,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontStyle: "italic",
     marginTop: 3,
-    opacity: 0.75,
   },
   ratingPaceWarning: {
     flexDirection: "row",
