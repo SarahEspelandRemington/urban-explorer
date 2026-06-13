@@ -448,14 +448,14 @@ Run through this before testing any change:
 
 These are the keys the app writes to `AsyncStorage` and that survive killing and relaunching the app in Simulator. They are only cleared by erasing Simulator content.
 
-| Key | What it holds |
-| --- | --- |
-| `urban-explorer.notificationLocale` | Locale preference |
-| `walk_banner_dismissed` | Walk Mode banner state |
-| `walk_welcome_dismissed` | Walk Mode welcome state |
-| `@urban_explorer_saved` | Saved places |
-| `recentWalkRoutes` | Recent walk routes |
-| `walk_show_prefetch_stats` | Prefetch stats overlay toggle |
-| `walk_debug_overlay_enabled` | Walk Mode debug overlay toggle |
-| `explore_debug_overlay_enabled` | Explore debug overlay toggle |
+| Key                                       | What it holds                        |
+| ----------------------------------------- | ------------------------------------ |
+| `urban-explorer.notificationLocale`       | Locale preference                    |
+| `walk_banner_dismissed`                   | Walk Mode banner state               |
+| `walk_welcome_dismissed`                  | Walk Mode welcome state              |
+| `@urban_explorer_saved`                   | Saved places                         |
+| `recentWalkRoutes`                        | Recent walk routes                   |
+| `walk_show_prefetch_stats`                | Prefetch stats overlay toggle        |
+| `walk_debug_overlay_enabled`              | Walk Mode debug overlay toggle       |
+| `explore_debug_overlay_enabled`           | Explore debug overlay toggle         |
 | Custom message keys (`customMessages.ts`) | Discovery / detail message overrides |

@@ -1980,7 +1980,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v53:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v54:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call

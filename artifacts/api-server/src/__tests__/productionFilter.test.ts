@@ -836,7 +836,9 @@ describe("suppressApproxDuplicates", () => {
     ];
     suppressApproxDuplicates(places);
     expect(places[1].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
-    expect(places[1].spatialSuppression).toBe("approxDuplicateOfNearbyVerified");
+    expect(places[1].spatialSuppression).toBe(
+      "approxDuplicateOfNearbyVerified",
+    );
     expect(places[0].discoveryClass).toBe("VERIFIED_PLACE"); // unchanged
   });
 
@@ -852,8 +854,8 @@ describe("suppressApproxDuplicates", () => {
       place({
         name: "Bergdoll Family Brewery Site",
         discoveryClass: "APPROXIMATE_SITE",
-        latitude: 39.970, // ~1.2 km away — beyond 200 m threshold
-        longitude: -75.190,
+        latitude: 39.97, // ~1.2 km away — beyond 200 m threshold
+        longitude: -75.19,
       }),
     ];
     suppressApproxDuplicates(places);
@@ -872,7 +874,7 @@ describe("suppressApproxDuplicates", () => {
       place({
         name: "Fairmount Water Works",
         discoveryClass: "APPROXIMATE_SITE",
-        latitude: 39.9660, // close, but no keyword overlap
+        latitude: 39.966, // close, but no keyword overlap
         longitude: -75.1746,
       }),
     ];

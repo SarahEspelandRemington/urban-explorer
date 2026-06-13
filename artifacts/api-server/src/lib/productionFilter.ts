@@ -148,7 +148,10 @@ const APPROX_SUPPRESS_STOPWORDS = new Set([
  * 5 characters long and not in the stopword set. Used to detect shared proper
  * nouns (family names, unique identifiers) between two place names.
  */
-function significantKeywords(name: string, stopwords: Set<string>): Set<string> {
+function significantKeywords(
+  name: string,
+  stopwords: Set<string>,
+): Set<string> {
   return new Set(
     name
       .toLowerCase()
@@ -194,7 +197,10 @@ export function suppressApproxDuplicates(
     if (approx.discoveryClass !== "APPROXIMATE_SITE") continue;
     if (approx.trustLevel === "osm_enriched") continue;
 
-    const approxKw = significantKeywords(approx.name ?? "", APPROX_SUPPRESS_STOPWORDS);
+    const approxKw = significantKeywords(
+      approx.name ?? "",
+      APPROX_SUPPRESS_STOPWORDS,
+    );
     if (approxKw.size === 0) continue;
 
     for (const verified of enrichedVerified) {
