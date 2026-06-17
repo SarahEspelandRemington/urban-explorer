@@ -161,6 +161,22 @@ function significantKeywords(
 }
 
 /**
+ * Removes Tier-4 (metadata-only) places from an Explore response.
+ *
+ * Walk Mode handles Tier-4 suppression on the client via walkEligibility.ts
+ * ("lowQuality"). This filter applies only to non-Walk Explore responses, on
+ * the way out — after the cache has been written with the full classified set,
+ * so the cache always retains the complete Tier-1–4 place list.
+ *
+ * See artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+ *
+ * Returns a new array; does not mutate the input.
+ */
+export function filterExploreTier4(places: any[]): any[] {
+  return places.filter((p) => p.discoveryTier !== 4);
+}
+
+/**
  * Suppresses APPROXIMATE_SITE places that are LLM extrapolations derived from
  * a nearby osm_enriched VERIFIED_PLACE in the same result set.
  *

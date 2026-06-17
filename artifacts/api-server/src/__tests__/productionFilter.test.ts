@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   classifyDiscovery,
   filterDeniedPlaces,
+  filterExploreTier4,
   suppressApproxDuplicates,
 } from "../lib/productionFilter";
 
@@ -19,6 +20,8 @@ interface TestPlace {
   spatialSuppression?: string;
   trustLevel?: string;
   autoNarrationBlocked?: boolean;
+  discoveryTier?: number;
+  discoveryRejectionReason?: string;
 }
 
 function place(overrides: Partial<TestPlace> = {}): TestPlace {
@@ -880,5 +883,65 @@ describe("suppressApproxDuplicates", () => {
     ];
     suppressApproxDuplicates(places);
     expect(places[1].discoveryClass).toBe("APPROXIMATE_SITE");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filterExploreTier4
+// ---------------------------------------------------------------------------
+
+describe("filterExploreTier4", () => {
+  it("removes a Tier-4 place", () => {
+    const places = [
+      place({ discoveryTier: 4, discoveryRejectionReason: "metadataOnly" }),
+    ];
+    expect(filterExploreTier4(places)).toHaveLength(0);
+  });
+
+  it("keeps a Tier-1 place", () => {
+    const places = [place({ discoveryTier: 1 })];
+    expect(filterExploreTier4(places)).toHaveLength(1);
+  });
+
+  it("keeps a Tier-2 place", () => {
+    const places = [place({ discoveryTier: 2 })];
+    expect(filterExploreTier4(places)).toHaveLength(1);
+  });
+
+  it("keeps a Tier-3 place", () => {
+    const places = [place({ discoveryTier: 3 })];
+    expect(filterExploreTier4(places)).toHaveLength(1);
+  });
+
+  it("keeps a place with no discoveryTier (unclassified)", () => {
+    const places = [place()];
+    expect(filterExploreTier4(places)).toHaveLength(1);
+  });
+
+  it("removes only Tier-4 from a mixed array", () => {
+    const places = [
+      place({ discoveryTier: 1 }),
+      place({
+        discoveryTier: 4,
+        discoveryRejectionReason: "noHistoricalDepth",
+      }),
+      place(), // unclassified
+      place({ discoveryTier: 2 }),
+      place({ discoveryTier: 4, discoveryRejectionReason: "metadataOnly" }),
+    ];
+    const result = filterExploreTier4(places);
+    expect(result).toHaveLength(3);
+    expect(result.every((p) => p.discoveryTier !== 4)).toBe(true);
+  });
+
+  it("does not mutate the input array", () => {
+    const places = [place({ discoveryTier: 4 }), place({ discoveryTier: 1 })];
+    const original = [...places];
+    filterExploreTier4(places);
+    expect(places).toHaveLength(original.length);
+  });
+
+  it("returns an empty array unchanged", () => {
+    expect(filterExploreTier4([])).toHaveLength(0);
   });
 });

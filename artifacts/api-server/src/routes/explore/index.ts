@@ -1551,9 +1551,15 @@ async function postProcessPlaces(
 import {
   classifyDiscovery,
   filterDeniedPlaces,
+  filterExploreTier4,
   suppressApproxDuplicates,
 } from "../../lib/productionFilter";
-export { classifyDiscovery, filterDeniedPlaces, suppressApproxDuplicates };
+export {
+  classifyDiscovery,
+  filterDeniedPlaces,
+  filterExploreTier4,
+  suppressApproxDuplicates,
+};
 import { applyDiscoveryTier } from "../../lib/discoveryTier";
 
 // ---------------------------------------------------------------------------
@@ -1980,7 +1986,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v54:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v55:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2012,6 +2018,13 @@ router.post("/explore/discover", async (req, res) => {
       applyLlmPrecisionFilter(allCachedPlaces);
       suppressApproxDuplicates(allCachedPlaces);
       allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
+      // Explore surface filter: drop Tier-4 (metadata-only) places before responding.
+      // Walk Mode handles T4 suppression in walkEligibility.ts ("lowQuality").
+      // The cache holds the full classified set — this runs on the cloned array only.
+      // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+      if (!walkMode) {
+        allCachedPlaces = filterExploreTier4(allCachedPlaces);
+      }
       // Both Explore and Walk require external coordinate verification.
       // Unverified LLM-coordinate places must not reach the UI in either mode.
       const refreshedPlaces = allCachedPlaces.filter(
@@ -2407,7 +2420,14 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
       noVerifiedPlacesNearby: false,
     };
     setLLMCache(discoverCacheKey, anchorResp);
-    res.json(anchorResp);
+    // Explore surface filter: drop Tier-4 (metadata-only) places before responding.
+    // The cache (above) retains the full classified set; this runs on the way out only.
+    // Walk Mode handles T4 suppression in walkEligibility.ts ("lowQuality").
+    // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+    const anchorResponsePlaces = walkMode
+      ? mergedPlaces
+      : filterExploreTier4(mergedPlaces);
+    res.json({ ...anchorResp, places: anchorResponsePlaces });
     return;
   }
 
@@ -2820,7 +2840,13 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   // so coordSource:"llm" places (real but unindexed in Nominatim) can
   // enter the Walk pool instead of being silently dropped.
   if (overpassFallbackMode) data.overpassFallback = true;
-  res.json(data);
+  // Explore surface filter: drop Tier-4 (metadata-only) places before responding.
+  // The cache (above) retains the full classified set; this runs on the way out only.
+  // Walk Mode handles T4 suppression in walkEligibility.ts ("lowQuality").
+  // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+  res.json(
+    walkMode ? data : { ...data, places: filterExploreTier4(data.places) },
+  );
 });
 
 router.post("/explore/suggest-locations", async (req, res) => {
