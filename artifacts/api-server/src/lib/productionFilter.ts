@@ -177,6 +177,57 @@ export function filterExploreTier4(places: any[]): any[] {
 }
 
 /**
+ * OSM amenity categories that represent generic commercial functions with no
+ * meaningful story under the Discovery Ranking Rubric ("generic business
+ * functions" and "generic chain businesses with no meaningful story").
+ * Matched case-insensitively against the place's `category` field.
+ */
+const GENERIC_COMMERCIAL_CATEGORIES = new Set([
+  "restaurant",
+  "pharmacy",
+  "fuel",
+  "convenience",
+  "fast_food",
+  "cafe",
+  "supermarket",
+  "atm",
+  "bank",
+]);
+
+/**
+ * Recognizable chain brand names that are suppressed regardless of category.
+ * Covers the "generic chain businesses with no meaningful story" criterion in
+ * the Discovery Ranking Rubric.
+ */
+const CHAIN_NAME_RE =
+  /\b(cvs|walgreens|rite\s*aid|7.?eleven|sunoco|shell|bp|exxon|mobil|chevron|wawa|dunkin|starbucks|mcdonalds?|burger\s*king|subway|chipotle|dominos?|pizza\s*hut|taco\s*bell|wendy'?s|panda\s*express|chick.?fil.?a|popeyes?|kfc|arby'?s|panera|jersey\s*mike'?s|five\s*guys)\b/i;
+
+/**
+ * Removes generic commercial businesses from non-Walk Explore responses.
+ *
+ * Suppresses places whose `category` is a generic commercial OSM amenity type
+ * (restaurant, pharmacy, fuel, etc.) OR whose `name` matches a recognizable
+ * chain brand. No escape hatch — a chain pharmacy or fast-food restaurant is
+ * suppressed regardless of discoveryTier.
+ *
+ * Walk Mode is unaffected: this filter is applied only when !walkMode, at the
+ * same call site as filterExploreTier4, after setLLMCache() on fresh paths so
+ * the cache retains the full unfiltered set.
+ *
+ * See artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+ *
+ * Returns a new array; does not mutate the input.
+ */
+export function filterGenericCommercial(places: any[]): any[] {
+  return places.filter((p) => {
+    const cat = (p.category ?? "").toLowerCase().trim();
+    if (GENERIC_COMMERCIAL_CATEGORIES.has(cat)) return false;
+    if (CHAIN_NAME_RE.test(p.name ?? "")) return false;
+    return true;
+  });
+}
+
+/**
  * Suppresses APPROXIMATE_SITE places that are LLM extrapolations derived from
  * a nearby osm_enriched VERIFIED_PLACE in the same result set.
  *

@@ -3,6 +3,7 @@ import {
   classifyDiscovery,
   filterDeniedPlaces,
   filterExploreTier4,
+  filterGenericCommercial,
   suppressApproxDuplicates,
 } from "../lib/productionFilter";
 
@@ -943,5 +944,247 @@ describe("filterExploreTier4", () => {
 
   it("returns an empty array unchanged", () => {
     expect(filterExploreTier4([])).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// filterGenericCommercial
+// ---------------------------------------------------------------------------
+
+describe("filterGenericCommercial", () => {
+  // --- category-based suppression ---
+
+  it("removes a place with category 'restaurant'", () => {
+    expect(
+      filterGenericCommercial([place({ category: "restaurant" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes a place with category 'pharmacy'", () => {
+    expect(
+      filterGenericCommercial([place({ category: "pharmacy" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes a place with category 'fuel'", () => {
+    expect(filterGenericCommercial([place({ category: "fuel" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes a place with category 'convenience'", () => {
+    expect(
+      filterGenericCommercial([place({ category: "convenience" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes a place with category 'fast_food'", () => {
+    expect(
+      filterGenericCommercial([place({ category: "fast_food" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes a place with category 'cafe'", () => {
+    expect(filterGenericCommercial([place({ category: "cafe" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes a place with category 'supermarket'", () => {
+    expect(
+      filterGenericCommercial([place({ category: "supermarket" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes a place with category 'atm'", () => {
+    expect(filterGenericCommercial([place({ category: "atm" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes a place with category 'bank'", () => {
+    expect(filterGenericCommercial([place({ category: "bank" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("suppresses generic category regardless of discoveryTier (no escape hatch)", () => {
+    const places = [
+      place({ category: "restaurant", discoveryTier: 1 }),
+      place({ category: "pharmacy", discoveryTier: 2 }),
+    ];
+    expect(filterGenericCommercial(places)).toHaveLength(0);
+  });
+
+  it("category match is case-insensitive (LLM may uppercase)", () => {
+    expect(
+      filterGenericCommercial([place({ category: "RESTAURANT" })]),
+    ).toHaveLength(0);
+    expect(
+      filterGenericCommercial([place({ category: "Pharmacy" })]),
+    ).toHaveLength(0);
+    expect(
+      filterGenericCommercial([place({ category: "Fast_Food" })]),
+    ).toHaveLength(0);
+  });
+
+  // --- chain-name suppression ---
+
+  it("removes CVS by name", () => {
+    expect(filterGenericCommercial([place({ name: "CVS" })])).toHaveLength(0);
+  });
+
+  it("removes 'CVS Pharmacy' by name", () => {
+    expect(
+      filterGenericCommercial([place({ name: "CVS Pharmacy" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes Walgreens by name", () => {
+    expect(
+      filterGenericCommercial([place({ name: "Walgreens" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes Rite Aid by name", () => {
+    expect(filterGenericCommercial([place({ name: "Rite Aid" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes '7-Eleven' by name", () => {
+    expect(filterGenericCommercial([place({ name: "7-Eleven" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes '7 Eleven' (no hyphen) by name", () => {
+    expect(filterGenericCommercial([place({ name: "7 Eleven" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes Sunoco by name", () => {
+    expect(filterGenericCommercial([place({ name: "Sunoco" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes Shell by name", () => {
+    expect(
+      filterGenericCommercial([place({ name: "Shell Gas Station" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes Wawa by name", () => {
+    expect(filterGenericCommercial([place({ name: "Wawa" })])).toHaveLength(0);
+  });
+
+  it("removes Starbucks by name", () => {
+    expect(
+      filterGenericCommercial([place({ name: "Starbucks" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes Dunkin by name", () => {
+    expect(filterGenericCommercial([place({ name: "Dunkin" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("removes McDonald's by name", () => {
+    expect(
+      filterGenericCommercial([place({ name: "McDonald's" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes McDonalds (no apostrophe) by name", () => {
+    expect(
+      filterGenericCommercial([place({ name: "McDonalds" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes Burger King by name", () => {
+    expect(
+      filterGenericCommercial([place({ name: "Burger King" })]),
+    ).toHaveLength(0);
+  });
+
+  it("removes Subway by name", () => {
+    expect(filterGenericCommercial([place({ name: "Subway" })])).toHaveLength(
+      0,
+    );
+  });
+
+  it("chain match is case-insensitive", () => {
+    expect(
+      filterGenericCommercial([place({ name: "cvs pharmacy" })]),
+    ).toHaveLength(0);
+    expect(
+      filterGenericCommercial([place({ name: "WALGREENS" })]),
+    ).toHaveLength(0);
+    expect(filterGenericCommercial([place({ name: "sunoco" })])).toHaveLength(
+      0,
+    );
+  });
+
+  // --- pass-through cases ---
+
+  it("keeps a historic building with no generic category or chain name", () => {
+    const result = filterGenericCommercial([
+      place({ name: "Bergdoll-Kemble Mansion", category: "building" }),
+    ]);
+    expect(result).toHaveLength(1);
+  });
+
+  it("keeps a place with category 'storefront' (not in generic list)", () => {
+    const result = filterGenericCommercial([place({ category: "storefront" })]);
+    expect(result).toHaveLength(1);
+  });
+
+  it("keeps a place with category 'church'", () => {
+    expect(
+      filterGenericCommercial([place({ category: "church" })]),
+    ).toHaveLength(1);
+  });
+
+  it("keeps a place with no category set", () => {
+    expect(filterGenericCommercial([place()])).toHaveLength(1);
+  });
+
+  it("keeps a place named 'Bank of the United States' (non-chain historic bank)", () => {
+    const result = filterGenericCommercial([
+      place({ name: "Second Bank of the United States", category: "building" }),
+    ]);
+    expect(result).toHaveLength(1);
+  });
+
+  it("does not mutate the input array", () => {
+    const places = [
+      place({ category: "restaurant" }),
+      place({ category: "building" }),
+    ];
+    filterGenericCommercial(places);
+    expect(places).toHaveLength(2);
+  });
+
+  it("returns empty array unchanged", () => {
+    expect(filterGenericCommercial([])).toHaveLength(0);
+  });
+
+  it("filters only generic places from a mixed array", () => {
+    const places = [
+      place({ name: "Spring Garden Station", category: "building" }),
+      place({ name: "CVS Pharmacy", category: "pharmacy" }),
+      place({ name: "7-Eleven", category: "convenience" }),
+      place({ name: "Holy Trinity Church", category: "church" }),
+      place({ name: "Sunoco", category: "fuel" }),
+    ];
+    const result = filterGenericCommercial(places);
+    expect(result).toHaveLength(2);
+    expect(result.map((p) => p.name)).toEqual([
+      "Spring Garden Station",
+      "Holy Trinity Church",
+    ]);
   });
 });
