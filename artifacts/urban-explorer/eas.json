@@ -33,10 +33,20 @@
       },
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://city-explorer-guide-sarahremington.replit.app",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "SENTRY_CLI_EXECUTABLE": "/usr/bin/true"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://city-explorer-guide-sarahremington.replit.app",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
+        "SENTRY_CLI_EXECUTABLE": "/usr/bin/true"
+      }
     }
   },
   "submit": {

@@ -1,15 +1,19 @@
 module.exports = {
   expo: {
-    name: "Urban Explorer",
-    slug: "urban-explorer",
+    name: "Streetlit",
+    slug: "streetlit",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/icon.png",
-    scheme: "urban-explorer",
+    icon: "./assets/branding/streetlit-app-icon-1024.png",
+    scheme: "streetlit",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/images/icon.png",
+      image: "./assets/branding/streetlit-splash-light.png",
+      dark: {
+        image: "./assets/branding/streetlit-splash-dark.png",
+        backgroundColor: "#000000",
+      },
       resizeMode: "contain",
       backgroundColor: "#faf8f5",
     },
@@ -17,15 +21,12 @@ module.exports = {
       supportsTablet: false,
       bundleIdentifier: "com.urbanexplorer.app",
       infoPlist: {
-        NSMicrophoneUsageDescription:
-          "Record voice memos to capture issues during a walk.",
         UIBackgroundModes: ["location", "audio"],
       },
     },
     android: {
       package: "com.urbanexplorer.app",
       permissions: [
-        "RECORD_AUDIO",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION",
@@ -35,7 +36,7 @@ module.exports = {
       ],
     },
     web: {
-      favicon: "./assets/images/icon.png",
+      favicon: "./assets/branding/streetlit-app-icon-1024.png",
     },
     plugins: [
       "expo-dev-client",
@@ -57,19 +58,19 @@ module.exports = {
       [
         "expo-audio",
         {
-          microphonePermission:
-            "Record voice memos to capture issues during a walk.",
+          microphonePermission: false,
+          recordAudioAndroid: false,
         },
       ],
       [
         "expo-location",
         {
           locationWhenInUsePermission:
-            "Allow Urban Explorer to use your location to narrate nearby places.",
+            "Allow Streetlit to use your location to find and narrate nearby places.",
           locationAlwaysAndWhenInUsePermission:
-            "Allow Urban Explorer to keep narrating nearby places while your phone is in your pocket or the screen is locked.",
+            "Allow Streetlit to keep narrating nearby places while your phone is in your pocket or the screen is locked.",
           locationAlwaysPermission:
-            "Allow Urban Explorer to keep narrating nearby places while your phone is in your pocket or the screen is locked.",
+            "Allow Streetlit to keep narrating nearby places while your phone is in your pocket or the screen is locked.",
           isIosBackgroundLocationEnabled: true,
           isAndroidBackgroundLocationEnabled: true,
           isAndroidForegroundServiceEnabled: true,
