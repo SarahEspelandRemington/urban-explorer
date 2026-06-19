@@ -48,7 +48,6 @@ import {
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceCardSkeleton } from "@/components/PlaceCardSkeleton";
 import { PlaceMapView } from "@/components/PlaceMapView";
-import { StreetlitLogo } from "@/components/StreetlitLogo";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
@@ -866,7 +865,14 @@ export default function ExploreScreen() {
               </Pressable>
             </View>
             <View style={styles.headerBottomRow}>
-              <StreetlitLogo variant="header" />
+              <Text
+                style={[
+                  styles.title,
+                  { color: colors.foreground, flex: 1, minWidth: 0 },
+                ]}
+              >
+                Explore
+              </Text>
 
               <View style={styles.headerActions}>
                 {__DEV__ ? (
@@ -1044,9 +1050,6 @@ export default function ExploreScreen() {
                 </Pressable>
               </View>
             </View>
-            <Text style={[styles.tagline, { color: colors.mutedForeground }]}>
-              Small stories hidden in ordinary places.
-            </Text>
           </Animated.View>
 
           {(hasCoords || locationLoading) && (
@@ -1581,6 +1584,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexShrink: 0,
   },
   toggleContainer: {
     flexDirection: "row",
@@ -1715,12 +1719,6 @@ const styles = StyleSheet.create({
   walkBannerSub: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
-  },
-  tagline: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    fontStyle: "italic",
-    marginTop: 3,
   },
   ratingPaceWarning: {
     flexDirection: "row",
