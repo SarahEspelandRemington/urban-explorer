@@ -877,7 +877,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   }, [isWalking, currentNarrationPlace, nearbyPlaces.length, narratedIds.size]);
 
   // Mirror narration state into the iOS Now Playing widget so the lock screen
-  // shows "Urban Explorer — <place>" with working pause/play/skip controls.
+  // shows "Streetlit — <place>" with working pause/play/skip controls.
   // No-op on web/Android (the native module is iOS-only).
   useEffect(() => {
     if (!isWalking) return;
@@ -889,18 +889,18 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     if (narration.isSpeaking && narration.currentPlace) {
       NowPlaying.setNowPlaying(
         narration.currentPlace,
-        "Urban Explorer",
+        "Streetlit",
         narration.isPaused,
         currentNarrationPlaceRef.current?.photoUrl ?? null,
       );
     } else {
       // Between stories the audio session is idle but the walk continues —
       // keep the widget visible with a generic "listening" label so the user
-      // still sees Urban Explorer is the active audio app. No artwork URL
+      // still sees Streetlit is the active audio app. No artwork URL
       // here means the native side falls back to the app icon.
       NowPlaying.setNowPlaying(
         "Listening for nearby places",
-        "Urban Explorer",
+        "Streetlit",
         true,
         null,
       );
@@ -2644,12 +2644,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             } else if (cmd === "next") n.skip();
           },
         );
-        // Seed the widget right away so the user sees Urban Explorer claim the
+        // Seed the widget right away so the user sees Streetlit claim the
         // Now Playing slot the moment Walk Mode starts, even before the first
         // narration begins.
         NowPlaying.setNowPlaying(
           "Listening for nearby places",
-          "Urban Explorer",
+          "Streetlit",
           true,
           null,
         );
