@@ -307,8 +307,8 @@ export interface Strings {
 }
 
 const en: Strings = {
-  notificationTitle: "Urban Explorer is exploring with you",
-  notificationBody: "Listening for nearby places to narrate as you walk.",
+  notificationTitle: "Streetlit is walking with you",
+  notificationBody: "Listening for nearby stories to narrate as you walk.",
   common: {
     retry: "Retry",
     ok: "OK",
@@ -425,7 +425,7 @@ const en: Strings = {
     skipAccessibility: "Skip",
     confirmEndTitle: "End this walk?",
     confirmEndMessage:
-      "Your walk history will be saved, but the session will end.",
+      "This stops narration and background location. Your recent routes stay saved on this device.",
     confirmEndOk: "End Walk",
     confirmEndCancel: "Keep Walking",
     filterBtn: "Filters",
@@ -473,7 +473,7 @@ const en: Strings = {
     descriptionSearch:
       "Enter a city, neighborhood, intersection, or address to explore.",
     descriptionEnable:
-      "Urban Explorer uses your location to surface stories and places nearby.",
+      "Streetlit uses your location to find nearby stories. We don't use it to build a profile or track where you've been.",
     placeholder: "e.g. Greenwich Village, NYC",
     finding: "Finding location...",
     exploreThis: "Explore This Location",
@@ -517,14 +517,14 @@ const en: Strings = {
   },
   placeTimeline: {
     title: "Time Travel",
-    subtitle: "See how this place evolved through history",
+    subtitle: "See how this place may have changed over time",
     loading: "Traveling through time...",
     error: "Could not load timeline. Check your connection and try again.",
   },
   loadingMessages: {
     discovery: [
-      "Digging through the archives...",
-      "Checking old maps and records...",
+      "Looking for the stories this block still remembers...",
+      "Reading the neighborhood between the lines...",
       "Looking for stories nearby...",
       "Seeing what this block remembers...",
       "Finding the layers beneath the surface...",
@@ -536,8 +536,10 @@ const en: Strings = {
       "Searching for traces that still remain...",
       "One moment — the city is thinking...",
       "Trying not to get distracted by ghost signs...",
-      "Cross-referencing the past with the present...",
+      "Connecting what's here now to what came before...",
       "Looking for the good stuff...",
+      "Following the clues in the streetscape...",
+      "Looking for what this block used to be...",
     ],
     detail: [
       "Looking closer at this place...",
@@ -548,21 +550,24 @@ const en: Strings = {
       "Reading between the layers...",
       "Gathering the details...",
       "Some stories take a minute...",
-      "Verifying the interesting part...",
+      "Finding the thread worth following...",
       "Trying to separate myth from reality...",
       "Looking for what still survives here...",
       "Putting the pieces together...",
       "Double-checking the map...",
       "History rarely labels itself clearly...",
       "Finding the human part...",
+      "Looking for the part worth noticing...",
+      "Pulling the useful clues together...",
     ],
   },
   investigate: {
     headerTitle: "Investigate an Address",
-    headerSubtitle: "Curious about a specific building? Ask the historian.",
+    headerSubtitle:
+      "Curious about a specific place? See what Streetlit turns up.",
     placeholder: "e.g., 538 W 38th St, New York, NY",
     investigate: "Investigate",
-    hint: "Works for any building — the more obscure, the better.",
+    hint: "Works best with a specific address or place name — obscure is welcome.",
     notFoundError:
       "Couldn't find that address. Try including a city or zip (e.g., '538 W 38th St, New York, NY').",
     notFoundErrorTip:
@@ -577,7 +582,7 @@ const en: Strings = {
     sectionHistory: "History",
     sectionFacts: "Facts & details",
     sectionBlockContext: "Block context",
-    stillLoading: "Loading historical data… this usually takes 15–25 seconds.",
+    stillLoading: "Looking for traces… this usually takes 15–25 seconds.",
     nearestChipPrefix: "Nearest:",
     nearestChipDismiss: "Dismiss suggestion",
     tryDifferentName: "Try a different name",
@@ -590,10 +595,9 @@ const en: Strings = {
       "Tap to pre-fill this suggestion in the search input",
   },
   login: {
-    title: "Urban Explorer",
+    title: "Streetlit",
     tagline: "Discover history, explore places, hear their stories.",
-    subtitle:
-      "Discover the hidden history around you. Log in or create a free account to start exploring.",
+    subtitle: "Discover the stories hidden in ordinary places.",
     cta: "Log in / Sign up",
   },
   walk: {
@@ -648,89 +652,26 @@ const en: Strings = {
   },
 };
 
+// Launch: English-only. Non-English entries are removed so the language
+// picker shows only English and getLocaleMeta() always resolves to English.
+// Non-English locale files (lib/locales/*) and loadStrings() cases are kept
+// intact and can be re-enabled by restoring entries here and in LOCALE_CODES.
 export const LOCALES: LocaleMeta[] = [
   {
     code: "en",
     label: "English",
-    notificationTitle: "Urban Explorer is exploring with you",
-    notificationBody: "Listening for nearby places to narrate as you walk.",
-  },
-  {
-    code: "es",
-    label: "Español",
-    notificationTitle: "Urban Explorer está explorando contigo",
-    notificationBody:
-      "Escuchando lugares cercanos para narrar mientras caminas.",
-  },
-  {
-    code: "fr",
-    label: "Français",
-    notificationTitle: "Urban Explorer explore avec vous",
-    notificationBody:
-      "À l'écoute des lieux proches à raconter pendant votre marche.",
-  },
-  {
-    code: "de",
-    label: "Deutsch",
-    notificationTitle: "Urban Explorer entdeckt mit dir",
-    notificationBody:
-      "Hört auf Orte in der Nähe, um sie beim Gehen zu erzählen.",
-  },
-  {
-    code: "it",
-    label: "Italiano",
-    notificationTitle: "Urban Explorer sta esplorando con te",
-    notificationBody:
-      "In ascolto dei luoghi vicini da raccontare mentre cammini.",
-  },
-  {
-    code: "pt",
-    label: "Português",
-    notificationTitle: "Urban Explorer está explorando com você",
-    notificationBody:
-      "Ouvindo lugares próximos para narrar enquanto você caminha.",
-  },
-  {
-    code: "nl",
-    label: "Nederlands",
-    notificationTitle: "Urban Explorer verkent met je mee",
-    notificationBody:
-      "Luistert naar plekken in de buurt om te vertellen terwijl je loopt.",
-  },
-  {
-    code: "ja",
-    label: "日本語",
-    notificationTitle: "Urban Explorer があなたと一緒に探索中",
-    notificationBody: "歩きながら案内できる近くの場所を探しています。",
-  },
-  {
-    code: "ko",
-    label: "한국어",
-    notificationTitle: "Urban Explorer가 함께 탐험하고 있어요",
-    notificationBody: "걷는 동안 안내할 주변 장소를 찾고 있습니다.",
-  },
-  {
-    code: "zh",
-    label: "中文",
-    notificationTitle: "Urban Explorer 正在与你一起探索",
-    notificationBody: "正在搜寻附近可讲解的地点。",
+    notificationTitle: "Streetlit is walking with you",
+    notificationBody: "Listening for nearby stories to narrate as you walk.",
   },
 ];
 
 export const DEFAULT_LOCALE: LocaleCode = "en";
 
-const LOCALE_CODES = new Set<string>([
-  "en",
-  "es",
-  "fr",
-  "de",
-  "it",
-  "pt",
-  "nl",
-  "ja",
-  "ko",
-  "zh",
-]);
+// Launch: English-only. Non-English codes are intentionally excluded so that
+// matchDeviceLocale() always falls back to "en" and no non-English strings
+// are ever active in the UI. The LocaleCode type and loadStrings() switch are
+// kept intact so they can be re-enabled without structural changes.
+const LOCALE_CODES = new Set<string>(["en"]);
 
 export function isLocaleCode(code: string): code is LocaleCode {
   return LOCALE_CODES.has(code);
