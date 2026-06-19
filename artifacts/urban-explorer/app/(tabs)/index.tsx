@@ -844,6 +844,48 @@ export default function ExploreScreen() {
                   ? `  ·  ±${Math.round(location.coords.accuracy)}m`
                   : ""}
               </Text>
+              {__DEV__ ? (
+                <Pressable
+                  onPress={() => {
+                    const next = !exploreDebugEnabled;
+                    setExploreDebugEnabled(next);
+                    setStartupValue(
+                      STARTUP_KEYS.exploreDebugOverlayEnabled,
+                      next ? "1" : "0",
+                    ).catch(() => {});
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: exploreDebugEnabled }}
+                  accessibilityLabel="Explore debug overlay"
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 6,
+                    borderWidth: 1,
+                    borderColor: exploreDebugEnabled
+                      ? colors.primary
+                      : colors.border,
+                    backgroundColor: exploreDebugEnabled
+                      ? colors.primary + "22"
+                      : colors.muted,
+                    opacity: pressed ? 0.75 : 1,
+                    marginRight: 6,
+                  })}
+                >
+                  <Text
+                    style={{
+                      color: exploreDebugEnabled
+                        ? colors.primary
+                        : colors.mutedForeground,
+                      fontSize: 11,
+                      fontFamily: "Inter_600SemiBold",
+                    }}
+                  >
+                    Dbg
+                  </Text>
+                </Pressable>
+              ) : null}
               <Pressable
                 onPress={() => {
                   if (Platform.OS !== "web")
@@ -866,57 +908,13 @@ export default function ExploreScreen() {
             </View>
             <View style={styles.headerBottomRow}>
               <Text
-                style={[
-                  styles.title,
-                  { color: colors.foreground, flex: 1, minWidth: 0 },
-                ]}
+                style={[styles.title, { color: colors.foreground }]}
+                numberOfLines={1}
               >
                 Explore
               </Text>
 
               <View style={styles.headerActions}>
-                {__DEV__ ? (
-                  <Pressable
-                    onPress={() => {
-                      const next = !exploreDebugEnabled;
-                      setExploreDebugEnabled(next);
-                      setStartupValue(
-                        STARTUP_KEYS.exploreDebugOverlayEnabled,
-                        next ? "1" : "0",
-                      ).catch(() => {});
-                    }}
-                    hitSlop={8}
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: exploreDebugEnabled }}
-                    accessibilityLabel="Explore debug overlay"
-                    style={({ pressed }) => ({
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 6,
-                      borderWidth: 1,
-                      borderColor: exploreDebugEnabled
-                        ? colors.primary
-                        : colors.border,
-                      backgroundColor: exploreDebugEnabled
-                        ? colors.primary + "22"
-                        : colors.muted,
-                      opacity: pressed ? 0.75 : 1,
-                      marginRight: 4,
-                    })}
-                  >
-                    <Text
-                      style={{
-                        color: exploreDebugEnabled
-                          ? colors.primary
-                          : colors.mutedForeground,
-                        fontSize: 11,
-                        fontFamily: "Inter_600SemiBold",
-                      }}
-                    >
-                      Dbg
-                    </Text>
-                  </Pressable>
-                ) : null}
                 {places.length > 0 && (
                   <View
                     style={[
@@ -1547,9 +1545,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerBottomRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "column",
     gap: 8,
   },
   languageChip: {
