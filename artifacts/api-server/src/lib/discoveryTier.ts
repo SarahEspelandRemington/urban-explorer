@@ -14,6 +14,9 @@
  *       context patterns. Valuable but not deeply historical.
  *   4 — Metadata only: current-function description, no historical depth,
  *       placeholder language. Suppressed from Walk Mode auto-narration.
+ *       Sub-cases: T4-A (short, no anchor), T4-B (generic lead), T4-C
+ *       (long, no depth), T4-D (contemporary commissioned artwork/memorial
+ *       with only post-2000 year evidence and no story-density signals).
  *   undefined — Not classified; current narration behaviour is preserved.
  *
  * Evaluation order: T1 → T2 → T3 → T4 → undefined
@@ -54,6 +57,21 @@ export interface DiscoveryTierResult {
 /** Explicit year references (1500–2029) or written decades. */
 const YEAR_RE =
   /\b(1[5-9]\d{2}|20[0-2]\d)\b|\bthe (eighteen|nineteen|twenty)[- ]?(hundreds?|twenties|thirties|forties|fifties|sixties|seventies|eighties|nineties|aughts?)\b|\b\d{4}s\b/i;
+
+/**
+ * Detects any year reference that is definitively pre-2001.
+ * Used to gate T4-D (contemporary commissioned artwork/memorial): the rule
+ * fires only when ALL year evidence in the corpus is post-2000, meaning the
+ * place carries no historical time anchor beyond a commissioning date.
+ *
+ * Matches: explicit years 1500–1999, written 18th/19th-century decade phrases,
+ * and decade strings like "1880s" / "1920s".
+ * Does NOT match: post-2000 explicit years (2001–2029), "20th century" as
+ * natural-language text (no number present), or ambiguous written decades
+ * starting with "twenty" (e.g. "the twenty-twenties").
+ */
+const PRE_2001_YEAR_RE =
+  /\b1[5-9]\d{2}\b|\bthe (eighteen|nineteen)[- ]?(hundreds?|twenties|thirties|forties|fifties|sixties|seventies|eighties|nineties|aughts?)\b|\b1\d{3}s\b/i;
 
 /**
  * Transformation language: strong signal that a place had a prior, different
@@ -107,9 +125,14 @@ const CIVIC_TERMS: readonly string[] = [
 const ARCH_STYLE_RE =
   /\b(art deco|beaux.?arts?|romanesque|modernist|brutalist|gothic( revival)?|italianate|federal style|prairie style|mission style|craftsman|victorian|colonial revival|greek revival|queen anne|tudor revival|georgian|neo.?classical|chicago school|international style|stripped classical|art nouveau)\b/i;
 
-/** Explanatory context phrases combined with a style name → Tier 2. */
+/**
+ * Explanatory context phrases combined with a style name → Tier 2.
+ * Includes both bare verb forms ("reflects") and present-participle forms
+ * ("reflecting") so that descriptions like "reflecting the spirit of the
+ * Art Deco era" are not missed due to verb inflection.
+ */
 const ARCH_CONTEXT_RE =
-  /\b(reflects|characteristic of|example of|influenced by|represents|emblematic of|typical of|reveals|demonstrates|illustrates|designed (in|to|for)|an example|rare example|fine example)\b/i;
+  /\b(reflects|reflecting|characteristic of|example of|influenced by|represents|representing|emblematic of|typical of|reveals|revealing|demonstrates|demonstrating|illustrates|illustrating|designed (in|to|for)|an example|rare example|fine example)\b/i;
 
 /** Adaptive-reuse markers. */
 const ADAPTIVE_REUSE_RE =
@@ -251,6 +274,45 @@ export function classifyDiscoveryTier(place: {
       tier: 4,
       reason: "classifiedTier4",
       rejectionReason: "noHistoricalDepth",
+    };
+  }
+
+  // T4-D: Contemporary commissioned artwork or memorial with no story-density
+  // signals. Public art installed post-2000 often includes a commissioning year
+  // that blocks T4-A/T4-C, yet the content is purely object-label or decorative
+  // description rather than historical discovery.
+  //
+  // Fires only when ALL of the following hold:
+  //   • category is "artwork" or "memorial" (narrow scope — buildings, etc. are excluded)
+  //   • hasYear is true (the place has a year, so it escaped T4-A/T4-C above)
+  //   • no pre-2001 year reference (YEAR_RE match is only a post-2000 date)
+  //   • no transformation language (hasTransformation is false)
+  //   • no civic vocabulary (hasCivic is false)
+  //   • no named architectural style (ARCH_STYLE_RE fails)
+  //
+  // Note: ARCH_CONTEXT_RE is intentionally NOT checked here. Context verbs
+  // like "reflects" or "represents" appear in ordinary descriptive prose ("the
+  // piece reflects the community") and only carry architectural weight when
+  // paired with a named style — which T2-A already tests. Without a style
+  // name, a context verb is not a story-density signal.
+  //
+  // Positive-tier invariant is preserved: reaching this check already means
+  // T1/T2/T3 did not fire. The four absent-signal conditions collectively
+  // define "decorative object-label content for a recent installation."
+  const isArtworkOrMemorial =
+    place.category === "artwork" || place.category === "memorial";
+  if (
+    isArtworkOrMemorial &&
+    hasYear &&
+    !PRE_2001_YEAR_RE.test(corpus) &&
+    !hasTransformation &&
+    !hasCivic &&
+    !ARCH_STYLE_RE.test(corpus)
+  ) {
+    return {
+      tier: 4,
+      reason: "classifiedTier4",
+      rejectionReason: "recentCommissionedArt",
     };
   }
 

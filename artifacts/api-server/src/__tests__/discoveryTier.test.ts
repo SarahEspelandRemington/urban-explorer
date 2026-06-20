@@ -462,6 +462,245 @@ describe("classifyDiscoveryTier — Bergdoll-Kemble Mansion enrichment", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Tier 2 — ARCH_CONTEXT_RE inflection fix
+// Present-participle forms (reflecting, representing, etc.) now count
+// alongside bare verb forms so that real architectural descriptions are not
+// missed due to verb inflection.
+// ---------------------------------------------------------------------------
+
+describe("classifyDiscoveryTier — ARCH_CONTEXT_RE inflection fix", () => {
+  it("T2-A: Art Deco + year + 'reflecting' (participle) → architecturalDetail", () => {
+    // Aero Memorial-style: "reflecting" was previously missed; now caught.
+    const result = classifyDiscoveryTier(
+      place(
+        "This Art Deco memorial commemorates pilots who died in World War I, reflecting the hopeful modernity of aviation in 1933.",
+      ),
+    );
+    expect(result.tier).toBe(2);
+    expect(result.reason).toBe("architecturalDetail");
+  });
+
+  it("T2-A: Beaux-Arts + year + 'representing' (participle) → architecturalDetail", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "Completed in 1902, the facade is Beaux-Arts in style, representing the civic ambition of the era.",
+      ),
+    );
+    expect(result.tier).toBe(2);
+    expect(result.reason).toBe("architecturalDetail");
+  });
+
+  it("T2-A: Victorian + year + 'revealing' (participle) → architecturalDetail", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "Dating to 1889, the structure is Victorian in character, revealing the ornamental tastes of the period.",
+      ),
+    );
+    expect(result.tier).toBe(2);
+    expect(result.reason).toBe("architecturalDetail");
+  });
+
+  it("T2-A: bare 'reflects' still works after the change (regression)", () => {
+    // Existing behaviour must be preserved: bare verb forms are unchanged.
+    const result = classifyDiscoveryTier(
+      place(
+        "Completed in 1898, the façade reflects the Beaux-Arts tradition popular in civic architecture of the period.",
+      ),
+    );
+    expect(result.tier).toBe(2);
+    expect(result.reason).toBe("architecturalDetail");
+  });
+
+  it("participle alone without arch style does not trigger T2-A (regression guard)", () => {
+    // "reflecting" without a named style must not produce a false T2.
+    const result = classifyDiscoveryTier(
+      place(
+        "Built in 1920, the building reflects the optimism of the era but has no particular style designation.",
+      ),
+    );
+    // Should NOT be Tier 2 — no arch style name present.
+    expect(result.tier).not.toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Tier 4-D — contemporary commissioned artwork/memorial
+// Post-2000 installation year + artwork/memorial category + no story-density
+// signals → recentCommissionedArt.
+// ---------------------------------------------------------------------------
+
+describe("classifyDiscoveryTier — T4-D contemporary commissioned art/memorial", () => {
+  it("2014 artwork with only commissioning year and no story signals → T4 recentCommissionedArt", () => {
+    // Magic Carpet-style: installation year, decorative description, no history.
+    const result = classifyDiscoveryTier(
+      place(
+        "Installed in 2014, this sculpture uses swirling metal forms to mimic the movement of a flying carpet, transforming this city corner into a spot of whimsy.",
+        [
+          "Created as part of a local arts initiative that debuted on July 16, 2014.",
+          "The piece reflects the multicultural heritage of the neighborhood.",
+        ],
+        { category: "artwork" },
+      ),
+    );
+    expect(result.tier).toBe(4);
+    expect(result.rejectionReason).toBe("recentCommissionedArt");
+  });
+
+  it("2018 memorial with no story-density signals → T4 recentCommissionedArt", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "Dedicated in 2018, this bronze plaque commemorates volunteers who served in the local community.",
+        [
+          "Installed by the city parks department as part of a 2018 beautification programme.",
+          "The plaque lists names of volunteers recognised for community contributions.",
+        ],
+        { category: "memorial" },
+      ),
+    );
+    expect(result.tier).toBe(4);
+    expect(result.rejectionReason).toBe("recentCommissionedArt");
+  });
+
+  it("1999 artwork (pre-2001) with no signals → unclassified, not T4-D (boundary)", () => {
+    // Year 1999 is pre-2001 → PRE_2001_YEAR_RE fires → T4-D does not fire.
+    const result = classifyDiscoveryTier(
+      place(
+        "Installed in 1999, this sculpture uses abstract forms to represent the neighbourhood.",
+        [
+          "Commissioned by the city arts programme in 1999.",
+          "The piece stands at the corner of two main streets.",
+        ],
+        { category: "artwork" },
+      ),
+    );
+    // Must NOT be caught by T4-D; falls through to unclassified.
+    expect(result.tier).toBeUndefined();
+    expect(result.reason).toBe("unclassified");
+  });
+
+  it("2010 artwork WITH civic vocabulary → not T4-D (civic cancels it)", () => {
+    // hasCivic blocks T4-D the same way it blocks T4-A/T4-C.
+    const result = classifyDiscoveryTier(
+      place(
+        "Installed in 2010, this mural celebrates the labor movement and immigrant workers who built the neighbourhood.",
+        [],
+        { category: "artwork" },
+      ),
+    );
+    expect(result.tier).not.toBe(4);
+  });
+
+  it("2012 artwork WITH transformation language → T1, not T4-D (T1-A wins)", () => {
+    // T1-A fires first: transformation + year → T4-D is never reached.
+    const result = classifyDiscoveryTier(
+      place(
+        "Originally a factory wall, this surface was repurposed into a mural installation in 2012.",
+        [],
+        { category: "artwork" },
+      ),
+    );
+    expect(result.tier).toBe(1);
+    expect(result.reason).toBe("hiddenPast");
+  });
+
+  it("2015 building (non-artwork/memorial category) → unclassified, not T4-D", () => {
+    // T4-D is scoped to artwork/memorial only; 'building' category does not trigger it.
+    const result = classifyDiscoveryTier(
+      place(
+        "Completed in 2015, this office building provides modern workspace for technology companies.",
+        [
+          "The structure uses a curtain-wall glass facade.",
+          "It houses several floors of open-plan offices.",
+        ],
+        { category: "building" },
+      ),
+    );
+    // T4-B or T4-C may fire for other reasons, but T4-D specifically must not be the cause
+    // when category is 'building'. Regardless of final tier, rejectionReason is not recentCommissionedArt.
+    expect(result.rejectionReason).not.toBe("recentCommissionedArt");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// T4-D regression guards — historically meaningful places must not become T4
+// ---------------------------------------------------------------------------
+
+describe("classifyDiscoveryTier — T4-D regression guards", () => {
+  it("1873 Civil War memorial → not Tier 4 (pre-2001 year blocks T4-D)", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "Erected to honor local veterans, this memorial stands as a solemn reminder of the city's sacrifice during the Civil War era.",
+        [
+          "Completed in 1873, it was funded by families of soldiers and sailors to commemorate their service.",
+          "Its location was chosen to be a central gathering place for Memorial Day ceremonies starting from the late 19th century.",
+        ],
+        { category: "memorial" },
+      ),
+    );
+    expect(result.tier).not.toBe(4);
+  });
+
+  it("1978 Kościuszko-style artwork (pre-2001 year) → unclassified, not T4-D", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "This 1978 bronze sculpture honors General Kościuszko, a Polish engineer who fortified West Point during the American Revolutionary War.",
+        [
+          "Created by artist Marian Konieczny as a tribute to Kościuszko's contributions to American independence.",
+          "Installed here in 1978 to recognise the shared history between Poland and the United States during the 18th century.",
+        ],
+        { category: "artwork" },
+      ),
+    );
+    // 1978 is pre-2001 → PRE_2001_YEAR_RE fires → T4-D does not fire.
+    expect(result.tier).toBeUndefined();
+    expect(result.reason).toBe("unclassified");
+    expect(result.rejectionReason).toBeUndefined();
+  });
+
+  it("1977/1780s Francisco de Miranda-style artwork → unclassified, not T4-D", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "This 1977 sculpture commemorates Francisco de Miranda, precursor of Latin American independence, connecting Philadelphia's history to global freedom struggles.",
+        [
+          "Installed in 1977 to mark Miranda's role in both Venezuelan independence and his brief 1780s refuge in Philadelphia.",
+        ],
+        { category: "artwork" },
+      ),
+    );
+    // Both 1977 and 1780s are pre-2001 → T4-D does not fire.
+    expect(result.tier).toBeUndefined();
+    expect(result.rejectionReason).toBeUndefined();
+  });
+
+  it("Joseph Leidy-style artwork (1820s–1890s years) → unclassified, not T4-D", () => {
+    const result = classifyDiscoveryTier(
+      place(
+        "This sculpture celebrates Joseph Leidy, a pioneering 19th-century anatomist whose work reshaped natural sciences.",
+        [
+          "Leidy (1823–1891) was instrumental in establishing forensic science and paleontology in America.",
+          "His discoveries included the first nearly complete dinosaur skeleton found in North America in 1858.",
+        ],
+        { category: "artwork" },
+      ),
+    );
+    expect(result.tier).not.toBe(4);
+    expect(result.rejectionReason).not.toBe("recentCommissionedArt");
+  });
+
+  it("2014 artwork WITH Art Deco style → not T4-D (ARCH_STYLE_RE blocks it)", () => {
+    // Even post-2000, if an architectural style is named, T4-D does not fire.
+    const result = classifyDiscoveryTier(
+      place(
+        "Installed in 2014, this Art Deco-inspired sculpture was designed to complement the historic architecture of the square.",
+        [],
+        { category: "artwork" },
+      ),
+    );
+    expect(result.rejectionReason).not.toBe("recentCommissionedArt");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // applyDiscoveryTier — in-place mutation
 // ---------------------------------------------------------------------------
 
