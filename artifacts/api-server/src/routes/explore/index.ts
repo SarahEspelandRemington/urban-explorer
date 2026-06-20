@@ -4823,6 +4823,7 @@ router.post("/explore/places-along-route", async (req, res) => {
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     classifyDiscovery(cached.places);
+    applyDiscoveryTier(cached.places);
     const filteredCached = filterDeniedPlaces(cached.places);
     res.json({ places: filteredCached });
     return;
@@ -5062,6 +5063,7 @@ Return one entry per input place, in the same order. Be concise — these blurbs
   });
 
   classifyDiscovery(enriched);
+  applyDiscoveryTier(enriched);
   const filteredEnriched = filterDeniedPlaces(enriched);
   const result = { places: filteredEnriched };
   setLLMCache(cacheKey, result);
