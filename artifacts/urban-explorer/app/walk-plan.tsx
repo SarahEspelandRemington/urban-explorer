@@ -636,7 +636,7 @@ export default function WalkPlanScreen() {
                 />
                 <View style={styles.routeMetaItem}>
                   <Feather
-                    name="headphones"
+                    name="map-pin"
                     size={14}
                     color={colors.mutedForeground}
                   />
