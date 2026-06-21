@@ -4680,7 +4680,7 @@ async function fetchOSMPlacesInBoundingBox(
 (
   nwr["historic"](${south},${west},${north},${east});
   nwr["heritage"](${south},${west},${north},${east});
-  nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint|hotel)$"](${south},${west},${north},${east});
+  nwr["tourism"~"^(attraction|artwork|memorial|museum|gallery|viewpoint)$"](${south},${west},${north},${east});
   nwr["name"]["building"](${south},${west},${north},${east});
   nwr["name"]["landuse"~"^(industrial|railway)$"](${south},${west},${north},${east});
   nwr["amenity"~"^(theatre|library|cinema|townhall|courthouse|university|college|school|place_of_worship|marketplace)$"]["name"](${south},${west},${north},${east});
@@ -4819,7 +4819,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v21:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v22:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     classifyDiscovery(cached.places);
@@ -4936,6 +4936,7 @@ QUALITY STANDARDS:
 - Avoid generic statements like "has rich history" or "notable building".
 - Be honest: if you're uncertain, frame as "Local lore holds that..." rather than invent.
 - When difficult history applies (labour, displacement, tragedy, crime), be grounded and humane — no sensationalism or dark-tourism framing.
+- ATTRIBUTION CONSTRAINT: Every fact and the summary sentence must attach to the specific building or structure at the given coordinates. Do not present facts about an adjacent park, square, plaza, district, or historic event as if they describe the candidate place itself. Nearby context is permitted only when it is explicitly framed as nearby — for example: "Steps from Rittenhouse Square, which was…" or "One block north of the 1850 market site…". A year or name that belongs to a neighbouring landmark does not count as historical depth for this building. If you have no place-specific history, write a brief neutral description — "A mid-century commercial building at this corner, current use hotel" — and omit the facts array or leave it empty. Do not invent, borrow, or inherit significance.
 - Use the EXACT name and coordinates provided — do not rename or move places.
 
 Respond in JSON format:
