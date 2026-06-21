@@ -13,9 +13,9 @@ export type HealthStatusCacheVersions = { [key: string]: string };
 export interface HealthStatus {
   status: string;
   /** Node.js runtime environment (NODE_ENV) */
-  environment: string;
+  environment?: string;
   /** Current cache version identifiers keyed by namespace */
-  cacheVersions: HealthStatusCacheVersions;
+  cacheVersions?: HealthStatusCacheVersions;
 }
 
 /**

@@ -368,8 +368,6 @@ components:
           description: Current cache version identifiers keyed by namespace
       required:
         - status
-        - environment
-        - cacheVersions
     DiscoverRequest:
       type: object
       properties:

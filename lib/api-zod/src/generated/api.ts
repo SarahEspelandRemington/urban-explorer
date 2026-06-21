@@ -13,9 +13,13 @@ import * as zod from "zod";
  */
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
-  environment: zod.string().describe("Node.js runtime environment (NODE_ENV)"),
+  environment: zod
+    .string()
+    .optional()
+    .describe("Node.js runtime environment (NODE_ENV)"),
   cacheVersions: zod
     .record(zod.string(), zod.string())
+    .optional()
     .describe("Current cache version identifiers keyed by namespace"),
 });
 
