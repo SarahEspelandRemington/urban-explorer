@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { logger } from "../../lib/logger";
 import {
+  LLM_CACHE_CURRENT_VERSIONS,
+  OSM_CACHE_VERSION,
+} from "../../lib/cacheVersions";
+import {
   AUDIO_DB_MAX_ENTRIES,
   AUDIO_CACHE_MAX_SIZE,
   AUDIO_CACHE_TTL_MS,
@@ -169,8 +173,8 @@ const OSM_CACHE_DISTANCE = 200;
 const osmSuggestionsCache = new Map<string, LLMCacheEntry<OSMPlace[]>>();
 
 function osmSuggestionsBucketKey(lat: number, lng: number): string {
-  // osm:v43: invalidates entries cached before the Overpass provider race was added.
-  return `osm:v43:${lat.toFixed(3)},${lng.toFixed(3)}`;
+  // OSM_CACHE_VERSION: invalidates entries cached before the Overpass provider race was added.
+  return `osm:${OSM_CACHE_VERSION}:${lat.toFixed(3)},${lng.toFixed(3)}`;
 }
 
 function getCachedOSMPlaces(lat: number, lng: number): OSMPlace[] | null {
@@ -229,28 +233,12 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 // Start at v1 for a new key; bump to v2, v3, etc. after each material change.
 // The timeline key is already at v2 after its prompt update (Task #270).
 //
-// LLM_CACHE_CURRENT_VERSIONS is the authoritative list of every (prefix, version)
-// pair that is currently live. On startup, any DB rows whose cache_key begins with
-// a known prefix but carries a different version segment are deleted so they can
-// never be warmed back into memory.  When you bump a version here, also bump it in
+// LLM_CACHE_CURRENT_VERSIONS is imported from lib/cacheVersions — the
+// authoritative list of every (prefix, version) pair that is currently live.
+// On startup, any DB rows whose cache_key begins with a known prefix but
+// carries a different version segment are deleted so they can never be
+// warmed back into memory.  When you bump a version here, also bump it in
 // the cache key assignment below.
-const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
-  [prefix: string, currentVersion: string]
-> = [
-  ["quick", "v57"], // discover — quick mode
-  ["full", "v57"], // discover — full mode
-  ["suggest", "v12"], // location suggestions
-  ["geocode", "v3"], // geocode
-  ["revgeo", "v12"], // reverse geocode
-  ["nbhd", "v2"], // neighbourhood label reverse-geocode (formerly revgeo-nbhd:v1:)
-  ["suggest404", "v5"], // address-not-found suggestions
-  ["investigate", "v6"], // address investigation
-  ["detail", "v6"], // place detail
-  ["timeline", "v2"], // place timeline
-  ["narration", "v17"], // walk narration (short)
-  ["deep-narration", "v12"], // deep walk narration
-  ["places-route", "v21"], // places along route
-];
 
 function getLLMCache<T>(key: string): T | null {
   const entry = llmCache.get(key);

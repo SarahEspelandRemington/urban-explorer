@@ -5,8 +5,17 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+/**
+ * Current cache version identifiers keyed by namespace
+ */
+export type HealthStatusCacheVersions = { [key: string]: string };
+
 export interface HealthStatus {
   status: string;
+  /** Node.js runtime environment (NODE_ENV) */
+  environment: string;
+  /** Current cache version identifiers keyed by namespace */
+  cacheVersions: HealthStatusCacheVersions;
 }
 
 /**
