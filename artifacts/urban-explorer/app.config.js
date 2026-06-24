@@ -19,13 +19,13 @@ module.exports = {
     },
     ios: {
       supportsTablet: false,
-      bundleIdentifier: "com.urbanexplorer.app",
+      bundleIdentifier: "com.streetlit.app",
       infoPlist: {
         UIBackgroundModes: ["location", "audio"],
       },
     },
     android: {
-      package: "com.urbanexplorer.app",
+      package: "com.streetlit.app",
       permissions: [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
