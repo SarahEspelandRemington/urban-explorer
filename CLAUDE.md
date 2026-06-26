@@ -259,15 +259,15 @@ GitHub is the source of truth; Replit may be deleted at any time.
 Load these when a task requires deeper context in the relevant area. Do not
 load all of them by default.
 
-| Doc                                                            | When to load                                                                                                                                                                                           |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `artifacts/urban-explorer/docs/discovery-ranking-rubric.md`    | Any task touching discovery eligibility, ranking, filtering, Explore surface, or Walk Mode narration eligibility                                                                                       |
-| `artifacts/urban-explorer/docs/runtime-sync-testing-matrix.md` | Any task involving server/API changes, Metro/client changes, cache behavior, env vars, or field testing                                                                                                |
-| `artifacts/urban-explorer/docs/runbook.md`                     | Repo structure, production URL, redeploy steps, EAS dev client, known runtime issues, "do not touch casually" table                                                                                    |
-| `.agents/skills/walk-mode-phone-away-trust/SKILL.md`           | Any task touching Walk Mode selection, narration, eligibility, overlays, or address/coordinate coherence                                                                                               |
-| `threat_model.md`                                              | Any task involving API surface changes, input handling, caching, location data, or new external integrations                                                                                           |
-| **Discovery Acceptance Model**                                 | **PENDING: currently PDF-only at `attached_assets/Discovery Acceptance Model V3.pdf_...pdf`. No markdown version exists. Treat as a real reference once converted to Markdown and added to the repo.** |
-| **Streetlit Product Language & Trust Guidelines**              | **PENDING: does not yet exist in the repo. Treat as a real reference once added.**                                                                                                                     |
+| Doc                                                                  | When to load                                                                                                                                 |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `artifacts/urban-explorer/docs/discovery-ranking-rubric.md`          | Any task touching discovery eligibility, ranking, filtering, Explore surface, or Walk Mode narration eligibility                             |
+| `artifacts/urban-explorer/docs/runtime-sync-testing-matrix.md`       | Any task involving server/API changes, Metro/client changes, cache behavior, env vars, or field testing                                      |
+| `artifacts/urban-explorer/docs/runbook.md`                           | Repo structure, production URL, redeploy steps, EAS dev client, known runtime issues, "do not touch casually" table                          |
+| `.agents/skills/walk-mode-phone-away-trust/SKILL.md`                 | Any task touching Walk Mode selection, narration, eligibility, overlays, or address/coordinate coherence                                     |
+| `threat_model.md`                                                    | Any task involving API surface changes, input handling, caching, location data, or new external integrations                                 |
+| `artifacts/urban-explorer/docs/discovery-acceptance-model.md`        | Any task touching discovery eligibility, ranking, or narration thresholds — defines what makes a place a genuine discovery vs. mere metadata |
+| `artifacts/urban-explorer/docs/product-language-trust-guidelines.md` | Any task touching user-facing copy, terminology (location/place/discovery/story), trust/certainty language, or UI text                       |
 
 ---
 
