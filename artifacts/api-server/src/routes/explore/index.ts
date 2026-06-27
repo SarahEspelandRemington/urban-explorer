@@ -1558,6 +1558,7 @@ import { applyDiscoveryTier } from "../../lib/discoveryTier";
 
 import { applyLlmPrecisionFilter } from "../../lib/spatialTrustFilter";
 import { resolveEffectiveHint } from "../../lib/areaContext";
+import { isBoringResidentialBuilding } from "../../lib/residentialBuildingFilter";
 export { applyLlmPrecisionFilter };
 
 // ---------------------------------------------------------------------------
@@ -1976,7 +1977,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v57:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v58:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2114,6 +2115,11 @@ router.post("/explore/discover", async (req, res) => {
         return !building || !effectiveDenylist.has(building);
       });
     }
+    // Suppress plain residential buildings with no story-bearing OSM tags.
+    // Applied after the denylist so the two filters compose cleanly.
+    osmCandidates = osmCandidates.filter(
+      (p) => !isBoringResidentialBuilding(p.tags),
+    );
 
     // 2. Density counts at three radius tiers (before any radius filter)
     const countWithin = (r: number) =>
@@ -2541,6 +2547,9 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
       return !building || !effectiveDenylist.has(building);
     });
   }
+  // Suppress plain residential buildings with no story-bearing OSM tags.
+  // Applied after the denylist so the two filters compose cleanly.
+  osmPlaces = osmPlaces.filter((p) => !isBoringResidentialBuilding(p.tags));
 
   const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
