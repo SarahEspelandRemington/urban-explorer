@@ -20,8 +20,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string]
 > = [
-  ["quick", "v57"], // discover — quick mode
-  ["full", "v57"], // discover — full mode
+  ["quick", "v58"], // discover — quick mode
+  ["full", "v58"], // discover — full mode
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
