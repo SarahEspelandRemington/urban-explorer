@@ -603,6 +603,7 @@ export default function WalkModeScreen() {
       <View style={styles.cardSlot}>
         {walk.narration.currentPlace ? (
           <Animated.View
+            key="playing"
             entering={
               Platform.OS !== "web" ? FadeInDown.springify() : undefined
             }
@@ -756,6 +757,7 @@ export default function WalkModeScreen() {
           </Animated.View>
         ) : walk.isLoading ? (
           <Animated.View
+            key="loading"
             entering={Platform.OS !== "web" ? FadeIn : undefined}
             style={[
               styles.nowPlaying,
@@ -771,6 +773,7 @@ export default function WalkModeScreen() {
           </Animated.View>
         ) : (
           <View
+            key="idle"
             style={[
               styles.nowPlaying,
               { backgroundColor: colors.card, borderColor: colors.border },
