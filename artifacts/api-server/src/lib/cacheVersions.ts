@@ -1,3 +1,4 @@
+// cache-versions:v2:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -25,7 +26,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["suggest", "v12"], // location suggestions
   ["geocode", "v3"], // geocode
   ["revgeo", "v12"], // reverse geocode
-  ["nbhd", "v2"], // neighbourhood label reverse-geocode (formerly revgeo-nbhd:v1:)
+  ["nbhd", "v2"], // neighbourhood label reverse-geocode (formerly named revgeo-nbhd, version 1)
   ["suggest404", "v5"], // address-not-found suggestions
   ["investigate", "v6"], // address investigation
   ["detail", "v6"], // place detail
