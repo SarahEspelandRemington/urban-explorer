@@ -4816,7 +4816,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v22:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v23:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     classifyDiscovery(cached.places);
@@ -5027,9 +5027,34 @@ Return one entry per input place, in the same order. Be concise — these blurbs
     "[places-along-route] LLM complete",
   );
 
+  // Same key subset as HINT_TAGS in the /explore/discover handler, kept as a
+  // local constant since that one is scoped to the other route's closure.
+  // Retained on the output so a future historicalForce pass has wikidata/
+  // wikipedia (and other hint tags) to key off — not read by any prompt,
+  // filter, or scoring logic today.
+  const ROUTE_OSM_HINT_TAGS = [
+    "historic",
+    "description",
+    "heritage:description",
+    "start_date",
+    "wikidata",
+    "wikipedia",
+    "operator",
+    "denomination",
+    "alt_name",
+    "architect",
+    "building:material",
+    "building:levels",
+  ] as const;
+
   // Match LLM output back to candidates by position (same order); fall back to nearest by name
   const enriched = finalCandidates.map((c, i) => {
     const llm = llmPlaces[i] || {};
+    const osmTags: Record<string, string> = {};
+    for (const key of ROUTE_OSM_HINT_TAGS) {
+      const val = c.place.tags[key];
+      if (val) osmTags[key] = sanitizeOSMText(val, 120);
+    }
     return {
       id:
         typeof llm.id === "string" && llm.id
@@ -5057,6 +5082,7 @@ Return one entry per input place, in the same order. Be concise — these blurbs
           : undefined,
       progressMeters: c.progressMeters,
       offsetMeters: c.offsetMeters,
+      osmTags: Object.keys(osmTags).length > 0 ? osmTags : undefined,
     };
   });
 
