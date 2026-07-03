@@ -7,20 +7,20 @@
       "registered": "2026-07-01"
     },
     "artifacts/api-server/src/routes/explore/index.ts": {
-      "sectionHash": "a77bf4997a42fd9d54d8d71181c72c430ac7d818f420f13885462c28e3e0039e",
+      "sectionHash": "3403deac7797bdec1a8f5dd1794c1a55e8ede6ce27ff265a5495bb22fbc2a0cc",
       "versions": [
         "v1",
         "v12",
         "v18",
         "v2",
-        "v23",
+        "v24",
         "v4",
         "v5",
         "v58",
         "v7",
         "v9"
       ],
-      "registered": "2026-07-02"
+      "registered": "2026-07-03"
     }
   }
 }

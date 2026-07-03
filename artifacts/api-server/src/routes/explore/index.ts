@@ -1551,6 +1551,7 @@ export {
   suppressApproxDuplicates,
 };
 import { applyDiscoveryTier } from "../../lib/discoveryTier";
+import { deriveHistoricalForce } from "../../lib/historicalForceMap";
 
 // ---------------------------------------------------------------------------
 // LLM precision claim detection
@@ -2006,6 +2007,13 @@ router.post("/explore/discover", async (req, res) => {
       // Apply discovery tier on every cache hit so pre-change cached entries
       // receive tier classification on the way out (no cache bump needed).
       applyDiscoveryTier(allCachedPlaces);
+      // historicalForce is derived on every read (fresh + cached), same
+      // pattern as discoveryTier above — table edits take effect without a
+      // cache-version bump. Tag-attachment only; not consumed anywhere yet.
+      for (const p of allCachedPlaces) {
+        const hf = deriveHistoricalForce(p.osmTags ?? {});
+        if (hf) p.historicalForce = hf;
+      }
       applyLlmPrecisionFilter(allCachedPlaces);
       suppressApproxDuplicates(allCachedPlaces);
       allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
@@ -2397,6 +2405,13 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
     // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
     classifyDiscovery(mergedPlaces);
     applyDiscoveryTier(mergedPlaces);
+    // historicalForce is derived on every read (fresh + cached), same
+    // pattern as discoveryTier above. Tag-attachment only; not consumed
+    // anywhere yet.
+    for (const p of mergedPlaces) {
+      const hf = deriveHistoricalForce(p.osmTags ?? {});
+      if (hf) p.historicalForce = hf;
+    }
     applyLlmPrecisionFilter(mergedPlaces);
     suppressApproxDuplicates(mergedPlaces);
     mergedPlaces = filterDeniedPlaces(mergedPlaces);
@@ -2711,6 +2726,13 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
     // object — no external calls, runs in O(n).
     classifyDiscovery(data.places);
     applyDiscoveryTier(data.places);
+    // historicalForce is derived on every read (fresh + cached), same
+    // pattern as discoveryTier above. Tag-attachment only; not consumed
+    // anywhere yet.
+    for (const p of data.places) {
+      const hf = deriveHistoricalForce(p.osmTags ?? {});
+      if (hf) p.historicalForce = hf;
+    }
 
     // Second pass: downgrade any non-interpretive place whose name/summary
     // contains a specific street reference but has no verified coordinate
@@ -4816,11 +4838,18 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v23:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v24:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     classifyDiscovery(cached.places);
     applyDiscoveryTier(cached.places);
+    // historicalForce is derived on every read (fresh + cached), same
+    // pattern as discoveryTier above. Tag-attachment only; not consumed
+    // anywhere yet.
+    for (const p of cached.places as any[]) {
+      const hf = deriveHistoricalForce(p.osmTags ?? {});
+      if (hf) p.historicalForce = hf;
+    }
     const filteredCached = filterDeniedPlaces(cached.places);
     res.json({ places: filteredCached });
     return;
@@ -5088,6 +5117,13 @@ Return one entry per input place, in the same order. Be concise — these blurbs
 
   classifyDiscovery(enriched);
   applyDiscoveryTier(enriched);
+  // historicalForce is derived on every read (fresh + cached), same
+  // pattern as discoveryTier above. Tag-attachment only; not consumed
+  // anywhere yet.
+  for (const p of enriched as any[]) {
+    const hf = deriveHistoricalForce(p.osmTags ?? {});
+    if (hf) p.historicalForce = hf;
+  }
   const filteredEnriched = filterDeniedPlaces(enriched);
   const result = { places: filteredEnriched };
   setLLMCache(cacheKey, result);
