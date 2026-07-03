@@ -20,7 +20,15 @@ import { parseWikipediaOsmTag } from "./wikipediaEnrichment";
 /** Wikidata Q-ID → historicalForce identifier. */
 export const WIKIDATA_HISTORICAL_FORCE_MAP: Record<string, string> = {
   // Baldwin Locomotive Works
-  // TODO(sarah): verify Wikidata Q-ID — no verified ID found in repo.
+  Q804868: "baldwin-locomotive-works",
+  // Matthew Baird Mansion
+  Q6790122: "baldwin-locomotive-works",
+  // Matthias Baldwin Park
+  Q49522748: "baldwin-locomotive-works",
+  // Harrington Machine Shop
+  Q5664613: "baldwin-locomotive-works",
+  // Middishade Factory
+  Q6841173: "baldwin-locomotive-works",
   // Eastern State Penitentiary
   // TODO(sarah): verify Wikidata Q-ID — no verified ID found in repo.
   // Fairmount Water Works
