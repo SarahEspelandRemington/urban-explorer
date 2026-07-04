@@ -1978,7 +1978,7 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v58:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = `${modeKey}:v60:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2080,20 +2080,17 @@ router.post("/explore/discover", async (req, res) => {
   }
 
   // ── OSM-ANCHOR WALK MODE ─────────────────────────────────────────────────
-  // When walkMode && osmAnchor, Overpass is the definitive candidate source.
+  // When osmAnchor is true, Overpass is the definitive candidate source.
   // The LLM writes copy only — it cannot invent place names, addresses, or
   // coordinates. Zero Overpass results → return empty with noVerifiedPlacesNearby.
-  // If Overpass is unavailable (IP-blocked, network error), we break out of
-  // this block and fall through to the standard LLM path so the walk still
-  // surfaces Nominatim-verified discoveries rather than going permanently silent.
+  // If Overpass is unavailable (IP-blocked, network error), return empty with
+  // overpassFallback: true. osmAnchor: true means "grounded or nothing" — there
+  // is no LLM fallback path regardless of Overpass availability.
   //
-  // overpassFallbackMode: set to true when we break out due to Overpass being
-  // unavailable. The LLM path appends this as a response flag so the client
-  // can use a relaxed candidateSource gate (historical places verified by
-  // Nominatim name-search still return coordSource:"llm" when the place has
-  // no OSM node, but their addresses are real and auto-narration is blocked).
-  let overpassFallbackMode = false;
-  osmAnchorBlock: if (osmAnchor) {
+  // overpassFallbackMode is retained below for historical reference but is now
+  // permanently false on this path; its downstream guards are dead code.
+  const overpassFallbackMode = false;
+  if (osmAnchor) {
     const nbhdLabel = await nbhdLabelPromise;
 
     // 1. Fetch OSM candidates — generous timeout, no brainstorm race needed.
@@ -2142,21 +2139,36 @@ router.post("/explore/discover", async (req, res) => {
     const searchBucket: "r150" | "r300" | "r500" =
       searchRadius <= 150 ? "r150" : searchRadius <= 300 ? "r300" : "r500";
 
-    // 3. Zero density → return early (genuine sparse area) or fall through to
-    // the LLM path (Overpass unavailable). No LLM fallback when Overpass
-    // succeeds but finds nothing — that means the area is genuinely sparse.
+    // 3. Zero density → return empty. osmAnchor: true means "grounded or nothing":
+    // both a genuine sparse area and an Overpass outage produce an empty response.
+    // No LLM fallback in either sub-case.
     if (osmCandidateCount[searchBucket] === 0) {
       if (overpassErrored) {
         // Overpass is unavailable (IP-blocked, network error, timeout).
-        // Break out of the osmAnchor block and fall through to the standard
-        // LLM path so the user still gets Nominatim-verified discoveries
-        // during the walk rather than a permanently silent experience.
+        // Return an empty result — do not fall through to the LLM path.
+        // overpassFallback: true lets the client and logs distinguish this
+        // from a genuine sparse area (noVerifiedPlacesNearby: true).
+        // Short TTL so the client retries promptly once Overpass recovers.
         req.log.warn(
           { tile: `${snapGrid(latitude)},${snapGrid(longitude)}` },
-          "[osmAnchor] Overpass unavailable — falling back to LLM discover path",
+          "[osmAnchor] Overpass unavailable — returning empty (grounded-only policy)",
         );
-        overpassFallbackMode = true;
-        break osmAnchorBlock;
+        const unavailableResp = {
+          places: [],
+          location: nbhdLabel.label,
+          locationSrc: nbhdLabel.src,
+          effectiveAddressHintSrc:
+            nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
+          osmCandidateCount,
+          overpassFallback: true,
+        };
+        const SHORT_TTL_MS = 30 * 1000;
+        llmCache.set(discoverCacheKey, {
+          data: unavailableResp,
+          timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
+        });
+        res.json(unavailableResp);
+        return;
       }
       // Genuine sparse area: cache with a short 30 s TTL so the next walk
       // session can retry promptly without hammering Overpass on every tick.
