@@ -61,3 +61,9 @@ attached_assets/Pasted-*.txt
 
 # Replit agent memory/session notes
 .agents/memory/
+
+# Local production secrets (never commit)
+.env.production.local
+
+# Local database backups (never commit)
+/backups/
