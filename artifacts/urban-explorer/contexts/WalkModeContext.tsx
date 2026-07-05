@@ -964,7 +964,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // area (same day, same block) requires zero HTTP round-trips.
         const cachedPlaces = await getPlaceCache(tile);
         if (cachedPlaces !== null) {
-          if (!isWalkingRef.current) return;
+          if (!isWalkingRef.current) {
+            if (__DEV__)
+              console.log(
+                "[discover] response arrived but walk ended — discarding",
+                { placesCount: cachedPlaces?.length ?? 0 },
+              );
+            return;
+          }
           const allIncoming = cachedPlaces as WalkPlace[];
           const map = new Map<string, WalkPlace>();
           for (const p of placesRef.current) map.set(p.id, p);
@@ -1114,7 +1121,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           // Guard: if stopWalk was called while the fetch was in-flight, discard
           // results so we don't repopulate the places list or update state after
           // the walk has ended.
-          if (!isWalkingRef.current) return;
+          if (!isWalkingRef.current) {
+            if (__DEV__)
+              console.log(
+                "[discover] response arrived but walk ended — discarding",
+                { placesCount: data?.places?.length ?? 0 },
+              );
+            return;
+          }
           if (Array.isArray(data?.places)) {
             // When Overpass was unavailable the server fell back to the LLM
             // path and flags the response. The candidateSource gate is relaxed
