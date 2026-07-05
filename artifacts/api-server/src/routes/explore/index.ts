@@ -1978,7 +1978,9 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
-  const discoverCacheKey = `${modeKey}:v60:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}${osmAnchor ? ":osm" : ""}`;
+  const discoverCacheKey = osmAnchor
+    ? `${modeKey}:v60:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    : `${modeKey}:v61:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2624,7 +2626,7 @@ INTERPRETIVE CATEGORIES — COORDINATE RULE: For places of category "waterway re
 
 NAME–LOCATION COHERENCE — CRITICAL: The place's display name MUST NOT reference a street, avenue, or landmark the place is not actually on. NEVER use patterns like "X near 8th Avenue", "Y on Broadway", "Z at the Hudson piers" unless the place's coordinates are within ~100 m of that street/landmark. If you cannot place the entity on the named street within the search radius, either (a) rename it to use a feature it IS adjacent to, or (b) drop it entirely. This rule exists because narration reads the name aloud — a name claiming the wrong street produces a confusing experience for a user standing somewhere else. Generic descriptive names ("Unmarked Speakeasy Site", "Former Garment Loft") are preferable to a name that lies about location.
 
-HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhood accounts…"). Fewer verified places beats more invented ones. NEVER invent a street name — if you cannot confirm the exact address, anchor to the nearest real cross-street intersection instead (e.g. "NW corner of Green St & N 22nd St"). An invented street name is always worse than an honest intersection.
+HONESTY: Flag uncertain claims ("Local lore holds…", "According to neighborhood accounts…"). Fewer verified places beats more invented ones.
 
 OSM DATA: The user message includes nearby OpenStreetMap features. Use each named feature as a prompt — what non-obvious story lies beneath what OSM calls "commercial"? Do not re-describe the OSM data; surface the obscure layer underneath.
 
