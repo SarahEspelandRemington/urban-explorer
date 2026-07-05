@@ -734,28 +734,32 @@ export default function ExploreScreen() {
       return;
     }
 
-    // Accuracy-upgrade re-discovery: if the initial discovery was triggered
-    // from a stale cached GPS fix (accuracy > 100 m) and we now have a fresh
-    // high-accuracy lock (≤ 50 m) that places the user more than 80 m away
-    // from where we discovered, silently re-run discovery at the correct spot.
-    // This fires at most once per session: after re-discovery, lastDiscoverAccuracy
-    // will be ≤ 50, so the condition can't trigger again.
+    // Stale/distant-fix re-discovery: re-run discovery if either (a) the
+    // current fix is more than 80 m from where the last discovery ran — this
+    // catches a seeded `getLastKnownPositionAsync` fix that was physically
+    // stale (e.g. up to 2 minutes old) even though its reported accuracy was
+    // good enough to pass the initial seed filter — or (b) the initial
+    // discovery was triggered from a low-accuracy fix (> 100 m) and we now
+    // have a fresh high-accuracy lock (≤ 50 m). Unlike the old accuracy-only
+    // guard, this can fire more than once per session as the user moves,
+    // since lastDiscoverCoordsRef is updated on every discoverAt() call.
     const lastCoords = lastDiscoverCoordsRef.current;
     const lastAcc = lastDiscoverAccuracyRef.current;
-    if (
-      lastCoords !== null &&
-      typeof lastAcc === "number" &&
-      lastAcc > 100 &&
-      typeof accuracy === "number" &&
-      accuracy <= 50 &&
-      haversineMeters(
+    if (lastCoords !== null) {
+      const movedMeters = haversineMeters(
         latitude,
         longitude,
         lastCoords.latitude,
         lastCoords.longitude,
-      ) > 80
-    ) {
-      discoverAt(latitude, longitude, accuracy);
+      );
+      const accuracyImproved =
+        typeof lastAcc === "number" &&
+        lastAcc > 100 &&
+        typeof accuracy === "number" &&
+        accuracy <= 50;
+      if (movedMeters > 80 || accuracyImproved) {
+        discoverAt(latitude, longitude, accuracy);
+      }
     }
 
     // Only re-run when `location` changes. Adding discoverMutation state would
