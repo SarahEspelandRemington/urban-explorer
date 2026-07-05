@@ -436,219 +436,230 @@ export function WalkModeMap({
             }),
           )}
 
-        {clusters.map((cluster) => {
-          if (expansion && cluster.key === expansion.cluster.key) return null;
-          if (collapse && collapsingClusterKeys?.has(cluster.key)) return null;
-          if (
-            expandingPlaceIds &&
-            cluster.places.length === 1 &&
-            expandingPlaceIds.has(cluster.places[0].id)
-          ) {
-            return null;
-          }
-          if (cluster.places.length === 1) {
-            const place = cluster.places[0];
-            const narratedAt = narratedIds.get(place.id);
-            const wasNarrated = narratedAt !== undefined;
-            const isSelected = selectedPlace?.id === place.id;
-            const isPlaying = currentlyPlayingPlaceId === place.id;
+        {clusters
+          .filter((cluster) => {
+            // Same exclusions as before — moved ahead of .map() so a
+            // filtered-out entry never becomes a `null` in MapView's
+            // children array (react-native-maps@1.18.0 predates Fabric and
+            // renders through RCTLegacyViewManagerInteropComponentView,
+            // which does not reliably strip null children).
+            if (expansion && cluster.key === expansion.cluster.key)
+              return false;
+            if (collapse && collapsingClusterKeys?.has(cluster.key))
+              return false;
+            if (
+              expandingPlaceIds &&
+              cluster.places.length === 1 &&
+              expandingPlaceIds.has(cluster.places[0].id)
+            ) {
+              return false;
+            }
+            return true;
+          })
+          .map((cluster) => {
+            if (cluster.places.length === 1) {
+              const place = cluster.places[0];
+              const narratedAt = narratedIds.get(place.id);
+              const wasNarrated = narratedAt !== undefined;
+              const isSelected = selectedPlace?.id === place.id;
+              const isPlaying = currentlyPlayingPlaceId === place.id;
 
-            // Semantic opacity hierarchy:
-            //   narration > selected > played (faded) > upcoming.
-            //   Selected pins surface to full opacity so they visually link
-            //   to the open preview card, even if previously narrated.
-            const markerOpacity = isPlaying
-              ? 1
-              : isSelected
+              // Semantic opacity hierarchy:
+              //   narration > selected > played (faded) > upcoming.
+              //   Selected pins surface to full opacity so they visually link
+              //   to the open preview card, even if previously narrated.
+              const markerOpacity = isPlaying
                 ? 1
-                : wasNarrated
-                  ? visitedOpacity(narratedAt) * 0.1
-                  : 0.7;
+                : isSelected
+                  ? 1
+                  : wasNarrated
+                    ? visitedOpacity(narratedAt) * 0.1
+                    : 0.7;
 
-            // Active: 28 px dominant. Upcoming: 12 px quiet dot.
-            // Played: 9 px small, neutral grey — visually subordinate.
-            // Selected + not playing: surface with more-opaque primary.
-            const pinSize = isPlaying ? 28 : wasNarrated ? 9 : 12;
-            const isInterpretive =
-              !isPlaying && place.discoveryClass === "INTERPRETIVE_OVERLAY";
-            const isApproxSite =
-              !isPlaying && place.discoveryClass === "APPROXIMATE_SITE";
-            const pinColor = isPlaying
-              ? colors.primary
-              : isSelected
-                ? colors.primary + "CC"
-                : wasNarrated
-                  ? colors.mutedForeground + "66"
-                  : isInterpretive
-                    ? colors.primary + "55"
-                    : isApproxSite
-                      ? colors.primary + "66"
-                      : colors.primary + "88";
-            // Active: 38 px wrapper. Selected: widen to fit halo ring. Others: pin + 8.
-            const wrapperSize = isPlaying
-              ? 38
-              : isSelected
-                ? Math.max(pinSize + 8, 34)
-                : pinSize + 8;
+              // Active: 28 px dominant. Upcoming: 12 px quiet dot.
+              // Played: 9 px small, neutral grey — visually subordinate.
+              // Selected + not playing: surface with more-opaque primary.
+              const pinSize = isPlaying ? 28 : wasNarrated ? 9 : 12;
+              const isInterpretive =
+                !isPlaying && place.discoveryClass === "INTERPRETIVE_OVERLAY";
+              const isApproxSite =
+                !isPlaying && place.discoveryClass === "APPROXIMATE_SITE";
+              const pinColor = isPlaying
+                ? colors.primary
+                : isSelected
+                  ? colors.primary + "CC"
+                  : wasNarrated
+                    ? colors.mutedForeground + "66"
+                    : isInterpretive
+                      ? colors.primary + "55"
+                      : isApproxSite
+                        ? colors.primary + "66"
+                        : colors.primary + "88";
+              // Active: 38 px wrapper. Selected: widen to fit halo ring. Others: pin + 8.
+              const wrapperSize = isPlaying
+                ? 38
+                : isSelected
+                  ? Math.max(pinSize + 8, 34)
+                  : pinSize + 8;
 
+              return (
+                <Marker
+                  key={cluster.key}
+                  coordinate={{
+                    latitude: place.latitude,
+                    longitude: place.longitude,
+                  }}
+                  anchor={{ x: 0.5, y: 0.5 }}
+                  tracksViewChanges={isSelected || isPlaying}
+                  opacity={markerOpacity}
+                  stopPropagation
+                >
+                  <Pressable
+                    onPress={() => {
+                      setPreviewCluster(null);
+                      setSelectedPlace(isSelected ? null : place);
+                    }}
+                    hitSlop={14}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${place.name}${isPlaying ? " (playing)" : wasNarrated ? " (played)" : ""}. Tap to play.`}
+                  >
+                    <View
+                      style={[
+                        styles.pinWrapper,
+                        { width: wrapperSize, height: wrapperSize },
+                      ]}
+                    >
+                      {isPlaying && (
+                        <Animated.View
+                          style={[
+                            styles.pinRing,
+                            {
+                              width: 44,
+                              height: 44,
+                              borderRadius: 22,
+                              borderColor: colors.primary,
+                              borderWidth: 1.5,
+                              backgroundColor: colors.primary + "0A",
+                              opacity: narrationPulse.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.1, 0.3],
+                              }),
+                            },
+                          ]}
+                        />
+                      )}
+                      {isSelected && !isPlaying && (
+                        <View
+                          style={[
+                            styles.pinRing,
+                            {
+                              width: 30,
+                              height: 30,
+                              borderRadius: 15,
+                              borderColor: colors.primary + "80",
+                              borderWidth: 1.5,
+                              backgroundColor: colors.primary + "0D",
+                              opacity: 0.85,
+                            },
+                          ]}
+                        />
+                      )}
+                      <View
+                        style={[
+                          styles.pin,
+                          {
+                            width: pinSize,
+                            height: pinSize,
+                            borderRadius: pinSize / 2,
+                            backgroundColor: pinColor,
+                            borderColor: isPlaying
+                              ? colors.primaryForeground
+                              : colors.background,
+                            borderWidth: isPlaying ? 2 : 1.25,
+                            ...(isPlaying
+                              ? {
+                                  shadowColor: colors.primary,
+                                  shadowOpacity: 0.4,
+                                  shadowRadius: 8,
+                                  elevation: 6,
+                                }
+                              : isSelected
+                                ? {
+                                    shadowColor: colors.primary,
+                                    shadowOpacity: 0.2,
+                                    shadowRadius: 4,
+                                    elevation: 3,
+                                  }
+                                : wasNarrated
+                                  ? { shadowOpacity: 0, elevation: 0 }
+                                  : {
+                                      shadowColor: "#000",
+                                      shadowOpacity: 0.2,
+                                      shadowRadius: 3,
+                                      elevation: 2,
+                                    }),
+                          },
+                        ]}
+                      />
+                    </View>
+                  </Pressable>
+                </Marker>
+              );
+            }
+            const allNarrated = cluster.places.every((p) =>
+              narratedIds.has(p.id),
+            );
+            const bg = allNarrated ? colors.mutedForeground : colors.primary;
+            const size =
+              cluster.places.length >= 100
+                ? 52
+                : cluster.places.length >= 10
+                  ? 44
+                  : 36;
             return (
               <Marker
                 key={cluster.key}
                 coordinate={{
-                  latitude: place.latitude,
-                  longitude: place.longitude,
+                  latitude: cluster.latitude,
+                  longitude: cluster.longitude,
                 }}
+                tracksViewChanges={false}
                 anchor={{ x: 0.5, y: 0.5 }}
-                tracksViewChanges={isSelected || isPlaying}
-                opacity={markerOpacity}
                 stopPropagation
               >
                 <Pressable
-                  onPress={() => {
-                    setPreviewCluster(null);
-                    setSelectedPlace(isSelected ? null : place);
-                  }}
-                  hitSlop={14}
+                  onPress={() => handleClusterPress(cluster)}
+                  onLongPress={() => setPreviewCluster(cluster)}
+                  delayLongPress={350}
+                  hitSlop={6}
                   accessibilityRole="button"
-                  accessibilityLabel={`${place.name}${isPlaying ? " (playing)" : wasNarrated ? " (played)" : ""}. Tap to play.`}
+                  accessibilityLabel={`Cluster of ${cluster.places.length} places. Long-press to preview.`}
                 >
                   <View
                     style={[
-                      styles.pinWrapper,
-                      { width: wrapperSize, height: wrapperSize },
+                      styles.cluster,
+                      {
+                        width: size,
+                        height: size,
+                        borderRadius: size / 2,
+                        backgroundColor: bg,
+                        borderColor: colors.background,
+                      },
                     ]}
                   >
-                    {isPlaying && (
-                      <Animated.View
-                        style={[
-                          styles.pinRing,
-                          {
-                            width: 44,
-                            height: 44,
-                            borderRadius: 22,
-                            borderColor: colors.primary,
-                            borderWidth: 1.5,
-                            backgroundColor: colors.primary + "0A",
-                            opacity: narrationPulse.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [0.1, 0.3],
-                            }),
-                          },
-                        ]}
-                      />
-                    )}
-                    {isSelected && !isPlaying && (
-                      <View
-                        style={[
-                          styles.pinRing,
-                          {
-                            width: 30,
-                            height: 30,
-                            borderRadius: 15,
-                            borderColor: colors.primary + "80",
-                            borderWidth: 1.5,
-                            backgroundColor: colors.primary + "0D",
-                            opacity: 0.85,
-                          },
-                        ]}
-                      />
-                    )}
-                    <View
+                    <Text
                       style={[
-                        styles.pin,
-                        {
-                          width: pinSize,
-                          height: pinSize,
-                          borderRadius: pinSize / 2,
-                          backgroundColor: pinColor,
-                          borderColor: isPlaying
-                            ? colors.primaryForeground
-                            : colors.background,
-                          borderWidth: isPlaying ? 2 : 1.25,
-                          ...(isPlaying
-                            ? {
-                                shadowColor: colors.primary,
-                                shadowOpacity: 0.4,
-                                shadowRadius: 8,
-                                elevation: 6,
-                              }
-                            : isSelected
-                              ? {
-                                  shadowColor: colors.primary,
-                                  shadowOpacity: 0.2,
-                                  shadowRadius: 4,
-                                  elevation: 3,
-                                }
-                              : wasNarrated
-                                ? { shadowOpacity: 0, elevation: 0 }
-                                : {
-                                    shadowColor: "#000",
-                                    shadowOpacity: 0.2,
-                                    shadowRadius: 3,
-                                    elevation: 2,
-                                  }),
-                        },
+                        styles.clusterText,
+                        { color: colors.primaryForeground },
                       ]}
-                    />
+                    >
+                      {cluster.places.length}
+                    </Text>
                   </View>
                 </Pressable>
               </Marker>
             );
-          }
-          const allNarrated = cluster.places.every((p) =>
-            narratedIds.has(p.id),
-          );
-          const bg = allNarrated ? colors.mutedForeground : colors.primary;
-          const size =
-            cluster.places.length >= 100
-              ? 52
-              : cluster.places.length >= 10
-                ? 44
-                : 36;
-          return (
-            <Marker
-              key={cluster.key}
-              coordinate={{
-                latitude: cluster.latitude,
-                longitude: cluster.longitude,
-              }}
-              tracksViewChanges={false}
-              anchor={{ x: 0.5, y: 0.5 }}
-              stopPropagation
-            >
-              <Pressable
-                onPress={() => handleClusterPress(cluster)}
-                onLongPress={() => setPreviewCluster(cluster)}
-                delayLongPress={350}
-                hitSlop={6}
-                accessibilityRole="button"
-                accessibilityLabel={`Cluster of ${cluster.places.length} places. Long-press to preview.`}
-              >
-                <View
-                  style={[
-                    styles.cluster,
-                    {
-                      width: size,
-                      height: size,
-                      borderRadius: size / 2,
-                      backgroundColor: bg,
-                      borderColor: colors.background,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.clusterText,
-                      { color: colors.primaryForeground },
-                    ]}
-                  >
-                    {cluster.places.length}
-                  </Text>
-                </View>
-              </Pressable>
-            </Marker>
-          );
-        })}
+          })}
       </MapView>
 
       {!isFollowing && (
