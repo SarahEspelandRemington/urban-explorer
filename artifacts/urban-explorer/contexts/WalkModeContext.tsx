@@ -1255,6 +1255,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (err) {
+        if (__DEV__)
+          console.log(
+            "[discover] fetch failed/timed out:",
+            err instanceof Error ? err.message : String(err),
+          );
         addWalkBreadcrumb(
           "fetchNearbyPlaces error",
           {
