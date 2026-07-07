@@ -358,6 +358,7 @@ export function PlaceMapView({
               tracksViewChanges={selectedMarkerId !== null || isLeader}
               zIndex={isSelectedExplore ? 1 : 0}
               onSelect={() => setSelectedMarkerId(place.id)}
+              onDeselect={() => setSelectedMarkerId(null)}
             >
               <View
                 style={[
