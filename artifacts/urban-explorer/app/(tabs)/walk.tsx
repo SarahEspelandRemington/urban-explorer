@@ -242,9 +242,6 @@ export default function WalkScreen() {
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.foreground }]}>Walk</Text>
         </View>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Choose how you want to move.
-        </Text>
       </View>
 
       <ScrollView
@@ -382,7 +379,7 @@ export default function WalkScreen() {
           </View>
           <View style={styles.actionText}>
             <Text style={[styles.actionTitle, { color: colors.foreground }]}>
-              Choose where you're going.
+              Choose a destination.
             </Text>
             <Text
               style={[
@@ -604,7 +601,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontFamily: "Inter_700Bold",
-    letterSpacing: -0.8,
+    letterSpacing: 0,
     lineHeight: 36,
     flexShrink: 0,
   },
