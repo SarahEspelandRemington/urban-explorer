@@ -383,7 +383,7 @@ export function WalkModeMap({
                 key={`expand:${place.id}`}
                 coordinate={{ latitude: lat, longitude: lng }}
                 anchor={{ x: 0.5, y: 0.5 }}
-                tracksViewChanges
+                tracksViewChanges={false}
                 opacity={0.35 + 0.65 * t}
               >
                 <View
@@ -416,7 +416,7 @@ export function WalkModeMap({
                   key={`collapse:${group.clusterKey}:${place.id}`}
                   coordinate={{ latitude: lat, longitude: lng }}
                   anchor={{ x: 0.5, y: 0.5 }}
-                  tracksViewChanges
+                  tracksViewChanges={false}
                   opacity={1 - 0.55 * t}
                 >
                   <View
