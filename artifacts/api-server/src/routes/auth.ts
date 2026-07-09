@@ -96,6 +96,10 @@ router.get("/auth/user", (req: Request, res: Response) => {
 });
 
 router.get("/login", async (req: Request, res: Response) => {
+  if (!REPL_ID) {
+    res.status(503).json({ error: "Authentication is currently unavailable" });
+    return;
+  }
   const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
 
@@ -127,6 +131,10 @@ router.get("/login", async (req: Request, res: Response) => {
 // Query params are not validated because the OIDC provider may include
 // parameters not expressed in the schema.
 router.get("/callback", async (req: Request, res: Response) => {
+  if (!REPL_ID) {
+    res.status(503).json({ error: "Authentication is currently unavailable" });
+    return;
+  }
   const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
 
@@ -192,18 +200,17 @@ router.get("/callback", async (req: Request, res: Response) => {
 });
 
 router.get("/logout", async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
   const origin = getOrigin(req);
 
   const sid = getSessionId(req);
   await clearSession(res, sid);
 
   if (!REPL_ID) {
-    req.log.error("REPL_ID is not set; cannot build end-session URL");
-    res.status(500).json({ error: "Server misconfiguration" });
+    res.status(503).json({ error: "Authentication is currently unavailable" });
     return;
   }
 
+  const config = await getOidcConfig();
   const endSessionUrl = oidc.buildEndSessionUrl(config, {
     client_id: REPL_ID,
     post_logout_redirect_uri: origin,
@@ -222,6 +229,13 @@ router.post(
     }
 
     const { code, code_verifier, redirect_uri, state, nonce } = parsed.data;
+
+    if (!REPL_ID) {
+      res
+        .status(503)
+        .json({ error: "Authentication is currently unavailable" });
+      return;
+    }
 
     try {
       const config = await getOidcConfig();

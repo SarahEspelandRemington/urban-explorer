@@ -6,6 +6,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { Redirect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/lib/auth";
@@ -13,8 +14,16 @@ import { useLoginFlow } from "@/lib/loginFlow";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { StreetlitLogo } from "@/components/StreetlitLogo";
+import { AUTH_ENABLED } from "@/constants/features";
 
 export default function LoginScreen() {
+  if (!AUTH_ENABLED) {
+    return <Redirect href="/(tabs)" />;
+  }
+  return <LoginScreenContent />;
+}
+
+function LoginScreenContent() {
   const { refreshUser, isLoading: isAuthLoading } = useAuth();
   const colors = useColors();
   const t = useT();
