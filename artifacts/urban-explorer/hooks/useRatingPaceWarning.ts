@@ -47,7 +47,7 @@ function getRecentCount(windowMs: number): number {
   return sharedTimestamps.filter((t) => now - t <= windowMs).length;
 }
 
-export function useRatingPaceWarning() {
+export function useRatingPaceWarning(enabled: boolean = true) {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showWarning, setShowWarning] = useState(false);
 
@@ -57,6 +57,7 @@ export function useRatingPaceWarning() {
   });
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     fetchRateLimitConfig().then((cfg) => {
       if (!cancelled) {
@@ -66,7 +67,7 @@ export function useRatingPaceWarning() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   const clearHideTimer = useCallback(() => {
     if (hideTimer.current !== null) {
@@ -92,12 +93,13 @@ export function useRatingPaceWarning() {
   }, [scheduleHide]);
 
   useEffect(() => {
+    if (!enabled) return;
     listeners.add(checkAndWarn);
     return () => {
       listeners.delete(checkAndWarn);
       clearHideTimer();
     };
-  }, [checkAndWarn, clearHideTimer]);
+  }, [enabled, checkAndWarn, clearHideTimer]);
 
   const recordRating = useCallback(() => {
     recordSharedRating();

@@ -27,6 +27,7 @@ import { NoteModal } from "@/components/NoteModal";
 import { PlaceCard } from "@/components/PlaceCard";
 import { SaveToast } from "@/components/SaveToast";
 
+import { RATINGS_ENABLED } from "@/constants/features";
 import { useDiscovery } from "@/contexts/DiscoveryContext";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
@@ -73,7 +74,7 @@ export default function SavedScreen() {
     showWarning: showRatingPaceWarning,
     recordRating,
     dismissWarning,
-  } = useRatingPaceWarning();
+  } = useRatingPaceWarning(RATINGS_ENABLED);
 
   const handlePlaceRated = useCallback(
     (_placeId: string, newRating: "up" | "down" | null) => {
@@ -514,7 +515,7 @@ export default function SavedScreen() {
         maxToRenderPerBatch={6}
         initialNumToRender={8}
         ListHeaderComponent={
-          showRatingPaceWarning ? (
+          RATINGS_ENABLED && showRatingPaceWarning ? (
             <Animated.View
               entering={FadeIn.duration(250)}
               exiting={FadeOut.duration(200)}

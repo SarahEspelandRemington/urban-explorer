@@ -48,6 +48,7 @@ import {
 import { PlaceCard } from "@/components/PlaceCard";
 import { PlaceCardSkeleton } from "@/components/PlaceCardSkeleton";
 import { PlaceMapView } from "@/components/PlaceMapView";
+import { RATINGS_ENABLED } from "@/constants/features";
 import { useT } from "@/contexts/LocaleContext";
 import { useColors } from "@/hooks/useColors";
 import { useRatingPaceWarning } from "@/hooks/useRatingPaceWarning";
@@ -285,7 +286,7 @@ export default function ExploreScreen() {
     showWarning: showRatingPaceWarning,
     recordRating,
     dismissWarning,
-  } = useRatingPaceWarning();
+  } = useRatingPaceWarning(RATINGS_ENABLED);
 
   const WALK_BANNER_KEY = STARTUP_KEYS.walkBannerDismissed;
   const [showWalkBanner, setShowWalkBanner] = useState(true);
@@ -1280,7 +1281,7 @@ export default function ExploreScreen() {
                 <View>
                   {showContent ? (
                     <>
-                      {showRatingPaceWarning ? (
+                      {RATINGS_ENABLED && showRatingPaceWarning ? (
                         <Animated.View
                           entering={FadeIn.duration(250)}
                           exiting={FadeOut.duration(200)}

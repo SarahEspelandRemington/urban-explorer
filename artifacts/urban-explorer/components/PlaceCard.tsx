@@ -25,6 +25,7 @@ import Animated, {
 import { NoteModal } from "@/components/NoteModal";
 import { PlaceActions } from "@/components/PlaceActions";
 import { getCategoryColor, getCategoryIcon } from "@/constants/categories";
+import { RATINGS_ENABLED } from "@/constants/features";
 import { useDiscovery, type SavedPlace } from "@/contexts/DiscoveryContext";
 import { buildPlaceId } from "@/lib/placeId";
 import { useT } from "@/contexts/LocaleContext";
@@ -356,69 +357,73 @@ export const PlaceCard = React.memo(function PlaceCard({
                   />
                 </View>
                 <View style={styles.heroActions}>
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation?.();
-                      handleRate("up");
-                    }}
-                    hitSlop={16}
-                    style={styles.actionButton}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Thumbs up for ${place.name}`}
-                    accessibilityState={{ selected: userRating === "up" }}
-                  >
-                    <Feather
-                      name="thumbs-up"
-                      size={18}
-                      color={
-                        userRating === "up"
-                          ? colors.accentGreen
-                          : colors.mutedForeground
-                      }
-                      style={{ opacity: userRating === "up" ? 1 : 0.45 }}
-                    />
-                  </Pressable>
-                  {communityRating != null ? (
-                    <Text
-                      style={[
-                        styles.communityScore,
-                        {
-                          color:
-                            communityRating.netScore > 0
+                  {RATINGS_ENABLED ? (
+                    <>
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          handleRate("up");
+                        }}
+                        hitSlop={16}
+                        style={styles.actionButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Thumbs up for ${place.name}`}
+                        accessibilityState={{ selected: userRating === "up" }}
+                      >
+                        <Feather
+                          name="thumbs-up"
+                          size={18}
+                          color={
+                            userRating === "up"
                               ? colors.accentGreen
-                              : communityRating.netScore < 0
-                                ? colors.destructive
-                                : colors.mutedForeground,
-                        },
-                      ]}
-                      accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
-                    >
-                      {communityRating.netScore > 0 ? "+" : ""}
-                      {communityRating.netScore}
-                    </Text>
+                              : colors.mutedForeground
+                          }
+                          style={{ opacity: userRating === "up" ? 1 : 0.45 }}
+                        />
+                      </Pressable>
+                      {communityRating != null ? (
+                        <Text
+                          style={[
+                            styles.communityScore,
+                            {
+                              color:
+                                communityRating.netScore > 0
+                                  ? colors.accentGreen
+                                  : communityRating.netScore < 0
+                                    ? colors.destructive
+                                    : colors.mutedForeground,
+                            },
+                          ]}
+                          accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
+                        >
+                          {communityRating.netScore > 0 ? "+" : ""}
+                          {communityRating.netScore}
+                        </Text>
+                      ) : null}
+                      <Pressable
+                        onPress={(e) => {
+                          e.stopPropagation?.();
+                          handleRate("down");
+                        }}
+                        hitSlop={16}
+                        style={styles.actionButton}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Thumbs down for ${place.name}`}
+                        accessibilityState={{ selected: userRating === "down" }}
+                      >
+                        <Feather
+                          name="thumbs-down"
+                          size={18}
+                          color={
+                            userRating === "down"
+                              ? colors.destructive
+                              : colors.mutedForeground
+                          }
+                          style={{ opacity: userRating === "down" ? 1 : 0.45 }}
+                        />
+                      </Pressable>
+                    </>
                   ) : null}
-                  <Pressable
-                    onPress={(e) => {
-                      e.stopPropagation?.();
-                      handleRate("down");
-                    }}
-                    hitSlop={16}
-                    style={styles.actionButton}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Thumbs down for ${place.name}`}
-                    accessibilityState={{ selected: userRating === "down" }}
-                  >
-                    <Feather
-                      name="thumbs-down"
-                      size={18}
-                      color={
-                        userRating === "down"
-                          ? colors.destructive
-                          : colors.mutedForeground
-                      }
-                      style={{ opacity: userRating === "down" ? 1 : 0.45 }}
-                    />
-                  </Pressable>
                   <Pressable
                     onPress={(e) => {
                       e.stopPropagation?.();
@@ -644,71 +649,73 @@ export const PlaceCard = React.memo(function PlaceCard({
             </Text>
           ) : null}
 
-          <View style={styles.compactRatingRow}>
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation?.();
-                handleRate("up");
-              }}
-              hitSlop={12}
-              style={styles.compactRatingBtn}
-              accessibilityRole="button"
-              accessibilityLabel={`Thumbs up for ${place.name}`}
-              accessibilityState={{ selected: userRating === "up" }}
-            >
-              <Feather
-                name="thumbs-up"
-                size={13}
-                color={
-                  userRating === "up"
-                    ? colors.accentGreen
-                    : colors.mutedForeground
-                }
-                style={{ opacity: userRating === "up" ? 1 : 0.35 }}
-              />
-            </Pressable>
-            {communityRating != null ? (
-              <Text
-                style={[
-                  styles.compactScore,
-                  {
-                    color:
-                      communityRating.netScore > 0
-                        ? colors.accentGreen
-                        : communityRating.netScore < 0
-                          ? colors.destructive
-                          : colors.mutedForeground,
-                  },
-                ]}
-                accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
+          {RATINGS_ENABLED ? (
+            <View style={styles.compactRatingRow}>
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  handleRate("up");
+                }}
+                hitSlop={12}
+                style={styles.compactRatingBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Thumbs up for ${place.name}`}
+                accessibilityState={{ selected: userRating === "up" }}
               >
-                {communityRating.netScore > 0 ? "+" : ""}
-                {communityRating.netScore}
-              </Text>
-            ) : null}
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation?.();
-                handleRate("down");
-              }}
-              hitSlop={12}
-              style={styles.compactRatingBtn}
-              accessibilityRole="button"
-              accessibilityLabel={`Thumbs down for ${place.name}`}
-              accessibilityState={{ selected: userRating === "down" }}
-            >
-              <Feather
-                name="thumbs-down"
-                size={13}
-                color={
-                  userRating === "down"
-                    ? colors.destructive
-                    : colors.mutedForeground
-                }
-                style={{ opacity: userRating === "down" ? 1 : 0.35 }}
-              />
-            </Pressable>
-          </View>
+                <Feather
+                  name="thumbs-up"
+                  size={13}
+                  color={
+                    userRating === "up"
+                      ? colors.accentGreen
+                      : colors.mutedForeground
+                  }
+                  style={{ opacity: userRating === "up" ? 1 : 0.35 }}
+                />
+              </Pressable>
+              {communityRating != null ? (
+                <Text
+                  style={[
+                    styles.compactScore,
+                    {
+                      color:
+                        communityRating.netScore > 0
+                          ? colors.accentGreen
+                          : communityRating.netScore < 0
+                            ? colors.destructive
+                            : colors.mutedForeground,
+                    },
+                  ]}
+                  accessibilityLabel={`Community score: ${communityRating.netScore > 0 ? "+" : ""}${communityRating.netScore}`}
+                >
+                  {communityRating.netScore > 0 ? "+" : ""}
+                  {communityRating.netScore}
+                </Text>
+              ) : null}
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  handleRate("down");
+                }}
+                hitSlop={12}
+                style={styles.compactRatingBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Thumbs down for ${place.name}`}
+                accessibilityState={{ selected: userRating === "down" }}
+              >
+                <Feather
+                  name="thumbs-down"
+                  size={13}
+                  color={
+                    userRating === "down"
+                      ? colors.destructive
+                      : colors.mutedForeground
+                  }
+                  style={{ opacity: userRating === "down" ? 1 : 0.35 }}
+                />
+              </Pressable>
+            </View>
+          ) : null}
 
           <Pressable
             onPress={(e) => {
