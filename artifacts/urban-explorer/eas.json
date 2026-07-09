@@ -14,7 +14,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://city-explorer-guide-sarahremington.replit.app",
+        "EXPO_PUBLIC_API_URL": "https://urban-explorer-ihsy.onrender.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_CLI_EXECUTABLE": "/usr/bin/true"
       }
@@ -26,7 +26,7 @@
         "simulator": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://city-explorer-guide-sarahremington.replit.app",
+        "EXPO_PUBLIC_API_URL": "https://urban-explorer-ihsy.onrender.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_CLI_EXECUTABLE": "/usr/bin/true"
       }
@@ -40,7 +40,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://city-explorer-guide-sarahremington.replit.app",
+        "EXPO_PUBLIC_API_URL": "https://urban-explorer-ihsy.onrender.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_CLI_EXECUTABLE": "/usr/bin/true"
       }
@@ -48,7 +48,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://city-explorer-guide-sarahremington.replit.app",
+        "EXPO_PUBLIC_API_URL": "https://urban-explorer-ihsy.onrender.com",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true",
         "SENTRY_CLI_EXECUTABLE": "/usr/bin/true"
       }

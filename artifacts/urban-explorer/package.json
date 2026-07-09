@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-https://city-explorer-guide-sarahremington.replit.app} EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN sh -c 'npx --yes kill-port $PORT >/dev/null 2>&1 || true; (i=0; while true; do sleep 3; i=$((i+1)); curl -sf \"http://localhost:${PORT}/status\" >/dev/null 2>&1 && break; [ $i -ge 30 ] && break; done; curl -sf \"http://localhost:${PORT}/index.bundle?platform=ios&dev=true&hot=false&minify=false\" >/dev/null 2>&1) & (while true; do printf \"\\033[B\\n\"; sleep 1; done) | pnpm exec expo start --go --localhost --port $PORT --max-workers 4'",
+    "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_API_URL=${EXPO_PUBLIC_API_URL:-https://urban-explorer-ihsy.onrender.com} EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN sh -c 'npx --yes kill-port $PORT >/dev/null 2>&1 || true; (i=0; while true; do sleep 3; i=$((i+1)); curl -sf \"http://localhost:${PORT}/status\" >/dev/null 2>&1 && break; [ $i -ge 30 ] && break; done; curl -sf \"http://localhost:${PORT}/index.bundle?platform=ios&dev=true&hot=false&minify=false\" >/dev/null 2>&1) & (while true; do printf \"\\033[B\\n\"; sleep 1; done) | pnpm exec expo start --go --localhost --port $PORT --max-workers 4'",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
