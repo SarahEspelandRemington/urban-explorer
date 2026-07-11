@@ -182,6 +182,17 @@ export interface WalkPlace {
     geocodedDistFromUserMeters?: number;
     address?: string;
   };
+  /** Server-computed landmark-adjacency fallback, present only when this
+   *  place has no real postal address and a qualifying nearby landmark was
+   *  found within the adjacency radius. v1 is display-only (phrase); the
+   *  target/bearing fields are for future debug-overlay use. */
+  orientation?: {
+    type: "landmark_adjacent";
+    target: { name: string; lat: number; lng: number };
+    distanceMeters: number;
+    bearingDegrees: number;
+    phrase: string;
+  };
 }
 
 export type WalkDensity = "sparse" | "dense";

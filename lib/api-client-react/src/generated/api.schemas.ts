@@ -128,6 +128,32 @@ export const PlaceTrustLevel = {
   osm_bare: "osm_bare",
 } as const;
 
+export type OrientationType =
+  (typeof OrientationType)[keyof typeof OrientationType];
+
+export const OrientationType = {
+  landmark_adjacent: "landmark_adjacent",
+} as const;
+
+export type OrientationTarget = {
+  name: string;
+  lat: number;
+  lng: number;
+};
+
+/**
+ * Deterministic, server-computed orientation fallback for a discovery that lacks a real postal address (e.g. 'Beside Eastern State Penitentiary'). v1 is landmark-adjacency only — present only when a qualifying named landmark is within the adjacency radius.
+ */
+export interface Orientation {
+  type: OrientationType;
+  target: OrientationTarget;
+  distanceMeters: number;
+  /** Initial bearing from the discovery to the orientation target, in degrees, 0-360 (0 = north, 90 = east). */
+  bearingDegrees: number;
+  /** Static, deterministic v1 rendering, e.g. 'Beside Eastern State Penitentiary'. */
+  phrase: string;
+}
+
 /**
  * Curated subset of raw OSM hint tags (e.g. wikidata, wikipedia, denomination, start_date). Present only on OSM-anchored candidates (candidateSource: osm).
  */
@@ -177,6 +203,7 @@ export interface Place {
   discoveryTier?: number;
   /** Debug label explaining why Tier 4 was assigned (e.g. metadataOnly, noHistoricalDepth, genericBusinessDescription). Present only when discoveryTier is 4. Shown in the Walk Mode debug overlay. */
   discoveryRejectionReason?: string;
+  orientation?: Orientation;
 }
 
 export interface DiscoverResponse {
@@ -437,6 +464,7 @@ export interface RoutePlace {
   progressMeters: number;
   /** Perpendicular distance from the route to the place, in meters */
   offsetMeters: number;
+  orientation?: Orientation;
 }
 
 export interface PlacesAlongRouteResponse {

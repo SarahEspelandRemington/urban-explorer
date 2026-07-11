@@ -749,6 +749,17 @@ export function WalkModeMap({
                         </Text>
                       ) : null;
                     })()}
+                    {!selectedPlace.address && selectedPlace.orientation ? (
+                      <Text
+                        numberOfLines={1}
+                        style={[
+                          styles.selectedSub,
+                          { color: colors.mutedForeground },
+                        ]}
+                      >
+                        {selectedPlace.orientation.phrase}
+                      </Text>
+                    ) : null}
                   </View>
                   {onOpenPlace ? (
                     <Pressable

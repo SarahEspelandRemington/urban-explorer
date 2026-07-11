@@ -59,6 +59,9 @@ export default function PlaceDetailScreen() {
     summary: string;
     facts: string;
     address: string;
+    /** Static "Beside/Near {landmark}" fallback, present only when the
+     *  server found no real address but a qualifying nearby landmark. */
+    orientationPhrase?: string;
     photoUrl: string;
     /** OSM element reference (e.g. 'node/12345678'). Used to look up curated
      *  OSM hint tags from osmHintsCache and pass them to the detail request. */
@@ -244,7 +247,7 @@ export default function PlaceDetailScreen() {
             {params.name}
           </Text>
 
-          {params.address ? (
+          {params.address || params.orientationPhrase ? (
             <View style={styles.addressRow}>
               <Feather
                 name="map-pin"
@@ -254,7 +257,7 @@ export default function PlaceDetailScreen() {
               <Text
                 style={[styles.addressText, { color: colors.mutedForeground }]}
               >
-                {params.address}
+                {params.address || params.orientationPhrase}
               </Text>
             </View>
           ) : null}

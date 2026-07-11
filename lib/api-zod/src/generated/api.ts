@@ -184,6 +184,30 @@ export const DiscoverPlacesResponse = zod.object({
         .describe(
           "Debug label explaining why Tier 4 was assigned (e.g. metadataOnly, noHistoricalDepth, genericBusinessDescription). Present only when discoveryTier is 4. Shown in the Walk Mode debug overlay.",
         ),
+      orientation: zod
+        .object({
+          type: zod.enum(["landmark_adjacent"]),
+          target: zod.object({
+            name: zod.string(),
+            lat: zod.number(),
+            lng: zod.number(),
+          }),
+          distanceMeters: zod.number(),
+          bearingDegrees: zod
+            .number()
+            .describe(
+              "Initial bearing from the discovery to the orientation target, in degrees, 0-360 (0 = north, 90 = east).",
+            ),
+          phrase: zod
+            .string()
+            .describe(
+              "Static, deterministic v1 rendering, e.g. 'Beside Eastern State Penitentiary'.",
+            ),
+        })
+        .optional()
+        .describe(
+          "Deterministic, server-computed orientation fallback for a discovery that lacks a real postal address (e.g. 'Beside Eastern State Penitentiary'). v1 is landmark-adjacency only — present only when a qualifying named landmark is within the adjacency radius.",
+        ),
     }),
   ),
   location: zod.string().describe("Human-readable description of the area"),
@@ -586,6 +610,30 @@ export const GetPlacesAlongRouteResponse = zod.object({
         .number()
         .describe(
           "Perpendicular distance from the route to the place, in meters",
+        ),
+      orientation: zod
+        .object({
+          type: zod.enum(["landmark_adjacent"]),
+          target: zod.object({
+            name: zod.string(),
+            lat: zod.number(),
+            lng: zod.number(),
+          }),
+          distanceMeters: zod.number(),
+          bearingDegrees: zod
+            .number()
+            .describe(
+              "Initial bearing from the discovery to the orientation target, in degrees, 0-360 (0 = north, 90 = east).",
+            ),
+          phrase: zod
+            .string()
+            .describe(
+              "Static, deterministic v1 rendering, e.g. 'Beside Eastern State Penitentiary'.",
+            ),
+        })
+        .optional()
+        .describe(
+          "Deterministic, server-computed orientation fallback for a discovery that lacks a real postal address (e.g. 'Beside Eastern State Penitentiary'). v1 is landmark-adjacency only — present only when a qualifying named landmark is within the adjacency radius.",
         ),
     }),
   ),

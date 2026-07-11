@@ -48,6 +48,7 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
 import { sanitizeDisplayTags } from "../../lib/sanitizeDisplayTags";
+import { haversineDistance } from "../../lib/geo";
 import {
   type WikipediaSummary,
   parseWikipediaOsmTag,
@@ -615,23 +616,6 @@ function formatOSMContext(
   });
 
   return `\n\nREAL PLACES FROM MAP DATA (OpenStreetMap) near these coordinates:\n${lines.join("\n")}\n\nIMPORTANT: Use OSM entries as verified anchors — exact name and coordinates must be preserved. Add your historical knowledge on top. Up to half your returned places may come from your own knowledge (demolished buildings, former uses, buried infrastructure, organisations that no longer exist) if OSM doesn't fill the quota — mark those confidence "medium" or "low". Do not force an OSM entry that has no interesting story. Places confirmed by OSM data should be confidence "high".`;
-}
-
-function haversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 function normalizeText(s: string): string {
@@ -1552,6 +1536,7 @@ export {
 };
 import { applyDiscoveryTier } from "../../lib/discoveryTier";
 import { deriveHistoricalForce } from "../../lib/historicalForceMap";
+import { computeOrientation } from "../../lib/orientation";
 
 // ---------------------------------------------------------------------------
 // LLM precision claim detection
@@ -1979,7 +1964,7 @@ router.post("/explore/discover", async (req, res) => {
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v60:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v64:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v61:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
@@ -2413,6 +2398,16 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         tags: sanitizeDisplayTags(copy?.tags),
         yearBuilt: copy?.yearBuilt,
         confidence: copy?.confidence ?? "low",
+        orientation: computeOrientation(
+          {
+            osmId: p.osmId,
+            name: p.name,
+            lat: p.lat,
+            lon: p.lon,
+            address: addr || undefined,
+          },
+          candidates,
+        ),
       };
     });
 
@@ -4852,7 +4847,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v24:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v27:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     classifyDiscovery(cached.places);
@@ -5098,6 +5093,8 @@ Return one entry per input place, in the same order. Be concise — these blurbs
       const val = c.place.tags[key];
       if (val) osmTags[key] = sanitizeOSMText(val, 120);
     }
+    const address =
+      typeof llm.address === "string" && llm.address ? llm.address : undefined;
     return {
       id:
         typeof llm.id === "string" && llm.id
@@ -5119,13 +5116,20 @@ Return one entry per input place, in the same order. Be concise — these blurbs
             ],
       latitude: c.place.lat,
       longitude: c.place.lon,
-      address:
-        typeof llm.address === "string" && llm.address
-          ? llm.address
-          : undefined,
+      address,
       progressMeters: c.progressMeters,
       offsetMeters: c.offsetMeters,
       osmTags: Object.keys(osmTags).length > 0 ? osmTags : undefined,
+      orientation: computeOrientation(
+        {
+          osmId: c.place.osmId,
+          name: c.place.name,
+          lat: c.place.lat,
+          lon: c.place.lon,
+          address,
+        },
+        osmPlaces,
+      ),
     };
   });
 

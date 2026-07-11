@@ -512,6 +512,8 @@ components:
         discoveryRejectionReason:
           type: string
           description: "Debug label explaining why Tier 4 was assigned (e.g. metadataOnly, noHistoricalDepth, genericBusinessDescription). Present only when discoveryTier is 4. Shown in the Walk Mode debug overlay."
+        orientation:
+          $ref: "#/components/schemas/Orientation"
       required:
         - id
         - name
@@ -520,6 +522,40 @@ components:
         - facts
         - latitude
         - longitude
+    Orientation:
+      type: object
+      description: "Deterministic, server-computed orientation fallback for a discovery that lacks a real postal address (e.g. 'Beside Eastern State Penitentiary'). v1 is landmark-adjacency only — present only when a qualifying named landmark is within the adjacency radius."
+      properties:
+        type:
+          type: string
+          enum: [landmark_adjacent]
+        target:
+          type: object
+          properties:
+            name:
+              type: string
+            lat:
+              type: number
+            lng:
+              type: number
+          required:
+            - name
+            - lat
+            - lng
+        distanceMeters:
+          type: number
+        bearingDegrees:
+          type: number
+          description: "Initial bearing from the discovery to the orientation target, in degrees, 0-360 (0 = north, 90 = east)."
+        phrase:
+          type: string
+          description: "Static, deterministic v1 rendering, e.g. 'Beside Eastern State Penitentiary'."
+      required:
+        - type
+        - target
+        - distanceMeters
+        - bearingDegrees
+        - phrase
     SuggestLocationsRequest:
       type: object
       properties:
@@ -946,6 +982,8 @@ components:
         offsetMeters:
           type: number
           description: "Perpendicular distance from the route to the place, in meters"
+        orientation:
+          $ref: "#/components/schemas/Orientation"
       required:
         - id
         - name

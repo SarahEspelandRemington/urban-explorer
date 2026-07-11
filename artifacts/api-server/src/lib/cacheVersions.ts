@@ -1,4 +1,4 @@
-// cache-versions:v2:
+// cache-versions:v4:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -33,7 +33,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["timeline", "v2"], // place timeline
   ["narration", "v17"], // walk narration (short)
   ["deep-narration", "v12"], // deep walk narration
-  ["places-route", "v21"], // places along route
+  ["places-route", "v27"], // places along route
 ];
 
 /**

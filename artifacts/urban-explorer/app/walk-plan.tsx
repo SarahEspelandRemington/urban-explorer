@@ -722,7 +722,11 @@ export default function WalkPlanScreen() {
                         numberOfLines={1}
                       >
                         {place.category}
-                        {place.address ? ` · ${place.address}` : ""}
+                        {place.address
+                          ? ` · ${place.address}`
+                          : place.orientation
+                            ? ` · ${place.orientation.phrase}`
+                            : ""}
                       </Text>
                     </View>
                   </View>

@@ -83,6 +83,7 @@ interface PlaceCardProps {
     osmId?: string;
     trustLevel?: string;
     osmTags?: Record<string, string>;
+    orientation?: { phrase: string };
   };
   index: number;
   expanded?: boolean;
@@ -272,6 +273,7 @@ export const PlaceCard = React.memo(function PlaceCard({
         address: place.address || "",
         photoUrl: place.photoUrl || "",
         osmId: place.osmId || "",
+        orientationPhrase: place.orientation?.phrase || "",
       },
     });
   };
