@@ -351,12 +351,14 @@ The Simulator must already be running (open Xcode → open Simulator, or `open -
 
 ```bash
 cd path/to/urban-explorer/artifacts/urban-explorer
-npx expo start --dev-client
+EXPO_PUBLIC_API_URL=https://urban-explorer-ihsy.onrender.com npx expo start --dev-client
 ```
 
 The simulator app shows a connection screen and auto-connects to Metro on the same machine. From this point, all JS/TS edits hot-reload instantly — no rebuild needed.
 
 > **Important:** Use `--dev-client`, not `--go`. The dev client binary refuses connections from a `--go` Metro server.
+
+> **Important:** `EXPO_PUBLIC_API_URL` is baked into the bundle at Metro start time (see `lib/apiBase.ts`) — if it's unset, the app now fails loudly at startup instead of silently degrading. A `.env.local` in this directory sets this automatically, so the env var above is redundant belt-and-suspenders; either is sufficient.
 
 ### When to rebuild the dev client
 
