@@ -62,7 +62,9 @@ export async function fetchNarrationPayload(
     placeName: place.name,
     category: place.category,
     summary: place.summary,
-    fact: place.facts[0],
+    // Bounded to 3 facts (matches WalkNarrationRequest.facts maxItems); see
+    // the same pattern in HeadingContext.tsx's deep-narration request body.
+    facts: place.facts.slice(0, 3),
     ...(place.address ? { address: place.address } : {}),
     ...(place.crossStreets ? { crossStreets: place.crossStreets } : {}),
   });

@@ -178,10 +178,9 @@ export function HeadingProvider({ children }: { children: React.ReactNode }) {
             category: place.category,
             yearBuilt: place.yearBuilt,
             summary: place.summary,
-            fact:
-              Array.isArray(place.facts) && place.facts.length > 0
-                ? place.facts[0]
-                : undefined,
+            // Bounded to 3 facts (matches WalkNarrationRequest.facts maxItems); see
+            // the same pattern in fetchNarrationPayload.ts's walk-narration request body.
+            facts: Array.isArray(place.facts) ? place.facts.slice(0, 3) : [],
           }),
           signal: abortCtrl.signal,
         });

@@ -375,7 +375,8 @@ export interface WalkNarrationRequest {
   placeName: string;
   category?: string;
   summary: string;
-  fact?: string;
+  /** @maxItems 3 */
+  facts?: string[];
   /** Specific street address of the place itself (e.g. "610 8th Ave" or "21 W 51st St"). Takes priority over crossStreets in the spatial anchor.
    */
   address?: string;

@@ -3889,10 +3889,14 @@ router.post("/explore/walk-narration", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact, address, crossStreets } =
+  const { placeName, category, summary, facts, address, crossStreets } =
     parsed.data;
 
-  const narrationCacheKey = `narration:v18:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const factsKeyPart = (facts || [])
+    .map((f) => f.slice(0, 80).toLowerCase())
+    .sort()
+    .join("|");
+  const narrationCacheKey = `narration:v20:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
     res.json(cachedNarration);
@@ -3969,7 +3973,7 @@ How to write for speech:
         },
         {
           role: "user",
-          content: `I'm walking past "${placeName}" (${category || "place"}).${locationContext} Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+          content: `I'm walking past "${placeName}" (${category || "place"}).${locationContext} Here's what's interesting: ${summary}${(facts || []).length ? ` Also: ${(facts || []).join(" ")}` : ""}. Give me a brief, natural narration.`,
         },
       ],
     })
@@ -4087,7 +4091,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact, address, crossStreets } =
+  const { placeName, category, summary, facts, address, crossStreets } =
     parsed.data;
 
   // Abort controller wired to the response close event so that any in-flight
@@ -4117,7 +4121,11 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
-  const narrationCacheKey = `narration:v18:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const factsKeyPart = (facts || [])
+    .map((f) => f.slice(0, 80).toLowerCase())
+    .sort()
+    .join("|");
+  const narrationCacheKey = `narration:v20:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
 
   const cachedAudio = await getAudioCache(audioCacheKey);
@@ -4210,7 +4218,7 @@ How to write for speech:
               },
               {
                 role: "user",
-                content: `I'm walking past "${placeName}" (${category || "place"}).${audioLocationContext} Here's what's interesting: ${summary}${fact ? ` Also: ${fact}` : ""}. Give me a brief, natural narration.`,
+                content: `I'm walking past "${placeName}" (${category || "place"}).${audioLocationContext} Here's what's interesting: ${summary}${(facts || []).length ? ` Also: ${(facts || []).join(" ")}` : ""}. Give me a brief, natural narration.`,
               },
             ],
           },
@@ -4311,7 +4319,7 @@ router.post("/explore/deep-narration", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, fact, address } = parsed.data;
+  const { placeName, category, summary, facts, address } = parsed.data;
   const yearBuilt =
     typeof (req.body as any)?.yearBuilt === "string"
       ? (req.body as any).yearBuilt
@@ -4324,7 +4332,11 @@ router.post("/explore/deep-narration", async (req, res) => {
   const deepTimeout = setTimeout(() => abortController.abort(), 20_000);
   res.on("close", () => abortController.abort());
 
-  const deepCacheKey = `deep-narration:v12:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${(fact || "").slice(0, 80).toLowerCase()}`;
+  const factsKeyPart = (facts || [])
+    .map((f) => f.slice(0, 80).toLowerCase())
+    .sort()
+    .join("|");
+  const deepCacheKey = `deep-narration:v14:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
@@ -4361,7 +4373,7 @@ How to write for speech:
           },
           {
             role: "user",
-            content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}${address ? `\nAddress: ${address}` : ""}.\n\nWhat we already know: ${summary}${fact ? `\nAlso noted: ${fact}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
+            content: `Give me a deep-dive narration for "${placeName}"${category ? ` (a ${category})` : ""}${yearBuilt ? `, dating to roughly ${yearBuilt}` : ""}${address ? `\nAddress: ${address}` : ""}.\n\nWhat we already know: ${summary}${(facts || []).length ? `\nAlso noted: ${(facts || []).join(" ")}` : ""}\n\nWrite the spoken narration only — no preamble, no closing remarks.`,
           },
         ],
       },

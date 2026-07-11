@@ -822,8 +822,11 @@ components:
           type: string
         summary:
           type: string
-        fact:
-          type: string
+        facts:
+          type: array
+          items:
+            type: string
+          maxItems: 3
         address:
           type: string
           description: >

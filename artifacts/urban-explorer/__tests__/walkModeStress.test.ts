@@ -282,6 +282,18 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
     summary: "Built in 1887.",
     facts: ["It was the first civic building in the district."],
   };
+  const mockPlaceMultiFact = {
+    id: "place-def",
+    name: "Bergdoll-Kemble Mansion",
+    category: "historic",
+    summary: "Built in 1886 as residence of Louis Bergdoll family.",
+    facts: [
+      "Built in 1886 as residence of Louis Bergdoll family.",
+      "Features include mahogany woodwork.",
+      "Site of the 1920 apprehension of Grover Cleveland Bergdoll.",
+      "Fourth fact beyond the cap that should be dropped.",
+    ],
+  };
   const OPTS = { apiBase: "https://test.example.com", isExpoGo: false };
 
   function audioFetch(byteLength = 16) {
@@ -392,6 +404,27 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
     const { trackNarrationFallback } = require("../lib/sentryWalk");
     await fetchNarrationPayload(mockPlace, OPTS);
     expect(trackNarrationFallback).toHaveBeenCalledWith("write_failure");
+  });
+
+  test("sends all facts (bounded to 3) to the narration endpoint, not just facts[0]", async () => {
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
+    writeNarrationAudioToCache.mockReturnValue(null);
+    mockFetch
+      .mockResolvedValueOnce(audioFetch(16))
+      .mockResolvedValueOnce(textFetch("The Bergdoll-Kemble Mansion."));
+
+    const { fetchNarrationPayload } = require("../lib/fetchNarrationPayload");
+    await fetchNarrationPayload(mockPlaceMultiFact, OPTS);
+
+    const textCallBody = JSON.parse(mockFetch.mock.calls[1][1].body);
+    expect(textCallBody.facts).toEqual([
+      "Built in 1886 as residence of Louis Bergdoll family.",
+      "Features include mahogany woodwork.",
+      "Site of the 1920 apprehension of Grover Cleveland Bergdoll.",
+    ]);
+    expect(textCallBody.fact).toBeUndefined();
   });
 });
 

@@ -456,11 +456,13 @@ export const GetPlaceTimelineResponse = zod.object({
  * Converts place facts into natural-sounding speech text optimized for TTS
  * @summary Generate a walking tour narration for a place
  */
+export const getWalkNarrationBodyFactsMax = 3;
+
 export const GetWalkNarrationBody = zod.object({
   placeName: zod.string(),
   category: zod.string().optional(),
   summary: zod.string(),
-  fact: zod.string().optional(),
+  facts: zod.array(zod.string()).max(getWalkNarrationBodyFactsMax).optional(),
   address: zod
     .string()
     .optional()
