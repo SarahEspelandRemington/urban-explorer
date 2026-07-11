@@ -1964,7 +1964,7 @@ router.post("/explore/discover", async (req, res) => {
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v64:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v65:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v61:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
@@ -2247,7 +2247,12 @@ router.post("/explore/discover", async (req, res) => {
     };
     let copyResults: CopyResult[] = [];
     const copyAbort = new AbortController();
-    const copyTimer = setTimeout(() => copyAbort.abort(), 30_000);
+    // max_completion_tokens is 3000 here (vs ~1200-1800 on the non-anchor
+    // discover path's 35 s timeout) to cover copy for up to ~26-30 candidates
+    // in one call, so worst-case generation can plausibly run 35-40 s. 45 s
+    // leaves real headroom above that, and stays well inside the client's
+    // 55 s discoverTimeout (WalkModeContext.tsx) rather than a tight margin.
+    const copyTimer = setTimeout(() => copyAbort.abort(), 45_000);
     res.on("close", () => copyAbort.abort());
 
     // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a

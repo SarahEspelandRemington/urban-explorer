@@ -1110,9 +1110,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         const discoverAbort = new AbortController();
         // Walk Mode runs Nominatim verification synchronously on the server
         // before responding (up to ~9 s for 8 places at the 1 req/s ToS rate,
-        // on top of the ~15–25 s LLM call). 40 s gives comfortable headroom
-        // while still being well inside the server's own 60 s cap.
-        const discoverTimeout = setTimeout(() => discoverAbort.abort(), 40_000);
+        // on top of the server's own 45 s copy-generation timeout, see
+        // copyTimer in routes/explore/index.ts). 55 s leaves ~10 s of real
+        // headroom above that combined worst case, not a tight margin.
+        const discoverTimeout = setTimeout(() => discoverAbort.abort(), 55_000);
         const res = await fetch(`${API_BASE}/api/explore/discover`, {
           method: "POST",
           headers: {
