@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   classifyDiscovery,
+  computeEmptyReason,
   filterDeniedPlaces,
   filterExploreTier4,
   filterGenericCommercial,
@@ -1186,5 +1187,24 @@ describe("filterGenericCommercial", () => {
       "Spring Garden Station",
       "Holy Trinity Church",
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeEmptyReason
+// ---------------------------------------------------------------------------
+
+describe("computeEmptyReason", () => {
+  it("returns undefined when the final result is non-empty", () => {
+    expect(computeEmptyReason(5, 3)).toBeUndefined();
+    expect(computeEmptyReason(0, 1)).toBeUndefined();
+  });
+
+  it("returns 'filtered_for_quality' when a populated pool was filtered to zero", () => {
+    expect(computeEmptyReason(5, 0)).toBe("filtered_for_quality");
+  });
+
+  it("returns 'no_candidates' when the raw pool was already empty", () => {
+    expect(computeEmptyReason(0, 0)).toBe("no_candidates");
   });
 });

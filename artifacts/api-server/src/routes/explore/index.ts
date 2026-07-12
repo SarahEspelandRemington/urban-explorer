@@ -1522,6 +1522,7 @@ async function postProcessPlaces(
 
 import {
   classifyDiscovery,
+  computeEmptyReason,
   filterDeniedPlaces,
   filterExploreTier4,
   filterGenericCommercial,
@@ -1529,6 +1530,7 @@ import {
 } from "../../lib/productionFilter";
 export {
   classifyDiscovery,
+  computeEmptyReason,
   filterDeniedPlaces,
   filterExploreTier4,
   filterGenericCommercial,
@@ -1964,8 +1966,8 @@ router.post("/explore/discover", async (req, res) => {
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v65:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
-    : `${modeKey}:v61:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+    ? `${modeKey}:v66:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    : `${modeKey}:v62:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2004,6 +2006,7 @@ router.post("/explore/discover", async (req, res) => {
       applyLlmPrecisionFilter(allCachedPlaces);
       suppressApproxDuplicates(allCachedPlaces);
       allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
+      const preQualityFilterCount = allCachedPlaces.length;
       // Explore surface filters: drop Tier-4 (metadata-only) places and generic
       // commercial businesses before responding. Walk Mode handles T4 suppression
       // in walkEligibility.ts ("lowQuality"). The cache holds the full classified
@@ -2023,6 +2026,9 @@ router.post("/explore/discover", async (req, res) => {
       // Override location with Nominatim reverse-geocode of the actual search
       // centre — never use the LLM-generated value from the cache.
       const nbhdLabel = await nbhdLabelPromise;
+      const cachedEmptyReason = walkMode
+        ? undefined
+        : computeEmptyReason(preQualityFilterCount, refreshedPlaces.length);
       res.json({
         ...cachedDiscover,
         places: refreshedPlaces,
@@ -2032,6 +2038,7 @@ router.post("/explore/discover", async (req, res) => {
         // was written on a fresh path, which already enforced Nominatim-wins).
         effectiveAddressHintSrc:
           nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
+        ...(cachedEmptyReason ? { emptyReason: cachedEmptyReason } : {}),
       });
 
       // Background: if any cached places are missing photos (e.g. the original
@@ -2167,6 +2174,7 @@ router.post("/explore/discover", async (req, res) => {
           nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
         osmCandidateCount,
         noVerifiedPlacesNearby: true,
+        ...(!walkMode ? { emptyReason: "no_candidates" as const } : {}),
       };
       const SHORT_TTL_MS = 30 * 1000;
       llmCache.set(discoverCacheKey, {
@@ -2455,7 +2463,14 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
     const anchorResponsePlaces = walkMode
       ? mergedPlaces
       : filterGenericCommercial(filterExploreTier4(mergedPlaces));
-    res.json({ ...anchorResp, places: anchorResponsePlaces });
+    const anchorEmptyReason = walkMode
+      ? undefined
+      : computeEmptyReason(mergedPlaces.length, anchorResponsePlaces.length);
+    res.json({
+      ...anchorResp,
+      places: anchorResponsePlaces,
+      ...(anchorEmptyReason ? { emptyReason: anchorEmptyReason } : {}),
+    });
     return;
   }
 
@@ -2883,14 +2898,22 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   // classified set; these run on the way out only. Walk Mode handles T4
   // suppression in walkEligibility.ts ("lowQuality").
   // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
-  res.json(
-    walkMode
-      ? data
-      : {
-          ...data,
-          places: filterGenericCommercial(filterExploreTier4(data.places)),
-        },
-  );
+  if (walkMode) {
+    res.json(data);
+  } else {
+    const explorePlaces = filterGenericCommercial(
+      filterExploreTier4(data.places),
+    );
+    const emptyReason = computeEmptyReason(
+      data.places.length,
+      explorePlaces.length,
+    );
+    res.json({
+      ...data,
+      places: explorePlaces,
+      ...(emptyReason ? { emptyReason } : {}),
+    });
+  }
 });
 
 router.post("/explore/suggest-locations", async (req, res) => {

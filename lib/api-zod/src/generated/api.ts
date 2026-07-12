@@ -227,6 +227,12 @@ export const DiscoverPlacesResponse = zod.object({
     .describe(
       "When osmAnchor is true and Overpass returned no candidates within the search radius. The places array will be empty.",
     ),
+  emptyReason: zod
+    .enum(["filtered_for_quality", "no_candidates"])
+    .optional()
+    .describe(
+      "Present only when places is empty and walkMode is not set. filtered_for_quality means the raw candidate pool was non-empty before Explore's quality filters (Tier-4 and generic-commercial suppression) ran, but filtering reduced it to zero. no_candidates means the raw candidate pool was already empty (genuinely nothing nearby). Does not identify which specific filter did the reducing.",
+    ),
 });
 
 /**

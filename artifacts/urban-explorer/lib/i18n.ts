@@ -51,6 +51,8 @@ export interface Strings {
     errorDetail: string;
     nothingFoundTitle: string;
     nothingFoundDetail: string;
+    nothingFoundFilteredTitle: string;
+    nothingFoundFilteredDetail: string;
     tryRange: (r: number) => string;
     searchAgain: string;
     startExploringTitle: string;
@@ -336,11 +338,13 @@ const en: Strings = {
     ratingPaceWarning: "You're rating quickly — pace yourself",
     busyTitle: "We're a bit busy",
     busyDetail: "We're busy right now — try again in a moment.",
-    errorTitle: "Something went wrong",
-    errorDetail: "We couldn't find places nearby. Try again.",
+    errorTitle: "Streetlit couldn't search this area",
+    errorDetail: "Check your connection and try again.",
     nothingFoundTitle: "Nothing found nearby",
-    nothingFoundDetail:
-      "No stories found within this range. Try a wider range or move a little further down the block.",
+    nothingFoundDetail: "Try moving the map or widening your search.",
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet",
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.",
     tryRange: (r) => `Try ${r}m range`,
     searchAgain: "Search again",
     startExploringTitle: "Start Exploring",

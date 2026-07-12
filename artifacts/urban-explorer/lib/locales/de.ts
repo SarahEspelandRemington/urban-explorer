@@ -30,11 +30,13 @@ const de: Strings = {
     ratingPaceWarning: "Du bewertest schnell — lass dir Zeit",
     busyTitle: "Wir sind etwas beschäftigt",
     busyDetail: "Gerade viel los — versuche es gleich nochmal.",
-    errorTitle: "Etwas ist schiefgelaufen",
-    errorDetail: "Wir konnten keine Orte in der Nähe finden. Erneut versuchen.",
+    errorTitle: "Streetlit couldn't search this area", // TODO: translate
+    errorDetail: "Check your connection and try again.", // TODO: translate
     nothingFoundTitle: "Nichts in der Nähe gefunden",
-    nothingFoundDetail:
-      "Keine Geschichten in diesem Umkreis. Versuche einen größeren Umkreis oder geh ein Stück weiter.",
+    nothingFoundDetail: "Try moving the map or widening your search.", // TODO: translate
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
     tryRange: (r) => `${r} m Umkreis versuchen`,
     searchAgain: "Erneut suchen",
     startExploringTitle: "Loslegen",

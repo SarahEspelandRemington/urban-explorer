@@ -120,6 +120,9 @@ export default function ExploreScreen() {
   const [showLocationSearch, setShowLocationSearch] = useState(false);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [emptyReason, setEmptyReason] = useState<
+    "filtered_for_quality" | "no_candidates" | null
+  >(null);
 
   // 60 s client-side cap. Server worst-case: brainstorm (≤8 s) + main LLM
   // (≤35 s) = 43 s; 60 s gives 17 s of network + OpenAI variance headroom and
@@ -135,6 +138,9 @@ export default function ExploreScreen() {
 
   const [mapPlaces, setMapPlaces] = useState<DiscoveredPlace[]>([]);
   const [mapLoading, setMapLoading] = useState(false);
+  const [mapSearchFeedback, setMapSearchFeedback] = useState<
+    "filtered_for_quality" | "no_candidates" | "error" | null
+  >(null);
   const mapPlacesRef = useRef<DiscoveredPlace[]>([]);
   const mapPendingCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const mapFirstInteractionRef = useRef(false);
@@ -591,6 +597,12 @@ export default function ExploreScreen() {
             // Race guard: only commit if this is still the latest request.
             if (requestId !== discoverRequestRef.current) return;
             setPlaces((data?.places as DiscoveredPlace[] | undefined) ?? []);
+            setEmptyReason(
+              (data?.emptyReason as
+                | "filtered_for_quality"
+                | "no_candidates"
+                | undefined) ?? null,
+            );
             setAreaName((data?.location as string | undefined) ?? "");
             setAreaNameSrc(
               (data?.locationSrc as string | undefined) ?? "unknown",
@@ -618,6 +630,7 @@ export default function ExploreScreen() {
     (lat: number, lng: number) => {
       const requestId = ++mapRegionRequestRef.current;
       setMapLoading(true);
+      setMapSearchFeedback(null);
       mapDiscoverMutation.mutate(
         {
           data: {
@@ -634,25 +647,32 @@ export default function ExploreScreen() {
             if (requestId !== mapRegionRequestRef.current) return;
             const newPlaces =
               (data?.places as DiscoveredPlace[] | undefined) ?? [];
-            if (newPlaces.length > 0) {
-              const existing = new Set(
-                mapPlacesRef.current.map(
-                  (p) =>
-                    `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`,
-                ),
-              );
-              const fresh = newPlaces.filter((p) => {
-                const key = `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`;
-                return !existing.has(key);
-              });
-              const updated = [...mapPlacesRef.current, ...fresh];
-              mapPlacesRef.current = updated;
-              setMapPlaces(updated);
-            }
+            // Always commit the result of a successful search — a zero-place
+            // response is a real outcome, not a request that never completed.
+            const existing = new Set(
+              mapPlacesRef.current.map(
+                (p) =>
+                  `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`,
+              ),
+            );
+            const fresh = newPlaces.filter((p) => {
+              const key = `${p.name}-${p.latitude.toFixed(4)}-${p.longitude.toFixed(4)}`;
+              return !existing.has(key);
+            });
+            const updated = [...mapPlacesRef.current, ...fresh];
+            mapPlacesRef.current = updated;
+            setMapPlaces(updated);
+            setMapSearchFeedback(
+              newPlaces.length === 0
+                ? ((data?.emptyReason as "filtered_for_quality" | undefined) ??
+                    "no_candidates")
+                : null,
+            );
             setMapLoading(false);
           },
           onError: () => {
             if (requestId !== mapRegionRequestRef.current) return;
+            setMapSearchFeedback("error");
             setMapLoading(false);
           },
         },
@@ -1262,6 +1282,7 @@ export default function ExploreScreen() {
               }}
               autoOpenId={autoOpenPlaceId}
               isLoadingMore={mapLoading || discoverMutation.isPending}
+              searchFeedback={mapSearchFeedback}
             />
           ) : (
             <FlatList
@@ -1401,7 +1422,9 @@ export default function ExploreScreen() {
                     <Text
                       style={[styles.emptyTitle, { color: colors.foreground }]}
                     >
-                      {t.explore.nothingFoundTitle}
+                      {emptyReason === "filtered_for_quality"
+                        ? t.explore.nothingFoundFilteredTitle
+                        : t.explore.nothingFoundTitle}
                     </Text>
                     <Text
                       style={[
@@ -1409,7 +1432,9 @@ export default function ExploreScreen() {
                         { color: colors.mutedForeground },
                       ]}
                     >
-                      {t.explore.nothingFoundDetail}
+                      {emptyReason === "filtered_for_quality"
+                        ? t.explore.nothingFoundFilteredDetail
+                        : t.explore.nothingFoundDetail}
                     </Text>
                     <View style={styles.emptyActions}>
                       {searchRadius < 500 && (

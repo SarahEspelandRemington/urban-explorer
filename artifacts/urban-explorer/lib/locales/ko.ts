@@ -30,11 +30,13 @@ const ko: Strings = {
     ratingPaceWarning: "평가가 너무 빨라요 — 천천히 하세요",
     busyTitle: "조금 바빠요",
     busyDetail: "지금 트래픽이 많아요 — 잠시 후 다시 시도해 주세요.",
-    errorTitle: "문제가 발생했습니다",
-    errorDetail: "근처에서 장소를 찾지 못했어요. 다시 시도해 주세요.",
+    errorTitle: "Streetlit couldn't search this area", // TODO: translate
+    errorDetail: "Check your connection and try again.", // TODO: translate
     nothingFoundTitle: "근처에서 아무것도 찾지 못했어요",
-    nothingFoundDetail:
-      "이 범위에는 이야기가 없어요. 더 넓은 범위를 시도하거나 조금 더 걸어보세요.",
+    nothingFoundDetail: "Try moving the map or widening your search.", // TODO: translate
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
     tryRange: (r) => `${r}m 범위 시도`,
     searchAgain: "다시 검색",
     startExploringTitle: "탐험을 시작하세요",

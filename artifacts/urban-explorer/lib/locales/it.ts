@@ -31,11 +31,13 @@ const it: Strings = {
     ratingPaceWarning: "Stai votando in fretta — prenditi una pausa",
     busyTitle: "Siamo un po' impegnati",
     busyDetail: "C'è molto traffico ora — riprova tra poco.",
-    errorTitle: "Qualcosa è andato storto",
-    errorDetail: "Non abbiamo trovato luoghi vicini. Riprova.",
+    errorTitle: "Streetlit couldn't search this area", // TODO: translate
+    errorDetail: "Check your connection and try again.", // TODO: translate
     nothingFoundTitle: "Niente trovato qui vicino",
-    nothingFoundDetail:
-      "Nessuna storia in questo raggio. Prova un raggio più ampio o spostati un po' più avanti.",
+    nothingFoundDetail: "Try moving the map or widening your search.", // TODO: translate
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
     tryRange: (r) => `Prova raggio di ${r} m`,
     searchAgain: "Cerca di nuovo",
     startExploringTitle: "Inizia a esplorare",

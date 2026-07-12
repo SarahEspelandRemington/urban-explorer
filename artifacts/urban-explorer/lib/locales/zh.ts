@@ -30,10 +30,13 @@ const zh: Strings = {
     ratingPaceWarning: "你评分太快啦 — 慢慢来",
     busyTitle: "我们有点忙",
     busyDetail: "现在比较繁忙 — 请稍后重试。",
-    errorTitle: "出了点问题",
-    errorDetail: "附近没找到地点，请再试一次。",
+    errorTitle: "Streetlit couldn't search this area", // TODO: translate
+    errorDetail: "Check your connection and try again.", // TODO: translate
     nothingFoundTitle: "附近没找到内容",
-    nothingFoundDetail: "这个范围内没有故事。试试更大的范围或往前再走几步。",
+    nothingFoundDetail: "Try moving the map or widening your search.", // TODO: translate
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
     tryRange: (r) => `试试 ${r} 米范围`,
     searchAgain: "重新搜索",
     startExploringTitle: "开始探索",

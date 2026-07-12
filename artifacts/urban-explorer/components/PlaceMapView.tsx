@@ -78,7 +78,17 @@ interface PlaceMapViewProps {
   onFirstInteraction?: () => void;
   autoOpenId?: string | null;
   isLoadingMore?: boolean;
+  searchFeedback?: "filtered_for_quality" | "no_candidates" | "error" | null;
 }
+
+const SEARCH_FEEDBACK_TEXT: Record<
+  "filtered_for_quality" | "no_candidates" | "error",
+  string
+> = {
+  filtered_for_quality: "Nothing quite right nearby yet",
+  no_candidates: "Nothing found nearby",
+  error: "Couldn't search this area",
+};
 
 const PAN_DISTANCE_THRESHOLD = 150;
 
@@ -108,6 +118,7 @@ export function PlaceMapView({
   onFirstInteraction,
   autoOpenId,
   isLoadingMore,
+  searchFeedback,
 }: PlaceMapViewProps) {
   const colors = useColors();
   const router = useRouter();
@@ -562,6 +573,32 @@ export function PlaceMapView({
         >
           <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
             Tap a marker to uncover a story.
+          </Text>
+        </Animated.View>
+      )}
+
+      {!isLoadingMore && !pendingCenter && searchFeedback && (
+        <Animated.View
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+          style={[
+            styles.topBadge,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          <Feather
+            name={searchFeedback === "error" ? "alert-circle" : "map-pin"}
+            size={14}
+            color={colors.mutedForeground}
+          />
+          <Text
+            style={[styles.topBadgeText, { color: colors.mutedForeground }]}
+          >
+            {SEARCH_FEEDBACK_TEXT[searchFeedback]}
           </Text>
         </Animated.View>
       )}

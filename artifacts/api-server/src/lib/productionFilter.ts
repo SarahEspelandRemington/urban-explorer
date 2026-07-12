@@ -228,6 +228,24 @@ export function filterGenericCommercial(places: any[]): any[] {
 }
 
 /**
+ * Distinguishes, for a zero-result Explore response, whether the area was
+ * genuinely empty or whether a populated candidate pool was filtered down to
+ * zero by filterExploreTier4 / filterGenericCommercial. Does not identify
+ * which specific filter did the reducing — only this two-way distinction.
+ *
+ * `rawCount` must be measured immediately before those filters run;
+ * `finalCount` is the length of the places array actually being returned.
+ * Returns undefined when the response is non-empty.
+ */
+export function computeEmptyReason(
+  rawCount: number,
+  finalCount: number,
+): "filtered_for_quality" | "no_candidates" | undefined {
+  if (finalCount > 0) return undefined;
+  return rawCount > 0 ? "filtered_for_quality" : "no_candidates";
+}
+
+/**
  * Suppresses APPROXIMATE_SITE places that are LLM extrapolations derived from
  * a nearby osm_enriched VERIFIED_PLACE in the same result set.
  *

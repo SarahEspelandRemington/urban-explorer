@@ -30,11 +30,13 @@ const ja: Strings = {
     ratingPaceWarning: "評価のペースが速いです — ゆっくりどうぞ",
     busyTitle: "少し混み合っています",
     busyDetail: "現在混雑しています — しばらくしてから再試行してください。",
-    errorTitle: "問題が発生しました",
-    errorDetail: "近くの場所が見つかりませんでした。もう一度お試しください。",
+    errorTitle: "Streetlit couldn't search this area", // TODO: translate
+    errorDetail: "Check your connection and try again.", // TODO: translate
     nothingFoundTitle: "近くに何も見つかりません",
-    nothingFoundDetail:
-      "この範囲には物語がありません。範囲を広げるか、少し先まで歩いてみてください。",
+    nothingFoundDetail: "Try moving the map or widening your search.", // TODO: translate
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
     tryRange: (r) => `${r}m の範囲を試す`,
     searchAgain: "再検索",
     startExploringTitle: "探索を始めよう",

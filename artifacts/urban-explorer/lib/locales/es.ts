@@ -31,11 +31,13 @@ const es: Strings = {
     busyTitle: "Estamos un poco ocupados",
     busyDetail:
       "Hay mucha actividad ahora — vuelve a intentarlo en un momento.",
-    errorTitle: "Algo salió mal",
-    errorDetail: "No pudimos encontrar lugares cerca. Inténtalo de nuevo.",
+    errorTitle: "Streetlit couldn't search this area", // TODO: translate
+    errorDetail: "Check your connection and try again.", // TODO: translate
     nothingFoundTitle: "Nada encontrado por aquí",
-    nothingFoundDetail:
-      "No hay historias en este rango. Prueba un rango mayor o avanza un poco más por la calle.",
+    nothingFoundDetail: "Try moving the map or widening your search.", // TODO: translate
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
     tryRange: (r) => `Probar rango de ${r} m`,
     searchAgain: "Buscar otra vez",
     startExploringTitle: "Empieza a explorar",

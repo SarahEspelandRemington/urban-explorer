@@ -31,11 +31,13 @@ const nl: Strings = {
     ratingPaceWarning: "Je beoordeelt snel — neem rustig de tijd",
     busyTitle: "We hebben het druk",
     busyDetail: "Het is nu druk — probeer het zo opnieuw.",
-    errorTitle: "Er ging iets mis",
-    errorDetail: "We konden geen plekken vinden. Probeer opnieuw.",
+    errorTitle: "Streetlit couldn't search this area", // TODO: translate
+    errorDetail: "Check your connection and try again.", // TODO: translate
     nothingFoundTitle: "Niets in de buurt gevonden",
-    nothingFoundDetail:
-      "Geen verhalen in dit bereik. Probeer een groter bereik of loop iets verder.",
+    nothingFoundDetail: "Try moving the map or widening your search.", // TODO: translate
+    nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
+    nothingFoundFilteredDetail:
+      "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
     tryRange: (r) => `Probeer ${r} m bereik`,
     searchAgain: "Opnieuw zoeken",
     startExploringTitle: "Begin met verkennen",

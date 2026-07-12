@@ -71,6 +71,17 @@ export type DiscoverResponseOsmCandidateCount = {
 };
 
 /**
+ * Present only when places is empty and walkMode is not set. filtered_for_quality means the raw candidate pool was non-empty before Explore's quality filters (Tier-4 and generic-commercial suppression) ran, but filtering reduced it to zero. no_candidates means the raw candidate pool was already empty (genuinely nothing nearby). Does not identify which specific filter did the reducing.
+ */
+export type DiscoverResponseEmptyReason =
+  (typeof DiscoverResponseEmptyReason)[keyof typeof DiscoverResponseEmptyReason];
+
+export const DiscoverResponseEmptyReason = {
+  filtered_for_quality: "filtered_for_quality",
+  no_candidates: "no_candidates",
+} as const;
+
+/**
  * How confident the AI is about this place's existence and details
  */
 export type PlaceConfidence =
@@ -214,6 +225,8 @@ export interface DiscoverResponse {
   osmCandidateCount?: DiscoverResponseOsmCandidateCount;
   /** When osmAnchor is true and Overpass returned no candidates within the search radius. The places array will be empty. */
   noVerifiedPlacesNearby?: boolean;
+  /** Present only when places is empty and walkMode is not set. filtered_for_quality means the raw candidate pool was non-empty before Explore's quality filters (Tier-4 and generic-commercial suppression) ran, but filtering reduced it to zero. no_candidates means the raw candidate pool was already empty (genuinely nothing nearby). Does not identify which specific filter did the reducing. */
+  emptyReason?: DiscoverResponseEmptyReason;
 }
 
 export interface SuggestLocationsRequest {
