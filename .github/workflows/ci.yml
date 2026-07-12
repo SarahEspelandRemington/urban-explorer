@@ -514,16 +514,6 @@ jobs:
           restore-keys: |
             tsbuildinfo-db-${{ runner.os }}-
 
-      - name: Restore codegen cache (api-spec)
-        uses: actions/cache@v4
-        with:
-          path: |
-            lib/api-zod/src/generated
-            lib/api-client-react/src/generated
-          key: codegen-api-spec-${{ runner.os }}-${{ hashFiles('lib/api-spec/openapi.yaml', 'lib/api-spec/orval.config.ts') }}
-          restore-keys: |
-            codegen-api-spec-${{ runner.os }}-
-
       - name: Restore TypeScript build cache (api-zod)
         uses: actions/cache@v4
         with:
@@ -3789,16 +3779,6 @@ jobs:
           key: tsbuildinfo-db-${{ runner.os }}-${{ hashFiles('tsconfig.base.json', 'lib/db/tsconfig.json', 'lib/db/src/**/*.ts') }}
           restore-keys: |
             tsbuildinfo-db-${{ runner.os }}-
-
-      - name: Restore codegen cache (api-spec)
-        uses: actions/cache@v4
-        with:
-          path: |
-            lib/api-zod/src/generated
-            lib/api-client-react/src/generated
-          key: codegen-api-spec-${{ runner.os }}-${{ hashFiles('lib/api-spec/openapi.yaml', 'lib/api-spec/orval.config.ts') }}
-          restore-keys: |
-            codegen-api-spec-${{ runner.os }}-
 
       - name: Restore TypeScript build cache (api-zod)
         uses: actions/cache@v4
