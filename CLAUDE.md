@@ -15,12 +15,21 @@ disagree, inspect the source code and update this document if appropriate.
 
 - **GitHub `main` and `~/Documents/streetlit-clean` are the source of truth.**
   All code changes happen here, on the Mac clone.
-- **Replit is production API hosting and legacy runtime only.** It is not a
-  development environment. Do not edit code in Replit.
+- **Render is the primary production backend.** The API server and Postgres
+  database run on Render, and the shipped app's `EXPO_PUBLIC_API_URL` (baked
+  into EAS builds) points at Render, not Replit. This followed a completed
+  migration: the Postgres restore finished, the Render API has been verified
+  across multiple sessions including a real Walk Mode session, and auth has
+  been stubbed so `REPL_ID`/Replit OIDC are no longer runtime dependencies.
+  Render is not a development environment. Do not edit code on Render.
+- **Replit is no longer the primary production backend.** The old Replit
+  deployment may still be reachable as a temporary fallback, but the app is
+  not pointed at it. Treat it as out of the active production runtime, not as
+  fully decommissioned — do not assume it has been deleted or torn down.
 - **Do not click Replit Publish** unless a task has been explicitly scoped to
-  include a production deployment.
-- **Do not transfer, migrate, or reconfigure Replit** unless that is the
-  explicit, agreed goal of the current task.
+  include deploying to the Replit fallback.
+- **Do not transfer, migrate, or reconfigure Render or the Replit fallback**
+  unless that is the explicit, agreed goal of the current task.
 - The app has been rebranded from "Urban Explorer" to "Streetlit" and the
   bundle ID changed from `com.urbanexplorer.app` to `com.streetlit.app`.
   Some older docs still use the old name — the code and `app.config.js` are
@@ -34,23 +43,28 @@ Before testing any server or API behavior, verify the production server is
 running the expected code:
 
 ```bash
-curl https://city-explorer-guide-sarahremington.replit.app/api/healthz
+curl https://urban-explorer-ihsy.onrender.com/api/healthz
 # Expected: {"status":"ok"}
 
-curl https://city-explorer-guide-sarahremington.replit.app/api/healthz?verbose=true
+curl https://urban-explorer-ihsy.onrender.com/api/healthz?verbose=true
 # Returns environment and cache version metadata
 ```
+
+The old Replit URL (`https://city-explorer-guide-sarahremington.replit.app`)
+may still respond, but it is the legacy fallback, not production — do not use
+it to verify production behavior.
 
 **Core runtime principles:**
 
 - GitHub green does not mean production is fresh. CI validates source code;
-  it does not restart the server, rebuild the deployment, or re-bundle Metro.
-- Each runtime layer — GitHub source, Replit dev server, Replit production
-  deployment, Metro bundle, iOS Simulator, API cache — is independently
-  versioned and must be explicitly refreshed. See the Runtime Sync / Testing
-  Matrix (Section 8) for the full per-layer reference.
-- Do not assume a Replit dev server restart has any effect on the production
-  `.replit.app` deployment. They are completely independent.
+  it does not redeploy Render, restart the API server, or re-bundle Metro.
+- Each runtime layer — GitHub source, Render production deployment, Metro
+  bundle, iOS Simulator, API cache — is independently versioned and must be
+  explicitly refreshed. See the Runtime Sync / Testing Matrix (Section 8) for
+  the full per-layer reference.
+- Do not assume any action on GitHub, your local machine, or the Replit
+  fallback has any effect on the Render production deployment. Render must be
+  explicitly redeployed to pick up new code.
 
 **Things that must not be changed casually:**
 
@@ -235,7 +249,8 @@ programmer but is actively learning and makes thoughtful product decisions.
 
 Push to GitHub only when the user explicitly requests it, or when the user
 has approved all changes made in the session and confirmed they want a push.
-GitHub is the source of truth; Replit may be deleted at any time.
+GitHub is the source of truth; the Replit fallback may be removed at any
+time.
 
 ---
 
