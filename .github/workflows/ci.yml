@@ -558,7 +558,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: tsconfig.tsbuildinfo
-          key: tsbuildinfo-root-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json') }}
+          key: tsbuildinfo-root-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json', 'lib/db/src/**/*.ts', 'lib/api-client-react/src/**/*.ts', 'lib/api-zod/src/**/*.ts', 'lib/integrations-openai-ai-server/src/**/*.ts') }}
           restore-keys: |
             tsbuildinfo-root-${{ runner.os }}-
 
@@ -3834,7 +3834,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: tsconfig.tsbuildinfo
-          key: tsbuildinfo-root-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json') }}
+          key: tsbuildinfo-root-${{ runner.os }}-${{ hashFiles('tsconfig.json', 'tsconfig.base.json', 'lib/db/src/**/*.ts', 'lib/api-client-react/src/**/*.ts', 'lib/api-zod/src/**/*.ts', 'lib/integrations-openai-ai-server/src/**/*.ts') }}
           restore-keys: |
             tsbuildinfo-root-${{ runner.os }}-
 
