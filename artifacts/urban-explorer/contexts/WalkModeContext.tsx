@@ -53,6 +53,7 @@ import {
 } from "@/lib/narrationPrefetchPipeline";
 import {
   evaluateEligibility,
+  looksGenericCommercial,
   type EligibilityState,
 } from "@/lib/walkEligibility";
 import {
@@ -998,6 +999,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // these out of narration, but excluding them here prevents them
             // from showing in debug candidate counts as "blocked" entries.
             if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
+            // Belt-and-suspenders: drop generic commercial/chain places from
+            // the Walk Mode pool regardless of how they arrived. The server
+            // now filters these unconditionally, but a tile cached before
+            // that change (or written from an older client) could still hold
+            // one — guard here so it doesn't linger as a pin.
+            if (looksGenericCommercial(p as any)) continue;
             // Walk Mode spatial trust gate (mirrors Layer 3 and server path):
             // drop any place without a verified coordSource. coordSource is set
             // by verifyPlaceCoordinates: "nominatim-confirmed"/"nominatim-corrected"
@@ -1176,6 +1183,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               // requests, but guard here too so the pool stays clean if the
               // route is called without walkMode or if the filter changes.
               if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
+              // Belt-and-suspenders: server already excludes generic
+              // commercial/chain places unconditionally, but guard here too
+              // so the pool stays clean against a stale merged-in entry or
+              // a future filter regression.
+              if (looksGenericCommercial(p as any)) continue;
               // Accept Overpass-sourced places (candidateSource:"osm") OR
               // LLM-sourced places that Nominatim externally verified. When
               // Overpass is unavailable (overpassFallback flag) also accept

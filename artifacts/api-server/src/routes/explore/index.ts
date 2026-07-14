@@ -1966,8 +1966,8 @@ router.post("/explore/discover", async (req, res) => {
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v66:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
-    : `${modeKey}:v62:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+    ? `${modeKey}:v67:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
   // Fire the neighbourhood label lookup immediately so it runs in parallel with
   // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
@@ -2007,14 +2007,16 @@ router.post("/explore/discover", async (req, res) => {
       suppressApproxDuplicates(allCachedPlaces);
       allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
       const preQualityFilterCount = allCachedPlaces.length;
-      // Explore surface filters: drop Tier-4 (metadata-only) places and generic
-      // commercial businesses before responding. Walk Mode handles T4 suppression
-      // in walkEligibility.ts ("lowQuality"). The cache holds the full classified
-      // set — these run on the cloned array only.
+      // Generic commercial businesses (chains) are excluded from both Explore
+      // and Walk Mode candidate pools/pins — confirmed product decision. The
+      // cache holds the full classified set — this runs on the cloned array only.
       // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+      allCachedPlaces = filterGenericCommercial(allCachedPlaces);
+      // Tier-4 (metadata-only) suppression remains Explore-only. Walk Mode
+      // handles T4 suppression in walkEligibility.ts ("lowQuality") —
+      // narration-eligibility only; pins remain visible.
       if (!walkMode) {
         allCachedPlaces = filterExploreTier4(allCachedPlaces);
-        allCachedPlaces = filterGenericCommercial(allCachedPlaces);
       }
       // Both Explore and Walk require external coordinate verification.
       // Unverified LLM-coordinate places must not reach the UI in either mode.
@@ -2455,14 +2457,18 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
       noVerifiedPlacesNearby: false,
     };
     setLLMCache(discoverCacheKey, anchorResp);
-    // Explore surface filters: drop Tier-4 (metadata-only) places and generic
-    // commercial businesses before responding. The cache (above) retains the full
-    // classified set; these run on the way out only. Walk Mode handles T4
-    // suppression in walkEligibility.ts ("lowQuality").
+    // Generic commercial businesses (chains) are excluded from both Explore
+    // and Walk Mode candidate pools/pins — confirmed product decision. The
+    // cache (above) retains the full classified set; this runs on the way
+    // out only.
     // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+    const anchorGenericFiltered = filterGenericCommercial(mergedPlaces);
+    // Tier-4 (metadata-only) suppression remains Explore-only. Walk Mode
+    // handles T4 suppression in walkEligibility.ts ("lowQuality") —
+    // narration-eligibility only; pins remain visible.
     const anchorResponsePlaces = walkMode
-      ? mergedPlaces
-      : filterGenericCommercial(filterExploreTier4(mergedPlaces));
+      ? anchorGenericFiltered
+      : filterExploreTier4(anchorGenericFiltered);
     const anchorEmptyReason = walkMode
       ? undefined
       : computeEmptyReason(mergedPlaces.length, anchorResponsePlaces.length);
@@ -2893,19 +2899,22 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   // so coordSource:"llm" places (real but unindexed in Nominatim) can
   // enter the Walk pool instead of being silently dropped.
   if (overpassFallbackMode) data.overpassFallback = true;
-  // Explore surface filters: drop Tier-4 (metadata-only) places and generic
-  // commercial businesses before responding. The cache (above) retains the full
-  // classified set; these run on the way out only. Walk Mode handles T4
-  // suppression in walkEligibility.ts ("lowQuality").
+  // Generic commercial businesses (chains) are excluded from both Explore
+  // and Walk Mode candidate pools/pins — confirmed product decision. The
+  // cache (above) retains the full classified set; this runs on the way
+  // out only.
   // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
+  const rawPlacesCount = data.places.length;
+  const genericFilteredPlaces = filterGenericCommercial(data.places);
   if (walkMode) {
-    res.json(data);
+    res.json({ ...data, places: genericFilteredPlaces });
   } else {
-    const explorePlaces = filterGenericCommercial(
-      filterExploreTier4(data.places),
-    );
+    // Tier-4 (metadata-only) suppression remains Explore-only. Walk Mode
+    // handles T4 suppression in walkEligibility.ts ("lowQuality") —
+    // narration-eligibility only; pins remain visible.
+    const explorePlaces = filterExploreTier4(genericFilteredPlaces);
     const emptyReason = computeEmptyReason(
-      data.places.length,
+      rawPlacesCount,
       explorePlaces.length,
     );
     res.json({
@@ -4887,7 +4896,7 @@ router.post("/explore/places-along-route", async (req, res) => {
     const [la, ln] = geom[idx];
     sig.push(`${la.toFixed(4)},${ln.toFixed(4)}`);
   }
-  const cacheKey = `places-route:v27:${sig.join("|")}:${corridor}:${cap}`;
+  const cacheKey = `places-route:v28:${sig.join("|")}:${corridor}:${cap}`;
   const cached = getLLMCache<{ places: any[] }>(cacheKey);
   if (cached) {
     classifyDiscovery(cached.places);
@@ -4899,7 +4908,13 @@ router.post("/explore/places-along-route", async (req, res) => {
       const hf = deriveHistoricalForce(p.osmTags ?? {});
       if (hf) p.historicalForce = hf;
     }
-    const filteredCached = filterDeniedPlaces(cached.places);
+    // Generic commercial businesses (chains) are excluded from the Walk
+    // Mode route-planning pool — same product decision as the live discover
+    // path. Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md
+    // — "Suppress from auto-surface".
+    const filteredCached = filterGenericCommercial(
+      filterDeniedPlaces(cached.places),
+    );
     res.json({ places: filteredCached });
     return;
   }
@@ -5182,7 +5197,13 @@ Return one entry per input place, in the same order. Be concise — these blurbs
     const hf = deriveHistoricalForce(p.osmTags ?? {});
     if (hf) p.historicalForce = hf;
   }
-  const filteredEnriched = filterDeniedPlaces(enriched);
+  // Generic commercial businesses (chains) are excluded from the Walk Mode
+  // route-planning pool — same product decision as the live discover path.
+  // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md —
+  // "Suppress from auto-surface".
+  const filteredEnriched = filterGenericCommercial(
+    filterDeniedPlaces(enriched),
+  );
   const result = { places: filteredEnriched };
   setLLMCache(cacheKey, result);
   res.json(result);

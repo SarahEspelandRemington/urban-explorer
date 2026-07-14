@@ -136,6 +136,44 @@ function looksInterpretive(p: EligibilityCandidate): boolean {
   return INTERPRETIVE_FALLBACK_RE.test(combined);
 }
 
+/**
+ * Client-side mirror of GENERIC_COMMERCIAL_CATEGORIES /
+ * CHAIN_NAME_RE in artifacts/api-server/src/lib/productionFilter.ts.
+ *
+ * NOT auto-synced — the server module is not importable from this Expo/React
+ * Native package (no shared workspace package exposes it, and api-server is
+ * not a dependency of @workspace/urban-explorer). This is a deliberate,
+ * hand-maintained duplicate for defense-in-depth, matching the existing
+ * INTERPRETIVE_FALLBACK_RE precedent above: it guards against a stale
+ * AsyncStorage tile cache (or a future places-along-route/discover response)
+ * serving chain places that predate a server-side filter change, without
+ * requiring a client rebuild.
+ *
+ * If the server-side lists change, update both GENERIC_COMMERCIAL_FALLBACK_CATEGORIES
+ * and CHAIN_FALLBACK_RE below to match, or this client-side guard will drift
+ * out of sync with the server and silently stop catching new chains.
+ */
+const GENERIC_COMMERCIAL_FALLBACK_CATEGORIES = new Set([
+  "restaurant",
+  "pharmacy",
+  "fuel",
+  "convenience",
+  "fast_food",
+  "cafe",
+  "supermarket",
+  "atm",
+  "bank",
+]);
+
+const CHAIN_FALLBACK_RE =
+  /\b(cvs|walgreens|rite\s*aid|7.?eleven|sunoco|shell|bp|exxon|mobil|chevron|wawa|dunkin|starbucks|mcdonalds?|burger\s*king|subway|chipotle|dominos?|pizza\s*hut|taco\s*bell|wendy'?s|panda\s*express|chick.?fil.?a|popeyes?|kfc|arby'?s|panera|jersey\s*mike'?s|five\s*guys)\b/i;
+
+export function looksGenericCommercial(p: EligibilityCandidate): boolean {
+  const cat = (p.category ?? "").toLowerCase().trim();
+  if (GENERIC_COMMERCIAL_FALLBACK_CATEGORIES.has(cat)) return true;
+  return CHAIN_FALLBACK_RE.test(p.name ?? "");
+}
+
 const DEG = Math.PI / 180;
 
 export function haversineMeters(

@@ -1,6 +1,7 @@
 import {
   evaluateEligibility,
   haversineMeters,
+  looksGenericCommercial,
   updatePassedTracker,
   type EligibilityCandidate,
   type EligibilityState,
@@ -457,5 +458,47 @@ describe("haversineMeters", () => {
     );
     expect(dist).toBeGreaterThan(70);
     expect(dist).toBeLessThan(110);
+  });
+});
+
+describe("looksGenericCommercial", () => {
+  it("excludes a CHAIN_NAME_RE name match regardless of category (Starbucks)", () => {
+    const p = makePlace("p1", 30, 0, {
+      name: "Starbucks",
+      category: "landmark", // not in GENERIC_COMMERCIAL_CATEGORIES
+    });
+    expect(looksGenericCommercial(p)).toBe(true);
+  });
+
+  it("excludes a GENERIC_COMMERCIAL_CATEGORIES category match regardless of name (non-chain bank)", () => {
+    const p = makePlace("p1", 30, 0, {
+      name: "Neighborhood Trust Company",
+      category: "bank",
+    });
+    expect(looksGenericCommercial(p)).toBe(true);
+  });
+
+  it("does not exclude an ordinary local business with a clean name and non-generic category", () => {
+    const p = makePlace("p1", 30, 0, {
+      name: "Green Room",
+      category: "bar",
+    });
+    expect(looksGenericCommercial(p)).toBe(false);
+  });
+
+  it("name-regex and category-set checks each fire independently", () => {
+    // Chain-sounding name, category NOT in the generic set — name check alone must catch it.
+    const chainNameOnly = makePlace("p1", 30, 0, {
+      name: "Five Guys",
+      category: "landmark",
+    });
+    expect(looksGenericCommercial(chainNameOnly)).toBe(true);
+
+    // Non-chain name, category IS in the generic set — category check alone must catch it.
+    const genericCategoryOnly = makePlace("p2", 30, 0, {
+      name: "Corner Market",
+      category: "convenience",
+    });
+    expect(looksGenericCommercial(genericCategoryOnly)).toBe(true);
   });
 });
