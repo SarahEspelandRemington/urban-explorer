@@ -74,18 +74,64 @@ export interface DiagDiscoverResult {
   poolCoverage?: { osm: number; llm: number };
 }
 
+/**
+ * Outcome of a narration fetch for the candidate pickNext selected. "cache"
+ * source means a prefetched payload was already sitting in
+ * prefetchedNarrationRef — no live network request was made for this pick.
+ * "live" means fetchNarrationPayload was actually called.
+ *
+ * "cancelled" only applies to the live path: the fetch itself succeeded, but
+ * stopWalk was called while it was in flight, so the payload was discarded.
+ * "failure" covers every other unsuccessful outcome fetchNarrationPayload
+ * already collapses to null (bad status, empty payload, thrown error,
+ * timeout) — the current code doesn't expose which case it was, so this
+ * doesn't invent a finer-grained distinction than what's already there.
+ */
+export interface DiagNarrationFetch {
+  ts: number;
+  placeId: string;
+  placeName: string;
+  source: "cache" | "live";
+  outcome: "success" | "failure" | "cancelled";
+  payloadKind?: "audio" | "text";
+}
+
+/**
+ * Most recent reason maybeNarrate/pickNext declined to even attempt a fetch
+ * this cycle (cooldown, already speaking, movement gate, etc). A single
+ * overwritten slot, not a growing log — these gates re-evaluate every ~1.5s
+ * tick, so a list would be mostly noise. Cleared (set null) right before a
+ * fetch is actually attempted so a stale reason doesn't linger on screen.
+ */
+export interface DiagBlock {
+  ts: number;
+  reason:
+    | "notWalking"
+    | "alreadySpeaking"
+    | "cooldown"
+    | "movementGate"
+    | "noEligibleCandidate"
+    | "reValidationDrop";
+  detail?: string;
+}
+
 export interface DiagState {
   lastSnapshot: DiagSelectionSnapshot | null;
   rejections: DiagRejection[]; // capped, most recent first
   lastDiscoverResult: DiagDiscoverResult | null;
+  narrationFetches: DiagNarrationFetch[]; // capped, most recent first
+  lastBlock: DiagBlock | null;
 }
 
 const REJECTION_CAP = 30;
+const FETCH_CAP = 20;
 
 const state: DiagState = {
   lastSnapshot: null,
   rejections: [],
   lastDiscoverResult: null,
+  narrationFetches: [],
+  lastBlock: null,
 };
 
 const subscribers = new Set<() => void>();
@@ -125,9 +171,24 @@ export function recordDiscoverResult(result: DiagDiscoverResult): void {
   notify();
 }
 
+export function recordNarrationFetch(fetch: DiagNarrationFetch): void {
+  state.narrationFetches.unshift(fetch);
+  if (state.narrationFetches.length > FETCH_CAP) {
+    state.narrationFetches.length = FETCH_CAP;
+  }
+  notify();
+}
+
+export function recordBlock(block: DiagBlock | null): void {
+  state.lastBlock = block;
+  notify();
+}
+
 export function resetWalkDiagnostics(): void {
   state.lastSnapshot = null;
   state.rejections = [];
   state.lastDiscoverResult = null;
+  state.narrationFetches = [];
+  state.lastBlock = null;
   notify();
 }

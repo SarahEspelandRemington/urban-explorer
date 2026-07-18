@@ -34,7 +34,13 @@ export function WalkModeDebugOverlay() {
     return subscribeWalkDiagnostics(() => setTick((t) => t + 1));
   }, []);
 
-  const { lastSnapshot, rejections, lastDiscoverResult } = getWalkDiagnostics();
+  const {
+    lastSnapshot,
+    rejections,
+    lastDiscoverResult,
+    narrationFetches,
+    lastBlock,
+  } = getWalkDiagnostics();
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { top: 90 }]}>
@@ -204,6 +210,36 @@ export function WalkModeDebugOverlay() {
             ) : (
               <Text style={styles.lineDim}>Waiting for first GPS tick…</Text>
             )}
+
+            <Text style={styles.sectionTitle}>Gate</Text>
+            <Text style={styles.lineDim} numberOfLines={1}>
+              {lastBlock
+                ? `${lastBlock.reason}${lastBlock.detail ? ` (${lastBlock.detail})` : ""} · ${Math.round((Date.now() - lastBlock.ts) / 1000)}s ago`
+                : "clear — last pick reached a fetch"}
+            </Text>
+
+            <Text style={styles.sectionTitle}>
+              Narration fetches ({narrationFetches.length})
+            </Text>
+            {narrationFetches.length === 0 ? (
+              <Text style={styles.lineDim}>(none)</Text>
+            ) : (
+              narrationFetches.slice(0, 10).map((f, i) => (
+                <Text
+                  key={`${f.placeId}-${f.ts}-${i}`}
+                  style={[
+                    styles.lineDim,
+                    f.outcome === "success" ? styles.lineActive : null,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {f.outcome} · {f.source}
+                  {f.payloadKind ? `/${f.payloadKind}` : ""} ·{" "}
+                  {f.placeName.slice(0, 22)}
+                </Text>
+              ))
+            )}
+
             <Text style={styles.sectionTitle}>
               Recent rejections ({rejections.length})
             </Text>

@@ -57,7 +57,9 @@ import {
   type EligibilityState,
 } from "@/lib/walkEligibility";
 import {
+  recordBlock,
   recordDiscoverResult,
+  recordNarrationFetch,
   recordRejection,
   recordSelectionSnapshot,
   resetWalkDiagnostics,
@@ -1594,6 +1596,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             `[fetchNarration] cache HIT (${lookup.source}) for "${place.name}" — zero-latency enqueue (${lookup.entry.payload.kind})`,
           );
         }
+        recordNarrationFetch({
+          ts: Date.now(),
+          placeId: place.id,
+          placeName: place.name,
+          source: "cache",
+          outcome: "success",
+          payloadKind: lookup.entry.payload.kind,
+        });
         // Only the "staleReplay" path is a genuine replay (a place that was
         // displaced from the live slot and revived from the stale pool because
         // the user re-picked it within the TTL). A "live" hit is the normal
@@ -1633,11 +1643,28 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
       // --- Normal path (cache miss or stale) ---
       const payload = await fetchNarrationPayload(place);
-      if (!payload) return;
+      if (!payload) {
+        recordNarrationFetch({
+          ts: Date.now(),
+          placeId: place.id,
+          placeName: place.name,
+          source: "live",
+          outcome: "failure",
+        });
+        return;
+      }
       // Guard: if stopWalk was called while the fetch was in-flight (up to 15 s),
       // discard the payload and run its cleanup so we never play audio or update
       // stats after the walk has ended.
       if (!isWalkingRef.current) {
+        recordNarrationFetch({
+          ts: Date.now(),
+          placeId: place.id,
+          placeName: place.name,
+          source: "live",
+          outcome: "cancelled",
+          payloadKind: payload.kind,
+        });
         if (payload.kind === "audio") {
           try {
             payload.cleanup?.();
@@ -1645,6 +1672,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
         return;
       }
+      recordNarrationFetch({
+        ts: Date.now(),
+        placeId: place.id,
+        placeName: place.name,
+        source: "live",
+        outcome: "success",
+        payloadKind: payload.kind,
+      });
       // First-time narration: ensure any stale "Replay" badge from the previous
       // story is gone before we kick off the new one.
       if (replayBadgeTimerRef.current) {
@@ -1739,6 +1774,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           console.log(
             `[pickNext] GATE:movement moved=${Math.round(movedSinceLast)}m need=${cfg.minMetersBetweenPicks}m`,
           );
+        recordBlock({
+          ts: Date.now(),
+          reason: "movementGate",
+          detail: `moved=${Math.round(movedSinceLast)}m need=${cfg.minMetersBetweenPicks}m`,
+        });
         return null;
       }
 
@@ -2362,10 +2402,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     (loc?: { latitude: number; longitude: number }) => {
       if (!isWalkingRef.current) {
         if (__DEV__) console.log("[maybeNarrate] BLOCKED: not walking");
+        recordBlock({ ts: Date.now(), reason: "notWalking" });
         return;
       }
       if (isSpeakingRef.current) {
         if (__DEV__) console.log("[maybeNarrate] BLOCKED: already speaking");
+        recordBlock({ ts: Date.now(), reason: "alreadySpeaking" });
         return;
       }
       const cfg = DENSITY_CONFIG[densityRef.current];
@@ -2375,6 +2417,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           console.log(
             `[maybeNarrate] BLOCKED: cooldown ${Math.round((cfg.cooldownMs - elapsed) / 1000)}s remaining (density=${densityRef.current})`,
           );
+        recordBlock({
+          ts: Date.now(),
+          reason: "cooldown",
+          detail: `${Math.round((cfg.cooldownMs - elapsed) / 1000)}s remaining`,
+        });
         return;
       }
       const next = pickNext(loc);
@@ -2383,6 +2430,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           console.log(
             `[maybeNarrate] BLOCKED: pickNext=null (${placesRef.current.length} places, ${narratedIdsRef.current.size} narrated)`,
           );
+        recordBlock({ ts: Date.now(), reason: "noEligibleCandidate" });
         return;
       }
 
@@ -2414,6 +2462,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             console.log(
               `[maybeNarrate] DROP re-validation: "${next.name}" → ${recheck.evaluations[0]?.reason}`,
             );
+          recordBlock({
+            ts: Date.now(),
+            reason: "reValidationDrop",
+            detail: `"${next.name}" → ${recheck.evaluations[0]?.reason}`,
+          });
           return;
         }
       }
@@ -2422,6 +2475,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         console.log(
           `[maybeNarrate] PASSED — fetching narration for "${next.name}"`,
         );
+      recordBlock(null);
       narratedIdsRef.current.set(next.id, Date.now());
       setNarratedIds(new Map(narratedIdsRef.current));
       addWalkBreadcrumb("place visited", { placeId: next.id });
