@@ -82,6 +82,11 @@ module.exports = {
       reactCompiler: true,
     },
     extra: {
+      // Timestamp of the last time this config was evaluated — i.e. the
+      // last `expo start` / `expo prebuild` / `eas build` invocation. Used
+      // by BuildInfoFooter as a best-effort "build date" since Expo does
+      // not otherwise record one for non-OTA builds.
+      buildDate: new Date().toISOString(),
       eas: {
         projectId: "929f545a-f8cc-4426-9856-d54face42a22",
       },

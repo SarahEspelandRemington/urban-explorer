@@ -23,6 +23,7 @@ import {
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BuildInfoFooter } from "@/components/BuildInfoFooter";
 import { NoteModal } from "@/components/NoteModal";
 import { PlaceCard } from "@/components/PlaceCard";
 import { SaveToast } from "@/components/SaveToast";
@@ -259,6 +260,8 @@ export default function SavedScreen() {
             </Text>
           </Pressable>
         </View>
+
+        <BuildInfoFooter />
 
         {/* Search */}
         <View
