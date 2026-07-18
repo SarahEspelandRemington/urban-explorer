@@ -1924,6 +1924,7 @@ function applyRatingSortWithMap(
 }
 
 router.post("/explore/discover", async (req, res) => {
+  const requestStartTime = Date.now();
   const parsed = DiscoverPlacesBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -1966,15 +1967,19 @@ router.post("/explore/discover", async (req, res) => {
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v67:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v68:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
 
-  // Fire the neighbourhood label lookup immediately so it runs in parallel with
-  // the cache check, OSM fetch, and LLM brainstorm. On a cache-warm revgeo call
-  // this resolves in microseconds (in-memory Map lookup). On a cold first-ever
-  // request for this grid cell it may take ~1 s (one Nominatim call respecting
-  // the 1 req/s ToS rate limiter). We ALWAYS override data.location with this
-  // result — never the LLM's (potentially hallucinated) value.
+  // Fire the neighbourhood label lookup immediately. On a cache-warm revgeo
+  // call this resolves in microseconds (in-memory Map lookup). On a cold
+  // first-ever request for this grid cell it has a 4 s hard ceiling (its own
+  // AbortController — see fetchNeighborhoodLabel), not the ~1 s this comment
+  // used to claim. In the osmAnchor branch this promise is awaited BEFORE the
+  // Overpass fetch starts (sequential, not overlapping), so its full ceiling
+  // is additive to the Overpass fetch's own 12 s ceiling — see the worst-case
+  // accounting in WalkModeContext.tsx's discoverTimeout comment. We ALWAYS
+  // override data.location with this result — never the LLM's (potentially
+  // hallucinated) value.
   const nbhdLabelPromise = fetchNeighborhoodLabel(latitude, longitude);
 
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
@@ -2260,10 +2265,26 @@ router.post("/explore/discover", async (req, res) => {
     // max_completion_tokens is 3000 here (vs ~1200-1800 on the non-anchor
     // discover path's 35 s timeout) to cover copy for up to ~26-30 candidates
     // in one call, so worst-case generation can plausibly run 35-40 s. 45 s
-    // leaves real headroom above that, and stays well inside the client's
-    // 55 s discoverTimeout (WalkModeContext.tsx) rather than a tight margin.
-    const copyTimer = setTimeout(() => copyAbort.abort(), 45_000);
-    res.on("close", () => copyAbort.abort());
+    // leaves real headroom above that, and stays inside the client's 70 s
+    // discoverTimeout (WalkModeContext.tsx) — see that comment for the full
+    // worst-case accounting (nbhd-label + Overpass + this timer).
+    // copyAbort.signal can fire from either cause below — track which one
+    // actually happened so the diagnostic log doesn't misattribute a client
+    // disconnect as a server-side timeout.
+    let copyAbortCause: "timer" | "client-close" | undefined;
+    const abortCopy = (cause: "timer" | "client-close") => {
+      if (!copyAbort.signal.aborted) {
+        copyAbortCause = cause;
+        copyAbort.abort();
+      }
+    };
+    const copyTimer = setTimeout(() => abortCopy("timer"), 45_000);
+    res.on("close", () => abortCopy("client-close"));
+    // Elapsed time before the copy-generation LLM call starts — covers the
+    // nbhd-label wait, the Overpass race (up to 12 s), and candidate
+    // filtering. Logged alongside the timer outcome below to distinguish
+    // pre-LLM latency from the LLM call itself.
+    const preCopyElapsedMs = Date.now() - requestStartTime;
 
     // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
     // wikipedia= tag. Fetches run in parallel (Promise.all) and are backed by
@@ -2367,6 +2388,18 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         !res.headersSent &&
         res.socket?.writable
       ) {
+        req.log.warn(
+          {
+            reqId: req.id,
+            branch: "osm-anchor",
+            abortCause: copyAbortCause,
+            timeoutMs: 45_000,
+            radius: searchRadius,
+            preCopyElapsedMs,
+            totalElapsedMs: Date.now() - requestStartTime,
+          },
+          "[osm-anchor] copyAbort fired — returning 503",
+        );
         res.status(503).json({
           error: "Discovery service temporarily unavailable. Please try again.",
         });
@@ -2374,7 +2407,14 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
       }
       // Copy failure is non-fatal: OSM coordinates are still correct
       req.log.warn(
-        { err },
+        {
+          reqId: req.id,
+          branch: "osm-anchor",
+          radius: searchRadius,
+          preCopyElapsedMs,
+          totalElapsedMs: Date.now() - requestStartTime,
+          err,
+        },
         "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
       );
     }
@@ -2660,15 +2700,27 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
   // takes up to 8 s (brainstorm timeout). With the ~3 000-token system prompt,
   // gpt-4.1-mini needs ~15-25 s to generate 1 200-1 800 output tokens. 35 s
   // gives comfortable headroom; total worst-case is ~43 s, well within the
-  // client's 60 s cap.
+  // client's 70 s cap (discoverTimeout in WalkModeContext.tsx). Note: this
+  // "full" (non-osmAnchor) branch is not currently reachable from the
+  // shipped client, which always sends osmAnchor: true.
   const DISCOVER_LLM_TIMEOUT_MS = 35_000;
   const discoverAbort = new AbortController();
+  // discoverAbort.signal can fire from either cause below — track which one
+  // actually happened so the diagnostic log doesn't misattribute a client
+  // disconnect as a server-side timeout.
+  let discoverAbortCause: "timer" | "client-close" | undefined;
+  const abortDiscover = (cause: "timer" | "client-close") => {
+    if (!discoverAbort.signal.aborted) {
+      discoverAbortCause = cause;
+      discoverAbort.abort();
+    }
+  };
   const discoverTimer = setTimeout(
-    () => discoverAbort.abort(),
+    () => abortDiscover("timer"),
     DISCOVER_LLM_TIMEOUT_MS,
   );
   // Cancel in-flight call immediately when the client navigates away.
-  res.on("close", () => discoverAbort.abort());
+  res.on("close", () => abortDiscover("client-close"));
 
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
@@ -2696,6 +2748,18 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
       // (res.on("close")), so the socket may already be gone.  Only attempt a
       // response write when headers haven't been sent and the socket is still
       // open — otherwise we'd produce a write-after-close log noise.
+      req.log.warn(
+        {
+          reqId: req.id,
+          branch: "full",
+          abortCause: discoverAbortCause,
+          timeoutMs: DISCOVER_LLM_TIMEOUT_MS,
+          radius: searchRadius,
+          totalElapsedMs: Date.now() - requestStartTime,
+          headersSent: res.headersSent,
+        },
+        "[discover] discoverAbort fired — returning 503 if possible",
+      );
       if (!res.headersSent && res.socket?.writable) {
         res.status(503).json({
           error: "Discovery service temporarily unavailable. Please try again.",
@@ -2704,6 +2768,17 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
       return;
     }
     const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
+    req.log.warn(
+      {
+        reqId: req.id,
+        branch: "full",
+        radius: searchRadius,
+        totalElapsedMs: Date.now() - requestStartTime,
+        status,
+        errStatus: err?.status,
+      },
+      "[discover] LLM call failed (non-timeout) — returning error",
+    );
     res.status(status).json({
       error: "Discovery service temporarily unavailable. Please try again.",
     });

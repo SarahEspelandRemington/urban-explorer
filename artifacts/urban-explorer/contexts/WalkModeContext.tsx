@@ -1115,12 +1115,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           .catch(() => {});
 
         const discoverAbort = new AbortController();
-        // Walk Mode runs Nominatim verification synchronously on the server
-        // before responding (up to ~9 s for 8 places at the 1 req/s ToS rate,
-        // on top of the server's own 45 s copy-generation timeout, see
-        // copyTimer in routes/explore/index.ts). 55 s leaves ~10 s of real
-        // headroom above that combined worst case, not a tight margin.
-        const discoverTimeout = setTimeout(() => discoverAbort.abort(), 55_000);
+        // Server-side worst case for the osmAnchor branch (confirmed by
+        // direct code trace, not the old ~1 s estimate): nbhd-label lookup
+        // (4 s hard ceiling) + Overpass fetch (12 s hard ceiling), run
+        // sequentially not in parallel = 16 s, plus the server's own 45 s
+        // copy-generation timeout (copyTimer in routes/explore/index.ts) =
+        // ~61 s abort-path worst case, ~62-63 s on a successful response
+        // (photo/rating lookups add a bit more, and the ratings DB lookup
+        // has no explicit timeout of its own). 70 s leaves approximately
+        // 7-9 s of expected margin for success-path work, network transit,
+        // and response parsing on a phone in the field, substantially
+        // reducing — not eliminating — the risk that the client aborts
+        // before the server responds.
+        const discoverTimeout = setTimeout(() => discoverAbort.abort(), 70_000);
         const res = await fetch(`${API_BASE}/api/explore/discover`, {
           method: "POST",
           headers: {
