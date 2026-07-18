@@ -56,6 +56,8 @@ import {
   looksGenericCommercial,
   type EligibilityState,
 } from "@/lib/walkEligibility";
+import { filterFailureBackoff } from "@/lib/walkFailureBackoff";
+import { isLiveFetchStale } from "@/lib/walkFetchSessionGuard";
 import {
   recordBlock,
   recordDiscoverResult,
@@ -433,6 +435,17 @@ const FAST_PACE_MPS = 1.4;
 const SLOW_DWELL_MS = 30_000;
 const MANUAL_OVERRIDE_MS = 5 * 60_000;
 
+// A live narration fetch that fails (bad status, empty payload, thrown error,
+// timeout — see fetchNarrationPayload) un-marks the candidate as narrated so
+// it isn't burned for the rest of the session, but immediately re-eligibility
+// would let a 1.5 s maybeNarrate tick re-request the same failing endpoint in
+// a tight loop, since a failed fetch never advances the cooldown/movement
+// gates (those only update when narration actually finishes playing). This
+// backoff is a separate operational concern from density-based narration
+// pacing (cfg.cooldownMs), so it uses its own fixed constant rather than
+// reusing that value.
+const NARRATION_FAILURE_BACKOFF_MS = 60_000;
+
 function haversineMeters(
   lat1: number,
   lon1: number,
@@ -635,6 +648,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const velocityHeadingBufferRef = useRef<number[]>([]);
   const fetchingRef = useRef(false);
   const narratedIdsRef = useRef<Map<string, number>>(new Map());
+  // placeId → timestamp of most recent live-fetch failure. Populated when a
+  // live fetch fails (alongside un-marking narratedIdsRef); a candidate with
+  // an unexpired entry here is treated as temporarily ineligible by pickNext
+  // (see NARRATION_FAILURE_BACKOFF_MS). Cleared on any successful fetch
+  // (live or cache) and reset wholesale in startWalk().
+  const failedFetchRef = useRef<Map<string, number>>(new Map());
+  // Incremented once per startWalk() call. fetchNarration captures this
+  // value before its 10–15 s await; if a Walk-1 fetch resolves as a failure
+  // after Walk 2 has already started (isWalkingRef.current is true again by
+  // then, so that check alone can't detect this), the generation mismatch
+  // stops it from writing Walk-1's failure state into Walk-2's fresh
+  // narratedIdsRef/failedFetchRef maps.
+  const walkGenerationRef = useRef(0);
   const placesRef = useRef<WalkPlace[]>([]);
   const lastNarrationEndRef = useRef<number>(0);
   // Where the user was when the last narration ended, so we can require them
@@ -1573,6 +1599,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
   const fetchNarration = useCallback(
     async (place: WalkPlace) => {
+      // Captured before the 10–15 s live-fetch await below so the failure
+      // branch can detect a stopWalk()+startWalk() that happened while this
+      // fetch was in flight (see walkGenerationRef).
+      const myGeneration = walkGenerationRef.current;
       // Pre-fetch sanity check: even before kicking off a 10–15 s request,
       // bail if the place is already too far. The authoritative re-check
       // happens immediately before each enqueueNarration call below.
@@ -1604,6 +1634,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           outcome: "success",
           payloadKind: lookup.entry.payload.kind,
         });
+        failedFetchRef.current.delete(place.id);
         // Only the "staleReplay" path is a genuine replay (a place that was
         // displaced from the live slot and revived from the stale pool because
         // the user re-picked it within the TTL). A "live" hit is the normal
@@ -1651,12 +1682,44 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           source: "live",
           outcome: "failure",
         });
+        // A failed fetch never played anything, so don't burn this candidate
+        // for the rest of the session — un-mark it. Record a failure
+        // timestamp so pickNext backs off from immediately re-selecting it
+        // (see NARRATION_FAILURE_BACKOFF_MS): the cooldown/movement gates
+        // only advance when narration actually finishes, so without this a
+        // failing endpoint could be re-requested every ~1.5 s.
+        //
+        // Only mutate the current session's maps if this fetch belongs to
+        // the walk that's still active. A stale fetch — from a stopped walk,
+        // or from a walk since superseded by a new startWalk() — must not
+        // add backoff state to a different session's maps.
+        if (
+          !isLiveFetchStale(
+            isWalkingRef.current,
+            walkGenerationRef.current,
+            myGeneration,
+          )
+        ) {
+          narratedIdsRef.current.delete(place.id);
+          setNarratedIds(new Map(narratedIdsRef.current));
+          failedFetchRef.current.set(place.id, Date.now());
+        }
         return;
       }
-      // Guard: if stopWalk was called while the fetch was in-flight (up to 15 s),
-      // discard the payload and run its cleanup so we never play audio or update
-      // stats after the walk has ended.
-      if (!isWalkingRef.current) {
+      // Guard: discard the payload and run its cleanup — never play audio,
+      // enqueue narration, or update stats/backoff state for a superseded
+      // session — when either stopWalk ended this walk outright, or a new
+      // startWalk() has superseded it while this fetch was in-flight (see
+      // isLiveFetchStale). Both cases are recorded as "cancelled" — the
+      // existing diagnostics vocabulary already covers "this fetch's result
+      // was discarded".
+      if (
+        isLiveFetchStale(
+          isWalkingRef.current,
+          walkGenerationRef.current,
+          myGeneration,
+        )
+      ) {
         recordNarrationFetch({
           ts: Date.now(),
           placeId: place.id,
@@ -1680,6 +1743,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         outcome: "success",
         payloadKind: payload.kind,
       });
+      failedFetchRef.current.delete(place.id);
       // First-time narration: ensure any stale "Replay" badge from the previous
       // story is gone before we kick off the new one.
       if (replayBadgeTimerRef.current) {
@@ -1886,6 +1950,39 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           velocityHeadingFresh: false,
         });
         finalEligibleIds = fb.eligibleIds;
+      }
+
+      // A candidate whose most recent live fetch failed is temporarily
+      // ineligible (see NARRATION_FAILURE_BACKOFF_MS) but NOT removed from
+      // finalEligibleIds wholesale — filtering happens here, per-candidate,
+      // so a second-choice candidate can still be selected below without
+      // waiting out another candidate's backoff window.
+      if (failedFetchRef.current.size > 0) {
+        const backoffResult = filterFailureBackoff(
+          finalEligibleIds,
+          failedFetchRef.current,
+          Date.now(),
+          NARRATION_FAILURE_BACKOFF_MS,
+        );
+        finalEligibleIds = backoffResult.eligibleIds;
+        for (const { id } of backoffResult.backedOff) {
+          const p = placesRef.current.find((q) => q.id === id);
+          if (p) {
+            recordRejection({
+              ts: Date.now(),
+              placeId: id,
+              placeName: p.name,
+              reason: "recentFailure",
+              distance: haversineMeters(
+                loc.latitude,
+                loc.longitude,
+                p.latitude,
+                p.longitude,
+              ),
+              bearingDiff: null,
+            });
+          }
+        }
       }
 
       // --- Ranking: lower score = better pick. Eligibility is settled above;
@@ -2578,6 +2675,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         } catch {}
 
         isWalkingRef.current = true;
+        walkGenerationRef.current += 1;
         setIsWalking(true);
         addWalkBreadcrumb("walk started");
 
@@ -2651,6 +2749,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         });
         setNarratedIds(new Map());
         narratedIdsRef.current = new Map();
+        failedFetchRef.current = new Map();
         // Seed pre-fetched places so narration can fire as soon as GPS arrives,
         // without waiting for the first GPS-driven discover call to complete.
         // Walk Mode spatial trust gate: only seed places that have been

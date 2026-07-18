@@ -43,7 +43,7 @@ export interface DiagRejection {
   ts: number;
   placeId: string;
   placeName: string;
-  reason: EligibilityReason | "scoreLost";
+  reason: EligibilityReason | "scoreLost" | "recentFailure";
   /** Distance from user to the rejected place in metres, or null when the
    *  rejection reason makes distance irrelevant (e.g. address-mismatch
    *  candidates rejected before any distance lookup). */
