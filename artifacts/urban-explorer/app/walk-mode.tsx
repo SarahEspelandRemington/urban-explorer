@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -578,7 +579,64 @@ export default function WalkModeScreen() {
       {walk.walkDebugEnabled ? <WalkModeDebugOverlay /> : null}
 
       <View style={styles.mapContainer}>
-        {walk.currentLocation ? (
+        {walk.locationError === "permission-denied" ? (
+          <View style={[styles.loadingMap, { backgroundColor: colors.muted }]}>
+            <Feather name="map-pin" size={26} color={colors.mutedForeground} />
+            <Text style={[styles.loadingTitle, { color: colors.foreground }]}>
+              {t.locationPermission.titleEnable}
+            </Text>
+            <Text
+              style={[
+                styles.loadingDescription,
+                { color: colors.mutedForeground },
+              ]}
+            >
+              {t.locationPermission.descriptionEnable}
+            </Text>
+            <Pressable
+              onPress={() => Linking.openSettings()}
+              accessibilityRole="button"
+              accessibilityLabel={t.locationPermission.openSettings}
+              style={({ pressed }) => [
+                styles.loadingActionBtn,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <Text style={styles.loadingActionBtnText}>
+                {t.locationPermission.openSettings}
+              </Text>
+            </Pressable>
+          </View>
+        ) : walk.locationError === "gps-timeout" ? (
+          <View style={[styles.loadingMap, { backgroundColor: colors.muted }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text
+              style={[styles.loadingText, { color: colors.mutedForeground }]}
+            >
+              {t.walkMode.locationTakingLonger}
+            </Text>
+            <Pressable
+              onPress={() => {
+                walk.stopWalk();
+                walk.startWalk();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t.common.retry}
+              style={({ pressed }) => [
+                styles.loadingActionBtn,
+                {
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.85 : 1,
+                },
+              ]}
+            >
+              <Text style={styles.loadingActionBtnText}>{t.common.retry}</Text>
+            </Pressable>
+          </View>
+        ) : walk.currentLocation ? (
           <WalkModeMap
             userLatitude={walk.currentLocation.latitude}
             userLongitude={walk.currentLocation.longitude}
@@ -944,6 +1002,25 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  loadingTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  loadingDescription: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 18,
+    paddingHorizontal: 32,
+  },
+  loadingActionBtn: {
+    marginTop: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  loadingActionBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
   cardSlot: {
     paddingHorizontal: 18,
     paddingBottom: 6,

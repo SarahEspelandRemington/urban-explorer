@@ -227,6 +227,14 @@ interface WalkModeContextType {
   nextTurn: NextTurn | null;
   stopWalk: () => void;
   currentLocation: { latitude: number; longitude: number } | null;
+  /**
+   * Set when startWalk's location acquisition hits a failure that is
+   * already detected in code but was previously never surfaced to the UI:
+   * foreground permission denial, or the 8-second first-fix race timing
+   * out/erroring with no GPS fix yet available. Cleared at the start of the
+   * next startWalk() attempt and the moment any location update arrives.
+   */
+  locationError: "permission-denied" | "gps-timeout" | null;
   nearbyPlaces: WalkPlace[];
   narratedIds: Map<string, number>;
   stats: WalkStats;
@@ -550,6 +558,9 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [locationError, setLocationError] = useState<
+    "permission-denied" | "gps-timeout" | null
+  >(null);
   // Mirror of currentLocation in a ref so async paths (fetchNarration awaits a
   // 10–15s LLM call) can read the freshest GPS without re-rendering and
   // without stale closures. Updated in a useEffect below.
@@ -2252,6 +2263,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       const now = Date.now();
       currentLocationRef.current = { latitude, longitude };
       setCurrentLocation({ latitude, longitude });
+      setLocationError(null);
 
       if (prevLocationRef.current) {
         const prev = prevLocationRef.current;
@@ -2651,10 +2663,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // Guard against double-tap or re-entry before the walk is fully set up.
       if (isWalkingRef.current || isStartingRef.current) return false;
       isStartingRef.current = true;
+      setLocationError(null);
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
           isStartingRef.current = false;
+          setLocationError("permission-denied");
           return false;
         }
 
@@ -2878,7 +2892,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             ),
           ]);
           if (isWalkingRef.current) handleLocationUpdate(loc);
-        } catch {}
+        } catch {
+          // The watch subscription set up below may still deliver a fix
+          // shortly after this race times out/errors — this only surfaces
+          // that the warm-start fix has stalled so far, it does not stop
+          // acquisition. Cleared by handleLocationUpdate the moment any fix
+          // (from the watch subscription) arrives.
+          if (isWalkingRef.current) setLocationError("gps-timeout");
+        }
 
         // Guard: if a stale subscription exists from a previous walk session
         // (e.g. after a hot-reload or rapid stop/restart), remove it before
@@ -3095,6 +3116,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       startWalk,
       stopWalk,
       currentLocation,
+      locationError,
       nearbyPlaces,
       narratedIds,
       stats,
@@ -3124,6 +3146,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       startWalk,
       stopWalk,
       currentLocation,
+      locationError,
       nearbyPlaces,
       narratedIds,
       stats,

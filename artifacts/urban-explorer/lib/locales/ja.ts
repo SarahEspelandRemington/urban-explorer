@@ -85,6 +85,8 @@ const ja: Strings = {
     sparse: "少なめ",
     dense: "多め",
     gettingLocation: "位置情報を取得中…",
+    locationTakingLonger:
+      "通常より時間がかかっています。引き続き位置情報の取得を試みています。",
     nowPlaying: "再生中",
     replayBadge: "再生済み",
     listening: "近くの物語を探しています…",

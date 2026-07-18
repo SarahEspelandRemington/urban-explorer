@@ -88,6 +88,8 @@ const es: Strings = {
     sparse: "Pocas",
     dense: "Frecuentes",
     gettingLocation: "Obteniendo tu ubicación…",
+    locationTakingLonger:
+      "Esto está tardando más de lo habitual. Seguimos intentando obtener tu ubicación.",
     nowPlaying: "Reproduciendo",
     replayBadge: "Repetición",
     listening: "Buscando historias cercanas…",

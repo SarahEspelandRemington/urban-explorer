@@ -86,6 +86,8 @@ const de: Strings = {
     sparse: "Selten",
     dense: "Häufig",
     gettingLocation: "Standort wird abgerufen…",
+    locationTakingLonger:
+      "Das dauert länger als gewöhnlich. Wir versuchen weiterhin, deinen Standort zu ermitteln.",
     nowPlaying: "Wird abgespielt",
     replayBadge: "Wiederholung",
     listening: "Suche Geschichten in der Nähe…",

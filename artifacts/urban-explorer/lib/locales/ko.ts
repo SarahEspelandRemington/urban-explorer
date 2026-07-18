@@ -83,6 +83,8 @@ const ko: Strings = {
     sparse: "드물게",
     dense: "자주",
     gettingLocation: "위치를 가져오는 중…",
+    locationTakingLonger:
+      "평소보다 시간이 오래 걸리고 있어요. 위치 정보를 계속 가져오는 중입니다.",
     nowPlaying: "재생 중",
     replayBadge: "재생",
     listening: "주변 이야기를 듣는 중…",

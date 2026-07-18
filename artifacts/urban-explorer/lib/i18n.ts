@@ -98,6 +98,7 @@ export interface Strings {
     sparse: string;
     dense: string;
     gettingLocation: string;
+    locationTakingLonger: string;
     nowPlaying: string;
     replayBadge: string;
     listening: string;
@@ -393,6 +394,8 @@ const en: Strings = {
     sparse: "Fewer results",
     dense: "More results",
     gettingLocation: "Getting your location…",
+    locationTakingLonger:
+      "This is taking longer than usual. We're still trying to find your location.",
     nowPlaying: "Now playing",
     replayBadge: "Replay",
     listening: "Listening for stories nearby…",

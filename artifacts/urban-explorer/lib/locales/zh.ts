@@ -82,6 +82,7 @@ const zh: Strings = {
     sparse: "稀疏",
     dense: "密集",
     gettingLocation: "正在获取你的位置…",
+    locationTakingLonger: "这次比平时花的时间更长。我们仍在尝试获取你的位置。",
     nowPlaying: "正在播放",
     replayBadge: "重播",
     listening: "正在聆听附近的故事…",

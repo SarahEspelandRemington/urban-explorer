@@ -86,6 +86,8 @@ const nl: Strings = {
     sparse: "Spaarzaam",
     dense: "Vaak",
     gettingLocation: "Locatie ophalen…",
+    locationTakingLonger:
+      "Dit duurt langer dan normaal. We proberen nog steeds je locatie te bepalen.",
     nowPlaying: "Speelt nu",
     replayBadge: "Herhaling",
     listening: "Op zoek naar verhalen in de buurt…",
