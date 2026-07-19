@@ -1429,7 +1429,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // the file once playback is done.  The actual fetch/write logic lives in
   // lib/fetchNarrationPayload.ts so it can be tested without React.
   const fetchNarrationPayload = useCallback(
-    (place: WalkPlace): Promise<NarrationPayload | null> => {
+    (
+      place: WalkPlace,
+      timeoutInfo?: { timedOut: boolean },
+    ): Promise<NarrationPayload | null> => {
       // Spatial-anchor policy — critical for trust.
       //
       // The narration prompt requires a location phrase on every narration
@@ -1476,6 +1479,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       return fetchNarrationPayloadUtil(enriched, {
         apiBase: API_BASE,
         isExpoGo: IS_EXPO_GO,
+        timeoutInfo,
       });
     },
     [],
@@ -1684,14 +1688,22 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       }
 
       // --- Normal path (cache miss or stale) ---
-      const payload = await fetchNarrationPayload(place);
+      // Client-side latency boundary for this fetch attempt: starts right
+      // before the network call is initiated, ends the moment its result
+      // (success/failure) is known below. This measures what the user
+      // actually waited on — it says nothing about server-side processing
+      // time, which is logged independently by the server itself.
+      const fetchStartedAt = Date.now();
+      const timeoutInfo = { timedOut: false };
+      const payload = await fetchNarrationPayload(place, timeoutInfo);
       if (!payload) {
         recordNarrationFetch({
           ts: Date.now(),
           placeId: place.id,
           placeName: place.name,
           source: "live",
-          outcome: "failure",
+          outcome: timeoutInfo.timedOut ? "timeout" : "failure",
+          durationMs: Date.now() - fetchStartedAt,
         });
         // A failed fetch never played anything, so don't burn this candidate
         // for the rest of the session — un-mark it. Record a failure
@@ -1738,6 +1750,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           source: "live",
           outcome: "cancelled",
           payloadKind: payload.kind,
+          durationMs: Date.now() - fetchStartedAt,
         });
         if (payload.kind === "audio") {
           try {
@@ -1753,6 +1766,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         source: "live",
         outcome: "success",
         payloadKind: payload.kind,
+        durationMs: Date.now() - fetchStartedAt,
       });
       failedFetchRef.current.delete(place.id);
       // First-time narration: ensure any stale "Replay" badge from the previous

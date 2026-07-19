@@ -54,9 +54,20 @@ export async function fetchNarrationPayload(
   opts: {
     apiBase: string;
     isExpoGo: boolean;
+    /**
+     * Optional out-param, mutated in place only when this call's final
+     * null return was caused by this function's own internal fetch timeout
+     * (12s text / 15s audio) aborting the request — as opposed to a
+     * non-2xx status, empty response, or other network error. Left
+     * untouched on success or on any non-timeout failure. Backward
+     * compatible: existing callers that don't pass this see no change in
+     * behavior. Purely a diagnostics signal — does not alter the timeout
+     * values or the audio→text fallback behavior in any way.
+     */
+    timeoutInfo?: { timedOut: boolean };
   },
 ): Promise<NarrationPayload | null> {
-  const { apiBase, isExpoGo } = opts;
+  const { apiBase, isExpoGo, timeoutInfo } = opts;
 
   const body = JSON.stringify({
     placeName: place.name,
@@ -141,8 +152,12 @@ export async function fetchNarrationPayload(
   }
 
   // Text path (web, or native fallback if audio failed / write threw).
+  // textController is declared outside the inner try so the outer catch
+  // below can read its .signal.aborted — that's the one place a genuine
+  // internal timeout (vs. a non-2xx status, empty payload, or other network
+  // error) can be distinguished for the timeoutInfo out-param.
+  const textController = new AbortController();
   try {
-    const textController = new AbortController();
     const textTimeout = setTimeout(() => textController.abort(), 12_000);
     try {
       const res = await fetch(`${apiBase}/api/explore/walk-narration`, {
@@ -169,6 +184,9 @@ export async function fetchNarrationPayload(
       clearTimeout(textTimeout);
     }
   } catch (err) {
+    if (timeoutInfo && textController.signal.aborted) {
+      timeoutInfo.timedOut = true;
+    }
     addWalkBreadcrumb(
       "narration fetch threw",
       { errorType: err instanceof Error ? err.constructor.name : typeof err },

@@ -3991,6 +3991,20 @@ NEVER invent: names, dates, organizations, or events that you cannot support wit
 });
 
 router.post("/explore/walk-narration", async (req, res) => {
+  // Server-side timing boundary (design mirrors the /explore/discover
+  // instrumentation): starts as close to true request receipt as this
+  // handler allows, ends the moment a response is sent/return is taken on
+  // every exit path below. This measures server processing time only — it
+  // is deliberately independent of the client's own fetch-latency
+  // measurement (see WalkModeContext.tsx's fetchStartedAt / DiagNarrationFetch
+  // .durationMs), which can differ (e.g. client gives up before this
+  // finishes, or vice versa). No shared request ID is threaded through to
+  // the client-side breadcrumb here — the client has no way to learn this
+  // request's req.id, and adding that plumbing would mean touching the
+  // narration request/response contract, which is out of scope. The two
+  // sides are correlated only loosely, by place name and rough time, same
+  // as a human reading two separate log streams would.
+  const requestStartTime = Date.now();
   const parsed = GetWalkNarrationBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -3999,13 +4013,25 @@ router.post("/explore/walk-narration", async (req, res) => {
   const { placeName, category, summary, facts, address, crossStreets } =
     parsed.data;
 
+  // @prompt-region walk-narration
   const factsKeyPart = (facts || [])
     .map((f) => f.slice(0, 80).toLowerCase())
     .sort()
     .join("|");
   const narrationCacheKey = `narration:v20:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // @end-prompt-region walk-narration
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
+    req.log.info(
+      {
+        reqId: req.id,
+        route: "walk-narration",
+        outcome: "success",
+        cacheHit: true,
+        durationMs: Date.now() - requestStartTime,
+      },
+      "[walk-narration] served from cache",
+    );
     res.json(cachedNarration);
     return;
   }
@@ -4015,8 +4041,28 @@ router.post("/explore/walk-narration", async (req, res) => {
   if (existingNarrationFlight) {
     try {
       const text = await existingNarrationFlight;
+      req.log.info(
+        {
+          reqId: req.id,
+          route: "walk-narration",
+          outcome: "success",
+          cacheHit: false,
+          durationMs: Date.now() - requestStartTime,
+        },
+        "[walk-narration] coalesced onto in-flight LLM call — success",
+      );
       res.json({ narration: text });
     } catch {
+      req.log.warn(
+        {
+          reqId: req.id,
+          route: "walk-narration",
+          outcome: "failure",
+          cacheHit: false,
+          durationMs: Date.now() - requestStartTime,
+        },
+        "[walk-narration] coalesced onto in-flight LLM call — failure",
+      );
       if (!res.headersSent && res.socket?.writable)
         res.status(503).json({
           error: "Narration service temporarily unavailable. Please try again.",
@@ -4025,6 +4071,7 @@ router.post("/explore/walk-narration", async (req, res) => {
     return;
   }
 
+  // @prompt-region walk-narration
   // Build the location context string for the user message. Priority:
   //   address (specific street number) > crossStreets (block context) > none.
   const locationContext = address
@@ -4084,6 +4131,7 @@ How to write for speech:
         },
       ],
     })
+    // @end-prompt-region walk-narration
     .then((r) => {
       const text = r.choices[0]?.message?.content;
       if (!text) throw new Error("empty_content");
@@ -4097,6 +4145,17 @@ How to write for speech:
   try {
     narrationText = await narrationPromise;
   } catch (err: any) {
+    req.log.warn(
+      {
+        reqId: req.id,
+        route: "walk-narration",
+        outcome: "failure",
+        cacheHit: false,
+        durationMs: Date.now() - requestStartTime,
+        errStatus: err?.status,
+      },
+      "[walk-narration] live LLM call failed",
+    );
     if (err?.message === "empty_content") {
       if (!res.headersSent)
         res.status(500).json({ error: "Failed to generate narration" });
@@ -4110,6 +4169,16 @@ How to write for speech:
     return;
   }
 
+  req.log.info(
+    {
+      reqId: req.id,
+      route: "walk-narration",
+      outcome: "success",
+      cacheHit: false,
+      durationMs: Date.now() - requestStartTime,
+    },
+    "[walk-narration] live LLM call succeeded",
+  );
   const result = { narration: narrationText };
   setLLMCache(narrationCacheKey, result);
   res.json(result);
@@ -4193,6 +4262,10 @@ function setAudioCache(key: string, bytes: Buffer): void {
 // then runs it through OpenAI's gpt-audio TTS so the phone can play a real
 // human-sounding voice instead of the iOS robotic system speech engine.
 router.post("/explore/walk-narration-audio", async (req, res) => {
+  // See the timing-boundary comment on /explore/walk-narration above — same
+  // discipline applies here: server-only processing time, independent of
+  // the client's own fetch-latency measurement, no shared request ID.
+  const requestStartTime = Date.now();
   const parsed = GetWalkNarrationBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -4228,15 +4301,27 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     : "nova";
 
   // Re-use the text narration cache so we don't double-generate text + audio.
+  // @prompt-region walk-narration-audio
   const factsKeyPart = (facts || [])
     .map((f) => f.slice(0, 80).toLowerCase())
     .sort()
     .join("|");
   const narrationCacheKey = `narration:v20:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
+  // @end-prompt-region walk-narration-audio
 
   const cachedAudio = await getAudioCache(audioCacheKey);
   if (cachedAudio) {
+    req.log.info(
+      {
+        reqId: req.id,
+        route: "walk-narration-audio",
+        outcome: "success",
+        cacheHit: true,
+        durationMs: Date.now() - requestStartTime,
+      },
+      "[walk-narration-audio] served from audio cache",
+    );
     res.setHeader("Content-Type", "audio/mpeg");
     res.setHeader("Cache-Control", "private, max-age=900");
     res.setHeader("X-Narration-Cache", "hit");
@@ -4259,6 +4344,16 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
       try {
         narrationText = await existingNarrationFlight;
       } catch (err: any) {
+        req.log.warn(
+          {
+            reqId: req.id,
+            route: "walk-narration-audio",
+            outcome: abortController.signal.aborted ? "cancelled" : "failure",
+            cacheHit: false,
+            durationMs: Date.now() - requestStartTime,
+          },
+          "[walk-narration-audio] coalesced narration text call failed",
+        );
         if (abortController.signal.aborted) return;
         const status =
           err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
@@ -4270,6 +4365,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         return;
       }
     } else {
+      // @prompt-region walk-narration-audio
       // Build the location context string — same priority as /walk-narration.
       const audioLocationContext = address
         ? ` Address: ${address}.`
@@ -4331,6 +4427,7 @@ How to write for speech:
           },
           { signal: abortController.signal },
         )
+        // @end-prompt-region walk-narration-audio
         .then((r) => {
           const text = r.choices[0]?.message?.content;
           if (!text) throw new Error("empty_content");
@@ -4345,6 +4442,17 @@ How to write for speech:
       try {
         narrationText = await audioNarrationPromise;
       } catch (err: any) {
+        req.log.warn(
+          {
+            reqId: req.id,
+            route: "walk-narration-audio",
+            outcome: abortController.signal.aborted ? "cancelled" : "failure",
+            cacheHit: false,
+            durationMs: Date.now() - requestStartTime,
+            errStatus: err?.status,
+          },
+          "[walk-narration-audio] live narration text call failed",
+        );
         if (abortController.signal.aborted) return;
         if (err?.message === "empty_content") {
           if (!res.headersSent)
@@ -4364,6 +4472,13 @@ How to write for speech:
     }
   }
 
+  // Cheap sub-timing split (no flow restructuring): everything above this
+  // point is the "chat" phase (cache lookup, coalesced wait, or a live LLM
+  // call); everything below is the "TTS" phase. Only reached on a chat-phase
+  // success, so chatMs below always reflects real elapsed time whether the
+  // text came from cache or a live call.
+  const chatDoneAt = Date.now();
+
   // Step 2: render narration text to natural-voice MP3 via OpenAI TTS.
   // Coalesce concurrent requests for the same audio key so only one TTS call
   // is made. Pass the abort signal so a lone caller's disconnect still cancels;
@@ -4376,6 +4491,17 @@ How to write for speech:
       audioBytes = await existingAudioFlight;
       if (audioBytes.length === 0) throw new Error("TTS returned empty audio");
     } catch (err: any) {
+      req.log.warn(
+        {
+          reqId: req.id,
+          route: "walk-narration-audio",
+          outcome: abortController.signal.aborted ? "cancelled" : "failure",
+          cacheHit: false,
+          durationMs: Date.now() - requestStartTime,
+          chatMs: chatDoneAt - requestStartTime,
+        },
+        "[walk-narration-audio] coalesced TTS call failed",
+      );
       if (abortController.signal.aborted) return;
       logger.error({ err, placeName, voice }, "TTS generation failed (waiter)");
       const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
@@ -4397,6 +4523,17 @@ How to write for speech:
     try {
       audioBytes = await audioPromise;
     } catch (err: any) {
+      req.log.warn(
+        {
+          reqId: req.id,
+          route: "walk-narration-audio",
+          outcome: abortController.signal.aborted ? "cancelled" : "failure",
+          cacheHit: false,
+          durationMs: Date.now() - requestStartTime,
+          chatMs: chatDoneAt - requestStartTime,
+        },
+        "[walk-narration-audio] live TTS call failed",
+      );
       if (abortController.signal.aborted) return;
       logger.error({ err, placeName, voice }, "TTS generation failed");
       const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
@@ -4407,6 +4544,17 @@ How to write for speech:
       return;
     }
     if (!audioBytes || audioBytes.length === 0) {
+      req.log.warn(
+        {
+          reqId: req.id,
+          route: "walk-narration-audio",
+          outcome: "failure",
+          cacheHit: false,
+          durationMs: Date.now() - requestStartTime,
+          chatMs: chatDoneAt - requestStartTime,
+        },
+        "[walk-narration-audio] TTS returned empty audio",
+      );
       if (!res.headersSent)
         res.status(500).json({ error: "TTS returned empty audio" });
       return;
@@ -4414,6 +4562,18 @@ How to write for speech:
     setAudioCache(audioCacheKey, audioBytes);
   }
 
+  req.log.info(
+    {
+      reqId: req.id,
+      route: "walk-narration-audio",
+      outcome: "success",
+      cacheHit: false,
+      durationMs: Date.now() - requestStartTime,
+      chatMs: chatDoneAt - requestStartTime,
+      ttsMs: Date.now() - chatDoneAt,
+    },
+    "[walk-narration-audio] request completed",
+  );
   res.setHeader("Content-Type", "audio/mpeg");
   res.setHeader("Cache-Control", "private, max-age=900");
   res.setHeader("X-Narration-Cache", "miss");

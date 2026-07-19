@@ -8,6 +8,7 @@
     "setup:sentry-walk-audio-dashboard": "tsx ./src/setupSentryWalkAudioFallbackDashboard.ts",
     "check:prompt-manifest": "tsx ./src/checkPromptManifest.ts",
     "update:prompt-manifest": "tsx ./src/updatePromptManifest.ts",
+    "test:prompt-manifest": "tsx --test ./src/lib/promptManifestLib.test.ts",
     "generate:api-zod-barrel": "tsx ./src/generateApiZodTypesBarrel.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

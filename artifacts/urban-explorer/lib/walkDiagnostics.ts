@@ -82,18 +82,29 @@ export interface DiagDiscoverResult {
  *
  * "cancelled" only applies to the live path: the fetch itself succeeded, but
  * stopWalk was called while it was in flight, so the payload was discarded.
- * "failure" covers every other unsuccessful outcome fetchNarrationPayload
- * already collapses to null (bad status, empty payload, thrown error,
- * timeout) — the current code doesn't expose which case it was, so this
- * doesn't invent a finer-grained distinction than what's already there.
+ * "timeout" means fetchNarrationPayload's own internal fetch timeout (12s
+ * text / 15s audio) is what caused the final null return, per its
+ * timeoutInfo out-param — distinct from "failure", which covers every other
+ * unsuccessful case (bad status, empty payload, non-timeout thrown error).
  */
 export interface DiagNarrationFetch {
   ts: number;
   placeId: string;
   placeName: string;
   source: "cache" | "live";
-  outcome: "success" | "failure" | "cancelled";
+  outcome: "success" | "failure" | "timeout" | "cancelled";
   payloadKind?: "audio" | "text";
+  /**
+   * Elapsed time in milliseconds from the moment fetchNarrationPayload was
+   * called to the moment its result (success/failure) was known. Only set
+   * for source: "live" — a "cache" hit is a synchronous consume of an
+   * already-prefetched payload, so there is no network round trip to time
+   * and this is left undefined rather than reported as a misleading ~0ms.
+   * This is a client-side, user-facing-latency measurement only: it does
+   * NOT reflect how long the server actually spent generating the
+   * narration — see the server's own request-timing logs for that.
+   */
+  durationMs?: number;
 }
 
 /**

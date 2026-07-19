@@ -236,6 +236,7 @@ export function WalkModeDebugOverlay() {
                   {f.outcome} · {f.source}
                   {f.payloadKind ? `/${f.payloadKind}` : ""} ·{" "}
                   {f.placeName.slice(0, 22)}
+                  {f.durationMs !== undefined ? ` · ${f.durationMs}ms` : ""}
                 </Text>
               ))
             )}
