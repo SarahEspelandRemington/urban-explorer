@@ -332,6 +332,181 @@ test("scanFileContent: a shared cache key above the first route becomes a module
   assert.deepEqual(moduleEntry!.versions, ["v2"]);
 });
 
+// --- discover-style multi-path route (two @prompt-region spans covering
+// two independent LLM call paths, mirroring the real /explore/discover
+// route's OSM-anchor + non-anchor structure) --------------------------------
+
+function discoverStyleFixture(opts?: {
+  pathAPrompt?: string;
+  pathBPrompt?: string;
+  extraLogging?: string;
+  docComment?: string;
+}): string {
+  const pathAPrompt =
+    opts?.pathAPrompt ?? 'const prompt = "path-a prompt text";';
+  const pathBPrompt =
+    opts?.pathBPrompt ?? 'const prompt = "path-b prompt text";';
+  const extraLogging = opts?.extraLogging ?? "";
+  const docComment =
+    opts?.docComment ??
+    "  // note: unrelated to the shared cache (fake-v2, keyed by lang)";
+  return lines(
+    'router.post("/api/discover", async (req, res) => {',
+    "  // @prompt-region discover",
+    "  const discoverCacheKey = `discover:v1:${x}`;",
+    "  // @end-prompt-region discover",
+    docComment,
+    "  // Path A: anchor-based LLM call",
+    "  // @prompt-region discover",
+    "  " + pathAPrompt,
+    "  // @end-prompt-region discover",
+    extraLogging,
+    "  // Path B: non-anchor LLM call",
+    "  // @prompt-region discover",
+    "  " + pathBPrompt,
+    "  // @end-prompt-region discover",
+    "});",
+  );
+}
+
+test("scanFileContent (discover-style): logging added outside both marked spans does not change the hash or require a version bump", () => {
+  const before = scanFileContent("discover.ts", discoverStyleFixture());
+  const after = scanFileContent(
+    "discover.ts",
+    discoverStyleFixture({
+      extraLogging: '  req.log.info("new diagnostic-only log line");',
+    }),
+  );
+  assert.equal(before.issues.length, 0);
+  assert.equal(after.issues.length, 0);
+
+  const beforeEntry = before.entries.find(
+    (e) => e.key === "discover.ts::discover",
+  )!;
+  const afterEntry = after.entries.find(
+    (e) => e.key === "discover.ts::discover",
+  )!;
+  assert.equal(beforeEntry.sectionHash, afterEntry.sectionHash);
+  assert.deepEqual(beforeEntry.versions, afterEntry.versions);
+});
+
+test("scanFileContent (discover-style): a prompt/cache-key change inside either marked span changes the hash without a version bump (the failure case the check script must reject)", () => {
+  const before = scanFileContent("discover.ts", discoverStyleFixture());
+  const beforeEntry = before.entries.find(
+    (e) => e.key === "discover.ts::discover",
+  )!;
+
+  const pathAChanged = scanFileContent(
+    "discover.ts",
+    discoverStyleFixture({
+      pathAPrompt: 'const prompt = "path-a prompt, edited";',
+    }),
+  );
+  const pathAEntry = pathAChanged.entries.find(
+    (e) => e.key === "discover.ts::discover",
+  )!;
+  assert.notEqual(beforeEntry.sectionHash, pathAEntry.sectionHash);
+  assert.deepEqual(beforeEntry.versions, pathAEntry.versions);
+
+  const pathBChanged = scanFileContent(
+    "discover.ts",
+    discoverStyleFixture({
+      pathBPrompt: 'const prompt = "path-b prompt, edited";',
+    }),
+  );
+  const pathBEntry = pathBChanged.entries.find(
+    (e) => e.key === "discover.ts::discover",
+  )!;
+  assert.notEqual(beforeEntry.sectionHash, pathBEntry.sectionHash);
+  assert.deepEqual(beforeEntry.versions, pathBEntry.versions);
+});
+
+test("scanFileContent (discover-style): both LLM paths are covered by the combined hash (changing only path A is distinguishable from changing only path B)", () => {
+  const pathAChanged = scanFileContent(
+    "discover.ts",
+    discoverStyleFixture({
+      pathAPrompt: 'const prompt = "path-a prompt, edited";',
+    }),
+  );
+  const pathBChanged = scanFileContent(
+    "discover.ts",
+    discoverStyleFixture({
+      pathBPrompt: 'const prompt = "path-b prompt, edited";',
+    }),
+  );
+  const pathAEntry = pathAChanged.entries.find(
+    (e) => e.key === "discover.ts::discover",
+  )!;
+  const pathBEntry = pathBChanged.entries.find(
+    (e) => e.key === "discover.ts::discover",
+  )!;
+  // Both edits are detected, and they are NOT confused with each other --
+  // proof that path A's and path B's marked spans are both actually
+  // contributing to the hash (not just one of the two @prompt-region pairs).
+  assert.notEqual(pathAEntry.sectionHash, pathBEntry.sectionHash);
+});
+
+test("scanFileContent (discover-style): a second marked span left unclosed is rejected (incomplete multi-span region)", () => {
+  const incomplete = lines(
+    'router.post("/api/discover", async (req, res) => {',
+    "  const discoverCacheKey = `discover:v1:${x}`;",
+    "  // @prompt-region discover",
+    '  const prompt = "path-a prompt text";',
+    "  // @end-prompt-region discover",
+    "  // @prompt-region discover",
+    '  const prompt = "path-b prompt text";',
+    "});",
+  );
+  const result = scanFileContent("discover.ts", incomplete);
+  assert.equal(
+    result.entries.find((e) => e.key === "discover.ts::discover"),
+    undefined,
+  );
+  assert.ok(
+    result.issues.some((i) => i.message.includes("unmatched @prompt-region")),
+  );
+});
+
+test("scanFileContent (discover-style): overlapping regions with mismatched slugs interleaved are rejected", () => {
+  const overlapping = lines(
+    'router.post("/api/discover", async (req, res) => {',
+    "  // @prompt-region discover",
+    "  const cacheKey = `discover:v1:${x}`;",
+    '  const prompt = "path-a prompt text";',
+    "  // @prompt-region walk-narration",
+    '  const prompt2 = "path-b prompt text";',
+    "  // @end-prompt-region discover",
+    "  // @end-prompt-region walk-narration",
+    "});",
+  );
+  const result = scanFileContent("discover.ts", overlapping);
+  assert.ok(result.issues.length > 0);
+});
+
+test("scanFileContent (discover-style): a doc comment with a cache-like example (e.g. wiki:v2) outside the marked spans is treated as a real token and rejects the route -- rewording the comment (no colon-adjacent version pattern) fixes it", () => {
+  const withStrayToken = discoverStyleFixture({
+    docComment:
+      "  // note: reuses the shared in-memory cache (wiki:v2:{lang}:{title}) elsewhere",
+  });
+  const before = scanFileContent("discover.ts", withStrayToken);
+  assert.equal(
+    before.entries.find((e) => e.key === "discover.ts::discover"),
+    undefined,
+  );
+  assert.ok(
+    before.issues.some((i) => i.message.includes("outside the marked regions")),
+  );
+
+  const reworded = discoverStyleFixture({
+    docComment:
+      "  // note: reuses the shared in-memory cache (wiki-v2, keyed by lang/title) elsewhere",
+  });
+  const after = scanFileContent("discover.ts", reworded);
+  assert.equal(after.issues.length, 0);
+  const entry = after.entries.find((e) => e.key === "discover.ts::discover")!;
+  assert.deepEqual(entry.versions, ["v1"]);
+});
+
 // --- manifest schema parsing -------------------------------------------------
 
 test("parseManifestFile: recognizes a well-formed v2 manifest", () => {

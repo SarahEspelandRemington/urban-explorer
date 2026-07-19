@@ -1966,9 +1966,11 @@ router.post("/explore/discover", async (req, res) => {
   const modeKey = isQuick ? "quick" : "full";
   const includesSuffix =
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
+  // @prompt-region discover
   const discoverCacheKey = osmAnchor
     ? `${modeKey}:v68:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
+  // @end-prompt-region discover
 
   // Fire the neighbourhood label lookup immediately. On a cache-warm revgeo
   // call this resolves in microseconds (in-memory Map lookup). On a cold
@@ -2288,7 +2290,7 @@ router.post("/explore/discover", async (req, res) => {
 
     // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
     // wikipedia= tag. Fetches run in parallel (Promise.all) and are backed by
-    // the shared in-memory cache (wiki:v2:{lang}:{title}) also used by the
+    // the shared in-memory cache (wiki-v2, keyed by lang/title) also used by the
     // detail-page Phase B path — a subsequent detail-page tap for the same
     // place is a free cache hit with no second Wikipedia API call.
     // Total added latency: ~200–400 ms for the slowest single fetch, which is
@@ -2334,11 +2336,23 @@ router.post("/explore/discover", async (req, res) => {
     }
 
     const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
+    // @prompt-region discover
+    const copyMaxCompletionTokens = 3000;
+    // @end-prompt-region discover
+    // Diagnostic-only fields populated as soon as the raw response is
+    // available (before JSON.parse), so they're still captured in the catch
+    // block below even when parsing itself throws (e.g. the "Unterminated
+    // string" failures we're currently investigating). Does not affect
+    // timeout, prompt, retry, or fallback behavior.
+    let copyResponseLength: number | undefined;
+    let copyFinishReason: string | undefined;
+    let copyCompletionTokens: number | undefined;
     try {
+      // @prompt-region discover
       const copyResponse = await openai.chat.completions.create(
         {
           model: "gpt-4.1-mini",
-          max_completion_tokens: 3000,
+          max_completion_tokens: copyMaxCompletionTokens,
           messages: [
             {
               role: "system",
@@ -2371,16 +2385,31 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           ],
           response_format: { type: "json_object" },
         },
+        // @end-prompt-region discover
         { signal: copyAbort.signal },
       );
       clearTimeout(copyTimer);
       const copyContent = copyResponse.choices[0]?.message?.content;
+      copyResponseLength = copyContent?.length;
+      copyFinishReason = copyResponse.choices[0]?.finish_reason;
+      copyCompletionTokens = copyResponse.usage?.completion_tokens;
       if (copyContent) {
         const copyData = JSON.parse(copyContent) as { results?: unknown[] };
         if (Array.isArray(copyData?.results)) {
           copyResults = copyData.results as CopyResult[];
         }
       }
+      req.log.info(
+        {
+          reqId: req.id,
+          branch: "osm-anchor",
+          maxCompletionTokens: copyMaxCompletionTokens,
+          responseLength: copyResponseLength,
+          finishReason: copyFinishReason,
+          completionTokens: copyCompletionTokens,
+        },
+        "[osm-anchor] copy generation succeeded",
+      );
     } catch (err: any) {
       clearTimeout(copyTimer);
       if (
@@ -2397,6 +2426,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             radius: searchRadius,
             preCopyElapsedMs,
             totalElapsedMs: Date.now() - requestStartTime,
+            maxCompletionTokens: copyMaxCompletionTokens,
           },
           "[osm-anchor] copyAbort fired — returning 503",
         );
@@ -2413,6 +2443,10 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           radius: searchRadius,
           preCopyElapsedMs,
           totalElapsedMs: Date.now() - requestStartTime,
+          maxCompletionTokens: copyMaxCompletionTokens,
+          responseLength: copyResponseLength,
+          finishReason: copyFinishReason,
+          completionTokens: copyCompletionTokens,
           err,
         },
         "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
@@ -2562,6 +2596,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
   //   Medium (≤300 m): 6-9  places, 2000 tokens
   //   Wide   (>300 m): 5-7  places, 1800 tokens
   // Quick mode (map pan) keeps its own 8-12 / 2500 budget unchanged.
+  // @prompt-region discover
   let placeCount: string;
   let maxTokens: number;
   if (isQuick) {
@@ -2578,6 +2613,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
     maxTokens = 1800;
   }
   const modelName = "gpt-4.1-mini";
+  // @end-prompt-region discover
 
   // Two-step discovery for full mode: brainstorm freely, then format.
   // Run the brainstorm IN PARALLEL with the Overpass fetch — both only need the
@@ -2596,6 +2632,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         BRAINSTORM_TIMEOUT_MS,
       );
       try {
+        // @prompt-region discover
         const brainstormResponse = await openai.chat.completions.create(
           {
             model: "gpt-4.1-mini",
@@ -2612,6 +2649,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               },
             ],
           },
+          // @end-prompt-region discover
           { signal: brainstormAbort.signal },
         );
         return brainstormResponse.choices[0]?.message?.content ?? "";
@@ -2643,6 +2681,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
 
   const osmContext = formatOSMContext(osmPlaces, latitude, longitude);
 
+  // @prompt-region discover
   const systemPrompt = `You are a hyper-local urban historian surfacing obscure, overlooked, and forgotten stories about specific streets, buildings, and spaces — the kind locals and architecture nerds know but tourists never find.
 
 Given GPS coordinates, identify real places within roughly ${radiusFeet} feet (${searchRadius} m). Think small and specific.
@@ -2695,6 +2734,7 @@ Respond in JSON:
 {"location":"specific area name","places":[{"id":"kebab-case","name":"Real or historical name","category":"building|storefront|alley|corner|infrastructure|former site|architectural detail|park|church|residential|vault sidewalk|subsurface|waterway remnant|transportation remnant","yearBuilt":"1920s","tags":["3-5 tags: speakeasy, labor history, immigrant history, art deco, tenement, gang territory, political machine, vault sidewalk, buried waterway, etc."],"summary":"One vivid sentence — the most surprising detail.","facts":["Fact with year/name/detail","Second distinct fact"],"latitude":40.12345,"longitude":-73.12345,"address":"157 W 48th St or W 48th St & 8th Ave","confidence":"high|medium|low"}]}
 
 Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries beat 10 weak ones.`;
+  // @end-prompt-region discover
 
   // Hard cap the main discovery call. Parallel phase (Overpass + brainstorm)
   // takes up to 8 s (brainstorm timeout). With the ~3 000-token system prompt,
@@ -2724,6 +2764,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
 
   let response: Awaited<ReturnType<typeof openai.chat.completions.create>>;
   try {
+    // @prompt-region discover
     response = await openai.chat.completions.create(
       {
         model: modelName,
@@ -2740,6 +2781,7 @@ Return ${placeCount} places. Quality beats quantity — 5 genuine discoveries be
         ],
         response_format: { type: "json_object" },
       },
+      // @end-prompt-region discover
       { signal: discoverAbort.signal },
     );
   } catch (err: any) {

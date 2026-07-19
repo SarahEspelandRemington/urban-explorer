@@ -16,18 +16,18 @@
       "versions": ["v1", "v12", "v2"],
       "registered": "2026-07-19"
     },
-    "artifacts/api-server/src/routes/explore/index.ts::discover": {
+    "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
       "extraction": "section-fallback",
-      "sectionHash": "c40c44397639bc2dc835b4def7658e7123f936aedb0013c957352a4257e4c785",
-      "versions": ["v2", "v63", "v68"],
+      "sectionHash": "bf1a5b49a64fb7d6880c46bb9041d983112133f3516569e33d8fd3da48ff623d",
+      "versions": ["v14"],
       "registered": "2026-07-19"
     },
-    "artifacts/api-server/src/routes/explore/index.ts::suggest-locations": {
+    "artifacts/api-server/src/routes/explore/index.ts::discover": {
       "kind": "route",
-      "extraction": "section-fallback",
-      "sectionHash": "81244dd2aa419827b2bdb5b77133cca9ed485c237c6db1e924c2b5dac4b53c8d",
-      "versions": ["v12"],
+      "extraction": "marked",
+      "sectionHash": "949799a39b79f8947bfc6cb09914844b057f77987808d6c9100b9a0fd30ac2b4",
+      "versions": ["v63", "v68"],
       "registered": "2026-07-19"
     },
     "artifacts/api-server/src/routes/explore/index.ts::geocode": {
@@ -35,13 +35,6 @@
       "extraction": "section-fallback",
       "sectionHash": "2660ac21336aef61f7fc8ba7cc7bf82578b113745a6cc7db88c5a54d1ba2b2b8",
       "versions": ["v4"],
-      "registered": "2026-07-19"
-    },
-    "artifacts/api-server/src/routes/explore/index.ts::reverse-geocode": {
-      "kind": "route",
-      "extraction": "section-fallback",
-      "sectionHash": "11e2122d0fcc1e0d666c7e4599a5920ef6bd5daf3b881974fcabf7df044859ce",
-      "versions": ["v12"],
       "registered": "2026-07-19"
     },
     "artifacts/api-server/src/routes/explore/index.ts::investigate-address": {
@@ -65,6 +58,27 @@
       "versions": ["v2"],
       "registered": "2026-07-19"
     },
+    "artifacts/api-server/src/routes/explore/index.ts::places-along-route": {
+      "kind": "route",
+      "extraction": "section-fallback",
+      "sectionHash": "765aee8fe175da19adf2dc73215d5e92027d813f6894e58a21fb695978eb0694",
+      "versions": ["v28"],
+      "registered": "2026-07-19"
+    },
+    "artifacts/api-server/src/routes/explore/index.ts::reverse-geocode": {
+      "kind": "route",
+      "extraction": "section-fallback",
+      "sectionHash": "11e2122d0fcc1e0d666c7e4599a5920ef6bd5daf3b881974fcabf7df044859ce",
+      "versions": ["v12"],
+      "registered": "2026-07-19"
+    },
+    "artifacts/api-server/src/routes/explore/index.ts::suggest-locations": {
+      "kind": "route",
+      "extraction": "section-fallback",
+      "sectionHash": "81244dd2aa419827b2bdb5b77133cca9ed485c237c6db1e924c2b5dac4b53c8d",
+      "versions": ["v12"],
+      "registered": "2026-07-19"
+    },
     "artifacts/api-server/src/routes/explore/index.ts::walk-narration": {
       "kind": "route",
       "extraction": "marked",
@@ -77,20 +91,6 @@
       "extraction": "marked",
       "sectionHash": "d8576fe401bde4d15a74503fca41465b722fcfe37e13b326656122713c1f8fc9",
       "versions": ["v20"],
-      "registered": "2026-07-19"
-    },
-    "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
-      "kind": "route",
-      "extraction": "section-fallback",
-      "sectionHash": "bf1a5b49a64fb7d6880c46bb9041d983112133f3516569e33d8fd3da48ff623d",
-      "versions": ["v14"],
-      "registered": "2026-07-19"
-    },
-    "artifacts/api-server/src/routes/explore/index.ts::places-along-route": {
-      "kind": "route",
-      "extraction": "section-fallback",
-      "sectionHash": "765aee8fe175da19adf2dc73215d5e92027d813f6894e58a21fb695978eb0694",
-      "versions": ["v28"],
       "registered": "2026-07-19"
     }
   }
