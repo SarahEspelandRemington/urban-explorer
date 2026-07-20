@@ -199,40 +199,38 @@ export default function WalkModeScreen() {
         </View>
 
         <View style={styles.headerRight}>
-          {__DEV__ ? (
-            <Pressable
-              onPress={() => walk.setWalkDebugEnabled(!walk.walkDebugEnabled)}
-              hitSlop={8}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: walk.walkDebugEnabled }}
-              accessibilityLabel={t.walkMode.walkDebugOverlay}
-              style={({ pressed }) => [
-                styles.debugBtn,
+          <Pressable
+            onPress={() => walk.setWalkDebugEnabled(!walk.walkDebugEnabled)}
+            hitSlop={8}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: walk.walkDebugEnabled }}
+            accessibilityLabel={t.walkMode.walkDebugOverlay}
+            style={({ pressed }) => [
+              styles.debugBtn,
+              {
+                backgroundColor: walk.walkDebugEnabled
+                  ? colors.primary + "22"
+                  : colors.muted,
+                borderColor: walk.walkDebugEnabled
+                  ? colors.primary
+                  : colors.border,
+                opacity: pressed ? 0.75 : 1,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.debugBtnLabel,
                 {
-                  backgroundColor: walk.walkDebugEnabled
-                    ? colors.primary + "22"
-                    : colors.muted,
-                  borderColor: walk.walkDebugEnabled
+                  color: walk.walkDebugEnabled
                     ? colors.primary
-                    : colors.border,
-                  opacity: pressed ? 0.75 : 1,
+                    : colors.mutedForeground,
                 },
               ]}
             >
-              <Text
-                style={[
-                  styles.debugBtnLabel,
-                  {
-                    color: walk.walkDebugEnabled
-                      ? colors.primary
-                      : colors.mutedForeground,
-                  },
-                ]}
-              >
-                Debug
-              </Text>
-            </Pressable>
-          ) : null}
+              Debug
+            </Text>
+          </Pressable>
           <View
             style={[styles.densityToggle, { backgroundColor: colors.muted }]}
           >
