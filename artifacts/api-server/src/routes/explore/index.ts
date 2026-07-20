@@ -2347,6 +2347,12 @@ router.post("/explore/discover", async (req, res) => {
     let copyResponseLength: number | undefined;
     let copyFinishReason: string | undefined;
     let copyCompletionTokens: number | undefined;
+    // Diagnostic-only: exact wall-clock time the copy-gen LLM call itself was
+    // issued, so the catch block below can log how long *this specific call*
+    // ran before rejecting/aborting — distinct from preCopyElapsedMs (time
+    // spent before the call started) and totalElapsedMs (whole request).
+    // Does not affect timeout, retry, prompt, or fallback behavior.
+    const copyCallStartTime = Date.now();
     try {
       // @prompt-region discover
       const copyResponse = await openai.chat.completions.create(
@@ -2407,11 +2413,30 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           responseLength: copyResponseLength,
           finishReason: copyFinishReason,
           completionTokens: copyCompletionTokens,
+          llmCallElapsedMs: Date.now() - copyCallStartTime,
+          // Diagnostic-only: should always be false here (a successful resolve
+          // implies the abort signal never fired), but logged defensively in
+          // case a resolve/abort race is ever observed in practice.
+          abortSignalAlreadyAborted: copyAbort.signal.aborted,
         },
         "[osm-anchor] copy generation succeeded",
       );
     } catch (err: any) {
       clearTimeout(copyTimer);
+      // Diagnostic-only: surface whatever the OpenAI SDK's error object
+      // exposes about *this specific rejection* — status/code/type/requestID
+      // are only populated when a real HTTP response was received (e.g. a
+      // RateLimitError from a 429); they stay undefined for APIUserAbortError
+      // (our AbortController fired mid-flight, no response ever arrived) and
+      // for APIConnectionError/APIConnectionTimeoutError (network-level
+      // failure). This does not change what triggers the abort or catch —
+      // it only records what the already-thrown error tells us.
+      const errName = err?.name ?? err?.constructor?.name;
+      const errStatus = err?.status;
+      const errCode = err?.code;
+      const errType = err?.type;
+      const errRequestId = err?.requestID;
+      const llmCallElapsedMs = Date.now() - copyCallStartTime;
       if (
         copyAbort.signal.aborted &&
         !res.headersSent &&
@@ -2427,6 +2452,12 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             preCopyElapsedMs,
             totalElapsedMs: Date.now() - requestStartTime,
             maxCompletionTokens: copyMaxCompletionTokens,
+            llmCallElapsedMs,
+            errName,
+            errStatus,
+            errCode,
+            errType,
+            errRequestId,
           },
           "[osm-anchor] copyAbort fired — returning 503",
         );
@@ -2447,6 +2478,12 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           responseLength: copyResponseLength,
           finishReason: copyFinishReason,
           completionTokens: copyCompletionTokens,
+          llmCallElapsedMs,
+          errName,
+          errStatus,
+          errCode,
+          errType,
+          errRequestId,
           err,
         },
         "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
