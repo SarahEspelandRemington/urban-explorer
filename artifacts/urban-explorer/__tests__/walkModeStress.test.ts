@@ -8,9 +8,9 @@
  *     handler or set to null when a newer session has already installed its
  *     callback.
  *
- *  2. NowPlaying desync — stopWalk must call NowPlaying.clear() synchronously
- *     before narration.stop() so the lock-screen widget is never re-instated
- *     by a late React effect after the walk ends.
+ *  2. Walk-stop ordering — stopWalk must set isWalkingRef.current = false
+ *     synchronously before narration.stop() so no late React effect can act
+ *     as if the walk were still active after it ends.
  *
  *  3. Paths.cache guard — lib/fetchNarrationPayload: when
  *     writeNarrationAudioToCache throws (bad Paths.cache, disk full, etc.),
@@ -158,27 +158,25 @@ describe("walkSessionManager — CAS callback, no ghost state", () => {
   });
 });
 
-// ─── Test group 2: NowPlaying desync — real executeStopWalkSync ──────────────
+// ─── Test group 2: walk-stop ordering — real executeStopWalkSync ─────────────
 //
 // lib/walkStopSession.ts#executeStopWalkSync is the production utility that
-// WalkModeContext.stopWalk delegates to for the synchronous stop-ordering.
-// These tests exercise the REAL function and will fail if anyone reorders the
-// calls inside executeStopWalkSync.
+// WalkModeContext.stopWalk delegates to. These tests exercise the REAL
+// function and will fail if anyone reorders isWalkingRef vs narrationStop.
+//
+// Lock-screen cleanup is no longer a separate step here — it's owned by
+// narration.stop() -> teardownActive() -> player.setActiveForLockScreen(false)
+// in useNarration.ts, so there's nothing further to assert about it at this
+// layer.
 
 import { executeStopWalkSync } from "../lib/walkStopSession";
 
-describe("executeStopWalkSync (NowPlaying stop-ordering guard)", () => {
+describe("executeStopWalkSync (walk-stop ordering guard)", () => {
   function buildDeps() {
     const callOrder: string[] = [];
     return {
       callOrder,
       isWalkingRef: { current: true },
-      nowPlayingUnsub: jest.fn(() => {
-        callOrder.push("nowPlayingUnsub");
-      }),
-      nowPlayingClear: jest.fn(() => {
-        callOrder.push("NowPlaying.clear");
-      }),
       narrationStop: jest.fn(() => {
         callOrder.push("narration.stop");
       }),
@@ -191,65 +189,38 @@ describe("executeStopWalkSync (NowPlaying stop-ordering guard)", () => {
     expect(deps.isWalkingRef.current).toBe(false);
   });
 
-  test("NowPlaying.clear() fires before narration.stop()", () => {
+  test("isWalkingRef is false before narrationStop() runs", () => {
     const deps = buildDeps();
-    executeStopWalkSync(deps);
-    const clearIdx = deps.callOrder.indexOf("NowPlaying.clear");
-    const stopIdx = deps.callOrder.indexOf("narration.stop");
-    expect(clearIdx).toBeGreaterThanOrEqual(0);
-    expect(stopIdx).toBeGreaterThanOrEqual(0);
-    expect(clearIdx).toBeLessThan(stopIdx);
-  });
-
-  test("isWalkingRef is set to false before NowPlaying.clear()", () => {
-    const deps = buildDeps();
-    let refAtClearTime: boolean | null = null;
-    deps.nowPlayingClear.mockImplementation(() => {
-      deps.callOrder.push("NowPlaying.clear");
-      refAtClearTime = deps.isWalkingRef.current;
+    let refAtStopTime: boolean | null = null;
+    deps.narrationStop.mockImplementation(() => {
+      deps.callOrder.push("narration.stop");
+      refAtStopTime = deps.isWalkingRef.current;
     });
 
     executeStopWalkSync(deps);
 
-    expect(refAtClearTime).toBe(false);
+    expect(refAtStopTime).toBe(false);
   });
 
-  test("nowPlayingUnsub is called before NowPlaying.clear()", () => {
+  test("narrationStop() is called exactly once", () => {
     const deps = buildDeps();
     executeStopWalkSync(deps);
-    const unsubIdx = deps.callOrder.indexOf("nowPlayingUnsub");
-    const clearIdx = deps.callOrder.indexOf("NowPlaying.clear");
-    expect(unsubIdx).toBeGreaterThanOrEqual(0);
-    expect(unsubIdx).toBeLessThan(clearIdx);
-  });
-
-  test("NowPlaying.clear() is called exactly once", () => {
-    const deps = buildDeps();
-    executeStopWalkSync(deps);
-    expect(deps.nowPlayingClear).toHaveBeenCalledTimes(1);
-  });
-
-  test("nowPlayingUnsub is skipped (not called) when null", () => {
-    const deps = buildDeps();
-    const depsNoUnsub = { ...deps, nowPlayingUnsub: null };
-    expect(() => executeStopWalkSync(depsNoUnsub)).not.toThrow();
-    expect(deps.nowPlayingClear).toHaveBeenCalledTimes(1);
     expect(deps.narrationStop).toHaveBeenCalledTimes(1);
   });
 
-  test("late effect guarded by isWalkingRef cannot reinstate NowPlaying widget", () => {
+  test("late effect guarded by isWalkingRef is a no-op after stop", () => {
     const deps = buildDeps();
-    const setNowPlayingCalls: string[] = [];
+    const calls: string[] = [];
 
     executeStopWalkSync(deps);
 
     function lateEffect(isWalkingRef: { current: boolean }) {
       if (!isWalkingRef.current) return;
-      setNowPlayingCalls.push("setNowPlaying");
+      calls.push("late-effect-ran");
     }
 
     lateEffect(deps.isWalkingRef);
-    expect(setNowPlayingCalls).toHaveLength(0);
+    expect(calls).toHaveLength(0);
   });
 });
 

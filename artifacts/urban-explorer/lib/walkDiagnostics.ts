@@ -126,12 +126,28 @@ export interface DiagBlock {
   detail?: string;
 }
 
+/**
+ * Most recent iOS lock-screen (setActiveForLockScreen) failure this walk
+ * session. Activation and deactivation failures are both recorded here, but
+ * only a *successful* activation clears it — a successful teardown does not,
+ * so an activation failure stays visible until the next activation attempt
+ * either succeeds or fails again. Expected to stay null in normal operation;
+ * this exists purely for field-test visibility into an otherwise-swallowed
+ * failure (see the catch blocks around setActiveForLockScreen in
+ * hooks/useNarration.ts).
+ */
+export interface DiagLockScreenError {
+  ts: number;
+  message: string;
+}
+
 export interface DiagState {
   lastSnapshot: DiagSelectionSnapshot | null;
   rejections: DiagRejection[]; // capped, most recent first
   lastDiscoverResult: DiagDiscoverResult | null;
   narrationFetches: DiagNarrationFetch[]; // capped, most recent first
   lastBlock: DiagBlock | null;
+  lastLockScreenError: DiagLockScreenError | null;
 }
 
 const REJECTION_CAP = 30;
@@ -143,6 +159,7 @@ const state: DiagState = {
   lastDiscoverResult: null,
   narrationFetches: [],
   lastBlock: null,
+  lastLockScreenError: null,
 };
 
 const subscribers = new Set<() => void>();
@@ -195,11 +212,27 @@ export function recordBlock(block: DiagBlock | null): void {
   notify();
 }
 
+export function recordLockScreenError(message: string): void {
+  state.lastLockScreenError = { ts: Date.now(), message };
+  notify();
+}
+
+/** Called only after a successful lock-screen activation — see the doc
+ *  comment on DiagLockScreenError for why deactivation success does not
+ *  call this. */
+export function clearLockScreenError(): void {
+  if (state.lastLockScreenError !== null) {
+    state.lastLockScreenError = null;
+    notify();
+  }
+}
+
 export function resetWalkDiagnostics(): void {
   state.lastSnapshot = null;
   state.rejections = [];
   state.lastDiscoverResult = null;
   state.narrationFetches = [];
   state.lastBlock = null;
+  state.lastLockScreenError = null;
   notify();
 }

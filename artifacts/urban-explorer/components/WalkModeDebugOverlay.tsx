@@ -52,6 +52,7 @@ export function WalkModeDebugOverlay() {
     lastDiscoverResult,
     narrationFetches,
     lastBlock,
+    lastLockScreenError,
   } = getWalkDiagnostics();
 
   return (
@@ -240,6 +241,17 @@ export function WalkModeDebugOverlay() {
               <Text style={styles.lineDim}>Waiting for first GPS tick…</Text>
             )}
 
+            {lastLockScreenError && (
+              <>
+                <Text style={styles.sectionTitle}>Lock screen</Text>
+                <Text style={styles.lineWarn} numberOfLines={1}>
+                  ⚠ {lastLockScreenError.message} ·{" "}
+                  {Math.round((Date.now() - lastLockScreenError.ts) / 1000)}s
+                  ago
+                </Text>
+              </>
+            )}
+
             <Text style={styles.sectionTitle}>
               Narration fetches ({narrationFetches.length})
             </Text>
@@ -341,6 +353,12 @@ const styles = StyleSheet.create({
   },
   lineQueued: {
     color: "#fcd34d",
+  },
+  lineWarn: {
+    color: "#f87171",
+    fontSize: 11,
+    fontFamily: "Menlo",
+    lineHeight: 14,
   },
   lineDim: {
     color: "#bbb",

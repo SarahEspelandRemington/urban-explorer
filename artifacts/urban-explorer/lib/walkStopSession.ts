@@ -1,30 +1,22 @@
 /**
- * Encapsulates the synchronous stop-ordering that is critical for preventing
- * NowPlaying lock-screen widget races.
+ * Encapsulates the synchronous stop-ordering for ending a walk.
  *
- * Order matters — and is verified by walkModeStress.test.ts (group 2):
- *   1. isWalkingRef.current = false — guards every async closure that checks it
- *   2. nowPlayingUnsub()            — tear down the remote-command listener
- *   3. nowPlayingClear()            — remove the lock-screen widget immediately
- *   4. narrationStop()              — stop audio playback
+ * isWalkingRef.current is set to false before narrationStop() runs, so any
+ * async closure or late-firing React effect that guards on isWalkingRef
+ * cannot act as if the walk were still active once this returns.
  *
- * A late React effect that calls NowPlaying.setNowPlaying will guard on
- * isWalkingRef.current; since we set it false before nowPlayingClear(), the
- * widget can never be re-instated by such an effect after the walk ends.
+ * narrationStop() (narration.stop() in useNarration.ts) tears down the
+ * active audio player via teardownActive(), which also clears the player's
+ * iOS lock-screen registration (setActiveForLockScreen(false)) — lock-screen
+ * cleanup is owned by the player lifecycle, not a separate step here.
  */
 
 export interface StopWalkSyncDeps {
   isWalkingRef: { current: boolean };
-  nowPlayingUnsub: (() => void) | null;
-  nowPlayingClear: () => void;
   narrationStop: () => void;
 }
 
 export function executeStopWalkSync(deps: StopWalkSyncDeps): void {
   deps.isWalkingRef.current = false;
-  if (deps.nowPlayingUnsub) {
-    deps.nowPlayingUnsub();
-  }
-  deps.nowPlayingClear();
   deps.narrationStop();
 }

@@ -8,6 +8,10 @@ import {
   trackNarrationPlayed,
 } from "../lib/sentryWalk";
 import { IS_EXPO_GO } from "../lib/expoEnv";
+import {
+  clearLockScreenError,
+  recordLockScreenError,
+} from "../lib/walkDiagnostics";
 
 /**
  * Lazy accessor for expo-audio. The static import is intentionally avoided at
@@ -52,6 +56,14 @@ let backgroundAudioConfigured = false;
  * when the screen is locked or the app is backgrounded. Safe to call multiple
  * times — only the first call actually flips the OS-level audio mode. No-op on
  * web (the browser tab keeps speechSynthesis alive on its own).
+ *
+ * interruptionMode is "doNotMix" (exclusive audio focus — other apps' audio
+ * pauses when narration plays) rather than "duckOthers", so iOS treats
+ * Streetlit as the primary Now Playing app and shows the lock-screen widget
+ * (see setActiveForLockScreen calls in processQueue/teardownActive below).
+ * This is session-wide, not per-narration, and is never reverted back to
+ * duckOthers once set — it stays in effect for the rest of the app process,
+ * including after Walk Mode stops.
  */
 export async function enableBackgroundAudio(): Promise<void> {
   if (Platform.OS === "web" || IS_EXPO_GO || backgroundAudioConfigured) return;
@@ -59,7 +71,7 @@ export async function enableBackgroundAudio(): Promise<void> {
     await getExpoAudio().setAudioModeAsync({
       playsInSilentMode: true,
       shouldPlayInBackground: true,
-      interruptionMode: "duckOthers",
+      interruptionMode: "doNotMix",
     });
     backgroundAudioConfigured = true;
   } catch {}
@@ -179,6 +191,22 @@ export function useNarration() {
     const player = currentPlayerRef.current;
     if (player) {
       try {
+        player.setActiveForLockScreen(false);
+      } catch (err) {
+        // Fire-and-forget: lock-screen cleanup must never block teardown.
+        // Recorded for field-test visibility only — see the doc comment on
+        // DiagLockScreenError for why this does not clear an earlier
+        // activation error.
+        if (__DEV__)
+          console.warn(
+            "[narration audio] setActiveForLockScreen(false) failed:",
+            err,
+          );
+        recordLockScreenError(
+          `deactivate failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+      try {
         player.pause();
       } catch {}
       try {
@@ -292,6 +320,15 @@ export function useNarration() {
             onFinish();
             return;
           }
+          // Reconcile isPaused with the real player state. Needed because
+          // play/pause/toggle can now be triggered outside our own
+          // pause()/resume() calls — from the lock-screen/Control Center
+          // remote commands, or from an AVAudioSession interruption
+          // (phone call, Siri) that expo-audio's native layer resolves
+          // directly against the player under doNotMix. Those paths don't
+          // go through our JS pause()/resume(), so this periodic status
+          // event (default 500ms interval) is what keeps isPaused in sync.
+          setIsPaused(!status.playing);
           // expo-audio doesn't expose a typed error field on AudioStatus, but
           // playbackState / reasonForWaitingToPlay are free-form strings the
           // platforms use to report failure ("error", "failed", "cannotPlay",
@@ -322,6 +359,30 @@ export function useNarration() {
       currentSubRef.current = sub;
 
       try {
+        // Register as the active iOS lock-screen / Control Center source
+        // immediately before play() so the widget reflects the real
+        // playback state from the first frame, matching the sequencing
+        // validated in the on-device diagnostic.
+        try {
+          player.setActiveForLockScreen(true, {
+            title: item.placeName,
+            artist: "Streetlit",
+          });
+          // Successful activation clears any earlier lock-screen error —
+          // the system is confirmed working again this walk.
+          clearLockScreenError();
+        } catch (err) {
+          // Fire-and-forget: lock-screen activation must never block
+          // playback. Recorded for field-test visibility only.
+          if (__DEV__)
+            console.warn(
+              "[narration audio] setActiveForLockScreen(true) failed:",
+              err,
+            );
+          recordLockScreenError(
+            `activate failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
         player.play();
         // Audio playback successfully started — count it toward the
         // dashboard's "narrations played" denominator. Emitted only after

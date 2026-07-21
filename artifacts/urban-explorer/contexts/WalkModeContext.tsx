@@ -66,7 +66,6 @@ import {
   recordSelectionSnapshot,
   resetWalkDiagnostics,
 } from "@/lib/walkDiagnostics";
-import { NowPlaying } from "@/modules/expo-now-playing/src";
 import {
   type BuildingGroupKey,
   groupKeysToIncludedTypes,
@@ -623,13 +622,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   const narration = useNarration();
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const headingWatchRef = useRef<Location.LocationSubscription | null>(null);
-  const nowPlayingUnsubRef = useRef<(() => void) | null>(null);
-  // narration is recreated on each render; stash the latest in a ref so the
-  // remote command listener (registered once at startWalk) drives the live one.
-  const narrationRef = useRef(narration);
-  useEffect(() => {
-    narrationRef.current = narration;
-  }, [narration]);
   const lastFetchRef = useRef<{ latitude: number; longitude: number } | null>(
     null,
   );
@@ -926,42 +918,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       narrationCount: narratedIds.size,
     });
   }, [isWalking, currentNarrationPlace, nearbyPlaces.length, narratedIds.size]);
-
-  // Mirror narration state into the iOS Now Playing widget so the lock screen
-  // shows "Streetlit — <place>" with working pause/play/skip controls.
-  // No-op on web/Android (the native module is iOS-only).
-  useEffect(() => {
-    if (!isWalking) return;
-    // Guard: stopWalk sets isWalkingRef.current = false synchronously before
-    // any async work and before NowPlaying.clear(). If this effect fires late
-    // (React batched the narration state change with the stop), we must not
-    // re-set the widget after the walk has been torn down.
-    if (!isWalkingRef.current) return;
-    if (narration.isSpeaking && narration.currentPlace) {
-      NowPlaying.setNowPlaying(
-        narration.currentPlace,
-        "Streetlit",
-        narration.isPaused,
-        currentNarrationPlaceRef.current?.photoUrl ?? null,
-      );
-    } else {
-      // Between stories the audio session is idle but the walk continues —
-      // keep the widget visible with a generic "listening" label so the user
-      // still sees Streetlit is the active audio app. No artwork URL
-      // here means the native side falls back to the app icon.
-      NowPlaying.setNowPlaying(
-        "Listening for nearby places",
-        "Streetlit",
-        true,
-        null,
-      );
-    }
-  }, [
-    isWalking,
-    narration.isSpeaking,
-    narration.isPaused,
-    narration.currentPlace,
-  ]);
 
   const cachedAddressHintRef = useRef<string>("");
 
@@ -2860,31 +2816,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           } catch {}
         }
 
-        // Bind lock-screen / Control Center commands to the narration queue.
-        if (nowPlayingUnsubRef.current) {
-          nowPlayingUnsubRef.current();
-          nowPlayingUnsubRef.current = null;
-        }
-        nowPlayingUnsubRef.current = NowPlaying.addRemoteCommandListener(
-          (cmd) => {
-            const n = narrationRef.current;
-            if (cmd === "play") n.resume();
-            else if (cmd === "pause") {
-              if (n.isPaused) n.resume();
-              else n.pause();
-            } else if (cmd === "next") n.skip();
-          },
-        );
-        // Seed the widget right away so the user sees Streetlit claim the
-        // Now Playing slot the moment Walk Mode starts, even before the first
-        // narration begins.
-        NowPlaying.setNowPlaying(
-          "Listening for nearby places",
-          "Streetlit",
-          true,
-          null,
-        );
-
         const accuracy =
           Platform.OS === "web"
             ? Location.Accuracy.High
@@ -3024,16 +2955,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const stopWalk = useCallback(() => {
-    // executeStopWalkSync enforces the exact stop-ordering that prevents
-    // NowPlaying lock-screen widget races (verified by walkModeStress tests):
-    //   isWalkingRef=false → nowPlayingUnsub → NowPlaying.clear → narration.stop
+    // executeStopWalkSync sets isWalkingRef.current = false before calling
+    // narration.stop() (which tears down the active player, including its
+    // lock-screen registration — see teardownActive in useNarration.ts) so
+    // no late-firing effect can observe isWalkingRef as still true.
     executeStopWalkSync({
       isWalkingRef,
-      nowPlayingUnsub: nowPlayingUnsubRef.current,
-      nowPlayingClear: NowPlaying.clear,
       narrationStop: narration.stop,
     });
-    nowPlayingUnsubRef.current = null;
     setIsWalking(false);
     addWalkBreadcrumb("walk stopped");
     // Reset narration anchor + diagnostics so the next walk starts fresh.
