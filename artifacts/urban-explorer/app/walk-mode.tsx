@@ -21,7 +21,6 @@ import Animated, { FadeIn, FadeInDown, FadeOut } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { WalkModeDebugOverlay } from "@/components/WalkModeDebugOverlay";
-import { NowPlayingDevProbe } from "@/components/NowPlayingDevProbe";
 import { WalkModeMap } from "@/components/WalkModeMap";
 import { useT } from "@/contexts/LocaleContext";
 import { useWalkMode, type WalkDensity } from "@/contexts/WalkModeContext";
@@ -576,12 +575,6 @@ export default function WalkModeScreen() {
       </Modal>
 
       {walk.walkDebugEnabled ? <WalkModeDebugOverlay /> : null}
-
-      {/* TEMPORARY — A1a Now Playing verification scaffolding.
-          Remove this block and NowPlayingDevProbe.tsx before any
-          preview-profile build. Isolated from Walk Mode/narration state;
-          calls the native module directly. */}
-      {__DEV__ ? <NowPlayingDevProbe /> : null}
 
       <View style={styles.mapContainer}>
         {walk.locationError === "permission-denied" ? (

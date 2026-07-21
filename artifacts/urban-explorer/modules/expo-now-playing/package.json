@@ -1,7 +1,0 @@
-{
-  "name": "expo-now-playing",
-  "version": "0.0.1",
-  "description": "Local Expo module that surfaces Walk Mode narration on the lock screen and notification shade. iOS uses MPNowPlayingInfoCenter / MPRemoteCommandCenter; Android uses MediaSessionCompat with a MediaStyle notification.",
-  "main": "src/index.ts",
-  "private": true
-}
