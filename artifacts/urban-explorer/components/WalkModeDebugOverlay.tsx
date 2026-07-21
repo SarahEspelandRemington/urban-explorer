@@ -103,6 +103,27 @@ export function WalkModeDebugOverlay() {
                     : ""}
                 </Text>
 
+                <Text style={styles.sectionTitle}>Gate</Text>
+                <Text style={styles.lineDim} numberOfLines={1}>
+                  {lastBlock
+                    ? `${lastBlock.reason}${lastBlock.detail ? ` (${lastBlock.detail})` : ""} · ${Math.round((Date.now() - lastBlock.ts) / 1000)}s ago`
+                    : "clear — last pick reached a fetch"}
+                </Text>
+
+                <Text style={styles.sectionTitle}>Next candidate</Text>
+                <Text style={styles.line} numberOfLines={2}>
+                  {lastSnapshot.selected
+                    ? `${lastSnapshot.selected.name} — ${lastSnapshot.selected.reason}`
+                    : "—"}
+                </Text>
+
+                <Text style={styles.sectionTitle}>Latest fetch</Text>
+                <Text style={styles.lineDim} numberOfLines={1}>
+                  {narrationFetches[0]
+                    ? `${narrationFetches[0].outcome} · ${narrationFetches[0].source} · ${narrationFetches[0].placeName.slice(0, 22)}`
+                    : "(none)"}
+                </Text>
+
                 {/* ── Discover / OSM-anchor stats ─────────────────────── */}
                 {lastDiscoverResult && (
                   <>
@@ -199,24 +220,10 @@ export function WalkModeDebugOverlay() {
                     </Text>
                   ))
                 )}
-
-                <Text style={styles.sectionTitle}>Next candidate</Text>
-                <Text style={styles.line} numberOfLines={2}>
-                  {lastSnapshot.selected
-                    ? `${lastSnapshot.selected.name} — ${lastSnapshot.selected.reason}`
-                    : "—"}
-                </Text>
               </>
             ) : (
               <Text style={styles.lineDim}>Waiting for first GPS tick…</Text>
             )}
-
-            <Text style={styles.sectionTitle}>Gate</Text>
-            <Text style={styles.lineDim} numberOfLines={1}>
-              {lastBlock
-                ? `${lastBlock.reason}${lastBlock.detail ? ` (${lastBlock.detail})` : ""} · ${Math.round((Date.now() - lastBlock.ts) / 1000)}s ago`
-                : "clear — last pick reached a fetch"}
-            </Text>
 
             <Text style={styles.sectionTitle}>
               Narration fetches ({narrationFetches.length})
