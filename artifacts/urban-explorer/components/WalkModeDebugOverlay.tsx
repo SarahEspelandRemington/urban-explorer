@@ -15,7 +15,14 @@
  */
 
 import React, { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 import { useWalkMode } from "@/contexts/WalkModeContext";
 import { useColors } from "@/hooks/useColors";
@@ -29,6 +36,11 @@ export function WalkModeDebugOverlay() {
   const walk = useWalkMode();
   const [, setTick] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
+  const { height: windowHeight } = useWindowDimensions();
+  // Overlay anchors at top:90; leave a 60pt margin above the bottom of the
+  // screen instead of a fixed cap, which left large unused space on most
+  // iPhones and forced excessive scrolling.
+  const panelMaxHeight = Math.max(240, windowHeight - 90 - 60);
 
   useEffect(() => {
     return subscribeWalkDiagnostics(() => setTick((t) => t + 1));
@@ -44,29 +56,32 @@ export function WalkModeDebugOverlay() {
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { top: 90 }]}>
-      <Pressable
-        onPress={() => setCollapsed((c) => !c)}
+      <View
         style={[
           styles.panel,
           {
             backgroundColor: "#000000cc",
             borderColor: colors.border,
+            maxHeight: panelMaxHeight,
           },
         ]}
-        accessibilityRole="button"
-        accessibilityLabel={
-          collapsed
-            ? "Expand Walk debug overlay"
-            : "Collapse Walk debug overlay"
-        }
       >
-        <View style={styles.headerRow}>
+        <Pressable
+          onPress={() => setCollapsed((c) => !c)}
+          style={styles.headerRow}
+          accessibilityRole="button"
+          accessibilityLabel={
+            collapsed
+              ? "Expand Walk debug overlay"
+              : "Collapse Walk debug overlay"
+          }
+        >
           <Text style={styles.headerTitle}>Walk debug</Text>
           <Text style={styles.headerHint}>{collapsed ? "▼" : "▲"}</Text>
-        </View>
+        </Pressable>
         {collapsed ? null : (
           <ScrollView
-            style={styles.scroll}
+            style={{ maxHeight: panelMaxHeight - 32 }}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
@@ -276,7 +291,7 @@ export function WalkModeDebugOverlay() {
             )}
           </ScrollView>
         )}
-      </Pressable>
+      </View>
     </View>
   );
 }
@@ -292,7 +307,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 8,
-    maxHeight: 360,
   },
   headerRow: {
     flexDirection: "row",
@@ -307,7 +321,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   headerHint: { color: "#fff", fontSize: 12 },
-  scroll: { maxHeight: 320 },
   scrollContent: { paddingBottom: 4 },
   sectionTitle: {
     color: "#aaa",
