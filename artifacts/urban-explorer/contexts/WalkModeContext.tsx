@@ -2087,8 +2087,6 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // signal) which left the overlay disagreeing with the actual selection.
       try {
         const visible = placesRef.current;
-        const headingIsReliableForDiag =
-          velocityHeadingRef.current !== null && velocityHeadingIsRecent;
         const candidates: Array<{
           id: string;
           name: string;
@@ -2098,37 +2096,34 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           osmId?: string;
           candidateSource?: "osm" | "llm";
         }> = [];
+        // Reuse `eligibleSet` (built above from the exact same
+        // evaluateEligibility + filterFailureBackoff pipeline that produced
+        // `best`) instead of re-deriving eligibility with a separate,
+        // hand-maintained filter. A prior version of this loop duplicated
+        // the eligibility logic and drifted from it — it never checked
+        // discoveryTier (Tier-4 / "lowQuality" places) or failure backoff,
+        // so the overlay could show a place as "eligible" that pickNext had
+        // already correctly excluded, producing a contradictory
+        // "Eligible N" + "Gate: noEligibleCandidate" overlay state. It also
+        // re-implemented the 90° hard-gate fallback-retry logic instead of
+        // reusing the real result — eligibleSet already reflects that
+        // fallback correctly. See walkEligibility.test.ts /
+        // walkFailureBackoff.test.ts for coverage of the underlying pipeline.
         for (const p of visible) {
-          if (narratedIdsRef.current.has(p.id)) continue;
-          if (p.autoNarrationBlocked) continue;
-          if (p.discoveryClass === "INTERPRETIVE_OVERLAY") continue;
-          // OSM-anchor POC: belt-and-suspenders — never surface a non-OSM
-          // candidate in the scoring pool even if it somehow reached placesRef.
-          if (p.candidateSource !== "osm") continue;
+          if (!eligibleSet.has(p.id)) continue;
           const d = haversineMeters(
             loc.latitude,
             loc.longitude,
             p.latitude,
             p.longitude,
           );
-          if (d > cfg.maxQueueDistance) continue;
           const net = p.netScore ?? 0;
-          if (net < cfg.netScoreFloor) continue;
           const pb =
             heading !== null
               ? bearingDeg(loc.latitude, loc.longitude, p.latitude, p.longitude)
               : null;
           const dd =
             heading !== null && pb !== null ? angularDiff(heading, pb) : null;
-          // Mirror pickNext's fresh-velocity hard 90° gate — otherwise the
-          // overlay can list a >90° candidate as #1 while pickNext silently
-          // excludes it. The fallback retry-without-gate path in pickNext
-          // only fires when EVERY first-pass candidate was 90°-gated, so it
-          // is intentionally not modelled here; the overlay should reflect
-          // the primary path.
-          if (headingIsReliableForDiag && dd !== null && dd > 90) {
-            continue;
-          }
           // Re-compute the same selection score pickNext uses so the
           // overlay's ranking matches what actually got picked.
           let s = d;
@@ -2165,7 +2160,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         const velocityFresh =
           velocityHeadingRef.current !== null &&
           velocityHeadingTimestampRef.current !== null &&
-          Date.now() - velocityHeadingTimestampRef.current < 8000;
+          Date.now() - velocityHeadingTimestampRef.current <
+            VELOCITY_HEADING_STALE_MS;
         recordSelectionSnapshot({
           ts: Date.now(),
           location: { latitude: loc.latitude, longitude: loc.longitude },
