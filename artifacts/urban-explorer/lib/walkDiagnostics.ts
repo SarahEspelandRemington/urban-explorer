@@ -141,6 +141,26 @@ export interface DiagLockScreenError {
   message: string;
 }
 
+/**
+ * Most recent /api/explore/discover failure this walk session (non-2xx
+ * response only — network failures and client-side aborts are not captured
+ * here; see the catch block in fetchNearbyPlaces, which remains diagnostic-
+ * silent for now). A single overwritten slot, not a growing log, mirroring
+ * DiagLockScreenError: this exists purely for field-test visibility into a
+ * failure that otherwise produces no signal anywhere (the pool/overlay
+ * coverage counts simply stay frozen at their last successful values — see
+ * the !res.ok branch in fetchNearbyPlaces).
+ *
+ * "kind" mirrors the busy/error distinction Explore's discoverMutation.isError
+ * check already makes on the same endpoint (429/503 = "busy" — temporarily
+ * unavailable, expected to recover — vs. any other non-2xx status = "error").
+ */
+export interface DiagDiscoverError {
+  ts: number;
+  status: number;
+  kind: "busy" | "error";
+}
+
 export interface DiagState {
   lastSnapshot: DiagSelectionSnapshot | null;
   rejections: DiagRejection[]; // capped, most recent first
@@ -148,6 +168,7 @@ export interface DiagState {
   narrationFetches: DiagNarrationFetch[]; // capped, most recent first
   lastBlock: DiagBlock | null;
   lastLockScreenError: DiagLockScreenError | null;
+  lastDiscoverError: DiagDiscoverError | null;
 }
 
 const REJECTION_CAP = 30;
@@ -160,6 +181,7 @@ const state: DiagState = {
   narrationFetches: [],
   lastBlock: null,
   lastLockScreenError: null,
+  lastDiscoverError: null,
 };
 
 const subscribers = new Set<() => void>();
@@ -199,6 +221,15 @@ export function recordDiscoverResult(result: DiagDiscoverResult): void {
   notify();
 }
 
+export function recordDiscoverError(status: number): void {
+  state.lastDiscoverError = {
+    ts: Date.now(),
+    status,
+    kind: status === 429 || status === 503 ? "busy" : "error",
+  };
+  notify();
+}
+
 export function recordNarrationFetch(fetch: DiagNarrationFetch): void {
   state.narrationFetches.unshift(fetch);
   if (state.narrationFetches.length > FETCH_CAP) {
@@ -234,5 +265,6 @@ export function resetWalkDiagnostics(): void {
   state.narrationFetches = [];
   state.lastBlock = null;
   state.lastLockScreenError = null;
+  state.lastDiscoverError = null;
   notify();
 }

@@ -60,6 +60,7 @@ import { filterFailureBackoff } from "@/lib/walkFailureBackoff";
 import { isLiveFetchStale } from "@/lib/walkFetchSessionGuard";
 import {
   recordBlock,
+  recordDiscoverError,
   recordDiscoverResult,
   recordNarrationFetch,
   recordRejection,
@@ -1133,10 +1134,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           signal: discoverAbort.signal,
         });
         clearTimeout(discoverTimeout);
-        if (!res.ok && __DEV__)
-          console.log(
-            `[discover] server error tile=${tile} status=${res.status}`,
-          );
+        if (!res.ok) {
+          if (__DEV__)
+            console.log(
+              `[discover] server error tile=${tile} status=${res.status}`,
+            );
+          recordDiscoverError(res.status);
+        }
         if (res.ok) {
           const data = await res.json();
           // Guard: if stopWalk was called while the fetch was in-flight, discard

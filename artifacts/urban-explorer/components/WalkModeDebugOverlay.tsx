@@ -53,6 +53,7 @@ export function WalkModeDebugOverlay() {
     narrationFetches,
     lastBlock,
     lastLockScreenError,
+    lastDiscoverError,
   } = getWalkDiagnostics();
 
   return (
@@ -248,6 +249,16 @@ export function WalkModeDebugOverlay() {
                   ⚠ {lastLockScreenError.message} ·{" "}
                   {Math.round((Date.now() - lastLockScreenError.ts) / 1000)}s
                   ago
+                </Text>
+              </>
+            )}
+
+            {lastDiscoverError && (
+              <>
+                <Text style={styles.sectionTitle}>Discover error</Text>
+                <Text style={styles.lineWarn} numberOfLines={1}>
+                  ⚠ {lastDiscoverError.kind} ({lastDiscoverError.status}) ·{" "}
+                  {Math.round((Date.now() - lastDiscoverError.ts) / 1000)}s ago
                 </Text>
               </>
             )}
