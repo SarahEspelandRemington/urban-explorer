@@ -1,47 +1,5 @@
 [
   {
-    "sha": "996c18a9194ad462d704ab5eb0edfa71c99bbe78",
-    "shortSha": "996c18a",
-    "ts": "2026-07-11T21:00:51Z",
-    "lint": 0,
-    "tc": 0,
-    "format": 0,
-    "install_s": 19,
-    "install_spike": false,
-    "lint_s": 6,
-    "lint_min_s": 2,
-    "lint_max_s": 7,
-    "tc_s": 12,
-    "tc_min_s": 11,
-    "tc_max_s": 16,
-    "format_s": 8,
-    "format_min_s": 5,
-    "format_max_s": 9,
-    "build_job_s": 0,
-    "build_job_min_s": 14,
-    "build_job_max_s": 19,
-    "build_s": 26,
-    "build_spike": false,
-    "topFiles": [
-      {
-        "file": "artifacts/api-server typecheck: src/routes/explore/index.ts",
-        "lint_warnings": 0,
-        "tc_warnings": 0,
-        "warnings": 0,
-        "errors": 6,
-        "messages": [
-          "Parameter 'f' implicitly has an 'any' type.",
-          "Property 'facts' does not exist on type '{ summary: string; placeName: string; category?: string | undefined; address?: string | undefined; fact?: string | undefined; crossStreets?: string | undefined; }'."
-        ],
-        "top_lint_rules": [],
-        "top_tc_rules": [
-          "TS2339",
-          "TS7006"
-        ]
-      }
-    ]
-  },
-  {
     "sha": "ac350db360c65abacb1566837844de53295b301c",
     "shortSha": "ac350db",
     "ts": "2026-07-12T22:14:05Z",
@@ -547,6 +505,31 @@
     "build_job_min_s": 15,
     "build_job_max_s": 20,
     "build_s": 44,
+    "build_spike": false,
+    "topFiles": []
+  },
+  {
+    "sha": "859b5b1575e3711835d7caf6f7b208014abc60ff",
+    "shortSha": "859b5b1",
+    "ts": "2026-07-24T21:54:41Z",
+    "lint": 0,
+    "tc": 0,
+    "format": 0,
+    "install_s": 25,
+    "install_spike": false,
+    "lint_s": 8,
+    "lint_min_s": 5,
+    "lint_max_s": 8,
+    "tc_s": 15,
+    "tc_min_s": 7,
+    "tc_max_s": 17,
+    "format_s": 8,
+    "format_min_s": 6,
+    "format_max_s": 9,
+    "build_job_s": 18,
+    "build_job_min_s": 15,
+    "build_job_max_s": 20,
+    "build_s": 49,
     "build_spike": false,
     "topFiles": []
   }
