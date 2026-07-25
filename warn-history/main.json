@@ -1,47 +1,5 @@
 [
   {
-    "sha": "ac350db360c65abacb1566837844de53295b301c",
-    "shortSha": "ac350db",
-    "ts": "2026-07-12T22:14:05Z",
-    "lint": 0,
-    "tc": 0,
-    "format": 0,
-    "install_s": 21,
-    "install_spike": false,
-    "lint_s": 7,
-    "lint_min_s": 2,
-    "lint_max_s": 7,
-    "tc_s": 7,
-    "tc_min_s": 7,
-    "tc_max_s": 16,
-    "format_s": 8,
-    "format_min_s": 5,
-    "format_max_s": 9,
-    "build_job_s": 0,
-    "build_job_min_s": 14,
-    "build_job_max_s": 19,
-    "build_s": 22,
-    "build_spike": false,
-    "topFiles": [
-      {
-        "file": "artifacts/api-server typecheck: src/routes/explore/index.ts",
-        "lint_warnings": 0,
-        "tc_warnings": 0,
-        "warnings": 0,
-        "errors": 6,
-        "messages": [
-          "Parameter 'f' implicitly has an 'any' type.",
-          "Property 'facts' does not exist on type '{ summary: string; placeName: string; category?: string | undefined; address?: string | undefined; fact?: string | undefined; crossStreets?: string | undefined; }'."
-        ],
-        "top_lint_rules": [],
-        "top_tc_rules": [
-          "TS2339",
-          "TS7006"
-        ]
-      }
-    ]
-  },
-  {
     "sha": "c920538c6640b9b9559e0f29733eda8ea09d7566",
     "shortSha": "c920538",
     "ts": "2026-07-12T22:32:30Z",
@@ -530,6 +488,31 @@
     "build_job_min_s": 15,
     "build_job_max_s": 20,
     "build_s": 49,
+    "build_spike": false,
+    "topFiles": []
+  },
+  {
+    "sha": "5a55558aab8320b1fdf276e2331640b24a93466d",
+    "shortSha": "5a55558",
+    "ts": "2026-07-25T22:36:05Z",
+    "lint": 0,
+    "tc": 0,
+    "format": 0,
+    "install_s": 24,
+    "install_spike": false,
+    "lint_s": 8,
+    "lint_min_s": 5,
+    "lint_max_s": 8,
+    "tc_s": 15,
+    "tc_min_s": 10,
+    "tc_max_s": 17,
+    "format_s": 8,
+    "format_min_s": 6,
+    "format_max_s": 9,
+    "build_job_s": 20,
+    "build_job_min_s": 15,
+    "build_job_max_s": 20,
+    "build_s": 51,
     "build_spike": false,
     "topFiles": []
   }
