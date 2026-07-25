@@ -2512,6 +2512,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             {
               reqId: req.id,
               branch: "osm-anchor",
+              candidateCount: candidates.length,
               maxCompletionTokens: copyMaxCompletionTokens,
               responseLength: copyResponseLength,
               finishReason: copyFinishReason,
@@ -2550,6 +2551,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               {
                 reqId: req.id,
                 branch: "osm-anchor",
+                candidateCount: candidates.length,
                 abortCause: copyAbortCause,
                 timeoutMs: 45_000,
                 radius: searchRadius,
@@ -2581,6 +2583,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             {
               reqId: req.id,
               branch: "osm-anchor",
+              candidateCount: candidates.length,
               radius: searchRadius,
               preCopyElapsedMs,
               totalElapsedMs: Date.now() - requestStartTime,
