@@ -225,6 +225,20 @@ const inFlightAudio = new Map<string, Promise<Buffer>>();
 const inFlightDetail = new Map<string, Promise<any>>();
 const inFlightSuggestion = new Map<string, Promise<string[]>>();
 const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
+// osm-anchor /explore/discover coalescing: same pattern as the maps above,
+// but the shared value also carries a waiterCount so the owner's own
+// res.on("close") abort handler can tell whether it's still the sole
+// listener before aborting the shared OpenAI call (see the osm-anchor
+// branch below). A second caller's disconnect never affects this counter's
+// abort decision — only the owner's own close event checks it.
+type AnchorDiscoverOutcome =
+  | { terminal: true; response: any }
+  | { terminal: false; entry: any };
+class DiscoverAbortError extends Error {}
+const inFlightDiscover = new Map<
+  string,
+  { promise: Promise<AnchorDiscoverOutcome>; waiterCount: { count: number } }
+>();
 
 // Cache key versioning convention:
 // Every LLM-backed cache key includes a version segment (e.g. ":v1:").
@@ -1968,7 +1982,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v68:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v69:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -1987,25 +2001,30 @@ router.post("/explore/discover", async (req, res) => {
   const cachedDiscover = getLLMCache<{ places?: any[]; [key: string]: any }>(
     discoverCacheKey,
   );
-  if (cachedDiscover) {
-    // Re-apply current ratings on every cache hit so newly-submitted ratings
+  // Shared by real llmCache hits and by requests that coalesce onto an
+  // in-flight osm-anchor discover call (see inFlightDiscover below) — both
+  // are "an already-computed candidate+copy set; re-derive the per-request
+  // pieces (ratings, walkMode-conditional filtering, area label) and
+  // respond." Never mutates `entry`; always clones places before editing.
+  const respondFromDiscoverEntry = async (
+    entry: Record<string, any>,
+  ): Promise<void> => {
+    // Re-apply current ratings on every hit so newly-submitted ratings
     // immediately affect the sort order and communityRating display without
-    // waiting for cache expiry. Clone places so we never mutate the cached object.
-    if (
-      Array.isArray(cachedDiscover.places) &&
-      cachedDiscover.places.length > 0
-    ) {
-      let allCachedPlaces = cachedDiscover.places.map((p: any) => ({ ...p }));
-      // Re-apply production filters on every cache hit so that a deny-list
-      // expansion after a cache entry was written cannot let banned categories
+    // waiting for cache expiry. Clone places so we never mutate the shared object.
+    if (Array.isArray(entry.places) && entry.places.length > 0) {
+      let allCachedPlaces = entry.places.map((p: any) => ({ ...p }));
+      // Re-apply production filters on every hit so that a deny-list
+      // expansion after this entry was produced cannot let banned categories
       // through. Classification is cheap (O(n), no external calls).
       classifyDiscovery(allCachedPlaces);
-      // Apply discovery tier on every cache hit so pre-change cached entries
-      // receive tier classification on the way out (no cache bump needed).
+      // Apply discovery tier on every hit so pre-change entries receive tier
+      // classification on the way out (no cache bump needed).
       applyDiscoveryTier(allCachedPlaces);
-      // historicalForce is derived on every read (fresh + cached), same
-      // pattern as discoveryTier above — table edits take effect without a
-      // cache-version bump. Tag-attachment only; not consumed anywhere yet.
+      // historicalForce is derived on every read (fresh + cached/coalesced),
+      // same pattern as discoveryTier above — table edits take effect
+      // without a cache-version bump. Tag-attachment only; not consumed
+      // anywhere yet.
       for (const p of allCachedPlaces) {
         const hf = deriveHistoricalForce(p.osmTags ?? {});
         if (hf) p.historicalForce = hf;
@@ -2016,7 +2035,7 @@ router.post("/explore/discover", async (req, res) => {
       const preQualityFilterCount = allCachedPlaces.length;
       // Generic commercial businesses (chains) are excluded from both Explore
       // and Walk Mode candidate pools/pins — confirmed product decision. The
-      // cache holds the full classified set — this runs on the cloned array only.
+      // entry holds the full classified set — this runs on the cloned array only.
       // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
       allCachedPlaces = filterGenericCommercial(allCachedPlaces);
       // Tier-4 (metadata-only) suppression remains Explore-only. Walk Mode
@@ -2033,36 +2052,35 @@ router.post("/explore/discover", async (req, res) => {
       const ratingsMap = await fetchRatingsMap(refreshedPlaces);
       applyRatingSortWithMap(refreshedPlaces, ratingsMap);
       // Override location with Nominatim reverse-geocode of the actual search
-      // centre — never use the LLM-generated value from the cache.
+      // centre — never use the LLM-generated value from the entry.
       const nbhdLabel = await nbhdLabelPromise;
       const cachedEmptyReason = walkMode
         ? undefined
         : computeEmptyReason(preQualityFilterCount, refreshedPlaces.length);
       res.json({
-        ...cachedDiscover,
+        ...entry,
         places: refreshedPlaces,
         location: nbhdLabel.label,
         locationSrc: nbhdLabel.src,
-        // Cached path always derives area context from Nominatim (the cache
-        // was written on a fresh path, which already enforced Nominatim-wins).
+        // Cached/coalesced path always derives area context from Nominatim
+        // (the entry was produced on a fresh path, which already enforced
+        // Nominatim-wins).
         effectiveAddressHintSrc:
           nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
         ...(cachedEmptyReason ? { emptyReason: cachedEmptyReason } : {}),
       });
 
-      // Background: if any cached places are missing photos (e.g. the original
-      // request hit the wall-clock timeout before Wikipedia responded), try again
-      // now and update the cache so the next hit gets artwork.
-      const missingPhotos = cachedDiscover.places.filter(
-        (p: any) => !p.photoUrl,
-      );
+      // Background: if any places are missing photos (e.g. the original
+      // request hit the wall-clock timeout before Wikipedia responded), try
+      // again now and update the cache so the next hit gets artwork.
+      const missingPhotos = entry.places.filter((p: any) => !p.photoUrl);
       if (missingPhotos.length > 0) {
         (async () => {
           try {
             await fetchPhotosForPlaces(missingPhotos);
             // Only update cache if we actually found any new photos.
             if (missingPhotos.some((p: any) => p.photoUrl)) {
-              setLLMCache(discoverCacheKey, cachedDiscover);
+              setLLMCache(discoverCacheKey, entry);
             }
           } catch {
             // Best-effort — never break the cached response.
@@ -2072,13 +2090,17 @@ router.post("/explore/discover", async (req, res) => {
     } else {
       const nbhdLabel = await nbhdLabelPromise;
       res.json({
-        ...cachedDiscover,
+        ...entry,
         location: nbhdLabel.label,
         locationSrc: nbhdLabel.src,
         effectiveAddressHintSrc:
           nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
       });
     }
+  };
+
+  if (cachedDiscover) {
+    await respondFromDiscoverEntry(cachedDiscover);
     return;
   }
 
@@ -2094,275 +2116,356 @@ router.post("/explore/discover", async (req, res) => {
   // permanently false on this path; its downstream guards are dead code.
   const overpassFallbackMode = false;
   if (osmAnchor) {
-    const nbhdLabel = await nbhdLabelPromise;
-
-    // 1. Fetch OSM candidates — generous timeout, no brainstorm race needed.
-    // null = Overpass errored or timed out (transient); [] = genuinely sparse.
-    // The outer 8 s race guards against fetchNearbyOSMPlaces stalling after
-    // its own internal abort fires (e.g. slow TLS teardown).
-    let overpassErrored = false;
-    const osmRaceResult = await Promise.race([
-      fetchNearbyOSMPlaces(
-        latitude,
-        longitude,
-        Math.min(searchRadius, 500),
-        false,
-        80,
-      ).catch((): null => null),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 12000)),
-    ]);
-    if (osmRaceResult === null) {
-      overpassErrored = true;
-    }
-    let osmCandidates: OSMPlace[] = osmRaceResult ?? [];
-
-    // Apply boring-building denylist
-    if (effectiveDenylist.size > 0) {
-      osmCandidates = osmCandidates.filter((p) => {
-        const building = (p.tags["building"] ?? "").toLowerCase();
-        return !building || !effectiveDenylist.has(building);
-      });
-    }
-    // Suppress plain residential buildings with no story-bearing OSM tags.
-    // Applied after the denylist so the two filters compose cleanly.
-    osmCandidates = osmCandidates.filter(
-      (p) => !isBoringResidentialBuilding(p.tags),
-    );
-
-    // 2. Density counts at three radius tiers (before any radius filter)
-    const countWithin = (r: number) =>
-      osmCandidates.filter(
-        (p) => haversineDistance(latitude, longitude, p.lat, p.lon) <= r,
-      ).length;
-    const osmCandidateCount = {
-      r150: countWithin(150),
-      r300: countWithin(300),
-      r500: countWithin(500),
-    };
-    const searchBucket: "r150" | "r300" | "r500" =
-      searchRadius <= 150 ? "r150" : searchRadius <= 300 ? "r300" : "r500";
-
-    // 3. Zero density → return empty. osmAnchor: true means "grounded or nothing":
-    // both a genuine sparse area and an Overpass outage produce an empty response.
-    // No LLM fallback in either sub-case.
-    if (osmCandidateCount[searchBucket] === 0) {
-      if (overpassErrored) {
-        // Overpass is unavailable (IP-blocked, network error, timeout).
-        // Return an empty result — do not fall through to the LLM path.
-        // overpassFallback: true lets the client and logs distinguish this
-        // from a genuine sparse area (noVerifiedPlacesNearby: true).
-        // Short TTL so the client retries promptly once Overpass recovers.
-        req.log.warn(
-          { tile: `${snapGrid(latitude)},${snapGrid(longitude)}` },
-          "[osmAnchor] Overpass unavailable — returning empty (grounded-only policy)",
+    // Coalescing: if another request for this exact grid cell/radius/mode is
+    // already running the pipeline below (Overpass fetch through copy-gen
+    // LLM call through post-processing), await its result instead of
+    // starting a second real Overpass fetch and a second paid OpenAI call.
+    // See inFlightDiscover above.
+    const existingDiscoverFlight = inFlightDiscover.get(discoverCacheKey);
+    if (existingDiscoverFlight) {
+      existingDiscoverFlight.waiterCount.count++;
+      req.log.info(
+        {
+          reqId: req.id,
+          discoverCacheKey,
+          waiterCount: existingDiscoverFlight.waiterCount.count,
+        },
+        "[osm-anchor] coalesced onto in-flight discover call",
+      );
+      let outcome: AnchorDiscoverOutcome;
+      try {
+        outcome = await existingDiscoverFlight.promise;
+      } catch (err) {
+        if (err instanceof DiscoverAbortError) {
+          // The owner already logged the abort and sent its own 503; this
+          // waiter only needs to send its own, guarded against its own
+          // response having already closed while it was waiting.
+          if (
+            !res.headersSent &&
+            !res.writableEnded &&
+            !res.destroyed &&
+            res.socket?.writable
+          ) {
+            res.status(503).json({
+              error:
+                "Discovery service temporarily unavailable. Please try again.",
+            });
+          } else {
+            req.log.debug(
+              { reqId: req.id, discoverCacheKey },
+              "[osm-anchor] waiter response no longer writable — skipping 503",
+            );
+          }
+          return;
+        }
+        throw err;
+      }
+      // Confirm this waiter's own response is still open before writing to
+      // it. Express does not reliably no-op a write to a closed response, so
+      // this is checked explicitly rather than relied on implicitly.
+      if (res.headersSent || res.writableEnded || res.destroyed) {
+        req.log.debug(
+          { reqId: req.id, discoverCacheKey },
+          "[osm-anchor] waiter response no longer writable — skipping result delivery",
         );
-        const unavailableResp = {
-          places: [],
-          location: nbhdLabel.label,
-          locationSrc: nbhdLabel.src,
-          effectiveAddressHintSrc:
-            nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
-          osmCandidateCount,
-          overpassFallback: true,
-        };
-        const SHORT_TTL_MS = 30 * 1000;
-        llmCache.set(discoverCacheKey, {
-          data: unavailableResp,
-          timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
-        });
-        res.json(unavailableResp);
         return;
       }
-      // Genuine sparse area: cache with a short 30 s TTL so the next walk
-      // session can retry promptly without hammering Overpass on every tick.
-      const emptyResp = {
-        places: [],
-        location: nbhdLabel.label,
-        locationSrc: nbhdLabel.src,
-        effectiveAddressHintSrc:
-          nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
-        osmCandidateCount,
-        noVerifiedPlacesNearby: true,
-        ...(!walkMode ? { emptyReason: "no_candidates" as const } : {}),
-      };
-      const SHORT_TTL_MS = 30 * 1000;
-      llmCache.set(discoverCacheKey, {
-        data: emptyResp,
-        timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
-      });
-      res.json(emptyResp);
+      if (outcome.terminal) {
+        res.json(outcome.response);
+      } else {
+        await respondFromDiscoverEntry(outcome.entry);
+      }
+      req.log.info(
+        { reqId: req.id, discoverCacheKey },
+        "[osm-anchor] waiter served from shared discover result",
+      );
       return;
     }
 
-    // 4. Limit to candidates within the search radius (10% headroom)
-    const candidates = osmCandidates.filter(
-      (p) =>
-        haversineDistance(latitude, longitude, p.lat, p.lon) <=
-        searchRadius * 1.1,
-    );
+    const waiterCountRef = { count: 1 };
+    const computeAnchorDiscoverResult =
+      async (): Promise<AnchorDiscoverOutcome> => {
+        const nbhdLabel = await nbhdLabelPromise;
 
-    // Helpers for address and copy formatting
-    const buildOsmAddr = (tags: Record<string, string>): string => {
-      const num = tags["addr:housenumber"] ?? "";
-      const street = tags["addr:street"] ?? "";
-      if (num && street) return `${num} ${street}`.trim();
-      if (street) return street;
-      return "";
-    };
-
-    const HINT_TAGS = [
-      "historic",
-      "description",
-      "heritage:description",
-      "start_date",
-      "wikidata",
-      "wikipedia",
-      "operator",
-      "denomination",
-      "alt_name",
-      "architect",
-      "building:material",
-      "building:levels",
-    ] as const;
-
-    const formatForCopy = (
-      p: OSMPlace,
-      wikiSummary?: WikipediaSummary | null,
-    ): Record<string, unknown> => {
-      const obj: Record<string, unknown> = {
-        id: p.osmId,
-        name: p.name,
-        type: p.type,
-        trustLevel: computeOsmTrustLevel(p.tags),
-      };
-      const addr = buildOsmAddr(p.tags);
-      if (addr) obj.address = addr;
-      for (const key of HINT_TAGS) {
-        const val = p.tags[key];
-        if (val) obj[key] = sanitizeOSMText(val, 120);
-      }
-      // Inject the first 1,000 chars of the Wikipedia extract when available.
-      // The copy LLM uses this as factual grounding (rule 11 in the system
-      // prompt). 1,000 chars is enough to capture full named sections (e.g.
-      // "History and architecture") that carry story-bearing content such as
-      // family history, notable events, or contextual narrative — content the
-      // REST /page/summary/ lead-paragraph never included.
-      if (wikiSummary?.extract) {
-        obj.wikipediaContent = wikiSummary.extract.slice(0, 1_000);
-      }
-      return obj;
-    };
-
-    // 5. Call LLM for copy-only (summary, facts, tags, yearBuilt, confidence)
-    type CopyResult = {
-      id: string;
-      summary: string;
-      facts: string[];
-      tags?: string[];
-      yearBuilt?: string;
-      confidence?: string;
-    };
-    let copyResults: CopyResult[] = [];
-    const copyAbort = new AbortController();
-    // max_completion_tokens is 3000 here (vs ~1200-1800 on the non-anchor
-    // discover path's 35 s timeout) to cover copy for up to ~26-30 candidates
-    // in one call, so worst-case generation can plausibly run 35-40 s. 45 s
-    // leaves real headroom above that, and stays inside the client's 70 s
-    // discoverTimeout (WalkModeContext.tsx) — see that comment for the full
-    // worst-case accounting (nbhd-label + Overpass + this timer).
-    // copyAbort.signal can fire from either cause below — track which one
-    // actually happened so the diagnostic log doesn't misattribute a client
-    // disconnect as a server-side timeout.
-    let copyAbortCause: "timer" | "client-close" | undefined;
-    const abortCopy = (cause: "timer" | "client-close") => {
-      if (!copyAbort.signal.aborted) {
-        copyAbortCause = cause;
-        copyAbort.abort();
-      }
-    };
-    const copyTimer = setTimeout(() => abortCopy("timer"), 45_000);
-    res.on("close", () => abortCopy("client-close"));
-    // Elapsed time before the copy-generation LLM call starts — covers the
-    // nbhd-label wait, the Overpass race (up to 12 s), and candidate
-    // filtering. Logged alongside the timer outcome below to distinguish
-    // pre-LLM latency from the LLM call itself.
-    const preCopyElapsedMs = Date.now() - requestStartTime;
-
-    // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
-    // wikipedia= tag. Fetches run in parallel (Promise.all) and are backed by
-    // the shared in-memory cache (wiki-v2, keyed by lang/title) also used by the
-    // detail-page Phase B path — a subsequent detail-page tap for the same
-    // place is a free cache hit with no second Wikipedia API call.
-    // Total added latency: ~200–400 ms for the slowest single fetch, which is
-    // negligible before the 3–30 s copy LLM call that follows. If any fetch
-    // times out or fails, the candidate silently falls through to the
-    // thin-copy path unchanged.
-    const wikiMap = new Map<string, WikipediaSummary>();
-    {
-      type WikiJob = { osmId: string; lang: string; title: string };
-      const jobs: WikiJob[] = candidates
-        .map((c): WikiJob | null => {
-          const tag = c.tags["wikipedia"];
-          if (!tag) return null;
-          const parsed = parseWikipediaOsmTag(tag);
-          if (!parsed) return null;
-          return { osmId: c.osmId, lang: parsed.lang, title: parsed.title };
-        })
-        .filter((x): x is WikiJob => x !== null);
-
-      if (jobs.length > 0) {
-        req.log.debug(
-          { count: jobs.length },
-          "[osm-anchor] pre-fetching Wikipedia summaries",
-        );
-        const settled = await Promise.all(
-          jobs.map(({ osmId, lang, title }) =>
-            fetchWikipediaSummary(lang, title, copyAbort.signal).then((s) => ({
-              osmId,
-              summary: s,
-            })),
+        // 1. Fetch OSM candidates — generous timeout, no brainstorm race needed.
+        // null = Overpass errored or timed out (transient); [] = genuinely sparse.
+        // The outer 8 s race guards against fetchNearbyOSMPlaces stalling after
+        // its own internal abort fires (e.g. slow TLS teardown).
+        let overpassErrored = false;
+        const osmRaceResult = await Promise.race([
+          fetchNearbyOSMPlaces(
+            latitude,
+            longitude,
+            Math.min(searchRadius, 500),
+            false,
+            80,
+          ).catch((): null => null),
+          new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), 12000),
           ),
-        );
-        for (const { osmId, summary } of settled) {
-          if (summary) wikiMap.set(osmId, summary);
+        ]);
+        if (osmRaceResult === null) {
+          overpassErrored = true;
         }
-        if (wikiMap.size > 0) {
-          req.log.info(
-            { enriched: wikiMap.size, total: jobs.length },
-            "[osm-anchor] Wikipedia enrichment ready",
-          );
-        }
-      }
-    }
+        let osmCandidates: OSMPlace[] = osmRaceResult ?? [];
 
-    const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
-    // @prompt-region discover
-    const copyMaxCompletionTokens = 3000;
-    // @end-prompt-region discover
-    // Diagnostic-only fields populated as soon as the raw response is
-    // available (before JSON.parse), so they're still captured in the catch
-    // block below even when parsing itself throws (e.g. the "Unterminated
-    // string" failures we're currently investigating). Does not affect
-    // timeout, prompt, retry, or fallback behavior.
-    let copyResponseLength: number | undefined;
-    let copyFinishReason: string | undefined;
-    let copyCompletionTokens: number | undefined;
-    // Diagnostic-only: exact wall-clock time the copy-gen LLM call itself was
-    // issued, so the catch block below can log how long *this specific call*
-    // ran before rejecting/aborting — distinct from preCopyElapsedMs (time
-    // spent before the call started) and totalElapsedMs (whole request).
-    // Does not affect timeout, retry, prompt, or fallback behavior.
-    const copyCallStartTime = Date.now();
-    try {
-      // @prompt-region discover
-      const copyResponse = await openai.chat.completions.create(
+        // Apply boring-building denylist
+        if (effectiveDenylist.size > 0) {
+          osmCandidates = osmCandidates.filter((p) => {
+            const building = (p.tags["building"] ?? "").toLowerCase();
+            return !building || !effectiveDenylist.has(building);
+          });
+        }
+        // Suppress plain residential buildings with no story-bearing OSM tags.
+        // Applied after the denylist so the two filters compose cleanly.
+        osmCandidates = osmCandidates.filter(
+          (p) => !isBoringResidentialBuilding(p.tags),
+        );
+
+        // 2. Density counts at three radius tiers (before any radius filter)
+        const countWithin = (r: number) =>
+          osmCandidates.filter(
+            (p) => haversineDistance(latitude, longitude, p.lat, p.lon) <= r,
+          ).length;
+        const osmCandidateCount = {
+          r150: countWithin(150),
+          r300: countWithin(300),
+          r500: countWithin(500),
+        };
+        const searchBucket: "r150" | "r300" | "r500" =
+          searchRadius <= 150 ? "r150" : searchRadius <= 300 ? "r300" : "r500";
+
+        // 3. Zero density → return empty. osmAnchor: true means "grounded or nothing":
+        // both a genuine sparse area and an Overpass outage produce an empty response.
+        // No LLM fallback in either sub-case.
+        if (osmCandidateCount[searchBucket] === 0) {
+          if (overpassErrored) {
+            // Overpass is unavailable (IP-blocked, network error, timeout).
+            // Return an empty result — do not fall through to the LLM path.
+            // overpassFallback: true lets the client and logs distinguish this
+            // from a genuine sparse area (noVerifiedPlacesNearby: true).
+            // Short TTL so the client retries promptly once Overpass recovers.
+            req.log.warn(
+              { tile: `${snapGrid(latitude)},${snapGrid(longitude)}` },
+              "[osmAnchor] Overpass unavailable — returning empty (grounded-only policy)",
+            );
+            const unavailableResp = {
+              places: [],
+              location: nbhdLabel.label,
+              locationSrc: nbhdLabel.src,
+              effectiveAddressHintSrc:
+                nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
+              osmCandidateCount,
+              overpassFallback: true,
+            };
+            const SHORT_TTL_MS = 30 * 1000;
+            llmCache.set(discoverCacheKey, {
+              data: unavailableResp,
+              timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
+            });
+            return { terminal: true, response: unavailableResp };
+          }
+          // Genuine sparse area: cache with a short 30 s TTL so the next walk
+          // session can retry promptly without hammering Overpass on every tick.
+          const emptyResp = {
+            places: [],
+            location: nbhdLabel.label,
+            locationSrc: nbhdLabel.src,
+            effectiveAddressHintSrc:
+              nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
+            osmCandidateCount,
+            noVerifiedPlacesNearby: true,
+            ...(!walkMode ? { emptyReason: "no_candidates" as const } : {}),
+          };
+          const SHORT_TTL_MS = 30 * 1000;
+          llmCache.set(discoverCacheKey, {
+            data: emptyResp,
+            timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
+          });
+          return { terminal: true, response: emptyResp };
+        }
+
+        // 4. Limit to candidates within the search radius (10% headroom)
+        const candidates = osmCandidates.filter(
+          (p) =>
+            haversineDistance(latitude, longitude, p.lat, p.lon) <=
+            searchRadius * 1.1,
+        );
+
+        // Helpers for address and copy formatting
+        const buildOsmAddr = (tags: Record<string, string>): string => {
+          const num = tags["addr:housenumber"] ?? "";
+          const street = tags["addr:street"] ?? "";
+          if (num && street) return `${num} ${street}`.trim();
+          if (street) return street;
+          return "";
+        };
+
+        const HINT_TAGS = [
+          "historic",
+          "description",
+          "heritage:description",
+          "start_date",
+          "wikidata",
+          "wikipedia",
+          "operator",
+          "denomination",
+          "alt_name",
+          "architect",
+          "building:material",
+          "building:levels",
+        ] as const;
+
+        const formatForCopy = (
+          p: OSMPlace,
+          wikiSummary?: WikipediaSummary | null,
+        ): Record<string, unknown> => {
+          const obj: Record<string, unknown> = {
+            id: p.osmId,
+            name: p.name,
+            type: p.type,
+            trustLevel: computeOsmTrustLevel(p.tags),
+          };
+          const addr = buildOsmAddr(p.tags);
+          if (addr) obj.address = addr;
+          for (const key of HINT_TAGS) {
+            const val = p.tags[key];
+            if (val) obj[key] = sanitizeOSMText(val, 120);
+          }
+          // Inject the first 1,000 chars of the Wikipedia extract when available.
+          // The copy LLM uses this as factual grounding (rule 11 in the system
+          // prompt). 1,000 chars is enough to capture full named sections (e.g.
+          // "History and architecture") that carry story-bearing content such as
+          // family history, notable events, or contextual narrative — content the
+          // REST /page/summary/ lead-paragraph never included.
+          if (wikiSummary?.extract) {
+            obj.wikipediaContent = wikiSummary.extract.slice(0, 1_000);
+          }
+          return obj;
+        };
+
+        // 5. Call LLM for copy-only (summary, facts, tags, yearBuilt, confidence)
+        type CopyResult = {
+          id: string;
+          summary: string;
+          facts: string[];
+          tags?: string[];
+          yearBuilt?: string;
+          confidence?: string;
+        };
+        let copyResults: CopyResult[] = [];
+        const copyAbort = new AbortController();
+        // max_completion_tokens is 3000 here (vs ~1200-1800 on the non-anchor
+        // discover path's 35 s timeout) to cover copy for up to ~26-30 candidates
+        // in one call, so worst-case generation can plausibly run 35-40 s. 45 s
+        // leaves real headroom above that, and stays inside the client's 70 s
+        // discoverTimeout (WalkModeContext.tsx) — see that comment for the full
+        // worst-case accounting (nbhd-label + Overpass + this timer).
+        // copyAbort.signal can fire from either cause below — track which one
+        // actually happened so the diagnostic log doesn't misattribute a client
+        // disconnect as a server-side timeout.
+        let copyAbortCause: "timer" | "client-close" | undefined;
+        const abortCopy = (cause: "timer" | "client-close") => {
+          if (!copyAbort.signal.aborted) {
+            copyAbortCause = cause;
+            copyAbort.abort();
+          }
+        };
+        const copyTimer = setTimeout(() => abortCopy("timer"), 45_000);
+        // Only the owner's own disconnect can trigger an early abort, and only
+        // while it's still the sole caller — once a second request has coalesced
+        // onto this call, that caller's connection must not be able to kill work
+        // another connected caller still needs. This trades away the early-abort
+        // cost saving for a *shared* call in the rare case every attached caller
+        // eventually disconnects (the call then simply runs to the 45 s timer
+        // instead). A solo call's own disconnect still aborts immediately,
+        // unchanged from today.
+        res.on("close", () => {
+          if (waiterCountRef.count <= 1) abortCopy("client-close");
+        });
+        // Elapsed time before the copy-generation LLM call starts — covers the
+        // nbhd-label wait, the Overpass race (up to 12 s), and candidate
+        // filtering. Logged alongside the timer outcome below to distinguish
+        // pre-LLM latency from the LLM call itself.
+        const preCopyElapsedMs = Date.now() - requestStartTime;
+
+        // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
+        // wikipedia= tag. Fetches run in parallel (Promise.all) and are backed by
+        // the shared in-memory cache (wiki-v2, keyed by lang/title) also used by the
+        // detail-page Phase B path — a subsequent detail-page tap for the same
+        // place is a free cache hit with no second Wikipedia API call.
+        // Total added latency: ~200–400 ms for the slowest single fetch, which is
+        // negligible before the 3–30 s copy LLM call that follows. If any fetch
+        // times out or fails, the candidate silently falls through to the
+        // thin-copy path unchanged.
+        const wikiMap = new Map<string, WikipediaSummary>();
         {
-          model: "gpt-4.1-mini",
-          max_completion_tokens: copyMaxCompletionTokens,
-          messages: [
+          type WikiJob = { osmId: string; lang: string; title: string };
+          const jobs: WikiJob[] = candidates
+            .map((c): WikiJob | null => {
+              const tag = c.tags["wikipedia"];
+              if (!tag) return null;
+              const parsed = parseWikipediaOsmTag(tag);
+              if (!parsed) return null;
+              return { osmId: c.osmId, lang: parsed.lang, title: parsed.title };
+            })
+            .filter((x): x is WikiJob => x !== null);
+
+          if (jobs.length > 0) {
+            req.log.debug(
+              { count: jobs.length },
+              "[osm-anchor] pre-fetching Wikipedia summaries",
+            );
+            const settled = await Promise.all(
+              jobs.map(({ osmId, lang, title }) =>
+                fetchWikipediaSummary(lang, title, copyAbort.signal).then(
+                  (s) => ({
+                    osmId,
+                    summary: s,
+                  }),
+                ),
+              ),
+            );
+            for (const { osmId, summary } of settled) {
+              if (summary) wikiMap.set(osmId, summary);
+            }
+            if (wikiMap.size > 0) {
+              req.log.info(
+                { enriched: wikiMap.size, total: jobs.length },
+                "[osm-anchor] Wikipedia enrichment ready",
+              );
+            }
+          }
+        }
+
+        const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
+        // @prompt-region discover
+        const copyMaxCompletionTokens = 3000;
+        // @end-prompt-region discover
+        // Diagnostic-only fields populated as soon as the raw response is
+        // available (before JSON.parse), so they're still captured in the catch
+        // block below even when parsing itself throws (e.g. the "Unterminated
+        // string" failures we're currently investigating). Does not affect
+        // timeout, prompt, retry, or fallback behavior.
+        let copyResponseLength: number | undefined;
+        let copyFinishReason: string | undefined;
+        let copyCompletionTokens: number | undefined;
+        // Diagnostic-only: exact wall-clock time the copy-gen LLM call itself was
+        // issued, so the catch block below can log how long *this specific call*
+        // ran before rejecting/aborting — distinct from preCopyElapsedMs (time
+        // spent before the call started) and totalElapsedMs (whole request).
+        // Does not affect timeout, retry, prompt, or fallback behavior.
+        const copyCallStartTime = Date.now();
+        try {
+          // @prompt-region discover
+          const copyResponse = await openai.chat.completions.create(
             {
-              role: "system",
-              content: `You are a hyper-local urban historian writing brief copy for real places sourced from OpenStreetMap.
+              model: "gpt-4.1-mini",
+              max_completion_tokens: copyMaxCompletionTokens,
+              messages: [
+                {
+                  role: "system",
+                  content: `You are a hyper-local urban historian writing brief copy for real places sourced from OpenStreetMap.
 
 MANDATORY RULES:
 1. Return exactly the same number of results as candidates provided.
@@ -2383,197 +2486,233 @@ Flag any claim not directly supported by the candidate's tags with "Reportedly" 
 11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content. Standalone attribution facts — "designed by architect X", "built in year Y", "listed on the National Register", "in a Beaux Arts style" — are NOT sufficient on their own for a discovery-worthy summary. Only use them to anchor a broader story: explain why the architect matters, what else they built, who commissioned the building and why, or what notable events occurred here. If the Wikipedia content contains only architectural metadata with no narrative context (no notable people, no events, no transformation over time), reflect that in a lower-confidence summary rather than dressing up dry facts as a compelling discovery.
 
 Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
+                },
+                {
+                  role: "user",
+                  content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(candidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
+                },
+              ],
+              response_format: { type: "json_object" },
             },
+            // @end-prompt-region discover
+            { signal: copyAbort.signal },
+          );
+          clearTimeout(copyTimer);
+          const copyContent = copyResponse.choices[0]?.message?.content;
+          copyResponseLength = copyContent?.length;
+          copyFinishReason = copyResponse.choices[0]?.finish_reason;
+          copyCompletionTokens = copyResponse.usage?.completion_tokens;
+          if (copyContent) {
+            const copyData = JSON.parse(copyContent) as { results?: unknown[] };
+            if (Array.isArray(copyData?.results)) {
+              copyResults = copyData.results as CopyResult[];
+            }
+          }
+          req.log.info(
             {
-              role: "user",
-              content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(candidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
+              reqId: req.id,
+              branch: "osm-anchor",
+              maxCompletionTokens: copyMaxCompletionTokens,
+              responseLength: copyResponseLength,
+              finishReason: copyFinishReason,
+              completionTokens: copyCompletionTokens,
+              llmCallElapsedMs: Date.now() - copyCallStartTime,
+              // Diagnostic-only: should always be false here (a successful resolve
+              // implies the abort signal never fired), but logged defensively in
+              // case a resolve/abort race is ever observed in practice.
+              abortSignalAlreadyAborted: copyAbort.signal.aborted,
+              waiterCount: waiterCountRef.count,
             },
-          ],
-          response_format: { type: "json_object" },
-        },
-        // @end-prompt-region discover
-        { signal: copyAbort.signal },
-      );
-      clearTimeout(copyTimer);
-      const copyContent = copyResponse.choices[0]?.message?.content;
-      copyResponseLength = copyContent?.length;
-      copyFinishReason = copyResponse.choices[0]?.finish_reason;
-      copyCompletionTokens = copyResponse.usage?.completion_tokens;
-      if (copyContent) {
-        const copyData = JSON.parse(copyContent) as { results?: unknown[] };
-        if (Array.isArray(copyData?.results)) {
-          copyResults = copyData.results as CopyResult[];
+            "[osm-anchor] copy generation succeeded",
+          );
+        } catch (err: any) {
+          clearTimeout(copyTimer);
+          // Diagnostic-only: surface whatever the OpenAI SDK's error object
+          // exposes about *this specific rejection* — status/code/type/requestID
+          // are only populated when a real HTTP response was received (e.g. a
+          // RateLimitError from a 429); they stay undefined for APIUserAbortError
+          // (our AbortController fired mid-flight, no response ever arrived) and
+          // for APIConnectionError/APIConnectionTimeoutError (network-level
+          // failure). This does not change what triggers the abort or catch —
+          // it only records what the already-thrown error tells us.
+          const errName = err?.name ?? err?.constructor?.name;
+          const errStatus = err?.status;
+          const errCode = err?.code;
+          const errType = err?.type;
+          const errRequestId = err?.requestID;
+          const llmCallElapsedMs = Date.now() - copyCallStartTime;
+          if (
+            copyAbort.signal.aborted &&
+            !res.headersSent &&
+            res.socket?.writable
+          ) {
+            req.log.warn(
+              {
+                reqId: req.id,
+                branch: "osm-anchor",
+                abortCause: copyAbortCause,
+                timeoutMs: 45_000,
+                radius: searchRadius,
+                preCopyElapsedMs,
+                totalElapsedMs: Date.now() - requestStartTime,
+                maxCompletionTokens: copyMaxCompletionTokens,
+                llmCallElapsedMs,
+                errName,
+                errStatus,
+                errCode,
+                errType,
+                errRequestId,
+                waiterCount: waiterCountRef.count,
+              },
+              "[osm-anchor] copyAbort fired — returning 503",
+            );
+            res.status(503).json({
+              error:
+                "Discovery service temporarily unavailable. Please try again.",
+            });
+            // Reject the shared promise so any coalesced waiters know to send
+            // their own 503 instead of hanging or silently getting a bare-OSM
+            // result they never asked for. This owner's own response was already
+            // sent above; the throw only drives cleanup/waiter notification.
+            throw new DiscoverAbortError();
+          }
+          // Copy failure is non-fatal: OSM coordinates are still correct
+          req.log.warn(
+            {
+              reqId: req.id,
+              branch: "osm-anchor",
+              radius: searchRadius,
+              preCopyElapsedMs,
+              totalElapsedMs: Date.now() - requestStartTime,
+              maxCompletionTokens: copyMaxCompletionTokens,
+              responseLength: copyResponseLength,
+              finishReason: copyFinishReason,
+              completionTokens: copyCompletionTokens,
+              llmCallElapsedMs,
+              errName,
+              errStatus,
+              errCode,
+              errType,
+              errRequestId,
+              waiterCount: waiterCountRef.count,
+              err,
+            },
+            "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
+          );
         }
-      }
-      req.log.info(
-        {
-          reqId: req.id,
-          branch: "osm-anchor",
-          maxCompletionTokens: copyMaxCompletionTokens,
-          responseLength: copyResponseLength,
-          finishReason: copyFinishReason,
-          completionTokens: copyCompletionTokens,
-          llmCallElapsedMs: Date.now() - copyCallStartTime,
-          // Diagnostic-only: should always be false here (a successful resolve
-          // implies the abort signal never fired), but logged defensively in
-          // case a resolve/abort race is ever observed in practice.
-          abortSignalAlreadyAborted: copyAbort.signal.aborted,
-        },
-        "[osm-anchor] copy generation succeeded",
-      );
-    } catch (err: any) {
-      clearTimeout(copyTimer);
-      // Diagnostic-only: surface whatever the OpenAI SDK's error object
-      // exposes about *this specific rejection* — status/code/type/requestID
-      // are only populated when a real HTTP response was received (e.g. a
-      // RateLimitError from a 429); they stay undefined for APIUserAbortError
-      // (our AbortController fired mid-flight, no response ever arrived) and
-      // for APIConnectionError/APIConnectionTimeoutError (network-level
-      // failure). This does not change what triggers the abort or catch —
-      // it only records what the already-thrown error tells us.
-      const errName = err?.name ?? err?.constructor?.name;
-      const errStatus = err?.status;
-      const errCode = err?.code;
-      const errType = err?.type;
-      const errRequestId = err?.requestID;
-      const llmCallElapsedMs = Date.now() - copyCallStartTime;
-      if (
-        copyAbort.signal.aborted &&
-        !res.headersSent &&
-        res.socket?.writable
-      ) {
-        req.log.warn(
-          {
-            reqId: req.id,
-            branch: "osm-anchor",
-            abortCause: copyAbortCause,
-            timeoutMs: 45_000,
-            radius: searchRadius,
-            preCopyElapsedMs,
-            totalElapsedMs: Date.now() - requestStartTime,
-            maxCompletionTokens: copyMaxCompletionTokens,
-            llmCallElapsedMs,
-            errName,
-            errStatus,
-            errCode,
-            errType,
-            errRequestId,
-          },
-          "[osm-anchor] copyAbort fired — returning 503",
-        );
-        res.status(503).json({
-          error: "Discovery service temporarily unavailable. Please try again.",
-        });
-        return;
-      }
-      // Copy failure is non-fatal: OSM coordinates are still correct
-      req.log.warn(
-        {
-          reqId: req.id,
-          branch: "osm-anchor",
-          radius: searchRadius,
-          preCopyElapsedMs,
-          totalElapsedMs: Date.now() - requestStartTime,
-          maxCompletionTokens: copyMaxCompletionTokens,
-          responseLength: copyResponseLength,
-          finishReason: copyFinishReason,
-          completionTokens: copyCompletionTokens,
-          llmCallElapsedMs,
-          errName,
-          errStatus,
-          errCode,
-          errType,
-          errRequestId,
-          err,
-        },
-        "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
-      );
-    }
 
-    // 6. Merge LLM copy onto OSM objects
-    const copyMap = new Map<string, CopyResult>(
-      copyResults.map((r) => [r.id, r]),
-    );
-    let mergedPlaces: any[] = candidates.map((p) => {
-      const copy = copyMap.get(p.osmId);
-      const addr = buildOsmAddr(p.tags);
-      const placeTrustLevel = computeOsmTrustLevel(p.tags);
-      const placeOsmTags: Record<string, string> = {};
-      for (const key of HINT_TAGS) {
-        const val = p.tags[key];
-        if (val) placeOsmTags[key] = sanitizeOSMText(val, 120);
-      }
-      return {
-        id: p.osmId.replace("/", "-"),
-        name: p.name,
-        category: p.type,
-        latitude: p.lat,
-        longitude: p.lon,
-        address: addr || undefined,
-        coordSource: "osm",
-        osmId: p.osmId,
-        candidateSource: "osm",
-        trustLevel: placeTrustLevel,
-        osmTags:
-          Object.keys(placeOsmTags).length > 0 ? placeOsmTags : undefined,
-        distanceMeters: Math.round(
-          haversineDistance(latitude, longitude, p.lat, p.lon),
-        ),
-        summary: copy?.summary ?? "A notable place in this area.",
-        facts: copy?.facts ?? [],
-        tags: sanitizeDisplayTags(copy?.tags),
-        yearBuilt: copy?.yearBuilt,
-        confidence: copy?.confidence ?? "low",
-        orientation: computeOrientation(
-          {
-            osmId: p.osmId,
+        // 6. Merge LLM copy onto OSM objects
+        const copyMap = new Map<string, CopyResult>(
+          copyResults.map((r) => [r.id, r]),
+        );
+        let mergedPlaces: any[] = candidates.map((p) => {
+          const copy = copyMap.get(p.osmId);
+          const addr = buildOsmAddr(p.tags);
+          const placeTrustLevel = computeOsmTrustLevel(p.tags);
+          const placeOsmTags: Record<string, string> = {};
+          for (const key of HINT_TAGS) {
+            const val = p.tags[key];
+            if (val) placeOsmTags[key] = sanitizeOSMText(val, 120);
+          }
+          return {
+            id: p.osmId.replace("/", "-"),
             name: p.name,
-            lat: p.lat,
-            lon: p.lon,
+            category: p.type,
+            latitude: p.lat,
+            longitude: p.lon,
             address: addr || undefined,
-          },
-          candidates,
-        ),
+            coordSource: "osm",
+            osmId: p.osmId,
+            candidateSource: "osm",
+            trustLevel: placeTrustLevel,
+            osmTags:
+              Object.keys(placeOsmTags).length > 0 ? placeOsmTags : undefined,
+            distanceMeters: Math.round(
+              haversineDistance(latitude, longitude, p.lat, p.lon),
+            ),
+            summary: copy?.summary ?? "A notable place in this area.",
+            facts: copy?.facts ?? [],
+            tags: sanitizeDisplayTags(copy?.tags),
+            yearBuilt: copy?.yearBuilt,
+            confidence: copy?.confidence ?? "low",
+            orientation: computeOrientation(
+              {
+                osmId: p.osmId,
+                name: p.name,
+                lat: p.lat,
+                lon: p.lon,
+                address: addr || undefined,
+              },
+              candidates,
+            ),
+          };
+        });
+
+        // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
+        classifyDiscovery(mergedPlaces);
+        applyDiscoveryTier(mergedPlaces);
+        // historicalForce is derived on every read (fresh + cached), same
+        // pattern as discoveryTier above. Tag-attachment only; not consumed
+        // anywhere yet.
+        for (const p of mergedPlaces) {
+          const hf = deriveHistoricalForce(p.osmTags ?? {});
+          if (hf) p.historicalForce = hf;
+        }
+        applyLlmPrecisionFilter(mergedPlaces);
+        suppressApproxDuplicates(mergedPlaces);
+        mergedPlaces = filterDeniedPlaces(mergedPlaces);
+
+        // 8. Wikipedia photos (best-effort)
+        await fetchPhotosForPlaces(mergedPlaces);
+
+        // 9. Community ratings sort
+        const anchorRatingsMap = await fetchRatingsMap(mergedPlaces);
+        applyRatingSortWithMap(mergedPlaces, anchorRatingsMap);
+
+        const anchorResp = {
+          places: mergedPlaces,
+          location: nbhdLabel.label,
+          locationSrc: nbhdLabel.src,
+          effectiveAddressHintSrc:
+            nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
+          osmCandidateCount,
+          noVerifiedPlacesNearby: false,
+        };
+        setLLMCache(discoverCacheKey, anchorResp);
+        return { terminal: false, entry: anchorResp };
       };
+
+    const discoverPromise = computeAnchorDiscoverResult();
+    inFlightDiscover.set(discoverCacheKey, {
+      promise: discoverPromise,
+      waiterCount: waiterCountRef,
+    });
+    discoverPromise.finally(() => {
+      inFlightDiscover.delete(discoverCacheKey);
     });
 
-    // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
-    classifyDiscovery(mergedPlaces);
-    applyDiscoveryTier(mergedPlaces);
-    // historicalForce is derived on every read (fresh + cached), same
-    // pattern as discoveryTier above. Tag-attachment only; not consumed
-    // anywhere yet.
-    for (const p of mergedPlaces) {
-      const hf = deriveHistoricalForce(p.osmTags ?? {});
-      if (hf) p.historicalForce = hf;
+    let outcome: AnchorDiscoverOutcome;
+    try {
+      outcome = await discoverPromise;
+    } catch (err) {
+      if (err instanceof DiscoverAbortError) {
+        // The owner's own 503 was already sent inside
+        // computeAnchorDiscoverResult — nothing left to do here.
+        return;
+      }
+      throw err;
     }
-    applyLlmPrecisionFilter(mergedPlaces);
-    suppressApproxDuplicates(mergedPlaces);
-    mergedPlaces = filterDeniedPlaces(mergedPlaces);
-
-    // 8. Wikipedia photos (best-effort)
-    await fetchPhotosForPlaces(mergedPlaces);
-
-    // 9. Community ratings sort
-    const anchorRatingsMap = await fetchRatingsMap(mergedPlaces);
-    applyRatingSortWithMap(mergedPlaces, anchorRatingsMap);
-
-    const anchorResp = {
-      places: mergedPlaces,
-      location: nbhdLabel.label,
-      locationSrc: nbhdLabel.src,
-      effectiveAddressHintSrc:
-        nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
-      osmCandidateCount,
-      noVerifiedPlacesNearby: false,
-    };
-    setLLMCache(discoverCacheKey, anchorResp);
+    if (outcome.terminal) {
+      res.json(outcome.response);
+      return;
+    }
     // Generic commercial businesses (chains) are excluded from both Explore
     // and Walk Mode candidate pools/pins — confirmed product decision. The
     // cache (above) retains the full classified set; this runs on the way
     // out only.
     // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
-    const anchorGenericFiltered = filterGenericCommercial(mergedPlaces);
+    const anchorResp = outcome.entry;
+    const anchorGenericFiltered = filterGenericCommercial(anchorResp.places);
     // Tier-4 (metadata-only) suppression remains Explore-only. Walk Mode
     // handles T4 suppression in walkEligibility.ts ("lowQuality") —
     // narration-eligibility only; pins remain visible.
@@ -2582,7 +2721,10 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
       : filterExploreTier4(anchorGenericFiltered);
     const anchorEmptyReason = walkMode
       ? undefined
-      : computeEmptyReason(mergedPlaces.length, anchorResponsePlaces.length);
+      : computeEmptyReason(
+          anchorResp.places.length,
+          anchorResponsePlaces.length,
+        );
     res.json({
       ...anchorResp,
       places: anchorResponsePlaces,
