@@ -2690,9 +2690,11 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
       promise: discoverPromise,
       waiterCount: waiterCountRef,
     });
-    discoverPromise.finally(() => {
-      inFlightDiscover.delete(discoverCacheKey);
-    });
+    discoverPromise
+      .finally(() => {
+        inFlightDiscover.delete(discoverCacheKey);
+      })
+      .catch(() => {});
 
     let outcome: AnchorDiscoverOutcome;
     try {
