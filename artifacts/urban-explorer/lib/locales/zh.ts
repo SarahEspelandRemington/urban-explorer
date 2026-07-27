@@ -37,6 +37,8 @@ const zh: Strings = {
     nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
     nothingFoundFilteredDetail:
       "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
+    nothingFoundFilteredDetailMaxRadius:
+      "Streetlit found nearby places, but not a story strong enough to show. Try moving to a different area.", // TODO: translate
     tryRange: (r) => `试试 ${r} 米范围`,
     searchAgain: "重新搜索",
     startExploringTitle: "开始探索",

@@ -37,6 +37,8 @@ const ja: Strings = {
     nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
     nothingFoundFilteredDetail:
       "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
+    nothingFoundFilteredDetailMaxRadius:
+      "Streetlit found nearby places, but not a story strong enough to show. Try moving to a different area.", // TODO: translate
     tryRange: (r) => `${r}m の範囲を試す`,
     searchAgain: "再検索",
     startExploringTitle: "探索を始めよう",

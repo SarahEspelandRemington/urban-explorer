@@ -53,6 +53,7 @@ export interface Strings {
     nothingFoundDetail: string;
     nothingFoundFilteredTitle: string;
     nothingFoundFilteredDetail: string;
+    nothingFoundFilteredDetailMaxRadius: string;
     tryRange: (r: number) => string;
     searchAgain: string;
     startExploringTitle: string;
@@ -346,6 +347,8 @@ const en: Strings = {
     nothingFoundFilteredTitle: "Nothing quite right nearby yet",
     nothingFoundFilteredDetail:
       "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.",
+    nothingFoundFilteredDetailMaxRadius:
+      "Streetlit found nearby places, but not a story strong enough to show. Try moving to a different area.",
     tryRange: (r) => `Try ${r}m range`,
     searchAgain: "Search again",
     startExploringTitle: "Start Exploring",

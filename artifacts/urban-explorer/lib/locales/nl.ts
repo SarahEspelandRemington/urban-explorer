@@ -38,6 +38,8 @@ const nl: Strings = {
     nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
     nothingFoundFilteredDetail:
       "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
+    nothingFoundFilteredDetailMaxRadius:
+      "Streetlit found nearby places, but not a story strong enough to show. Try moving to a different area.", // TODO: translate
     tryRange: (r) => `Probeer ${r} m bereik`,
     searchAgain: "Opnieuw zoeken",
     startExploringTitle: "Begin met verkennen",

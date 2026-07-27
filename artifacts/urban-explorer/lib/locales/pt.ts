@@ -38,6 +38,8 @@ const pt: Strings = {
     nothingFoundFilteredTitle: "Nothing quite right nearby yet", // TODO: translate
     nothingFoundFilteredDetail:
       "Streetlit found nearby places, but not a story strong enough to show. Try a wider area.", // TODO: translate
+    nothingFoundFilteredDetailMaxRadius:
+      "Streetlit found nearby places, but not a story strong enough to show. Try moving to a different area.", // TODO: translate
     tryRange: (r) => `Tentar alcance de ${r} m`,
     searchAgain: "Buscar de novo",
     startExploringTitle: "Comece a explorar",

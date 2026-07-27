@@ -1433,7 +1433,9 @@ export default function ExploreScreen() {
                       ]}
                     >
                       {emptyReason === "filtered_for_quality"
-                        ? t.explore.nothingFoundFilteredDetail
+                        ? searchRadius >= 500
+                          ? t.explore.nothingFoundFilteredDetailMaxRadius
+                          : t.explore.nothingFoundFilteredDetail
                         : t.explore.nothingFoundDetail}
                     </Text>
                     <View style={styles.emptyActions}>
@@ -1489,32 +1491,34 @@ export default function ExploreScreen() {
                           </Text>
                         </Pressable>
                       )}
-                      <Pressable
-                        onPress={handleDiscover}
-                        style={({ pressed }) => [
-                          styles.retryButton,
-                          {
-                            backgroundColor: colors.muted,
-                            opacity: pressed ? 0.85 : 1,
-                          },
-                        ]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Search again"
-                      >
-                        <Feather
-                          name="refresh-cw"
-                          size={16}
-                          color={colors.foreground}
-                        />
-                        <Text
-                          style={[
-                            styles.retryText,
-                            { color: colors.foreground },
+                      {emptyReason !== "filtered_for_quality" && (
+                        <Pressable
+                          onPress={handleDiscover}
+                          style={({ pressed }) => [
+                            styles.retryButton,
+                            {
+                              backgroundColor: colors.muted,
+                              opacity: pressed ? 0.85 : 1,
+                            },
                           ]}
+                          accessibilityRole="button"
+                          accessibilityLabel="Search again"
                         >
-                          {t.explore.searchAgain}
-                        </Text>
-                      </Pressable>
+                          <Feather
+                            name="refresh-cw"
+                            size={16}
+                            color={colors.foreground}
+                          />
+                          <Text
+                            style={[
+                              styles.retryText,
+                              { color: colors.foreground },
+                            ]}
+                          >
+                            {t.explore.searchAgain}
+                          </Text>
+                        </Pressable>
+                      )}
                     </View>
                   </View>
                 ) : (
