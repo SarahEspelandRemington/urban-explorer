@@ -3531,7 +3531,9 @@ router.post("/explore/investigate-address", async (req, res) => {
     //
     // Guard with inFlightGeocode so concurrent requests for the same address
     // share a single pending Nominatim call instead of each issuing their own.
+    // @prompt-region investigate-address
     const geocodeCacheKey = `geocode:v4:${trimmedAddress.toLowerCase()}`;
+    // @end-prompt-region investigate-address
     let results: NominatimResult[];
     try {
       const cachedGeocode = getLLMCache<NominatimResult[]>(geocodeCacheKey);
@@ -3546,7 +3548,9 @@ router.post("/explore/investigate-address", async (req, res) => {
             nominatimSearch(trimmedAddress, 1, { addressdetails: "1" }),
           );
           inFlightGeocode.set(geocodeCacheKey, geocodePromise);
-          geocodePromise.finally(() => inFlightGeocode.delete(geocodeCacheKey));
+          geocodePromise
+            .finally(() => inFlightGeocode.delete(geocodeCacheKey))
+            .catch(() => {});
           results = await geocodePromise;
           if (results.length > 0) {
             setLLMCache(geocodeCacheKey, results);
@@ -3562,7 +3566,9 @@ router.post("/explore/investigate-address", async (req, res) => {
     if (results.length === 0) {
       // Attempt a broader fuzzy search to surface 1-2 nearby-landmark suggestions
       // so the user has concrete alternatives to try instead of a bare error.
+      // @prompt-region investigate-address
       const suggestionCacheKey = `suggest404:v5:${trimmedAddress.toLowerCase()}`;
+      // @end-prompt-region investigate-address
       const cachedSuggestions = getLLMCache<string[]>(suggestionCacheKey);
       let suggestions: string[] = cachedSuggestions ?? [];
       if (!cachedSuggestions) {
@@ -3593,9 +3599,9 @@ router.post("/explore/investigate-address", async (req, res) => {
             return resolved;
           })();
           inFlightSuggestion.set(suggestionCacheKey, suggestionPromise);
-          suggestionPromise.finally(() =>
-            inFlightSuggestion.delete(suggestionCacheKey),
-          );
+          suggestionPromise
+            .finally(() => inFlightSuggestion.delete(suggestionCacheKey))
+            .catch(() => {});
           try {
             suggestions = await suggestionPromise;
           } catch {
@@ -3617,9 +3623,13 @@ router.post("/explore/investigate-address", async (req, res) => {
       formatNominatimDisplayName(r.display_name) || trimmedAddress;
   }
 
+  // @prompt-region investigate-address
+  // investigate:v8: bumped after relocating buildDetailUserTurn out of this
+  // route's section (ownership fix only — no change to this route's own
+  // prompt content or cache-key semantics).
   // Cache key: normalized address + coord bucket. Investigations are deterministic
   // per-building so a longer TTL is fine; share the LLM cache.
-  const investigateCacheKey = `investigate:v7:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const investigateCacheKey = `investigate:v8:${trimmedAddress.toLowerCase()}:${lat.toFixed(5)},${lng.toFixed(5)}`;
   const cached = getLLMCache(investigateCacheKey);
   if (cached) {
     res.json(cached);
@@ -3801,68 +3811,8 @@ What is this building? What was it originally? What should I look at?`,
 
   setLLMCache(investigateCacheKey, result);
   res.json(result);
+  // @end-prompt-region investigate-address
 });
-
-/**
- * Build the user-turn content for /explore/place-detail.
- *
- * When the request carries OSM trust metadata (collected during discover),
- * a verified OSM data block is appended so the model can ground its response
- * in confirmed tag data rather than relying solely on training memory.
- *
- * Anti-hallucination rules are NOT relaxed: the block is labelled as the
- * *only* confirmed source for factual claims. Wikidata/Wikipedia tags are
- * treated as source pointers only — the model must not claim to have fetched
- * article or entity content.
- */
-export function buildDetailUserTurn(
-  placeName: string,
-  category: string | undefined,
-  latitude: number,
-  longitude: number,
-  trustLevel?: string,
-  osmTags?: Record<string, string>,
-  wikipediaSummary?: WikipediaSummary,
-): string {
-  const base = `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located in this area of ${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
-
-  const wikiBlock = wikipediaSummary
-    ? `\n\n${buildWikiPromptBlock(wikipediaSummary)}`
-    : "";
-
-  if (!trustLevel || !osmTags || Object.keys(osmTags).length === 0) {
-    return wikiBlock ? `${base}${wikiBlock}` : base;
-  }
-
-  const tagLines = Object.entries(osmTags)
-    .map(([k, v]) => `  ${k}: ${v}`)
-    .join("\n");
-
-  if (trustLevel === "osm_enriched") {
-    const osmSection = `VERIFIED SOURCE TAGS (from OpenStreetMap — use as factual anchors for documented history):\n${tagLines}`;
-    if (wikiBlock) {
-      // Wikipedia content was actually fetched — drop the source-pointer warning
-      // (which exists to prevent the LLM from *claiming* it fetched content it
-      // didn't). Here it genuinely did, so the warning would be misleading.
-      return `${base}\n\n${osmSection}${wikiBlock}`;
-    }
-    const hasPointer = osmTags.wikidata || osmTags.wikipedia;
-    const pointerNote = hasPointer
-      ? `\n\nSOURCE POINTER NOTE: The wikidata and/or wikipedia values above are external record identifiers — they confirm a documented source exists for this place. Do NOT claim to have read the Wikipedia article or fetched Wikidata content. You may note that a Wikipedia or Wikidata record exists if directly relevant, but do not describe content from those sources as if you retrieved it.`
-      : "";
-    return `${base}\n\n${osmSection}${pointerNote}`;
-  }
-
-  if (trustLevel === "osm_standard") {
-    return (
-      `${base}\n\nVERIFIED TAG DATA (from OpenStreetMap — use only these confirmed facts):\n${tagLines}\n\n` +
-      `Do NOT invent founding dates, architectural styles, historical roles, or community claims beyond what these tags explicitly state. If start_date is absent from this block, omit any date or founding-year claim entirely.` +
-      wikiBlock
-    );
-  }
-
-  return `${base}${wikiBlock}`;
-}
 
 router.post("/explore/place-detail", async (req, res) => {
   const parsed = GetPlaceDetailBody.safeParse(req.body);
@@ -3878,8 +3828,13 @@ router.post("/explore/place-detail", async (req, res) => {
   const detailTimeout = setTimeout(() => detailController.abort(), 20_000);
   res.on("close", () => detailController.abort());
 
-  // detail:v9: invalidates entries cached before Wikipedia summary enrichment was added.
-  const detailCacheKey = `detail:v9:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  // @prompt-region place-detail
+  // History: the prior version invalidated entries cached before Wikipedia
+  // summary enrichment was added.
+  // detail:v10: bumped after this route absorbed buildDetailUserTurn's
+  // definition (relocated here for correct manifest ownership) — no change
+  // to prompt content, model settings, or timeout values.
+  const detailCacheKey = `detail:v10:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -4063,10 +4018,13 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
     if (photoUrl) data.photoUrl = photoUrl;
     return data;
   };
+  // @end-prompt-region place-detail
 
   const detailPromise = buildDetail();
   inFlightDetail.set(detailCacheKey, detailPromise);
-  detailPromise.finally(() => inFlightDetail.delete(detailCacheKey));
+  detailPromise
+    .finally(() => inFlightDetail.delete(detailCacheKey))
+    .catch(() => {});
 
   let data: any;
   try {
@@ -4103,6 +4061,69 @@ NEVER invent: names, dates, architectural movements, organizations, or events th
   setLLMCache(detailCacheKey, data);
   res.json(data);
 });
+
+// @prompt-region place-detail
+/**
+ * Build the user-turn content for /explore/place-detail.
+ *
+ * When the request carries OSM trust metadata (collected during discover),
+ * a verified OSM data block is appended so the model can ground its response
+ * in confirmed tag data rather than relying solely on training memory.
+ *
+ * Anti-hallucination rules are NOT relaxed: the block is labelled as the
+ * *only* confirmed source for factual claims. Wikidata/Wikipedia tags are
+ * treated as source pointers only — the model must not claim to have fetched
+ * article or entity content.
+ */
+export function buildDetailUserTurn(
+  placeName: string,
+  category: string | undefined,
+  latitude: number,
+  longitude: number,
+  trustLevel?: string,
+  osmTags?: Record<string, string>,
+  wikipediaSummary?: WikipediaSummary,
+): string {
+  const base = `Tell me everything interesting about "${placeName}" — category: ${category || "place"} — located in this area of ${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+
+  const wikiBlock = wikipediaSummary
+    ? `\n\n${buildWikiPromptBlock(wikipediaSummary)}`
+    : "";
+
+  if (!trustLevel || !osmTags || Object.keys(osmTags).length === 0) {
+    return wikiBlock ? `${base}${wikiBlock}` : base;
+  }
+
+  const tagLines = Object.entries(osmTags)
+    .map(([k, v]) => `  ${k}: ${v}`)
+    .join("\n");
+
+  if (trustLevel === "osm_enriched") {
+    const osmSection = `VERIFIED SOURCE TAGS (from OpenStreetMap — use as factual anchors for documented history):\n${tagLines}`;
+    if (wikiBlock) {
+      // Wikipedia content was actually fetched — drop the source-pointer warning
+      // (which exists to prevent the LLM from *claiming* it fetched content it
+      // didn't). Here it genuinely did, so the warning would be misleading.
+      return `${base}\n\n${osmSection}${wikiBlock}`;
+    }
+    const hasPointer = osmTags.wikidata || osmTags.wikipedia;
+    const pointerNote = hasPointer
+      ? `\n\nSOURCE POINTER NOTE: The wikidata and/or wikipedia values above are external record identifiers — they confirm a documented source exists for this place. Do NOT claim to have read the Wikipedia article or fetched Wikidata content. You may note that a Wikipedia or Wikidata record exists if directly relevant, but do not describe content from those sources as if you retrieved it.`
+      : "";
+    return `${base}\n\n${osmSection}${pointerNote}`;
+  }
+
+  if (trustLevel === "osm_standard") {
+    return (
+      `${base}\n\nVERIFIED TAG DATA (from OpenStreetMap — use only these confirmed facts):\n${tagLines}\n\n` +
+      `Do NOT invent founding dates, architectural styles, historical roles, or community claims beyond what these tags explicitly state. If start_date is absent from this block, omit any date or founding-year claim entirely.` +
+      wikiBlock
+    );
+  }
+
+  return `${base}${wikiBlock}`;
+}
+// @end-prompt-region place-detail
 
 router.post("/explore/place-timeline", async (req, res) => {
   const parsed = GetPlaceTimelineBody.safeParse(req.body);

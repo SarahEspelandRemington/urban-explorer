@@ -39,17 +39,17 @@
     },
     "artifacts/api-server/src/routes/explore/index.ts::investigate-address": {
       "kind": "route",
-      "extraction": "section-fallback",
-      "sectionHash": "45ff15059cabe635b9e311136861664c091cee959b961f746dc7e71cd3b61f4f",
-      "versions": ["v4", "v5", "v7"],
-      "registered": "2026-07-19"
+      "extraction": "marked",
+      "sectionHash": "a9420656a71826773a7798d846c43573f09627f8a51099bacbafba09b391bd12",
+      "versions": ["v4", "v5", "v8"],
+      "registered": "2026-07-30"
     },
     "artifacts/api-server/src/routes/explore/index.ts::place-detail": {
       "kind": "route",
-      "extraction": "section-fallback",
-      "sectionHash": "601321e6b8234f7bf4ae1df7f692d1a0c890793f135c6dcd2cf481377f3591f7",
-      "versions": ["v9"],
-      "registered": "2026-07-19"
+      "extraction": "marked",
+      "sectionHash": "0aae3e1d5d54e74b1ba1180d81f71c681baa08fc388c73a250668e3dafa675ea",
+      "versions": ["v10"],
+      "registered": "2026-07-30"
     },
     "artifacts/api-server/src/routes/explore/index.ts::place-timeline": {
       "kind": "route",
