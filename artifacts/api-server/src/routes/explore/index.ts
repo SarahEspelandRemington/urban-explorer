@@ -4365,7 +4365,9 @@ How to write for speech:
     });
 
   inFlightNarration.set(narrationCacheKey, narrationPromise);
-  narrationPromise.finally(() => inFlightNarration.delete(narrationCacheKey));
+  narrationPromise
+    .finally(() => inFlightNarration.delete(narrationCacheKey))
+    .catch(() => {});
 
   let narrationText: string;
   try {
@@ -4661,9 +4663,9 @@ How to write for speech:
         });
 
       inFlightNarration.set(narrationCacheKey, audioNarrationPromise);
-      audioNarrationPromise.finally(() =>
-        inFlightNarration.delete(narrationCacheKey),
-      );
+      audioNarrationPromise
+        .finally(() => inFlightNarration.delete(narrationCacheKey))
+        .catch(() => {});
 
       try {
         narrationText = await audioNarrationPromise;
@@ -4745,7 +4747,9 @@ How to write for speech:
       abortController.signal,
     );
     inFlightAudio.set(audioCacheKey, audioPromise);
-    audioPromise.finally(() => inFlightAudio.delete(audioCacheKey));
+    audioPromise
+      .finally(() => inFlightAudio.delete(audioCacheKey))
+      .catch(() => {});
     try {
       audioBytes = await audioPromise;
     } catch (err: any) {
