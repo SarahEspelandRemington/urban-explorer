@@ -832,9 +832,10 @@ async function fetchNeighborhoodLabel(
   lat: number,
   lng: number,
 ): Promise<{ label: string; src: "nominatim" | "fallback" }> {
+  // @prompt-region nbhd-label
   // Key uses the "nbhd" prefix (not "revgeo-nbhd") so it is governed by the
   // ["nbhd", "v2"] entry in LLM_CACHE_CURRENT_VERSIONS and is never
-  // accidentally swept by the broader "revgeo:v12:" cleanup rule.
+  // accidentally swept by the broader "revgeo-v12" cleanup rule.
   const cacheKey = `nbhd:v2:${lat.toFixed(3)},${lng.toFixed(3)}`;
   const cached = getLLMCache<{ label: string; src: "nominatim" | "fallback" }>(
     cacheKey,
@@ -886,6 +887,7 @@ async function fetchNeighborhoodLabel(
     clearTimeout(timer);
     return { label: "Nearby", src: "fallback" as const };
   }
+  // @end-prompt-region nbhd-label
 }
 
 async function verifyPlaceCoordinates(
@@ -1561,6 +1563,7 @@ import { computeOrientation } from "../../lib/orientation";
 import { applyLlmPrecisionFilter } from "../../lib/spatialTrustFilter";
 import { resolveEffectiveHint } from "../../lib/areaContext";
 import { isBoringResidentialBuilding } from "../../lib/residentialBuildingFilter";
+import { isOrdinaryCommercialUse } from "../../lib/commercialUseFilter";
 export { applyLlmPrecisionFilter };
 
 // ---------------------------------------------------------------------------
@@ -1571,14 +1574,19 @@ const photoCache = new Map<string, { url: string | null; ts: number }>();
 const PHOTO_CACHE_HIT_TTL = 60 * 60 * 1000; // 1 hour for successful lookups
 const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404 — retry sooner)
 
+// @prompt-region wiki-summary
 // ---------------------------------------------------------------------------
-// Wikipedia summary cache — in-memory, keyed wiki:v2:{lang}:{encoded_title}
+// Wikipedia summary cache — in-memory, keyed wiki:v3:{lang}:{encoded_title}
 // ---------------------------------------------------------------------------
 // v2: switched from REST /page/summary/ (lead paragraph only) to the action
 // API (prop=extracts&explaintext=1) which returns the full article text,
 // including named sections like "History and architecture".  This gives the
 // copy LLM access to story-bearing content (brewery history, notable events,
 // family narratives) rather than only architectural metadata.
+// v3: no prompt/behavior change — bumped solely to accompany this cache
+// region's migration from whole-module-prefix hashing to scoped marked
+// extraction (see promptManifestLib.ts), so the old module-prefix hash
+// (shared with nbhd-label/wiki-photo) can't be reused under stale semantics.
 
 /** 4-hour TTL applied to both successful fetches and permanent failures
  *  (404, empty extract, malformed JSON) so a bad OSM tag doesn't hammer
@@ -1597,7 +1605,7 @@ const wikipediaSummaryCache = new Map<
  * than only the lead paragraph, so named sections such as "History and
  * architecture" are available to the copy LLM.
  *
- * Cache key: wiki:v2:{lang}:{encoded_title}
+ * Cache key: wiki:v3:{lang}:{encoded_title}
  *
  * Only called when `osmTags.wikipedia` is well-formed — never guesses from
  * place names.  Always falls back gracefully: any failure returns null so
@@ -1609,7 +1617,7 @@ async function fetchWikipediaSummary(
   signal?: AbortSignal,
 ): Promise<WikipediaSummary | null> {
   const encodedTitle = encodeURIComponent(title);
-  const cacheKey = `wiki:v2:${lang}:${encodedTitle}`;
+  const cacheKey = `wiki:v3:${lang}:${encodedTitle}`;
 
   const cached = wikipediaSummaryCache.get(cacheKey);
   if (
@@ -1709,6 +1717,7 @@ async function fetchWikipediaSummary(
     return null;
   }
 }
+// @end-prompt-region wiki-summary
 
 /**
  * Attempt to find a representative photo for a place name via the Wikipedia
@@ -1729,6 +1738,7 @@ async function fetchWikipediaPhoto(
   articleTitle?: string,
   articleLang?: string,
 ): Promise<string | null> {
+  // @prompt-region wiki-photo
   // When an explicit OSM wikipedia article title is provided, use a separate
   // cache key so a stale/wrong placeName-guessed photo cannot bleed through.
   const cacheKey =
@@ -1820,6 +1830,7 @@ async function fetchWikipediaPhoto(
 
   return photoUrl;
 }
+// @end-prompt-region wiki-photo
 
 /**
  * Fetch photos for all places in parallel, annotating each with a `photoUrl`
@@ -2220,6 +2231,14 @@ router.post("/explore/discover", async (req, res) => {
         // Applied after the denylist so the two filters compose cleanly.
         osmCandidates = osmCandidates.filter(
           (p) => !isBoringResidentialBuilding(p.tags),
+        );
+        // Suppress ordinary shops/offices/craft businesses with no
+        // story-bearing OSM tags. These enter the pool via the named-building
+        // Overpass catch-all and never carry a whitelisted amenity value, so
+        // filterGenericCommercial() downstream can't recognize them by
+        // category — this candidate-stage filter is the fix.
+        osmCandidates = osmCandidates.filter(
+          (p) => !isOrdinaryCommercialUse(p.tags),
         );
 
         // 2. Density counts at three radius tiers (before any radius filter)

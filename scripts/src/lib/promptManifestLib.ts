@@ -13,10 +13,14 @@
  *
  * For a file WITH route boundaries (e.g. routes/explore/index.ts), the file
  * is split at each `router.post(`/`router.get(` boundary:
- *   - Everything before the first route boundary is a "module" entry (keyed
- *     by file path alone) — this protects shared, non-route-scoped cache
- *     keys such as an in-memory Wikipedia-summary lookup that sits above all
- *     the route handlers.
+ *   - Everything before the first route boundary is the "module prefix". If
+ *     it contains no @prompt-region markers, it becomes a single "module"
+ *     entry (keyed by file path alone) — the conservative whole-prefix-hash
+ *     fallback. If it DOES contain markers, each declared slug becomes its
+ *     own "module" entry (keyed `<filePath>::module:<slug>`), so independent
+ *     shared cache-key systems above the routes (e.g. a neighborhood-label
+ *     cache and a Wikipedia-summary cache) can be edited and version-bumped
+ *     independently instead of sharing one hash.
  *   - Each route's own section (from its `router.*(` call to the next route
  *     boundary, or EOF) becomes its own "route" entry, keyed
  *     `<filePath>::<route-slug>`. This means editing route A's handler can
@@ -309,6 +313,103 @@ export function extractPromptRegions(
   return { spans, errors };
 }
 
+/**
+ * Parse `// @prompt-region <slug>` / `// @end-prompt-region [<slug>]` marker
+ * pairs out of a file's module-prefix text (the text before the first route
+ * boundary). Unlike extractPromptRegions() (route-scoped, one expected
+ * slug), the module prefix has no single canonical slug — multiple
+ * independent cache-key systems can each declare their own slug here, so
+ * spans are grouped by slug instead of validated against one expected
+ * value. Structural error categories (nested/unmatched/mismatched/empty/
+ * malformed) mirror extractPromptRegions().
+ */
+export function extractModulePromptRegions(
+  moduleText: string,
+  filePath: string,
+): { spansBySlug: Map<string, PromptRegionSpan[]>; errors: string[] } {
+  const lines = moduleText.split("\n");
+  const spansBySlug = new Map<string, PromptRegionSpan[]>();
+  const errors: string[] = [];
+  let open: {
+    slug: string;
+    startLine: number;
+    startOffset: number;
+  } | null = null;
+  let offset = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const beginMatch = line.match(BEGIN_RE);
+    const endMatch = line.match(END_RE);
+
+    if (beginMatch) {
+      if (open) {
+        errors.push(
+          `${filePath}: nested @prompt-region in module prefix at line ~${i} — region "${beginMatch[1]}" opened while "${open.slug}" is still open`,
+        );
+      } else {
+        open = {
+          slug: beginMatch[1]!,
+          startLine: i,
+          startOffset: offset + line.length + 1,
+        };
+      }
+    } else if (endMatch) {
+      if (!open) {
+        errors.push(
+          `${filePath}: unmatched @end-prompt-region in module prefix at line ~${i} (no open region)`,
+        );
+      } else {
+        const endSlug = endMatch[1];
+        if (endSlug && endSlug !== open.slug) {
+          errors.push(
+            `${filePath}: mismatched @end-prompt-region "${endSlug}" does not match open region "${open.slug}" in module prefix (line ~${i})`,
+          );
+        } else {
+          const spanStart = open.startOffset;
+          const spanEnd = offset;
+          const text = moduleText.slice(spanStart, spanEnd);
+          if (text.trim().length === 0) {
+            errors.push(
+              `${filePath}: empty @prompt-region "${open.slug}" in module prefix (lines ${open.startLine}-${i})`,
+            );
+          } else {
+            const span: PromptRegionSpan = {
+              start: spanStart,
+              end: spanEnd,
+              text,
+            };
+            const existing = spansBySlug.get(open.slug);
+            if (existing) existing.push(span);
+            else spansBySlug.set(open.slug, [span]);
+          }
+        }
+        open = null;
+      }
+    } else {
+      if (LOOSE_BEGIN_RE.test(line)) {
+        errors.push(
+          `${filePath}: malformed @prompt-region marker in module prefix at line ~${i}: "${line.trim()}"`,
+        );
+      }
+      if (LOOSE_END_RE.test(line)) {
+        errors.push(
+          `${filePath}: malformed @end-prompt-region marker in module prefix at line ~${i}: "${line.trim()}"`,
+        );
+      }
+    }
+    offset += line.length + 1;
+  }
+
+  if (open) {
+    errors.push(
+      `${filePath}: unmatched @prompt-region "${open.slug}" in module prefix starting line ~${open.startLine} (no @end-prompt-region before end of module prefix)`,
+    );
+  }
+
+  return { spansBySlug, errors };
+}
+
 export interface ScannedEntry {
   key: string;
   kind: EntryKind;
@@ -354,13 +455,49 @@ export function scanFileContent(filePath: string, source: string): ScanResult {
   const moduleText = source.slice(0, firstStart);
   const moduleTokens = findVersionTokens(moduleText);
   if (moduleTokens.length > 0) {
-    entries.push({
-      key: filePath,
-      kind: "module",
-      extraction: "module-prefix",
-      sectionHash: hashSpans([moduleText]),
-      versions: sortedUniqueVersions(moduleTokens),
-    });
+    const { spansBySlug, errors: moduleMarkerErrors } =
+      extractModulePromptRegions(moduleText, filePath);
+    if (moduleMarkerErrors.length > 0) {
+      for (const m of moduleMarkerErrors) {
+        issues.push({ file: filePath, message: m });
+      }
+    } else if (spansBySlug.size > 0) {
+      const outsideVersions = new Set<string>();
+      for (const t of moduleTokens) {
+        const inside = [...spansBySlug.values()].some((spans) =>
+          spans.some((s) => t.index >= s.start && t.index < s.end),
+        );
+        if (!inside) outsideVersions.add(t.version);
+      }
+      if (outsideVersions.size > 0) {
+        issues.push({
+          file: filePath,
+          message: `module prefix declares @prompt-region markers but has version token(s) [${[...outsideVersions].join(", ")}] outside the marked regions — move the cache-key definition inside a @prompt-region block`,
+        });
+      } else {
+        for (const [slug, spans] of spansBySlug) {
+          const slugTokens = moduleTokens.filter((t) =>
+            spans.some((s) => t.index >= s.start && t.index < s.end),
+          );
+          if (slugTokens.length === 0) continue;
+          entries.push({
+            key: `${filePath}::module:${slug}`,
+            kind: "module",
+            extraction: "marked",
+            sectionHash: hashSpans(spans.map((s) => s.text)),
+            versions: sortedUniqueVersions(slugTokens),
+          });
+        }
+      }
+    } else {
+      entries.push({
+        key: filePath,
+        kind: "module",
+        extraction: "module-prefix",
+        sectionHash: hashSpans([moduleText]),
+        versions: sortedUniqueVersions(moduleTokens),
+      });
+    }
   }
 
   const seenKeys = new Set<string>();

@@ -13,6 +13,7 @@ import {
   hashSpans,
   findVersionTokens,
   scanFileContent,
+  extractModulePromptRegions,
   parseManifestFile,
 } from "./promptManifestLib.js";
 
@@ -330,6 +331,343 @@ test("scanFileContent: a shared cache key above the first route becomes a module
   assert.equal(moduleEntry!.kind, "module");
   assert.equal(moduleEntry!.extraction, "module-prefix");
   assert.deepEqual(moduleEntry!.versions, ["v2"]);
+});
+
+// --- extractModulePromptRegions (direct unit tests) -------------------------
+
+test("extractModulePromptRegions: no markers returns an empty map and no errors (preserves the whole-prefix fallback path)", () => {
+  const { spansBySlug, errors } = extractModulePromptRegions(
+    "const nbhdKey = `nbhd:v2:${lat}`;\n",
+    "f.ts",
+  );
+  assert.equal(errors.length, 0);
+  assert.equal(spansBySlug.size, 0);
+});
+
+test("extractModulePromptRegions: parses multiple distinct slugs into separate span groups", () => {
+  const moduleText = lines(
+    "// @prompt-region nbhd-label",
+    "const a = `nbhd:v2:${lat}`;",
+    "// @end-prompt-region nbhd-label",
+    "// @prompt-region wiki-summary",
+    "const b = `wiki:v3:${lang}`;",
+    "// @end-prompt-region wiki-summary",
+  );
+  const { spansBySlug, errors } = extractModulePromptRegions(
+    moduleText,
+    "f.ts",
+  );
+  assert.equal(errors.length, 0);
+  assert.deepEqual([...spansBySlug.keys()].sort(), [
+    "nbhd-label",
+    "wiki-summary",
+  ]);
+  assert.equal(spansBySlug.get("nbhd-label")!.length, 1);
+  assert.equal(spansBySlug.get("wiki-summary")!.length, 1);
+});
+
+test("extractModulePromptRegions: multiple pairs for the same slug are collected in order under one key", () => {
+  const moduleText = lines(
+    "// @prompt-region nbhd-label",
+    "const a = 1;",
+    "// @end-prompt-region nbhd-label",
+    "// @prompt-region nbhd-label",
+    "const b = 2;",
+    "// @end-prompt-region nbhd-label",
+  );
+  const { spansBySlug, errors } = extractModulePromptRegions(
+    moduleText,
+    "f.ts",
+  );
+  assert.equal(errors.length, 0);
+  assert.equal(spansBySlug.size, 1);
+  assert.equal(spansBySlug.get("nbhd-label")!.length, 2);
+});
+
+test("extractModulePromptRegions: nested markers are rejected", () => {
+  const moduleText = lines(
+    "// @prompt-region nbhd-label",
+    "// @prompt-region wiki-summary",
+    "// @end-prompt-region wiki-summary",
+    "// @end-prompt-region nbhd-label",
+  );
+  const { errors } = extractModulePromptRegions(moduleText, "f.ts");
+  assert.ok(errors.some((e) => e.includes("nested")));
+});
+
+test("extractModulePromptRegions: unmatched begin marker is rejected", () => {
+  const { errors } = extractModulePromptRegions(
+    lines("// @prompt-region nbhd-label", "const a = 1;"),
+    "f.ts",
+  );
+  assert.ok(errors.some((e) => e.includes("unmatched @prompt-region")));
+});
+
+test("extractModulePromptRegions: unmatched end marker is rejected", () => {
+  const { errors } = extractModulePromptRegions(
+    lines("const a = 1;", "// @end-prompt-region nbhd-label"),
+    "f.ts",
+  );
+  assert.ok(errors.some((e) => e.includes("unmatched @end-prompt-region")));
+});
+
+test("extractModulePromptRegions: an empty region is rejected", () => {
+  const { errors } = extractModulePromptRegions(
+    lines("// @prompt-region nbhd-label", "// @end-prompt-region nbhd-label"),
+    "f.ts",
+  );
+  assert.ok(errors.some((e) => e.includes("empty")));
+});
+
+test("extractModulePromptRegions: mismatched end-marker slug is rejected", () => {
+  const { errors } = extractModulePromptRegions(
+    lines(
+      "// @prompt-region nbhd-label",
+      "const a = 1;",
+      "// @end-prompt-region wiki-summary",
+    ),
+    "f.ts",
+  );
+  assert.ok(errors.some((e) => e.includes("mismatched")));
+});
+
+// --- scanFileContent: module-prefix with markers, integrated ---------------
+// (multiple independent cache-key systems sharing the module prefix, as in
+// the real routes/explore/index.ts nbhd-label / wiki-summary / wiki-photo
+// split)
+
+function moduleWithMarkersFixture(opts?: {
+  nbhdBody?: string;
+  wikiBody?: string;
+}): string {
+  const nbhdBody = opts?.nbhdBody ?? "const nbhdKey = `nbhd:v2:${lat}`;";
+  const wikiBody = opts?.wikiBody ?? "const wikiKey = `wiki:v3:${lang}`;";
+  return (
+    lines(
+      "// @prompt-region nbhd-label",
+      nbhdBody,
+      "// @end-prompt-region nbhd-label",
+      "",
+      "// @prompt-region wiki-summary",
+      wikiBody,
+      "// @end-prompt-region wiki-summary",
+      "",
+    ) + baseFixture()
+  );
+}
+
+test("scanFileContent: multiple named module regions produce separate, independently keyed and versioned entries, and the old bare-filePath entry disappears", () => {
+  const result = scanFileContent("fixture.ts", moduleWithMarkersFixture());
+  assert.equal(result.issues.length, 0);
+
+  // The old whole-prefix key must be gone -- this is exactly the condition
+  // updatePromptManifest.ts's existing generic stale-diffing logic relies on
+  // to remove it automatically once markers are introduced.
+  assert.equal(
+    result.entries.find((e) => e.key === "fixture.ts"),
+    undefined,
+  );
+
+  const nbhd = result.entries.find(
+    (e) => e.key === "fixture.ts::module:nbhd-label",
+  )!;
+  assert.ok(nbhd);
+  assert.equal(nbhd.kind, "module");
+  assert.equal(nbhd.extraction, "marked");
+  assert.deepEqual(nbhd.versions, ["v2"]);
+
+  const wiki = result.entries.find(
+    (e) => e.key === "fixture.ts::module:wiki-summary",
+  )!;
+  assert.ok(wiki);
+  assert.equal(wiki.kind, "module");
+  assert.equal(wiki.extraction, "marked");
+  assert.deepEqual(wiki.versions, ["v3"]);
+
+  assert.notEqual(nbhd.sectionHash, wiki.sectionHash);
+});
+
+test("scanFileContent: editing one module region's content does not change a sibling module region's hash", () => {
+  const before = scanFileContent("fixture.ts", moduleWithMarkersFixture());
+  const after = scanFileContent(
+    "fixture.ts",
+    moduleWithMarkersFixture({
+      nbhdBody: "const nbhdKey = `nbhd:v2:${lat}`; // edited",
+    }),
+  );
+  const beforeNbhd = before.entries.find(
+    (e) => e.key === "fixture.ts::module:nbhd-label",
+  )!;
+  const afterNbhd = after.entries.find(
+    (e) => e.key === "fixture.ts::module:nbhd-label",
+  )!;
+  assert.notEqual(beforeNbhd.sectionHash, afterNbhd.sectionHash);
+
+  const beforeWiki = before.entries.find(
+    (e) => e.key === "fixture.ts::module:wiki-summary",
+  )!;
+  const afterWiki = after.entries.find(
+    (e) => e.key === "fixture.ts::module:wiki-summary",
+  )!;
+  assert.equal(beforeWiki.sectionHash, afterWiki.sectionHash);
+  assert.deepEqual(beforeWiki.versions, afterWiki.versions);
+});
+
+test("scanFileContent: multiple ordered marker pairs for the same module-prefix slug are merged into a single entry (duplicate slugs are supported, not rejected)", () => {
+  const dup =
+    lines(
+      "// @prompt-region nbhd-label",
+      "const nbhdKeyPart1 = `nbhd:v2:${lat}`;",
+      "// @end-prompt-region nbhd-label",
+      "  // unrelated line between the two spans",
+      "// @prompt-region nbhd-label",
+      "const nbhdKeyPart2 = `nbhd extra, no token here`;",
+      "// @end-prompt-region nbhd-label",
+      "",
+    ) + baseFixture();
+  const result = scanFileContent("fixture.ts", dup);
+  assert.equal(result.issues.length, 0);
+  const matches = result.entries.filter(
+    (e) => e.key === "fixture.ts::module:nbhd-label",
+  );
+  assert.equal(matches.length, 1);
+  assert.deepEqual(matches[0]!.versions, ["v2"]);
+});
+
+test("scanFileContent: nested @prompt-region markers in the module prefix are rejected and no module entries are produced", () => {
+  const bad =
+    lines(
+      "// @prompt-region nbhd-label",
+      "const nbhdKey = `nbhd:v2:${lat}`;",
+      "// @prompt-region nbhd-label",
+      "const x = 1;",
+      "// @end-prompt-region nbhd-label",
+      "// @end-prompt-region nbhd-label",
+      "",
+    ) + baseFixture();
+  const result = scanFileContent("fixture.ts", bad);
+  assert.ok(
+    result.issues.some(
+      (i) =>
+        i.message.includes("nested") && i.message.includes("module prefix"),
+    ),
+  );
+  assert.equal(
+    result.entries.find((e) => e.key.includes("::module:")),
+    undefined,
+  );
+});
+
+test("scanFileContent: unmatched begin marker in the module prefix is rejected", () => {
+  const bad =
+    lines(
+      "// @prompt-region nbhd-label",
+      "const nbhdKey = `nbhd:v2:${lat}`;",
+      "",
+    ) + baseFixture();
+  const result = scanFileContent("fixture.ts", bad);
+  assert.ok(
+    result.issues.some(
+      (i) =>
+        i.message.includes("unmatched @prompt-region") &&
+        i.message.includes("module prefix"),
+    ),
+  );
+});
+
+test("scanFileContent: unmatched end marker in the module prefix is rejected", () => {
+  const bad =
+    lines(
+      "const nbhdKey = `nbhd:v2:${lat}`;",
+      "// @end-prompt-region nbhd-label",
+      "",
+    ) + baseFixture();
+  const result = scanFileContent("fixture.ts", bad);
+  assert.ok(
+    result.issues.some(
+      (i) =>
+        i.message.includes("unmatched @end-prompt-region") &&
+        i.message.includes("module prefix"),
+    ),
+  );
+});
+
+test("scanFileContent: an empty @prompt-region in the module prefix is rejected", () => {
+  const bad =
+    lines(
+      "// @prompt-region nbhd-label",
+      "// @end-prompt-region nbhd-label",
+      "const nbhdKey = `nbhd:v2:${lat}`;",
+      "",
+    ) + baseFixture();
+  const result = scanFileContent("fixture.ts", bad);
+  assert.ok(
+    result.issues.some(
+      (i) => i.message.includes("empty") && i.message.includes("module prefix"),
+    ),
+  );
+});
+
+test("scanFileContent: overlapping module-prefix regions with mismatched slugs interleaved are rejected", () => {
+  const bad =
+    lines(
+      "// @prompt-region nbhd-label",
+      "const nbhdKey = `nbhd:v2:${lat}`;",
+      "// @prompt-region wiki-summary",
+      "const wikiKey = `wiki:v3:${lang}`;",
+      "// @end-prompt-region nbhd-label",
+      "// @end-prompt-region wiki-summary",
+      "",
+    ) + baseFixture();
+  const result = scanFileContent("fixture.ts", bad);
+  assert.ok(result.issues.length > 0);
+  assert.equal(
+    result.entries.find((e) => e.key.includes("::module:")),
+    undefined,
+  );
+});
+
+test("scanFileContent: a version token outside a marked module-prefix region is rejected", () => {
+  const bad =
+    lines(
+      "const strayKey = `wiki:v3:${lang}`;",
+      "// @prompt-region nbhd-label",
+      "const nbhdKey = `nbhd:v2:${lat}`;",
+      "// @end-prompt-region nbhd-label",
+      "",
+    ) + baseFixture();
+  const result = scanFileContent("fixture.ts", bad);
+  assert.equal(
+    result.entries.find((e) => e.key.includes("::module:")),
+    undefined,
+  );
+  assert.ok(
+    result.issues.some(
+      (i) =>
+        i.message.includes("outside the marked regions") &&
+        i.message.includes("module prefix"),
+    ),
+  );
+});
+
+test("scanFileContent: introducing module-prefix markers replaces the old bare-filePath module entry with the new per-slug entries (the exact transition updatePromptManifest.ts's generic stale/added diffing relies on)", () => {
+  const before = scanFileContent(
+    "fixture.ts",
+    lines("const nbhdKey = `nbhd:v2:${lat}`;", "") + baseFixture(),
+  );
+  assert.ok(before.entries.some((e) => e.key === "fixture.ts"));
+
+  const after = scanFileContent("fixture.ts", moduleWithMarkersFixture());
+  assert.equal(
+    after.entries.find((e) => e.key === "fixture.ts"),
+    undefined,
+  );
+  assert.ok(
+    after.entries.some((e) => e.key === "fixture.ts::module:nbhd-label"),
+  );
+  assert.ok(
+    after.entries.some((e) => e.key === "fixture.ts::module:wiki-summary"),
+  );
 });
 
 // --- discover-style multi-path route (two @prompt-region spans covering

@@ -16,6 +16,8 @@
  * all downstream suppression. Suppressing at the candidate stage is the fix.
  */
 
+import { OSM_STORY_BEARING_TAGS } from "./osmStoryBearingTags";
+
 /** OSM building= values that represent plain residential use. */
 export const RESIDENTIAL_BUILDING_TYPES = new Set([
   "apartments",
@@ -36,17 +38,12 @@ export const RESIDENTIAL_BUILDING_TYPES = new Set([
  * Excluded intentionally: start_date, old_name, alt_name, operator,
  * building:material, denomination — these describe facts about a place but do
  * not indicate that the place has a discovery-worthy story.
+ *
+ * Sourced from the shared base list in osmStoryBearingTags.ts. Bound to a
+ * local const (not re-exported directly) so isBoringResidentialBuilding()
+ * below has a usable local identifier to iterate.
  */
-export const RESIDENTIAL_STORY_BEARING_TAGS = new Set([
-  "wikidata",
-  "wikipedia",
-  "historic",
-  "heritage",
-  "heritage:description",
-  "ref:nrhp",
-  "description",
-  "architect",
-]);
+export const RESIDENTIAL_STORY_BEARING_TAGS = OSM_STORY_BEARING_TAGS;
 
 /**
  * Returns true when the place should be suppressed from OSM candidate pools:

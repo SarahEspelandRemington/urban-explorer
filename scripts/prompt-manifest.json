@@ -9,13 +9,6 @@
       "versions": ["v4"],
       "registered": "2026-07-19"
     },
-    "artifacts/api-server/src/routes/explore/index.ts": {
-      "kind": "module",
-      "extraction": "module-prefix",
-      "sectionHash": "06477d1399595c7f3b4da53436ec2f8ee0cb7c5a5b8281a5c601e83f72c64416",
-      "versions": ["v1", "v12", "v2"],
-      "registered": "2026-07-25"
-    },
     "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
       "extraction": "section-fallback",
@@ -43,6 +36,27 @@
       "sectionHash": "a9420656a71826773a7798d846c43573f09627f8a51099bacbafba09b391bd12",
       "versions": ["v4", "v5", "v8"],
       "registered": "2026-07-30"
+    },
+    "artifacts/api-server/src/routes/explore/index.ts::module:nbhd-label": {
+      "kind": "module",
+      "extraction": "marked",
+      "sectionHash": "173b6097ba0b0f4bf8aa11b570160d37268cdbe0f9f83d884e151f31bd259b8f",
+      "versions": ["v2"],
+      "registered": "2026-07-31"
+    },
+    "artifacts/api-server/src/routes/explore/index.ts::module:wiki-photo": {
+      "kind": "module",
+      "extraction": "marked",
+      "sectionHash": "043540b08d352a7b23c9f47abf38328f1bdddf14642e05d4afe92c22fa2ac43f",
+      "versions": ["v1"],
+      "registered": "2026-07-31"
+    },
+    "artifacts/api-server/src/routes/explore/index.ts::module:wiki-summary": {
+      "kind": "module",
+      "extraction": "marked",
+      "sectionHash": "ee9b22acb32f6c610663bbb9cf4aa80cd317be22e51cd42115724d2aabee1150",
+      "versions": ["v3"],
+      "registered": "2026-07-31"
     },
     "artifacts/api-server/src/routes/explore/index.ts::place-detail": {
       "kind": "route",
