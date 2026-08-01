@@ -1564,6 +1564,7 @@ import { applyLlmPrecisionFilter } from "../../lib/spatialTrustFilter";
 import { resolveEffectiveHint } from "../../lib/areaContext";
 import { isBoringResidentialBuilding } from "../../lib/residentialBuildingFilter";
 import { isOrdinaryCommercialUse } from "../../lib/commercialUseFilter";
+import { validateCopyResultIds } from "../../lib/copyResultIntegrity";
 export { applyLlmPrecisionFilter };
 
 // ---------------------------------------------------------------------------
@@ -2527,24 +2528,60 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               copyResults = copyData.results as CopyResult[];
             }
           }
-          req.log.info(
-            {
-              reqId: req.id,
-              branch: "osm-anchor",
-              candidateCount: candidates.length,
-              maxCompletionTokens: copyMaxCompletionTokens,
-              responseLength: copyResponseLength,
-              finishReason: copyFinishReason,
-              completionTokens: copyCompletionTokens,
-              llmCallElapsedMs: Date.now() - copyCallStartTime,
-              // Diagnostic-only: should always be false here (a successful resolve
-              // implies the abort signal never fired), but logged defensively in
-              // case a resolve/abort race is ever observed in practice.
-              abortSignalAlreadyAborted: copyAbort.signal.aborted,
-              waiterCount: waiterCountRef.count,
-            },
-            "[osm-anchor] copy generation succeeded",
-          );
+          // Validate that the returned result IDs form an exact bijection with
+          // the candidate IDs supplied to this call. A dropped candidate can
+          // still produce a syntactically valid remaining batch whose prose
+          // was contaminated with the dropped candidate's story — there is no
+          // reliable way to detect that from prose content alone, so an
+          // invalid ID set rejects the entire batch rather than merging any
+          // individual result. Skipped when copyResults is already empty
+          // (malformed/empty response), which falls through to the existing
+          // success log below unchanged.
+          let copyIntegrity:
+            | ReturnType<typeof validateCopyResultIds>
+            | undefined;
+          if (copyResults.length > 0) {
+            copyIntegrity = validateCopyResultIds(
+              candidates.map((c) => c.osmId),
+              copyResults.map((r) => r.id),
+            );
+            if (!copyIntegrity.valid) {
+              copyResults = [];
+            }
+          }
+          if (copyIntegrity && !copyIntegrity.valid) {
+            req.log.warn(
+              {
+                reqId: req.id,
+                branch: "osm-anchor",
+                expectedCount: copyIntegrity.expectedCount,
+                returnedCount: copyIntegrity.returnedCount,
+                missingCount: copyIntegrity.missingCount,
+                duplicateCount: copyIntegrity.duplicateCount,
+                unexpectedCount: copyIntegrity.unexpectedCount,
+              },
+              "[osm-anchor] copy result ID integrity check failed — rejecting batch",
+            );
+          } else {
+            req.log.info(
+              {
+                reqId: req.id,
+                branch: "osm-anchor",
+                candidateCount: candidates.length,
+                maxCompletionTokens: copyMaxCompletionTokens,
+                responseLength: copyResponseLength,
+                finishReason: copyFinishReason,
+                completionTokens: copyCompletionTokens,
+                llmCallElapsedMs: Date.now() - copyCallStartTime,
+                // Diagnostic-only: should always be false here (a successful resolve
+                // implies the abort signal never fired), but logged defensively in
+                // case a resolve/abort race is ever observed in practice.
+                abortSignalAlreadyAborted: copyAbort.signal.aborted,
+                waiterCount: waiterCountRef.count,
+              },
+              "[osm-anchor] copy generation succeeded",
+            );
+          }
         } catch (err: any) {
           clearTimeout(copyTimer);
           // Diagnostic-only: surface whatever the OpenAI SDK's error object
