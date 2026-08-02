@@ -1,22 +1,5 @@
 [
   {
-    "sha": "c5914255335ad5564a9cbf8f9ba0c3758d912db6",
-    "shortSha": "c591425",
-    "ts": "2026-07-18T18:56:40Z",
-    "lint": 0,
-    "tc": 0,
-    "format": 0,
-    "install_s": 27,
-    "install_spike": false,
-    "lint_s": 6,
-    "tc_s": 17,
-    "format_s": 7,
-    "build_job_s": 19,
-    "build_s": 49,
-    "build_spike": false,
-    "topFiles": []
-  },
-  {
     "sha": "4dcc8e4c2c501c7b2daa66d50076de54dfa66f7e",
     "shortSha": "4dcc8e4",
     "ts": "2026-07-18T19:32:41Z",
@@ -335,6 +318,23 @@
     "tc_s": 16,
     "format_s": 8,
     "build_job_s": 18,
+    "build_s": 50,
+    "build_spike": false,
+    "topFiles": []
+  },
+  {
+    "sha": "7472414aecf016cab91dd94246475a65f9088a14",
+    "shortSha": "7472414",
+    "ts": "2026-08-02T05:02:35Z",
+    "lint": 0,
+    "tc": 0,
+    "format": 0,
+    "install_s": 18,
+    "install_spike": false,
+    "lint_s": 8,
+    "tc_s": 15,
+    "format_s": 8,
+    "build_job_s": 19,
     "build_s": 50,
     "build_spike": false,
     "topFiles": []
