@@ -2812,6 +2812,8 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                 reqId: req.id,
                 branch: "osm-anchor",
                 candidateCount: candidates.length,
+                preCopyElapsedMs,
+                totalElapsedMs: Date.now() - requestStartTime,
                 maxCompletionTokens: copyMaxCompletionTokens,
                 responseLength: copyResponseLength,
                 finishReason: copyFinishReason,
