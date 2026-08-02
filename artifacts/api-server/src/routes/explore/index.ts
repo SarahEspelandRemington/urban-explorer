@@ -231,9 +231,52 @@ const inFlightGeocode = new Map<string, Promise<NominatimResult[]>>();
 // listener before aborting the shared OpenAI call (see the osm-anchor
 // branch below). A second caller's disconnect never affects this counter's
 // abort decision — only the owner's own close event checks it.
+// Diagnostic-only funnel counts for the osm-anchor discover pipeline. Never
+// cached and never sent to the client — a sibling field on the outcome, kept
+// separate from `response`/`entry` for that reason. `funnelCompletedThrough`
+// tells a reader which downstream fields were actually reached this request:
+// "afterCommercialUseFilter" means the two early-terminal branches (Overpass
+// unavailable / zero density) fired before copy-gen ever ran, so every field
+// after `counts.afterCommercialUseFilter` is genuinely absent, not zero.
+type FreshFunnelDiagnostics = {
+  cacheStatus: "fresh_owner";
+  funnelCompletedThrough: "afterCommercialUseFilter" | "final";
+  counts: {
+    rawOsmCandidates: number;
+    afterDenylist: number;
+    afterResidentialFilter: number;
+    afterCommercialUseFilter: number;
+    afterRadiusFilter?: number;
+    afterCopyMerge?: number;
+    afterDeniedPlacesFilter?: number;
+  };
+  copyOutcome?:
+    | "valid_batch"
+    | "integrity_rejected"
+    | "copy_exception"
+    | "empty_or_invalid_results";
+  overlayFlagged?: {
+    cumulative: {
+      afterClassification: number;
+      afterPrecisionFilter: number;
+      afterDuplicateSuppression: number;
+    };
+    incremental: {
+      byClassification: number;
+      byPrecisionFilter: number;
+      byDuplicateSuppression: number;
+    };
+  };
+  tierDistribution?: {
+    afterClassification: TierDistribution;
+    afterDeniedPlacesFilter: TierDistribution;
+  };
+  terminalReason?: "overpass_unavailable" | "no_osm_results";
+  lastEliminatingStage?: string;
+};
 type AnchorDiscoverOutcome =
-  | { terminal: true; response: any }
-  | { terminal: false; entry: any };
+  | { terminal: true; response: any; funnelDiagnostics: FreshFunnelDiagnostics }
+  | { terminal: false; entry: any; funnelDiagnostics: FreshFunnelDiagnostics };
 class DiscoverAbortError extends Error {}
 const inFlightDiscover = new Map<
   string,
@@ -1565,6 +1608,11 @@ import { resolveEffectiveHint } from "../../lib/areaContext";
 import { isBoringResidentialBuilding } from "../../lib/residentialBuildingFilter";
 import { isOrdinaryCommercialUse } from "../../lib/commercialUseFilter";
 import { validateCopyResultIds } from "../../lib/copyResultIntegrity";
+import {
+  computeTierDistribution,
+  findLastEliminatingStage,
+  type TierDistribution,
+} from "../../lib/discoverFunnel";
 export { applyLlmPrecisionFilter };
 
 // ---------------------------------------------------------------------------
@@ -2020,11 +2068,13 @@ router.post("/explore/discover", async (req, res) => {
   // respond." Never mutates `entry`; always clones places before editing.
   const respondFromDiscoverEntry = async (
     entry: Record<string, any>,
+    cacheStatus: "cache_hit" | "coalesced_waiter",
   ): Promise<void> => {
     // Re-apply current ratings on every hit so newly-submitted ratings
     // immediately affect the sort order and communityRating display without
     // waiting for cache expiry. Clone places so we never mutate the shared object.
     if (Array.isArray(entry.places) && entry.places.length > 0) {
+      const cachedPoolSize = entry.places.length;
       let allCachedPlaces = entry.places.map((p: any) => ({ ...p }));
       // Re-apply production filters on every hit so that a deny-list
       // expansion after this entry was produced cannot let banned categories
@@ -2033,6 +2083,15 @@ router.post("/explore/discover", async (req, res) => {
       // Apply discovery tier on every hit so pre-change entries receive tier
       // classification on the way out (no cache bump needed).
       applyDiscoveryTier(allCachedPlaces);
+      // Diagnostic-only snapshots — this function reruns the same
+      // classification/precision/dedup/deny sequence as the fresh path (see
+      // computeAnchorDiscoverResult), so the same overlay/tier attribution is
+      // genuinely available here too, unlike the pre-copy-gen stages which
+      // this cached/coalesced path never re-derives (they're not in `entry`).
+      const tierAfterClassification = computeTierDistribution(allCachedPlaces);
+      const overlayAfterClassification = allCachedPlaces.filter(
+        (p: any) => p.discoveryClass === "INTERPRETIVE_OVERLAY",
+      ).length;
       // historicalForce is derived on every read (fresh + cached/coalesced),
       // same pattern as discoveryTier above — table edits take effect
       // without a cache-version bump. Tag-attachment only; not consumed
@@ -2042,14 +2101,25 @@ router.post("/explore/discover", async (req, res) => {
         if (hf) p.historicalForce = hf;
       }
       applyLlmPrecisionFilter(allCachedPlaces);
+      const overlayAfterPrecisionFilter = allCachedPlaces.filter(
+        (p: any) => p.discoveryClass === "INTERPRETIVE_OVERLAY",
+      ).length;
       suppressApproxDuplicates(allCachedPlaces);
+      const overlayAfterDuplicateSuppression = allCachedPlaces.filter(
+        (p: any) => p.discoveryClass === "INTERPRETIVE_OVERLAY",
+      ).length;
       allCachedPlaces = filterDeniedPlaces(allCachedPlaces);
       const preQualityFilterCount = allCachedPlaces.length;
+      const tierAfterDeniedPlacesFilter =
+        computeTierDistribution(allCachedPlaces);
       // Generic commercial businesses (chains) are excluded from both Explore
       // and Walk Mode candidate pools/pins — confirmed product decision. The
       // entry holds the full classified set — this runs on the cloned array only.
       // Rubric: artifacts/urban-explorer/docs/discovery-ranking-rubric.md — "Suppress from auto-surface".
       allCachedPlaces = filterGenericCommercial(allCachedPlaces);
+      const afterGenericCommercial = allCachedPlaces.length;
+      const tierAfterGenericCommercial =
+        computeTierDistribution(allCachedPlaces);
       // Tier-4 (metadata-only) suppression remains Explore-only. Walk Mode
       // handles T4 suppression in walkEligibility.ts ("lowQuality") —
       // narration-eligibility only; pins remain visible.
@@ -2069,6 +2139,60 @@ router.post("/explore/discover", async (req, res) => {
       const cachedEmptyReason = walkMode
         ? undefined
         : computeEmptyReason(preQualityFilterCount, refreshedPlaces.length);
+      if (osmAnchor) {
+        const tierFinal = computeTierDistribution(refreshedPlaces);
+        const stageList: { name: string; count: number }[] = [
+          { name: "cachedPoolSize", count: cachedPoolSize },
+          { name: "afterDeniedPlacesFilter", count: preQualityFilterCount },
+          { name: "afterGenericCommercial", count: afterGenericCommercial },
+          ...(!walkMode
+            ? [{ name: "afterExploreTier4", count: refreshedPlaces.length }]
+            : []),
+        ];
+        const lastEliminatingStage = findLastEliminatingStage(stageList);
+        req.log[refreshedPlaces.length === 0 ? "warn" : "info"](
+          {
+            reqId: req.id,
+            branch: "osm-anchor",
+            walkMode,
+            cacheStatus,
+            funnelCompletedThrough: "final" as const,
+            counts: {
+              cachedPoolSize,
+              afterDeniedPlacesFilter: preQualityFilterCount,
+              afterGenericCommercial,
+              ...(!walkMode
+                ? { afterExploreTier4: refreshedPlaces.length }
+                : {}),
+              finalCount: refreshedPlaces.length,
+            },
+            overlayFlagged: {
+              cumulative: {
+                afterClassification: overlayAfterClassification,
+                afterPrecisionFilter: overlayAfterPrecisionFilter,
+                afterDuplicateSuppression: overlayAfterDuplicateSuppression,
+              },
+              incremental: {
+                byClassification: overlayAfterClassification,
+                byPrecisionFilter:
+                  overlayAfterPrecisionFilter - overlayAfterClassification,
+                byDuplicateSuppression:
+                  overlayAfterDuplicateSuppression -
+                  overlayAfterPrecisionFilter,
+              },
+            },
+            tierDistribution: {
+              afterClassification: tierAfterClassification,
+              afterDeniedPlacesFilter: tierAfterDeniedPlacesFilter,
+              afterGenericCommercial: tierAfterGenericCommercial,
+              final: tierFinal,
+            },
+            ...(cachedEmptyReason ? { emptyReason: cachedEmptyReason } : {}),
+            ...(lastEliminatingStage ? { lastEliminatingStage } : {}),
+          },
+          "[osm-anchor] discover funnel",
+        );
+      }
       res.json({
         ...entry,
         places: refreshedPlaces,
@@ -2100,6 +2224,34 @@ router.post("/explore/discover", async (req, res) => {
         })();
       }
     } else {
+      // Diagnostic-only: this cached/shared entry never went through the
+      // pipeline above (no places to reclassify) — a true terminal cached
+      // entry (Overpass-unavailable or genuine-sparse, cached with
+      // places: []) or a since-filtered-to-zero success entry. Only the pool
+      // size is genuinely available; every other field would be invented.
+      if (osmAnchor) {
+        req.log.warn(
+          {
+            reqId: req.id,
+            branch: "osm-anchor",
+            walkMode,
+            cacheStatus,
+            funnelCompletedThrough: "cachedPoolSizeOnly" as const,
+            counts: {
+              cachedPoolSize: Array.isArray(entry.places)
+                ? entry.places.length
+                : 0,
+            },
+            ...(entry.overpassFallback
+              ? { terminalReason: "overpass_unavailable" as const }
+              : {}),
+            ...(entry.noVerifiedPlacesNearby
+              ? { terminalReason: "no_osm_results" as const }
+              : {}),
+          },
+          "[osm-anchor] discover funnel",
+        );
+      }
       const nbhdLabel = await nbhdLabelPromise;
       res.json({
         ...entry,
@@ -2112,7 +2264,7 @@ router.post("/explore/discover", async (req, res) => {
   };
 
   if (cachedDiscover) {
-    await respondFromDiscoverEntry(cachedDiscover);
+    await respondFromDiscoverEntry(cachedDiscover, "cache_hit");
     return;
   }
 
@@ -2183,9 +2335,24 @@ router.post("/explore/discover", async (req, res) => {
         return;
       }
       if (outcome.terminal) {
+        // Diagnostic-only: this waiter gets the owner's already-computed
+        // terminal (empty) response verbatim — reuse the owner's funnel
+        // counts under this waiter's own reqId rather than recomputing
+        // anything, since nothing walkMode-dependent happens for a terminal
+        // empty response.
+        req.log.warn(
+          {
+            reqId: req.id,
+            branch: "osm-anchor",
+            walkMode,
+            ...outcome.funnelDiagnostics,
+            cacheStatus: "coalesced_waiter" as const,
+          },
+          "[osm-anchor] discover funnel",
+        );
         res.json(outcome.response);
       } else {
-        await respondFromDiscoverEntry(outcome.entry);
+        await respondFromDiscoverEntry(outcome.entry, "coalesced_waiter");
       }
       req.log.info(
         { reqId: req.id, discoverCacheKey },
@@ -2220,6 +2387,9 @@ router.post("/explore/discover", async (req, res) => {
           overpassErrored = true;
         }
         let osmCandidates: OSMPlace[] = osmRaceResult ?? [];
+        // Diagnostic-only funnel counts — see FreshFunnelDiagnostics. Does not
+        // affect filtering, ranking, or response content.
+        const rawOsmCandidates = osmCandidates.length;
 
         // Apply boring-building denylist
         if (effectiveDenylist.size > 0) {
@@ -2228,11 +2398,13 @@ router.post("/explore/discover", async (req, res) => {
             return !building || !effectiveDenylist.has(building);
           });
         }
+        const afterDenylist = osmCandidates.length;
         // Suppress plain residential buildings with no story-bearing OSM tags.
         // Applied after the denylist so the two filters compose cleanly.
         osmCandidates = osmCandidates.filter(
           (p) => !isBoringResidentialBuilding(p.tags),
         );
+        const afterResidentialFilter = osmCandidates.length;
         // Suppress ordinary shops/offices/craft businesses with no
         // story-bearing OSM tags. These enter the pool via the named-building
         // Overpass catch-all and never carry a whitelisted amenity value, so
@@ -2241,6 +2413,7 @@ router.post("/explore/discover", async (req, res) => {
         osmCandidates = osmCandidates.filter(
           (p) => !isOrdinaryCommercialUse(p.tags),
         );
+        const afterCommercialUseFilter = osmCandidates.length;
 
         // 2. Density counts at three radius tiers (before any radius filter)
         const countWithin = (r: number) =>
@@ -2259,6 +2432,54 @@ router.post("/explore/discover", async (req, res) => {
         // both a genuine sparse area and an Overpass outage produce an empty response.
         // No LLM fallback in either sub-case.
         if (osmCandidateCount[searchBucket] === 0) {
+          // Diagnostic-only: distinguish "nothing to eliminate" (Overpass
+          // errored, or genuinely returned zero elements) from a real filter
+          // stage taking a nonzero pool down to zero. terminalReason and
+          // lastEliminatingStage are mutually exclusive by construction — see
+          // findLastEliminatingStage's doc comment for why the earliest
+          // zero-crossing is the one real cause.
+          const terminalReason:
+            | "overpass_unavailable"
+            | "no_osm_results"
+            | undefined = overpassErrored
+            ? "overpass_unavailable"
+            : rawOsmCandidates === 0
+              ? "no_osm_results"
+              : undefined;
+          const lastEliminatingStage = findLastEliminatingStage([
+            { name: "rawOsmCandidates", count: rawOsmCandidates },
+            { name: "afterDenylist", count: afterDenylist },
+            { name: "afterResidentialFilter", count: afterResidentialFilter },
+            {
+              name: "afterCommercialUseFilter",
+              count: afterCommercialUseFilter,
+            },
+            {
+              name: "distanceBucketFilter",
+              count: osmCandidateCount[searchBucket],
+            },
+          ]);
+          const funnelDiagnostics: FreshFunnelDiagnostics = {
+            cacheStatus: "fresh_owner",
+            funnelCompletedThrough: "afterCommercialUseFilter",
+            counts: {
+              rawOsmCandidates,
+              afterDenylist,
+              afterResidentialFilter,
+              afterCommercialUseFilter,
+            },
+            ...(terminalReason ? { terminalReason } : {}),
+            ...(lastEliminatingStage ? { lastEliminatingStage } : {}),
+          };
+          req.log.warn(
+            {
+              reqId: req.id,
+              branch: "osm-anchor",
+              walkMode,
+              ...funnelDiagnostics,
+            },
+            "[osm-anchor] discover funnel",
+          );
           if (overpassErrored) {
             // Overpass is unavailable (IP-blocked, network error, timeout).
             // Return an empty result — do not fall through to the LLM path.
@@ -2283,7 +2504,11 @@ router.post("/explore/discover", async (req, res) => {
               data: unavailableResp,
               timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
             });
-            return { terminal: true, response: unavailableResp };
+            return {
+              terminal: true,
+              response: unavailableResp,
+              funnelDiagnostics,
+            };
           }
           // Genuine sparse area: cache with a short 30 s TTL so the next walk
           // session can retry promptly without hammering Overpass on every tick.
@@ -2302,7 +2527,7 @@ router.post("/explore/discover", async (req, res) => {
             data: emptyResp,
             timestamp: Date.now() - (LLM_CACHE_TTL_MS - SHORT_TTL_MS),
           });
-          return { terminal: true, response: emptyResp };
+          return { terminal: true, response: emptyResp, funnelDiagnostics };
         }
 
         // 4. Limit to candidates within the search radius (10% headroom)
@@ -2311,6 +2536,9 @@ router.post("/explore/discover", async (req, res) => {
             haversineDistance(latitude, longitude, p.lat, p.lon) <=
             searchRadius * 1.1,
         );
+        // Diagnostic-only. candidatesForCopyGen in the funnel log is the same
+        // value — this filter is the only thing that produces it.
+        const afterRadiusFilter = candidates.length;
 
         // Helpers for address and copy formatting
         const buildOsmAddr = (tags: Record<string, string>): string => {
@@ -2374,6 +2602,16 @@ router.post("/explore/discover", async (req, res) => {
           confidence?: string;
         };
         let copyResults: CopyResult[] = [];
+        // Diagnostic-only classification of how this call's result ended up
+        // in its final state — does not affect fallback behavior, only what
+        // gets logged. Defaults to the exception case; overwritten below once
+        // the try block reaches a point that proves otherwise. Irrelevant
+        // (never logged) if the 503-abort path throws instead of returning.
+        let copyOutcome:
+          | "valid_batch"
+          | "integrity_rejected"
+          | "copy_exception"
+          | "empty_or_invalid_results" = "copy_exception";
         const copyAbort = new AbortController();
         // max_completion_tokens is 3000 here (vs ~1200-1800 on the non-anchor
         // discover path's 35 s timeout) to cover copy for up to ~26-30 candidates
@@ -2528,6 +2766,11 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               copyResults = copyData.results as CopyResult[];
             }
           }
+          // Diagnostic-only: reaching this line means the try block did not
+          // throw. copyOutcome may still be overwritten to "integrity_rejected"
+          // below if the bijection check fails.
+          copyOutcome =
+            copyResults.length > 0 ? "valid_batch" : "empty_or_invalid_results";
           // Validate that the returned result IDs form an exact bijection with
           // the candidate IDs supplied to this call. A dropped candidate can
           // still produce a syntactically valid remaining batch whose prose
@@ -2547,6 +2790,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             );
             if (!copyIntegrity.valid) {
               copyResults = [];
+              copyOutcome = "integrity_rejected";
             }
           }
           if (copyIntegrity && !copyIntegrity.valid) {
@@ -2706,10 +2950,28 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             ),
           };
         });
+        // Diagnostic-only. Always equal to afterRadiusFilter today — merge is
+        // a 1:1 map over `candidates`, never a filter. Captured anyway as its
+        // own named funnel stage per the pipeline-boundary spec, in case that
+        // ever changes.
+        const afterCopyMerge = mergedPlaces.length;
 
         // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
         classifyDiscovery(mergedPlaces);
         applyDiscoveryTier(mergedPlaces);
+        // Diagnostic-only snapshots. applyLlmPrecisionFilter and
+        // suppressApproxDuplicates below are both `void` — they only
+        // reclassify discoveryClass/spatialSuppression in place and never
+        // change array length. filterDeniedPlaces is the one call that
+        // actually removes anything (everything both of those two flag as
+        // INTERPRETIVE_OVERLAY, plus whatever classifyDiscovery flagged
+        // natively). These counts attribute how many places accumulate that
+        // flag at each of the three flagging points, even though only the
+        // last one below (afterDeniedPlacesFilter) changes the array length.
+        const tierAfterClassification = computeTierDistribution(mergedPlaces);
+        const overlayAfterClassification = mergedPlaces.filter(
+          (p) => p.discoveryClass === "INTERPRETIVE_OVERLAY",
+        ).length;
         // historicalForce is derived on every read (fresh + cached), same
         // pattern as discoveryTier above. Tag-attachment only; not consumed
         // anywhere yet.
@@ -2718,8 +2980,17 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           if (hf) p.historicalForce = hf;
         }
         applyLlmPrecisionFilter(mergedPlaces);
+        const overlayAfterPrecisionFilter = mergedPlaces.filter(
+          (p) => p.discoveryClass === "INTERPRETIVE_OVERLAY",
+        ).length;
         suppressApproxDuplicates(mergedPlaces);
+        const overlayAfterDuplicateSuppression = mergedPlaces.filter(
+          (p) => p.discoveryClass === "INTERPRETIVE_OVERLAY",
+        ).length;
         mergedPlaces = filterDeniedPlaces(mergedPlaces);
+        const afterDeniedPlacesFilter = mergedPlaces.length;
+        const tierAfterDeniedPlacesFilter =
+          computeTierDistribution(mergedPlaces);
 
         // 8. Wikipedia photos (best-effort)
         await fetchPhotosForPlaces(mergedPlaces);
@@ -2738,7 +3009,39 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           noVerifiedPlacesNearby: false,
         };
         setLLMCache(discoverCacheKey, anchorResp);
-        return { terminal: false, entry: anchorResp };
+        const funnelDiagnostics: FreshFunnelDiagnostics = {
+          cacheStatus: "fresh_owner",
+          funnelCompletedThrough: "final",
+          copyOutcome,
+          counts: {
+            rawOsmCandidates,
+            afterDenylist,
+            afterResidentialFilter,
+            afterCommercialUseFilter,
+            afterRadiusFilter,
+            afterCopyMerge,
+            afterDeniedPlacesFilter,
+          },
+          overlayFlagged: {
+            cumulative: {
+              afterClassification: overlayAfterClassification,
+              afterPrecisionFilter: overlayAfterPrecisionFilter,
+              afterDuplicateSuppression: overlayAfterDuplicateSuppression,
+            },
+            incremental: {
+              byClassification: overlayAfterClassification,
+              byPrecisionFilter:
+                overlayAfterPrecisionFilter - overlayAfterClassification,
+              byDuplicateSuppression:
+                overlayAfterDuplicateSuppression - overlayAfterPrecisionFilter,
+            },
+          },
+          tierDistribution: {
+            afterClassification: tierAfterClassification,
+            afterDeniedPlacesFilter: tierAfterDeniedPlacesFilter,
+          },
+        };
+        return { terminal: false, entry: anchorResp, funnelDiagnostics };
       };
 
     const discoverPromise = computeAnchorDiscoverResult();
@@ -2786,6 +3089,69 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           anchorResp.places.length,
           anchorResponsePlaces.length,
         );
+    // Diagnostic-only aggregate funnel log — the single log emission for
+    // this owner request's normal-completion path (the two early-terminal
+    // branches inside computeAnchorDiscoverResult log their own, mutually
+    // exclusive with this one). Combines the diagnostics threaded back from
+    // computeAnchorDiscoverResult with the two post-cache filters
+    // (filterGenericCommercial, filterExploreTier4) that only run out here,
+    // after the cache write, on the way to the client.
+    {
+      const fd = outcome.funnelDiagnostics;
+      const afterGenericCommercial = anchorGenericFiltered.length;
+      const finalCount = anchorResponsePlaces.length;
+      const tierAfterGenericCommercial = computeTierDistribution(
+        anchorGenericFiltered,
+      );
+      const tierFinal = computeTierDistribution(anchorResponsePlaces);
+      const stageList: { name: string; count: number }[] = [
+        { name: "rawOsmCandidates", count: fd.counts.rawOsmCandidates },
+        { name: "afterDenylist", count: fd.counts.afterDenylist },
+        {
+          name: "afterResidentialFilter",
+          count: fd.counts.afterResidentialFilter,
+        },
+        {
+          name: "afterCommercialUseFilter",
+          count: fd.counts.afterCommercialUseFilter,
+        },
+        { name: "afterRadiusFilter", count: fd.counts.afterRadiusFilter ?? 0 },
+        {
+          name: "afterDeniedPlacesFilter",
+          count: fd.counts.afterDeniedPlacesFilter ?? 0,
+        },
+        { name: "afterGenericCommercial", count: afterGenericCommercial },
+        ...(!walkMode
+          ? [{ name: "afterExploreTier4", count: finalCount }]
+          : []),
+      ];
+      const lastEliminatingStage = findLastEliminatingStage(stageList);
+      req.log[finalCount === 0 ? "warn" : "info"](
+        {
+          reqId: req.id,
+          branch: "osm-anchor",
+          walkMode,
+          cacheStatus: "fresh_owner" as const,
+          funnelCompletedThrough: "final" as const,
+          copyOutcome: fd.copyOutcome,
+          counts: {
+            ...fd.counts,
+            afterGenericCommercial,
+            ...(!walkMode ? { afterExploreTier4: finalCount } : {}),
+            finalCount,
+          },
+          overlayFlagged: fd.overlayFlagged,
+          tierDistribution: {
+            ...fd.tierDistribution,
+            afterGenericCommercial: tierAfterGenericCommercial,
+            final: tierFinal,
+          },
+          ...(anchorEmptyReason ? { emptyReason: anchorEmptyReason } : {}),
+          ...(lastEliminatingStage ? { lastEliminatingStage } : {}),
+        },
+        "[osm-anchor] discover funnel",
+      );
+    }
     res.json({
       ...anchorResp,
       places: anchorResponsePlaces,
