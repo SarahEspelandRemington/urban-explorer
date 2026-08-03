@@ -2708,6 +2708,12 @@ router.post("/explore/discover", async (req, res) => {
         let copyResponseLength: number | undefined;
         let copyFinishReason: string | undefined;
         let copyCompletionTokens: number | undefined;
+        // Diagnostic-only: true only on the "copy generation succeeded" log
+        // path below (valid batch or empty/invalid results that still passed
+        // ID-integrity, i.e. not integrity_rejected). Gates the trustLevel x
+        // discoveryTier snapshot after the merge step so it only reflects
+        // real generated copy, not placeholder fallback text.
+        let copyGenerationSucceeded = false;
         // Diagnostic-only: exact wall-clock time the copy-gen LLM call itself was
         // issued, so the catch block below can log how long *this specific call*
         // ran before rejecting/aborting — distinct from preCopyElapsedMs (time
@@ -2807,6 +2813,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               "[osm-anchor] copy result ID integrity check failed — rejecting batch",
             );
           } else {
+            copyGenerationSucceeded = true;
             req.log.info(
               {
                 reqId: req.id,
@@ -2961,6 +2968,34 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
         classifyDiscovery(mergedPlaces);
         applyDiscoveryTier(mergedPlaces);
+        // Diagnostic-only, read-only: cross-tab of trustLevel (OSM tag
+        // richness, known pre-copy) x discoveryTier (regex-classified from
+        // generated prose, known only post-copy). Investigates whether
+        // trustLevel is a reliable pre-copy proxy for editorial quality —
+        // gated on copyGenerationSucceeded so placeholder fallback text
+        // ("A notable place in this area.") never pollutes the counts.
+        // Does not affect ranking, filtering, or response content.
+        if (copyGenerationSucceeded) {
+          const trustTierCrosstab: Record<string, Record<string, number>> = {};
+          for (const p of mergedPlaces) {
+            const tl = p.trustLevel ?? "unknown";
+            const dt =
+              p.discoveryTier !== undefined
+                ? String(p.discoveryTier)
+                : "unclassified";
+            trustTierCrosstab[tl] ??= {};
+            trustTierCrosstab[tl][dt] = (trustTierCrosstab[tl][dt] ?? 0) + 1;
+          }
+          req.log.info(
+            {
+              reqId: req.id,
+              branch: "osm-anchor",
+              candidateCount: mergedPlaces.length,
+              trustTierCrosstab,
+            },
+            "[osm-anchor] trustLevel x discoveryTier snapshot",
+          );
+        }
         // Diagnostic-only snapshots. applyLlmPrecisionFilter and
         // suppressApproxDuplicates below are both `void` — they only
         // reclassify discoveryClass/spatialSuppression in place and never
