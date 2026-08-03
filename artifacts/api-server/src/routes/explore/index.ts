@@ -254,7 +254,17 @@ type FreshFunnelDiagnostics = {
     | "valid_batch"
     | "integrity_rejected"
     | "copy_exception"
-    | "empty_or_invalid_results";
+    | "empty_or_invalid_results"
+    | "skipped_all_bare";
+  // Diagnostic-only: how many candidates were sent to the copy-generation
+  // LLM call vs. deliberately excluded beforehand (currently: osm_bare
+  // candidates). Distinct from `counts.*` above — exclusion doesn't shrink
+  // the candidate/place pipeline (excluded candidates still reach the
+  // response via the merge fallback), it only shrinks what's sent to the LLM.
+  copyGeneration?: {
+    candidatesSent: number;
+    excludedBareCount: number;
+  };
   overlayFlagged?: {
     cumulative: {
       afterClassification: number;
@@ -2042,7 +2052,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v69:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v70:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2611,7 +2621,8 @@ router.post("/explore/discover", async (req, res) => {
           | "valid_batch"
           | "integrity_rejected"
           | "copy_exception"
-          | "empty_or_invalid_results" = "copy_exception";
+          | "empty_or_invalid_results"
+          | "skipped_all_bare" = "copy_exception";
         const copyAbort = new AbortController();
         // max_completion_tokens is 3000 here (vs ~1200-1800 on the non-anchor
         // discover path's 35 s timeout) to cover copy for up to ~26-30 candidates
@@ -2720,16 +2731,50 @@ router.post("/explore/discover", async (req, res) => {
         // spent before the call started) and totalElapsedMs (whole request).
         // Does not affect timeout, retry, prompt, or fallback behavior.
         const copyCallStartTime = Date.now();
-        try {
-          // @prompt-region discover
-          const copyResponse = await openai.chat.completions.create(
+        // osm_bare candidates are excluded from the copy-generation call.
+        // OSM_COPY_RULES.osm_bare restricts bare-tier copy to observational
+        // language only (no dates, founding claims, former uses, or
+        // architectural-style claims) — language the discoveryTier classifier
+        // can never score above Tier 4. Confirmed empirically: 0 of 236
+        // osm_bare candidates landed Tier 1-3 in the 2026-08-02 production
+        // sample. Excluded candidates still flow through the merge step below
+        // via the existing copyMap.get(...) ?? fallback — identical to a
+        // candidate whose copy generation genuinely failed.
+        const copyGenCandidates = candidates.filter(
+          (p) => computeOsmTrustLevel(p.tags) !== "osm_bare",
+        );
+        const excludedBareCount = candidates.length - copyGenCandidates.length;
+        if (copyGenCandidates.length === 0) {
+          // Nothing eligible for copy generation (every remaining candidate
+          // was osm_bare) — skip the LLM call entirely rather than firing it
+          // with an empty candidate list. Excluded candidates still reach the
+          // response via the same merge/fallback path used below for any
+          // other missing-copy case (copyMap.get(...) ?? placeholder).
+          clearTimeout(copyTimer);
+          copyOutcome = "skipped_all_bare";
+          copyGenerationSucceeded = true;
+          req.log.info(
             {
-              model: "gpt-4.1-mini",
-              max_completion_tokens: copyMaxCompletionTokens,
-              messages: [
-                {
-                  role: "system",
-                  content: `You are a hyper-local urban historian writing brief copy for real places sourced from OpenStreetMap.
+              reqId: req.id,
+              branch: "osm-anchor",
+              candidateCount: 0,
+              excludedBareCount,
+              preCopyElapsedMs,
+              totalElapsedMs: Date.now() - requestStartTime,
+            },
+            "[osm-anchor] copy generation skipped — all candidates were osm_bare",
+          );
+        } else {
+          try {
+            // @prompt-region discover
+            const copyResponse = await openai.chat.completions.create(
+              {
+                model: "gpt-4.1-mini",
+                max_completion_tokens: copyMaxCompletionTokens,
+                messages: [
+                  {
+                    role: "system",
+                    content: `You are a hyper-local urban historian writing brief copy for real places sourced from OpenStreetMap.
 
 MANDATORY RULES:
 1. Return exactly the same number of results as candidates provided.
@@ -2750,123 +2795,163 @@ Flag any claim not directly supported by the candidate's tags with "Reportedly" 
 11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content. Standalone attribution facts — "designed by architect X", "built in year Y", "listed on the National Register", "in a Beaux Arts style" — are NOT sufficient on their own for a discovery-worthy summary. Only use them to anchor a broader story: explain why the architect matters, what else they built, who commissioned the building and why, or what notable events occurred here. If the Wikipedia content contains only architectural metadata with no narrative context (no notable people, no events, no transformation over time), reflect that in a lower-confidence summary rather than dressing up dry facts as a compelling discovery.
 
 Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
-                },
-                {
-                  role: "user",
-                  content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(candidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
-                },
-              ],
-              response_format: { type: "json_object" },
-            },
-            // @end-prompt-region discover
-            { signal: copyAbort.signal },
-          );
-          clearTimeout(copyTimer);
-          const copyContent = copyResponse.choices[0]?.message?.content;
-          copyResponseLength = copyContent?.length;
-          copyFinishReason = copyResponse.choices[0]?.finish_reason;
-          copyCompletionTokens = copyResponse.usage?.completion_tokens;
-          if (copyContent) {
-            const copyData = JSON.parse(copyContent) as { results?: unknown[] };
-            if (Array.isArray(copyData?.results)) {
-              copyResults = copyData.results as CopyResult[];
-            }
-          }
-          // Diagnostic-only: reaching this line means the try block did not
-          // throw. copyOutcome may still be overwritten to "integrity_rejected"
-          // below if the bijection check fails.
-          copyOutcome =
-            copyResults.length > 0 ? "valid_batch" : "empty_or_invalid_results";
-          // Validate that the returned result IDs form an exact bijection with
-          // the candidate IDs supplied to this call. A dropped candidate can
-          // still produce a syntactically valid remaining batch whose prose
-          // was contaminated with the dropped candidate's story — there is no
-          // reliable way to detect that from prose content alone, so an
-          // invalid ID set rejects the entire batch rather than merging any
-          // individual result. Skipped when copyResults is already empty
-          // (malformed/empty response), which falls through to the existing
-          // success log below unchanged.
-          let copyIntegrity:
-            | ReturnType<typeof validateCopyResultIds>
-            | undefined;
-          if (copyResults.length > 0) {
-            copyIntegrity = validateCopyResultIds(
-              candidates.map((c) => c.osmId),
-              copyResults.map((r) => r.id),
+                  },
+                  {
+                    role: "user",
+                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(copyGenCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
+                  },
+                ],
+                response_format: { type: "json_object" },
+              },
+              // @end-prompt-region discover
+              { signal: copyAbort.signal },
             );
-            if (!copyIntegrity.valid) {
-              copyResults = [];
-              copyOutcome = "integrity_rejected";
+            clearTimeout(copyTimer);
+            const copyContent = copyResponse.choices[0]?.message?.content;
+            copyResponseLength = copyContent?.length;
+            copyFinishReason = copyResponse.choices[0]?.finish_reason;
+            copyCompletionTokens = copyResponse.usage?.completion_tokens;
+            if (copyContent) {
+              const copyData = JSON.parse(copyContent) as {
+                results?: unknown[];
+              };
+              if (Array.isArray(copyData?.results)) {
+                copyResults = copyData.results as CopyResult[];
+              }
             }
-          }
-          if (copyIntegrity && !copyIntegrity.valid) {
+            // Diagnostic-only: reaching this line means the try block did not
+            // throw. copyOutcome may still be overwritten to "integrity_rejected"
+            // below if the bijection check fails.
+            copyOutcome =
+              copyResults.length > 0
+                ? "valid_batch"
+                : "empty_or_invalid_results";
+            // Validate that the returned result IDs form an exact bijection with
+            // the candidate IDs supplied to this call. A dropped candidate can
+            // still produce a syntactically valid remaining batch whose prose
+            // was contaminated with the dropped candidate's story — there is no
+            // reliable way to detect that from prose content alone, so an
+            // invalid ID set rejects the entire batch rather than merging any
+            // individual result. Skipped when copyResults is already empty
+            // (malformed/empty response), which falls through to the existing
+            // success log below unchanged.
+            let copyIntegrity:
+              | ReturnType<typeof validateCopyResultIds>
+              | undefined;
+            if (copyResults.length > 0) {
+              copyIntegrity = validateCopyResultIds(
+                copyGenCandidates.map((c) => c.osmId),
+                copyResults.map((r) => r.id),
+              );
+              if (!copyIntegrity.valid) {
+                copyResults = [];
+                copyOutcome = "integrity_rejected";
+              }
+            }
+            if (copyIntegrity && !copyIntegrity.valid) {
+              req.log.warn(
+                {
+                  reqId: req.id,
+                  branch: "osm-anchor",
+                  expectedCount: copyIntegrity.expectedCount,
+                  returnedCount: copyIntegrity.returnedCount,
+                  missingCount: copyIntegrity.missingCount,
+                  duplicateCount: copyIntegrity.duplicateCount,
+                  unexpectedCount: copyIntegrity.unexpectedCount,
+                },
+                "[osm-anchor] copy result ID integrity check failed — rejecting batch",
+              );
+            } else {
+              copyGenerationSucceeded = true;
+              req.log.info(
+                {
+                  reqId: req.id,
+                  branch: "osm-anchor",
+                  candidateCount: copyGenCandidates.length,
+                  excludedBareCount,
+                  preCopyElapsedMs,
+                  totalElapsedMs: Date.now() - requestStartTime,
+                  maxCompletionTokens: copyMaxCompletionTokens,
+                  responseLength: copyResponseLength,
+                  finishReason: copyFinishReason,
+                  completionTokens: copyCompletionTokens,
+                  llmCallElapsedMs: Date.now() - copyCallStartTime,
+                  // Diagnostic-only: should always be false here (a successful resolve
+                  // implies the abort signal never fired), but logged defensively in
+                  // case a resolve/abort race is ever observed in practice.
+                  abortSignalAlreadyAborted: copyAbort.signal.aborted,
+                  waiterCount: waiterCountRef.count,
+                },
+                "[osm-anchor] copy generation succeeded",
+              );
+            }
+          } catch (err: any) {
+            clearTimeout(copyTimer);
+            // Diagnostic-only: surface whatever the OpenAI SDK's error object
+            // exposes about *this specific rejection* — status/code/type/requestID
+            // are only populated when a real HTTP response was received (e.g. a
+            // RateLimitError from a 429); they stay undefined for APIUserAbortError
+            // (our AbortController fired mid-flight, no response ever arrived) and
+            // for APIConnectionError/APIConnectionTimeoutError (network-level
+            // failure). This does not change what triggers the abort or catch —
+            // it only records what the already-thrown error tells us.
+            const errName = err?.name ?? err?.constructor?.name;
+            const errStatus = err?.status;
+            const errCode = err?.code;
+            const errType = err?.type;
+            const errRequestId = err?.requestID;
+            const llmCallElapsedMs = Date.now() - copyCallStartTime;
+            if (
+              copyAbort.signal.aborted &&
+              !res.headersSent &&
+              res.socket?.writable
+            ) {
+              req.log.warn(
+                {
+                  reqId: req.id,
+                  branch: "osm-anchor",
+                  candidateCount: copyGenCandidates.length,
+                  excludedBareCount,
+                  abortCause: copyAbortCause,
+                  timeoutMs: 45_000,
+                  radius: searchRadius,
+                  preCopyElapsedMs,
+                  totalElapsedMs: Date.now() - requestStartTime,
+                  maxCompletionTokens: copyMaxCompletionTokens,
+                  llmCallElapsedMs,
+                  errName,
+                  errStatus,
+                  errCode,
+                  errType,
+                  errRequestId,
+                  waiterCount: waiterCountRef.count,
+                },
+                "[osm-anchor] copyAbort fired — returning 503",
+              );
+              res.status(503).json({
+                error:
+                  "Discovery service temporarily unavailable. Please try again.",
+              });
+              // Reject the shared promise so any coalesced waiters know to send
+              // their own 503 instead of hanging or silently getting a bare-OSM
+              // result they never asked for. This owner's own response was already
+              // sent above; the throw only drives cleanup/waiter notification.
+              throw new DiscoverAbortError();
+            }
+            // Copy failure is non-fatal: OSM coordinates are still correct
             req.log.warn(
               {
                 reqId: req.id,
                 branch: "osm-anchor",
-                expectedCount: copyIntegrity.expectedCount,
-                returnedCount: copyIntegrity.returnedCount,
-                missingCount: copyIntegrity.missingCount,
-                duplicateCount: copyIntegrity.duplicateCount,
-                unexpectedCount: copyIntegrity.unexpectedCount,
-              },
-              "[osm-anchor] copy result ID integrity check failed — rejecting batch",
-            );
-          } else {
-            copyGenerationSucceeded = true;
-            req.log.info(
-              {
-                reqId: req.id,
-                branch: "osm-anchor",
-                candidateCount: candidates.length,
+                candidateCount: copyGenCandidates.length,
+                excludedBareCount,
+                radius: searchRadius,
                 preCopyElapsedMs,
                 totalElapsedMs: Date.now() - requestStartTime,
                 maxCompletionTokens: copyMaxCompletionTokens,
                 responseLength: copyResponseLength,
                 finishReason: copyFinishReason,
                 completionTokens: copyCompletionTokens,
-                llmCallElapsedMs: Date.now() - copyCallStartTime,
-                // Diagnostic-only: should always be false here (a successful resolve
-                // implies the abort signal never fired), but logged defensively in
-                // case a resolve/abort race is ever observed in practice.
-                abortSignalAlreadyAborted: copyAbort.signal.aborted,
-                waiterCount: waiterCountRef.count,
-              },
-              "[osm-anchor] copy generation succeeded",
-            );
-          }
-        } catch (err: any) {
-          clearTimeout(copyTimer);
-          // Diagnostic-only: surface whatever the OpenAI SDK's error object
-          // exposes about *this specific rejection* — status/code/type/requestID
-          // are only populated when a real HTTP response was received (e.g. a
-          // RateLimitError from a 429); they stay undefined for APIUserAbortError
-          // (our AbortController fired mid-flight, no response ever arrived) and
-          // for APIConnectionError/APIConnectionTimeoutError (network-level
-          // failure). This does not change what triggers the abort or catch —
-          // it only records what the already-thrown error tells us.
-          const errName = err?.name ?? err?.constructor?.name;
-          const errStatus = err?.status;
-          const errCode = err?.code;
-          const errType = err?.type;
-          const errRequestId = err?.requestID;
-          const llmCallElapsedMs = Date.now() - copyCallStartTime;
-          if (
-            copyAbort.signal.aborted &&
-            !res.headersSent &&
-            res.socket?.writable
-          ) {
-            req.log.warn(
-              {
-                reqId: req.id,
-                branch: "osm-anchor",
-                candidateCount: candidates.length,
-                abortCause: copyAbortCause,
-                timeoutMs: 45_000,
-                radius: searchRadius,
-                preCopyElapsedMs,
-                totalElapsedMs: Date.now() - requestStartTime,
-                maxCompletionTokens: copyMaxCompletionTokens,
                 llmCallElapsedMs,
                 errName,
                 errStatus,
@@ -2874,43 +2959,11 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                 errType,
                 errRequestId,
                 waiterCount: waiterCountRef.count,
+                err,
               },
-              "[osm-anchor] copyAbort fired — returning 503",
+              "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
             );
-            res.status(503).json({
-              error:
-                "Discovery service temporarily unavailable. Please try again.",
-            });
-            // Reject the shared promise so any coalesced waiters know to send
-            // their own 503 instead of hanging or silently getting a bare-OSM
-            // result they never asked for. This owner's own response was already
-            // sent above; the throw only drives cleanup/waiter notification.
-            throw new DiscoverAbortError();
           }
-          // Copy failure is non-fatal: OSM coordinates are still correct
-          req.log.warn(
-            {
-              reqId: req.id,
-              branch: "osm-anchor",
-              candidateCount: candidates.length,
-              radius: searchRadius,
-              preCopyElapsedMs,
-              totalElapsedMs: Date.now() - requestStartTime,
-              maxCompletionTokens: copyMaxCompletionTokens,
-              responseLength: copyResponseLength,
-              finishReason: copyFinishReason,
-              completionTokens: copyCompletionTokens,
-              llmCallElapsedMs,
-              errName,
-              errStatus,
-              errCode,
-              errType,
-              errRequestId,
-              waiterCount: waiterCountRef.count,
-              err,
-            },
-            "[osm-anchor] LLM copy generation failed — returning bare OSM candidates",
-          );
         }
 
         // 6. Merge LLM copy onto OSM objects
@@ -3050,6 +3103,10 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           cacheStatus: "fresh_owner",
           funnelCompletedThrough: "final",
           copyOutcome,
+          copyGeneration: {
+            candidatesSent: copyGenCandidates.length,
+            excludedBareCount,
+          },
           counts: {
             rawOsmCandidates,
             afterDenylist,
@@ -3171,6 +3228,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           cacheStatus: "fresh_owner" as const,
           funnelCompletedThrough: "final" as const,
           copyOutcome: fd.copyOutcome,
+          copyGeneration: fd.copyGeneration,
           counts: {
             ...fd.counts,
             afterGenericCommercial,
