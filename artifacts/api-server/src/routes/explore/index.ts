@@ -264,6 +264,7 @@ type FreshFunnelDiagnostics = {
   copyGeneration?: {
     candidatesSent: number;
     excludedBareCount: number;
+    excludedCapCount: number;
   };
   overlayFlagged?: {
     cumulative: {
@@ -2055,7 +2056,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v70:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v71:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2747,6 +2748,32 @@ router.post("/explore/discover", async (req, res) => {
           (p) => computeOsmTrustLevel(p.tags) !== "osm_bare",
         );
         const excludedBareCount = candidates.length - copyGenCandidates.length;
+        // Provisional hard cap on how many post-bare-exclusion candidates are
+        // sent to the copy-generation LLM call. Dense areas (Union Square,
+        // Financial District) were still hitting 30 candidates after the
+        // osm_bare exclusion alone, reproducing the original B3 45s timeout
+        // in production (confirmed 2026-08-04). 22 is a provisional cap
+        // derived from production log analysis of candidate count vs. LLM
+        // call duration/tokens on this exact code path. Sorted closest-first
+        // so the cap favors spatial relevance; osm_standard and osm_enriched
+        // remain equally eligible — no trust-tier prioritization here.
+        // Candidates beyond the cap are NOT dropped: they still reach the
+        // response via the existing copyMap.get(...) ?? placeholder merge
+        // path below, identical to a bare-excluded or genuinely-failed
+        // candidate.
+        const COPY_GEN_CANDIDATE_CAP = 22;
+        const cappedCandidates =
+          copyGenCandidates.length > COPY_GEN_CANDIDATE_CAP
+            ? [...copyGenCandidates]
+                .sort(
+                  (a, b) =>
+                    haversineDistance(latitude, longitude, a.lat, a.lon) -
+                    haversineDistance(latitude, longitude, b.lat, b.lon),
+                )
+                .slice(0, COPY_GEN_CANDIDATE_CAP)
+            : copyGenCandidates;
+        const excludedCapCount =
+          copyGenCandidates.length - cappedCandidates.length;
         if (copyGenCandidates.length === 0) {
           // Nothing eligible for copy generation (every remaining candidate
           // was osm_bare) — skip the LLM call entirely rather than firing it
@@ -2762,6 +2789,7 @@ router.post("/explore/discover", async (req, res) => {
               branch: "osm-anchor",
               candidateCount: 0,
               excludedBareCount,
+              excludedCapCount,
               preCopyElapsedMs,
               totalElapsedMs: Date.now() - requestStartTime,
             },
@@ -2801,7 +2829,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                   },
                   {
                     role: "user",
-                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(copyGenCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
+                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(cappedCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
                   },
                 ],
                 response_format: { type: "json_object" },
@@ -2843,7 +2871,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               | undefined;
             if (copyResults.length > 0) {
               copyIntegrity = validateCopyResultIds(
-                copyGenCandidates.map((c) => c.osmId),
+                cappedCandidates.map((c) => c.osmId),
                 copyResults.map((r) => r.id),
               );
               if (!copyIntegrity.valid) {
@@ -2870,8 +2898,9 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                 {
                   reqId: req.id,
                   branch: "osm-anchor",
-                  candidateCount: copyGenCandidates.length,
+                  candidateCount: cappedCandidates.length,
                   excludedBareCount,
+                  excludedCapCount,
                   preCopyElapsedMs,
                   totalElapsedMs: Date.now() - requestStartTime,
                   maxCompletionTokens: copyMaxCompletionTokens,
@@ -2913,8 +2942,9 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                 {
                   reqId: req.id,
                   branch: "osm-anchor",
-                  candidateCount: copyGenCandidates.length,
+                  candidateCount: cappedCandidates.length,
                   excludedBareCount,
+                  excludedCapCount,
                   abortCause: copyAbortCause,
                   timeoutMs: 45_000,
                   radius: searchRadius,
@@ -2946,8 +2976,9 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               {
                 reqId: req.id,
                 branch: "osm-anchor",
-                candidateCount: copyGenCandidates.length,
+                candidateCount: cappedCandidates.length,
                 excludedBareCount,
+                excludedCapCount,
                 radius: searchRadius,
                 preCopyElapsedMs,
                 totalElapsedMs: Date.now() - requestStartTime,
@@ -3107,8 +3138,9 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           funnelCompletedThrough: "final",
           copyOutcome,
           copyGeneration: {
-            candidatesSent: copyGenCandidates.length,
+            candidatesSent: cappedCandidates.length,
             excludedBareCount,
+            excludedCapCount,
           },
           counts: {
             rawOsmCandidates,
