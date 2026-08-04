@@ -165,11 +165,24 @@ const T4_FUNCTION_RE =
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
+ * Exact placeholder summary written by the discover route's copy-generation
+ * merge/fallback path (`copy?.summary ?? PLACEHOLDER_SUMMARY`) whenever a
+ * candidate has no real generated copy — whether from ordinary copy-gen
+ * failure or deliberate osm_bare exclusion. Exported so both files share one
+ * literal instead of two independently-maintained copies.
+ */
+export const PLACEHOLDER_SUMMARY = "A notable place in this area.";
+
+/**
  * Classify a single place's discovery tier from its narrative content.
  * Pure function — no side effects, no async, no external calls.
  *
- * Evaluation order: T1 → T2 → T3 → T4 → undefined
- * Positive-tier signals always take priority over Tier-4 suppression.
+ * Evaluation order: exact-placeholder-shape → T1 → T2 → T3 → T4 → undefined
+ * Positive-tier signals always take priority over Tier-4 suppression — EXCEPT
+ * the exact placeholder fallback shape (no real summary, no facts), which is
+ * always Tier 4 regardless of any classifier signal a bare place name might
+ * accidentally contain (e.g. a civic term like "union" inside "Union
+ * Christian Church").
  */
 export function classifyDiscoveryTier(place: {
   name?: string;
@@ -177,6 +190,17 @@ export function classifyDiscoveryTier(place: {
   facts?: string[];
   category?: string;
 }): DiscoveryTierResult {
+  if (
+    place.summary === PLACEHOLDER_SUMMARY &&
+    (!place.facts || place.facts.length === 0)
+  ) {
+    return {
+      tier: 4,
+      reason: "classifiedTier4",
+      rejectionReason: "placeholderFallback",
+    };
+  }
+
   const summaryRaw = place.summary ?? "";
   const facts = Array.isArray(place.facts) ? place.facts.join(" ") : "";
   const corpus = `${place.name ?? ""} ${summaryRaw} ${facts}`.toLowerCase();

@@ -1605,7 +1605,10 @@ export {
   filterGenericCommercial,
   suppressApproxDuplicates,
 };
-import { applyDiscoveryTier } from "../../lib/discoveryTier";
+import {
+  applyDiscoveryTier,
+  PLACEHOLDER_SUMMARY,
+} from "../../lib/discoveryTier";
 import { deriveHistoricalForce } from "../../lib/historicalForceMap";
 import { computeOrientation } from "../../lib/orientation";
 
@@ -2995,7 +2998,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             distanceMeters: Math.round(
               haversineDistance(latitude, longitude, p.lat, p.lon),
             ),
-            summary: copy?.summary ?? "A notable place in this area.",
+            summary: copy?.summary ?? PLACEHOLDER_SUMMARY,
             facts: copy?.facts ?? [],
             tags: sanitizeDisplayTags(copy?.tags),
             yearBuilt: copy?.yearBuilt,
