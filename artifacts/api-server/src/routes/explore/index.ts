@@ -534,7 +534,7 @@ async function fetchNearbyOSMPlaces(
   if (cached) return cached.places;
 
   const r = Math.min(radiusMeters, 500);
-  const timeoutSec = quickMode ? 4 : 5;
+  const timeoutSec = quickMode ? 4 : 6;
   const query = `
 [out:json][timeout:${timeoutSec}];
 (
@@ -552,10 +552,10 @@ async function fetchNearbyOSMPlaces(
   nwr["memorial"](around:${r},${lat},${lng});
   nwr["name"]["leisure"~"^(park|garden|nature_reserve)$"](around:${r},${lat},${lng});
 );
-out center body ${maxResults};
+out center body qt ${maxResults};
 `;
   const controller = new AbortController();
-  const abortTimeout = quickMode ? 5000 : 10000;
+  const abortTimeout = quickMode ? 5000 : 11000;
   const timeout = setTimeout(() => controller.abort(), abortTimeout);
 
   const fetchOpts = {
@@ -581,8 +581,20 @@ out center body ${maxResults};
     clearTimeout(timeout);
     logger.info({ provider }, "[overpass] provider responded");
 
-    const json = (await resp.json()) as { elements?: any[] };
+    const json = (await resp.json()) as { elements?: any[]; remark?: string };
     if (!json.elements) return null;
+    // Overpass returns HTTP 200 with an empty elements array (not an HTTP
+    // error) when it hits its own internal [timeout:N] query budget — this
+    // is otherwise indistinguishable from a genuinely sparse area. Detect it
+    // via the "remark" field and route it into the same overpassErrored path
+    // as a network-level failure, rather than silently caching an empty result.
+    if (json.remark && /timed out|timeout/i.test(json.remark)) {
+      logger.warn(
+        { remark: json.remark },
+        "Overpass internal query timeout — treating as unavailable",
+      );
+      return null;
+    }
 
     const seen = new Set<string>();
     const results: OSMPlace[] = [];
@@ -2391,10 +2403,15 @@ router.post("/explore/discover", async (req, res) => {
             longitude,
             Math.min(searchRadius, 500),
             false,
-            80,
+            // Walk Mode always requests a 300m radius (confirmed via both
+            // WalkModeContext density profiles) — 120 fully covers the
+            // observed density there. The Explore tab's search/map-pan paths
+            // can reach 500m and were not stress-tested at a higher cap, so
+            // they stay at 80 pending a separate sizing pass.
+            walkMode ? 120 : 80,
           ).catch((): null => null),
           new Promise<null>((resolve) =>
-            setTimeout(() => resolve(null), 12000),
+            setTimeout(() => resolve(null), 13000),
           ),
         ]);
         if (osmRaceResult === null) {
@@ -2662,11 +2679,58 @@ router.post("/explore/discover", async (req, res) => {
         // pre-LLM latency from the LLM call itself.
         const preCopyElapsedMs = Date.now() - requestStartTime;
 
+        // osm_bare candidates are excluded from the copy-generation call.
+        // OSM_COPY_RULES.osm_bare restricts bare-tier copy to observational
+        // language only (no dates, founding claims, former uses, or
+        // architectural-style claims) — language the discoveryTier classifier
+        // can never score above Tier 4. Confirmed empirically: 0 of 236
+        // osm_bare candidates landed Tier 1-3 in the 2026-08-02 production
+        // sample. Excluded candidates still flow through the merge step below
+        // via the existing copyMap.get(...) ?? fallback — identical to a
+        // candidate whose copy generation genuinely failed.
+        const copyGenCandidates = candidates.filter(
+          (p) => computeOsmTrustLevel(p.tags) !== "osm_bare",
+        );
+        const excludedBareCount = candidates.length - copyGenCandidates.length;
+        // Provisional hard cap on how many post-bare-exclusion candidates are
+        // sent to the copy-generation LLM call. Dense areas (Union Square,
+        // Financial District) were still hitting 30 candidates after the
+        // osm_bare exclusion alone, reproducing the original B3 45s timeout
+        // in production (confirmed 2026-08-04). 22 is a provisional cap
+        // derived from production log analysis of candidate count vs. LLM
+        // call duration/tokens on this exact code path. Sorted closest-first
+        // so the cap favors spatial relevance; osm_standard and osm_enriched
+        // remain equally eligible — no trust-tier prioritization here.
+        // Candidates beyond the cap are NOT dropped: they still reach the
+        // response via the existing copyMap.get(...) ?? placeholder merge
+        // path below, identical to a bare-excluded or genuinely-failed
+        // candidate. Computed here (before Wikipedia pre-fetch below) so the
+        // Wikipedia fan-out can be scoped to this same window — wikiMap is
+        // only ever consulted for cappedCandidates during copy-gen, so
+        // fetching summaries for anything beyond it is wasted network fan-out.
+        const COPY_GEN_CANDIDATE_CAP = 22;
+        const cappedCandidates =
+          copyGenCandidates.length > COPY_GEN_CANDIDATE_CAP
+            ? [...copyGenCandidates]
+                .sort(
+                  (a, b) =>
+                    haversineDistance(latitude, longitude, a.lat, a.lon) -
+                    haversineDistance(latitude, longitude, b.lat, b.lon),
+                )
+                .slice(0, COPY_GEN_CANDIDATE_CAP)
+            : copyGenCandidates;
+        const excludedCapCount =
+          copyGenCandidates.length - cappedCandidates.length;
+
         // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
-        // wikipedia= tag. Fetches run in parallel (Promise.all) and are backed by
-        // the shared in-memory cache (wiki-v2, keyed by lang/title) also used by the
-        // detail-page Phase B path — a subsequent detail-page tap for the same
-        // place is a free cache hit with no second Wikipedia API call.
+        // wikipedia= tag. Scoped to cappedCandidates — the only candidates
+        // wikiMap is ever consulted for during copy-gen — rather than the
+        // full post-filter pool, so a larger raw Overpass cap can't inflate
+        // concurrent Wikipedia fetch fan-out. Fetches run in parallel
+        // (Promise.all) and are backed by the shared in-memory cache
+        // (wiki-v2, keyed by lang/title) also used by the detail-page Phase B
+        // path — a subsequent detail-page tap for the same place is a free
+        // cache hit with no second Wikipedia API call.
         // Total added latency: ~200–400 ms for the slowest single fetch, which is
         // negligible before the 3–30 s copy LLM call that follows. If any fetch
         // times out or fails, the candidate silently falls through to the
@@ -2674,7 +2738,7 @@ router.post("/explore/discover", async (req, res) => {
         const wikiMap = new Map<string, WikipediaSummary>();
         {
           type WikiJob = { osmId: string; lang: string; title: string };
-          const jobs: WikiJob[] = candidates
+          const jobs: WikiJob[] = cappedCandidates
             .map((c): WikiJob | null => {
               const tag = c.tags["wikipedia"];
               if (!tag) return null;
@@ -2735,45 +2799,6 @@ router.post("/explore/discover", async (req, res) => {
         // spent before the call started) and totalElapsedMs (whole request).
         // Does not affect timeout, retry, prompt, or fallback behavior.
         const copyCallStartTime = Date.now();
-        // osm_bare candidates are excluded from the copy-generation call.
-        // OSM_COPY_RULES.osm_bare restricts bare-tier copy to observational
-        // language only (no dates, founding claims, former uses, or
-        // architectural-style claims) — language the discoveryTier classifier
-        // can never score above Tier 4. Confirmed empirically: 0 of 236
-        // osm_bare candidates landed Tier 1-3 in the 2026-08-02 production
-        // sample. Excluded candidates still flow through the merge step below
-        // via the existing copyMap.get(...) ?? fallback — identical to a
-        // candidate whose copy generation genuinely failed.
-        const copyGenCandidates = candidates.filter(
-          (p) => computeOsmTrustLevel(p.tags) !== "osm_bare",
-        );
-        const excludedBareCount = candidates.length - copyGenCandidates.length;
-        // Provisional hard cap on how many post-bare-exclusion candidates are
-        // sent to the copy-generation LLM call. Dense areas (Union Square,
-        // Financial District) were still hitting 30 candidates after the
-        // osm_bare exclusion alone, reproducing the original B3 45s timeout
-        // in production (confirmed 2026-08-04). 22 is a provisional cap
-        // derived from production log analysis of candidate count vs. LLM
-        // call duration/tokens on this exact code path. Sorted closest-first
-        // so the cap favors spatial relevance; osm_standard and osm_enriched
-        // remain equally eligible — no trust-tier prioritization here.
-        // Candidates beyond the cap are NOT dropped: they still reach the
-        // response via the existing copyMap.get(...) ?? placeholder merge
-        // path below, identical to a bare-excluded or genuinely-failed
-        // candidate.
-        const COPY_GEN_CANDIDATE_CAP = 22;
-        const cappedCandidates =
-          copyGenCandidates.length > COPY_GEN_CANDIDATE_CAP
-            ? [...copyGenCandidates]
-                .sort(
-                  (a, b) =>
-                    haversineDistance(latitude, longitude, a.lat, a.lon) -
-                    haversineDistance(latitude, longitude, b.lat, b.lon),
-                )
-                .slice(0, COPY_GEN_CANDIDATE_CAP)
-            : copyGenCandidates;
-        const excludedCapCount =
-          copyGenCandidates.length - cappedCandidates.length;
         if (copyGenCandidates.length === 0) {
           // Nothing eligible for copy generation (every remaining candidate
           // was osm_bare) — skip the LLM call entirely rather than firing it
