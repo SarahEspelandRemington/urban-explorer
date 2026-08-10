@@ -142,14 +142,21 @@ export interface DiagLockScreenError {
 }
 
 /**
- * Most recent /api/explore/discover failure this walk session (non-2xx
- * response only — network failures and client-side aborts are not captured
- * here; see the catch block in fetchNearbyPlaces, which remains diagnostic-
- * silent for now). A single overwritten slot, not a growing log, mirroring
- * DiagLockScreenError: this exists purely for field-test visibility into a
- * failure that otherwise produces no signal anywhere (the pool/overlay
- * coverage counts simply stay frozen at their last successful values — see
- * the !res.ok branch in fetchNearbyPlaces).
+ * Most recent /api/explore/discover failure this walk session — covers all
+ * three ways fetchNearbyPlaces can fail to update the pool: a non-2xx HTTP
+ * response ("busy"/"error"), the fetch throwing or the client's own abort
+ * timeout firing ("network", no HTTP status available), and a 2xx response
+ * whose body isn't the expected shape ("malformed", no confirmed live
+ * occurrence as of A14 — kept distinct from "error" so it's visibly odd if
+ * it ever does fire, rather than blending into ordinary flakiness). Note:
+ * a 2xx response with an unparseable JSON body throws inside res.json() and
+ * is caught by the generic catch block, so it's classified as "network"
+ * rather than "malformed" — an accepted coarser-labeling limitation, not a
+ * gap in coverage (it's still visible and still triggers backoff either way).
+ * A single overwritten slot, not a growing log, mirroring DiagLockScreenError:
+ * this exists purely for field-test visibility into a failure that otherwise
+ * produces no signal anywhere (the pool/overlay coverage counts simply stay
+ * frozen at their last successful values).
  *
  * "kind" mirrors the busy/error distinction Explore's discoverMutation.isError
  * check already makes on the same endpoint (429/503 = "busy" — temporarily
@@ -157,8 +164,8 @@ export interface DiagLockScreenError {
  */
 export interface DiagDiscoverError {
   ts: number;
-  status: number;
-  kind: "busy" | "error";
+  status: number | null;
+  kind: "busy" | "error" | "network" | "malformed";
 }
 
 export interface DiagState {
@@ -221,12 +228,11 @@ export function recordDiscoverResult(result: DiagDiscoverResult): void {
   notify();
 }
 
-export function recordDiscoverError(status: number): void {
-  state.lastDiscoverError = {
-    ts: Date.now(),
-    status,
-    kind: status === 429 || status === 503 ? "busy" : "error",
-  };
+export function recordDiscoverError(
+  status: number | null,
+  kind: "busy" | "error" | "network" | "malformed",
+): void {
+  state.lastDiscoverError = { ts: Date.now(), status, kind };
   notify();
 }
 
@@ -254,6 +260,16 @@ export function recordLockScreenError(message: string): void {
 export function clearLockScreenError(): void {
   if (state.lastLockScreenError !== null) {
     state.lastLockScreenError = null;
+    notify();
+  }
+}
+
+/** Called after a successful discover pool update (cache hit or server
+ *  fetch) so the overlay doesn't keep showing a stale warning once the
+ *  underlying failure has actually recovered. */
+export function clearDiscoverError(): void {
+  if (state.lastDiscoverError !== null) {
+    state.lastDiscoverError = null;
     notify();
   }
 }

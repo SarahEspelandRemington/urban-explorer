@@ -59,6 +59,7 @@ import {
 import { filterFailureBackoff } from "@/lib/walkFailureBackoff";
 import { isLiveFetchStale } from "@/lib/walkFetchSessionGuard";
 import {
+  clearDiscoverError,
   recordBlock,
   recordDiscoverError,
   recordDiscoverResult,
@@ -454,6 +455,34 @@ const MANUAL_OVERRIDE_MS = 5 * 60_000;
 // reusing that value.
 const NARRATION_FAILURE_BACKOFF_MS = 60_000;
 
+// A14 discover-retry backoff (distinct from NARRATION_FAILURE_BACKOFF_MS
+// above, which gates per-place narration retries, not the discover fetch
+// itself). Without this, a run of fast discover failures (network error,
+// quick 429/503) gets retried on literally the next GPS tick — every
+// ~2-5s (Location.watchPositionAsync's timeInterval:2000/distanceInterval:5)
+// once the user is past the 50m refetchMeters trigger — since lastFetchRef
+// only advances on success. This floor is a "not too soon after a failure"
+// gate layered on top of that existing movement trigger, not a new
+// standalone timer: it never fires discover on its own, it only ever
+// delays an attempt the 50m check already wants to make. Capped at 60s so
+// a sustained outage still recovers within a bounded window, and doesn't
+// grow further past that. A genuinely slow-but-successful call (confirmed
+// live up to ~36s) is never penalized by this, since the cooldown only
+// starts counting after an attempt finishes.
+const DISCOVER_BACKOFF_BASE_MS = 5_000;
+const DISCOVER_BACKOFF_CAP_MS = 60_000;
+
+function registerDiscoverBackoffFailure(
+  ref: React.MutableRefObject<{ streak: number; nextAllowedAt: number }>,
+): void {
+  const streak = ref.current.streak + 1;
+  const delay = Math.min(
+    DISCOVER_BACKOFF_CAP_MS,
+    DISCOVER_BACKOFF_BASE_MS * 2 ** (streak - 1),
+  );
+  ref.current = { streak, nextAllowedAt: Date.now() + delay };
+}
+
 function haversineMeters(
   lat1: number,
   lon1: number,
@@ -651,6 +680,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Rolling buffer of recent velocity-derived bearings for median smoothing.
   const velocityHeadingBufferRef = useRef<number[]>([]);
   const fetchingRef = useRef(false);
+  // A14 discover-retry backoff state (see DISCOVER_BACKOFF_BASE_MS above).
+  // streak resets to 0 on any successful pool update (cache hit or server
+  // fetch); nextAllowedAt gates the existing 50m-movement trigger, it is
+  // never a standalone timer.
+  const discoverBackoffRef = useRef<{ streak: number; nextAllowedAt: number }>({
+    streak: 0,
+    nextAllowedAt: 0,
+  });
   const narratedIdsRef = useRef<Map<string, number>>(new Map());
   // placeId → timestamp of most recent live-fetch failure. Populated when a
   // live fetch fails (alongside un-marking narratedIdsRef); a candidate with
@@ -1036,6 +1073,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           setNearbyPlaces(merged);
           lastFetchRef.current = { latitude, longitude };
           fetchedTilesRef.current.add(tile);
+          discoverBackoffRef.current = { streak: 0, nextAllowedAt: 0 };
+          clearDiscoverError();
           // Same loop-walk recovery prune as the HTTP path — needed here too
           // since cached-tile hits skip the HTTP branch entirely.
           const oneHourAgoC = Date.now() - 60 * 60 * 1000;
@@ -1139,7 +1178,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             console.log(
               `[discover] server error tile=${tile} status=${res.status}`,
             );
-          recordDiscoverError(res.status);
+          recordDiscoverError(
+            res.status,
+            res.status === 429 || res.status === 503 ? "busy" : "error",
+          );
+          registerDiscoverBackoffFailure(discoverBackoffRef);
         }
         if (res.ok) {
           const data = await res.json();
@@ -1217,6 +1260,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             placesRef.current = merged;
             setNearbyPlaces(merged);
             lastFetchRef.current = { latitude, longitude };
+            discoverBackoffRef.current = { streak: 0, nextAllowedAt: 0 };
+            clearDiscoverError();
             // Persist to tile cache so the next walk in the same area skips
             // the HTTP round-trip entirely. Use data.places (the raw server
             // response) rather than the evicted `merged` list so the cache
@@ -1282,6 +1327,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
                   .length,
               },
             });
+          } else {
+            // No confirmed live occurrence as of A14 — kept as an explicit
+            // branch (rather than silently falling through) so a genuine
+            // response-shape mismatch is visible instead of indistinguishable
+            // from a frozen pool.
+            if (__DEV__)
+              console.log(
+                `[discover] malformed response tile=${tile} — places not an array`,
+              );
+            recordDiscoverError(res.status, "malformed");
+            registerDiscoverBackoffFailure(discoverBackoffRef);
           }
         }
       } catch (err) {
@@ -1297,6 +1353,8 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           },
           "error",
         );
+        recordDiscoverError(null, "network");
+        registerDiscoverBackoffFailure(discoverBackoffRef);
       } finally {
         fetchingRef.current = false;
         setIsLoading(false);
@@ -2356,9 +2414,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
 
       // Refetch on movement.
       const cfg = DENSITY_CONFIG[densityRef.current];
+      // A14 backoff gate: after a run of discover failures, hold off on the
+      // next attempt until nextAllowedAt (see DISCOVER_BACKOFF_BASE_MS).
+      // This never triggers a fetch on its own — it only ever delays an
+      // attempt the movement checks below already want to make.
+      const backoffReady =
+        Date.now() >= discoverBackoffRef.current.nextAllowedAt;
       if (!lastFetchRef.current) {
-        if (__DEV__) console.log(`[refetch] first fix — triggering discover`);
-        fetchNearbyPlaces(latitude, longitude);
+        if (backoffReady) {
+          if (__DEV__) console.log(`[refetch] first fix — triggering discover`);
+          fetchNearbyPlaces(latitude, longitude);
+        }
       } else {
         const distFromLastFetch = haversineMeters(
           lastFetchRef.current.latitude,
@@ -2366,7 +2432,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           latitude,
           longitude,
         );
-        if (distFromLastFetch > cfg.refetchMeters) {
+        if (distFromLastFetch > cfg.refetchMeters && backoffReady) {
           if (__DEV__)
             console.log(
               `[refetch] moved=${Math.round(distFromLastFetch)}m > ${cfg.refetchMeters}m — triggering discover`,
@@ -2779,6 +2845,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // early-return guard and bail, leaving placesRef empty and pickNext
         // returning null for the entire first-fetch window.
         fetchingRef.current = false;
+        // Same reasoning applies to the A14 discover-retry backoff: without
+        // this reset, a walk that ended mid-failure-streak (nextAllowedAt up
+        // to 60s in the future) would suppress the new walk's first discover
+        // attempt for up to 60s.
+        discoverBackoffRef.current = { streak: 0, nextAllowedAt: 0 };
         lastNarrationEndLocationRef.current = null;
         paceSamplesRef.current = [];
         slowSinceRef.current = null;

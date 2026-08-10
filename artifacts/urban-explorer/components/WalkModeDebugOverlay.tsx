@@ -257,8 +257,12 @@ export function WalkModeDebugOverlay() {
               <>
                 <Text style={styles.sectionTitle}>Discover error</Text>
                 <Text style={styles.lineWarn} numberOfLines={1}>
-                  ⚠ {lastDiscoverError.kind} ({lastDiscoverError.status}) ·{" "}
-                  {Math.round((Date.now() - lastDiscoverError.ts) / 1000)}s ago
+                  ⚠ {lastDiscoverError.kind}
+                  {lastDiscoverError.status !== null
+                    ? ` (${lastDiscoverError.status})`
+                    : ""}{" "}
+                  · {Math.round((Date.now() - lastDiscoverError.ts) / 1000)}s
+                  ago
                 </Text>
               </>
             )}
