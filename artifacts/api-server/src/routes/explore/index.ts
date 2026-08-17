@@ -2068,7 +2068,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v71:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v74:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2595,9 +2595,202 @@ router.post("/explore/discover", async (req, res) => {
           "building:levels",
         ] as const;
 
+        // @prompt-region discover
+        // Evidence-selector (Option A, Walk Mode field test). Given a
+        // candidate's full Wikipedia extract, an isolated LLM call selects
+        // which whole paragraphs clear a fixed editorial-value bar, and the
+        // selected text is reconstructed verbatim (never summarized or
+        // paraphrased) — replacing the naive first-1,000-char truncation
+        // below for a bounded set of candidates. See the read-only
+        // design/measurement pass (2026-08-17) for the diagnostic history
+        // behind this: naive truncation regularly cut off story-bearing
+        // content that a topic-blind, closed-set selector could reliably
+        // recover across 15 real test places (6 non-blind, 9 blind).
+        //
+        // Scope for this field-test version, deliberately narrow:
+        //  - Walk Mode requests only (see the invocation site below).
+        //  - Only the 3 closest Wikipedia-enriched candidates by straight-
+        //    line distance — a server-side proxy for "candidates the user
+        //    is likely to reach soon," NOT a replica of pickNext's live,
+        //    heading-aware, single-best-pick scoring (which only exists
+        //    client-side and has no stable "top 3" to reproduce here).
+        //  - Every failure mode (timeout, invalid indices, parse/network
+        //    error, or the selector declining) falls back to today's exact
+        //    first-1,000-char truncation for that candidate only — this
+        //    guarantees no functional regression (no worse than today's
+        //    behavior) on selector failure. It does NOT guarantee better
+        //    editorial copy on selector success: a valid selection could
+        //    still read worse than the truncation it replaces, which is
+        //    part of what this field test is meant to surface.
+        const EVIDENCE_SELECTOR_SYSTEM_PROMPT =
+          "You are evaluating paragraphs of Wikipedia text as evidence for a local-history app entry about a real place. " +
+          "You will be given the numbered paragraphs only. You have no other information about why this place was chosen " +
+          "or what anyone expects you to find -- judge only from the text provided.\n\n" +
+          "Select the indices of all paragraphs that meet at least one of the following evidence-value criteria:\n\n" +
+          "1. Explanatory force — Prefer evidence that explains why the place looks, exists, or functions as it does, rather than merely describing it or listing chronology.\n\n" +
+          "2. Broader context — Value evidence that connects the place to a larger historical, cultural, social, economic, or neighborhood pattern when that connection deepens understanding of the place itself.\n\n" +
+          "3. Human stakes — Value evidence that reveals what people or communities did, experienced, changed, created, preserved, lost, or contested at a place. Institutional, transactional, or procedural facts gain value when they illuminate those human stakes rather than functioning merely as administrative detail.\n\n" +
+          "4. Revelatory value — Value evidence that reveals a hidden, unexpected, or easily overlooked dimension of the place and meaningfully changes how it can be understood. Surprise alone is not sufficient; the revelation should add explanatory, contextual, or human significance.\n\n" +
+          "5. Observational value — Distinctive, easily overlooked physical details can carry editorial value simply by helping the user notice the place more closely. Explanatory context can strengthen that value, but is not required when the detail itself rewards attention.\n\n" +
+          "Tie-break principle: When evidence is otherwise comparable, prefer the material with the greatest potential to change how someone understands or experiences the place.\n\n" +
+          "Boundary: These are evidence-value dimensions, not a strict lexicographic priority order. A passage can be strong through one or several dimensions. Rank/select based on overall editorial value to Streetlit, using the tie-break principle when needed.\n\n" +
+          "Explicitly excluded: Physical persistence is not a criterion. Continued physical presence does not inherently increase a story's editorial value; vanished places and invisible earlier layers remain valid Streetlit territory.\n\n" +
+          "It is acceptable, and expected in some cases, to select none of the paragraphs if nothing in the list clears this bar. Do not summarize, paraphrase, or add any information beyond selecting indices.\n\n" +
+          'Respond only with JSON in this exact shape: {"selected_indices": [numbers], "insufficient": boolean}. Set "insufficient" to true and "selected_indices" to an empty array if no paragraph clears the bar. Do not include any other text, explanation, or field.';
+
+        // Fixed, blunt cap — no packing/ranking logic. Deliberately larger
+        // than today's 1,000-char truncation budget: the selector operates
+        // on whole paragraphs, and a 1,000-char cap can reject or truncate
+        // a single strong paragraph, effectively recreating the truncation
+        // problem this field test exists to test against.
+        const EVIDENCE_SELECTOR_OUTPUT_CAP = 2_500;
+        const EVIDENCE_SELECTOR_TIMEOUT_MS = 6_000;
+
+        const NON_PROSE_SECTION_DENYLIST = new Set([
+          "references",
+          "external links",
+          "see also",
+          "notes",
+          "further reading",
+          "bibliography",
+          "citations",
+          "sources",
+          "footnotes",
+          "works cited",
+          "notes and references",
+          "gallery",
+        ]);
+
+        const splitWikipediaSections = (
+          text: string,
+        ): Array<{ title: string; content: string }> => {
+          const headerRe = /^(=+)\s*([A-Za-z0-9 ,'-]+?)\s*(=+)\s*$/gm;
+          const matches = [...text.matchAll(headerRe)];
+          if (matches.length === 0)
+            return [{ title: "Introduction", content: text }];
+          const sections: Array<{ title: string; content: string }> = [];
+          const intro = text.slice(0, matches[0]!.index).trim();
+          if (intro) sections.push({ title: "Introduction", content: intro });
+          for (let i = 0; i < matches.length; i++) {
+            const m = matches[i]!;
+            const title = m[2]!.trim();
+            const start = m.index! + m[0].length;
+            const end =
+              i + 1 < matches.length ? matches[i + 1]!.index! : text.length;
+            sections.push({ title, content: text.slice(start, end).trim() });
+          }
+          return sections;
+        };
+
+        type EvidenceParagraph = {
+          index: number;
+          section: string;
+          text: string;
+        };
+
+        // Broader than a topical allowlist deliberately — see the paragraph-
+        // enumeration methodology from the blind selector test this reuses:
+        // a keyword/section filter would silently reintroduce a deterministic
+        // relevance heuristic. The selector, not this function, is the sole
+        // arbiter of relevance; this only excludes clearly non-prose sections.
+        const enumerateEvidenceParagraphs = (
+          extract: string,
+        ): EvidenceParagraph[] => {
+          const paras: Array<{ section: string; text: string }> = [];
+          for (const { title, content } of splitWikipediaSections(extract)) {
+            if (NON_PROSE_SECTION_DENYLIST.has(title.trim().toLowerCase()))
+              continue;
+            if (!content) continue;
+            for (const chunkRaw of content.split(/\n\s*\n/)) {
+              const chunk = chunkRaw.trim();
+              if (chunk.length < 20) continue;
+              if (!/[A-Za-z]/.test(chunk)) continue;
+              paras.push({ section: title, text: chunk });
+            }
+          }
+          return paras.map((p, i) => ({
+            index: i + 1,
+            section: p.section,
+            text: p.text,
+          }));
+        };
+
+        // Returns the verbatim, budget-capped selected text, or null on any
+        // failure/decline — callers must treat null exactly like "no
+        // Wikipedia summary available" (i.e. fall through to the existing
+        // truncation path).
+        const selectEvidenceParagraphs = async (
+          extract: string,
+          placeName: string,
+          address: string | undefined,
+        ): Promise<string | null> => {
+          const paragraphs = enumerateEvidenceParagraphs(extract);
+          if (paragraphs.length === 0) return null;
+
+          const lines = paragraphs.map(
+            (p) => `[${p.index}] section="${p.section}"\n${p.text}`,
+          );
+          const userPrompt =
+            `Place: ${placeName}${address ? `\nAddress: ${address}` : ""}\n\n` +
+            `Paragraphs:\n\n${lines.join("\n\n")}`;
+
+          const selectorAbort = new AbortController();
+          const timer = setTimeout(
+            () => selectorAbort.abort(),
+            EVIDENCE_SELECTOR_TIMEOUT_MS,
+          );
+          try {
+            const res = await openai.chat.completions.create(
+              {
+                model: "gpt-4.1-mini",
+                max_completion_tokens: 2000,
+                messages: [
+                  { role: "system", content: EVIDENCE_SELECTOR_SYSTEM_PROMPT },
+                  { role: "user", content: userPrompt },
+                ],
+                response_format: { type: "json_object" },
+              },
+              { signal: selectorAbort.signal },
+            );
+            const raw = res.choices[0]?.message?.content ?? "";
+            const parsed = JSON.parse(raw) as {
+              selected_indices?: unknown;
+              insufficient?: unknown;
+            };
+            if (parsed.insufficient === true) return null;
+            if (!Array.isArray(parsed.selected_indices)) return null;
+
+            const byIndex = new Map(paragraphs.map((p) => [p.index, p]));
+            const retained: EvidenceParagraph[] = [];
+            for (const idx of parsed.selected_indices) {
+              // Any index outside the pool invalidates the whole selection
+              // for this candidate — fall back entirely rather than
+              // reconstructing a partial/uncertain result.
+              if (typeof idx !== "number" || !byIndex.has(idx)) return null;
+              retained.push(byIndex.get(idx)!);
+            }
+            if (retained.length === 0) return null;
+
+            let out = "";
+            for (const p of retained) {
+              if (out.length + p.text.length > EVIDENCE_SELECTOR_OUTPUT_CAP)
+                break;
+              out += (out ? "\n\n" : "") + p.text;
+            }
+            return out || null;
+          } catch {
+            return null;
+          } finally {
+            clearTimeout(timer);
+          }
+        };
+        // @end-prompt-region discover
+
+        // @prompt-region discover
         const formatForCopy = (
           p: OSMPlace,
           wikiSummary?: WikipediaSummary | null,
+          enhancedWikipediaContent?: string,
         ): Record<string, unknown> => {
           const obj: Record<string, unknown> = {
             id: p.osmId,
@@ -2611,17 +2804,24 @@ router.post("/explore/discover", async (req, res) => {
             const val = p.tags[key];
             if (val) obj[key] = sanitizeOSMText(val, 120);
           }
-          // Inject the first 1,000 chars of the Wikipedia extract when available.
-          // The copy LLM uses this as factual grounding (rule 11 in the system
-          // prompt). 1,000 chars is enough to capture full named sections (e.g.
-          // "History and architecture") that carry story-bearing content such as
-          // family history, notable events, or contextual narrative — content the
-          // REST /page/summary/ lead-paragraph never included.
-          if (wikiSummary?.extract) {
+          // Evidence-selector output (Option A, Walk Mode field test) takes
+          // priority when present for this candidate — verbatim, selected
+          // paragraphs rather than a blind truncation. Falls through to the
+          // original first-1,000-char behavior otherwise, unchanged.
+          if (enhancedWikipediaContent) {
+            obj.wikipediaContent = enhancedWikipediaContent;
+          } else if (wikiSummary?.extract) {
+            // Inject the first 1,000 chars of the Wikipedia extract when available.
+            // The copy LLM uses this as factual grounding (rule 11 in the system
+            // prompt). 1,000 chars is enough to capture full named sections (e.g.
+            // "History and architecture") that carry story-bearing content such as
+            // family history, notable events, or contextual narrative — content the
+            // REST /page/summary/ lead-paragraph never included.
             obj.wikipediaContent = wikiSummary.extract.slice(0, 1_000);
           }
           return obj;
         };
+        // @end-prompt-region discover
 
         // 5. Call LLM for copy-only (summary, facts, tags, yearBuilt, confidence)
         type CopyResult = {
@@ -2775,6 +2975,51 @@ router.post("/explore/discover", async (req, res) => {
           }
         }
 
+        // @prompt-region discover
+        // Evidence-selector invocation (Option A, Walk Mode field test).
+        // Walk Mode requests only, capped to the 3 closest Wikipedia-
+        // enriched candidates by straight-line distance — see the design
+        // note above formatForCopy for why this is a distance proxy, not a
+        // pickNext replica. Runs after wikiMap (needs its entries) and
+        // before the copy-gen call below (its output feeds formatForCopy).
+        // Any per-candidate failure leaves that osmId absent from this map,
+        // which formatForCopy already treats identically to "no enhanced
+        // content" — the original truncation path, unchanged.
+        const selectorEnhancedWikiContent = new Map<string, string>();
+        if (walkMode && wikiMap.size > 0) {
+          const closestEnriched = [...wikiMap.entries()]
+            .map(([osmId, summary]) => {
+              const candidate = cappedCandidates.find((x) => x.osmId === osmId);
+              if (!candidate) return null;
+              return {
+                osmId,
+                summary,
+                candidate,
+                distance: haversineDistance(
+                  latitude,
+                  longitude,
+                  candidate.lat,
+                  candidate.lon,
+                ),
+              };
+            })
+            .filter((x): x is NonNullable<typeof x> => x !== null)
+            .sort((a, b) => a.distance - b.distance)
+            .slice(0, 3);
+
+          await Promise.all(
+            closestEnriched.map(async ({ osmId, summary, candidate }) => {
+              const selected = await selectEvidenceParagraphs(
+                summary.extract,
+                candidate.name,
+                buildOsmAddr(candidate.tags) || undefined,
+              );
+              if (selected) selectorEnhancedWikiContent.set(osmId, selected);
+            }),
+          );
+        }
+        // @end-prompt-region discover
+
         const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
         // @prompt-region discover
         const copyMaxCompletionTokens = 3000;
@@ -2854,7 +3099,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                   },
                   {
                     role: "user",
-                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(cappedCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId))))}`,
+                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(cappedCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId), selectorEnhancedWikiContent.get(c.osmId))))}`,
                   },
                 ],
                 response_format: { type: "json_object" },
