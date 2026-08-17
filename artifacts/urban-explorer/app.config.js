@@ -4,18 +4,18 @@ module.exports = {
     slug: "streetlit",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/branding/streetlit-app-icon-1024.png",
+    icon: "./assets/branding/streetlit-app-icon-production-2026-08.png",
     scheme: "streetlit",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     splash: {
-      image: "./assets/branding/streetlit-splash-light.png",
+      image: "./assets/branding/streetlit-splash-prototype-2026-08.png",
       dark: {
-        image: "./assets/branding/streetlit-splash-dark.png",
-        backgroundColor: "#000000",
+        image: "./assets/branding/streetlit-splash-prototype-2026-08.png",
+        backgroundColor: "#F3D3B9",
       },
       resizeMode: "contain",
-      backgroundColor: "#faf8f5",
+      backgroundColor: "#F3D3B9",
     },
     ios: {
       supportsTablet: false,
