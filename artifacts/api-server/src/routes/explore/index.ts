@@ -5101,6 +5101,11 @@ router.post("/explore/walk-narration", async (req, res) => {
       },
       "[walk-narration] served from cache",
     );
+    // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+    req.log.info(
+      { reqId: req.id, narrationTextDiagnostic: cachedNarration.narration },
+      "[TEMP-A3-NARRATION-LOG] full narration text",
+    );
     res.json(cachedNarration);
     return;
   }
@@ -5119,6 +5124,11 @@ router.post("/explore/walk-narration", async (req, res) => {
           durationMs: Date.now() - requestStartTime,
         },
         "[walk-narration] coalesced onto in-flight LLM call — success",
+      );
+      // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+      req.log.info(
+        { reqId: req.id, narrationTextDiagnostic: text },
+        "[TEMP-A3-NARRATION-LOG] full narration text",
       );
       res.json({ narration: text });
     } catch {
@@ -5249,6 +5259,11 @@ How to write for speech:
       durationMs: Date.now() - requestStartTime,
     },
     "[walk-narration] live LLM call succeeded",
+  );
+  // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+  req.log.info(
+    { reqId: req.id, narrationTextDiagnostic: narrationText },
+    "[TEMP-A3-NARRATION-LOG] full narration text",
   );
   const result = { narration: narrationText };
   setLLMCache(narrationCacheKey, result);
@@ -5542,6 +5557,12 @@ How to write for speech:
       setLLMCache(narrationCacheKey, { narration: narrationText });
     }
   }
+
+  // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+  req.log.info(
+    { reqId: req.id, narrationTextDiagnostic: narrationText },
+    "[TEMP-A3-NARRATION-LOG] full narration text",
+  );
 
   // Cheap sub-timing split (no flow restructuring): everything above this
   // point is the "chat" phase (cache lookup, coalesced wait, or a live LLM
