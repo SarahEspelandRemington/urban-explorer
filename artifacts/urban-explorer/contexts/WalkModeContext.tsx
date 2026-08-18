@@ -689,6 +689,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     nextAllowedAt: 0,
   });
   const narratedIdsRef = useRef<Map<string, number>>(new Map());
+  // True while a maybeNarrate-initiated fetchNarration() call is outstanding.
+  // Guards against overlapping fetches: narratedIdsRef is marked at pick
+  // time, before fetchNarration resolves, so without this guard repeated
+  // ticks (1500ms interval + every GPS update) could each pick a different
+  // still-unmarked candidate and fire their own fetch in parallel.
+  const narrationFetchInFlightRef = useRef(false);
   // placeId → timestamp of most recent live-fetch failure. Populated when a
   // live fetch fails (alongside un-marking narratedIdsRef); a candidate with
   // an unexpired entry here is treated as temporarily ineligible by pickNext
@@ -2555,6 +2561,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         recordBlock({ ts: Date.now(), reason: "alreadySpeaking" });
         return;
       }
+      if (narrationFetchInFlightRef.current) {
+        if (__DEV__)
+          console.log("[maybeNarrate] BLOCKED: narration fetch in flight");
+        return;
+      }
       const cfg = DENSITY_CONFIG[densityRef.current];
       const elapsed = Date.now() - lastNarrationEndRef.current;
       if (elapsed < cfg.cooldownMs) {
@@ -2624,7 +2635,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       narratedIdsRef.current.set(next.id, Date.now());
       setNarratedIds(new Map(narratedIdsRef.current));
       addWalkBreadcrumb("place visited", { placeId: next.id });
-      fetchNarration(next);
+      narrationFetchInFlightRef.current = true;
+      fetchNarration(next).finally(() => {
+        narrationFetchInFlightRef.current = false;
+      });
     },
     [pickNext, fetchNarration],
   );
