@@ -47,6 +47,12 @@ export interface NarrationPlace {
    * the user's reverse-geocoded block is approximately correct for the place.
    */
   crossStreets?: string;
+  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic
+   *  correlation token (never a stable place identifier) echoed unchanged
+   *  from the discover response. Passed through so field-test server logs
+   *  can trace discover candidate -> selector -> copy-gen -> narration.
+   *  Remove after the diagnostic window — see MEMORY.md removal note. */
+  evidenceRef?: string;
 }
 
 export async function fetchNarrationPayload(
@@ -78,6 +84,7 @@ export async function fetchNarrationPayload(
     facts: place.facts.slice(0, 3),
     ...(place.address ? { address: place.address } : {}),
     ...(place.crossStreets ? { crossStreets: place.crossStreets } : {}),
+    ...(place.evidenceRef ? { evidenceRef: place.evidenceRef } : {}),
   });
   const headers = {
     "Content-Type": "application/json",

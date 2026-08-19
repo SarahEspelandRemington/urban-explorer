@@ -2068,7 +2068,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v74:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v75:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2595,7 +2595,6 @@ router.post("/explore/discover", async (req, res) => {
           "building:levels",
         ] as const;
 
-        // @prompt-region discover
         // Evidence-selector (Option A, Walk Mode field test). Given a
         // candidate's full Wikipedia extract, an isolated LLM call selects
         // which whole paragraphs clear a fixed editorial-value bar, and the
@@ -2622,6 +2621,7 @@ router.post("/explore/discover", async (req, res) => {
         //    editorial copy on selector success: a valid selection could
         //    still read worse than the truncation it replaces, which is
         //    part of what this field test is meant to surface.
+        // @prompt-region discover
         const EVIDENCE_SELECTOR_SYSTEM_PROMPT =
           "You are evaluating paragraphs of Wikipedia text as evidence for a local-history app entry about a real place. " +
           "You will be given the numbered paragraphs only. You have no other information about why this place was chosen " +
@@ -2645,6 +2645,7 @@ router.post("/explore/discover", async (req, res) => {
         // problem this field test exists to test against.
         const EVIDENCE_SELECTOR_OUTPUT_CAP = 2_500;
         const EVIDENCE_SELECTOR_TIMEOUT_MS = 6_000;
+        // @end-prompt-region discover
 
         const NON_PROSE_SECTION_DENYLIST = new Set([
           "references",
@@ -2715,17 +2716,40 @@ router.post("/explore/discover", async (req, res) => {
           }));
         };
 
-        // Returns the verbatim, budget-capped selected text, or null on any
-        // failure/decline — callers must treat null exactly like "no
-        // Wikipedia summary available" (i.e. fall through to the existing
+        // TEMP-A3-EVIDENCE-CORRELATION: outcome classification for the
+        // evidence selector, added for temporary A3 field-test log
+        // correlation only. Purely additive over the prior string | null
+        // return — every prior return-null site is preserved unchanged,
+        // just labeled with why. See MEMORY.md removal note.
+        type EvidenceSelectorOutcome =
+          | "success"
+          | "declined"
+          | "invalidIndices"
+          | "emptySelection"
+          | "parseError"
+          | "timeoutOrAbort"
+          | "noParagraphs";
+
+        type EvidenceSelectorResult = {
+          outcome: EvidenceSelectorOutcome;
+          text: string | null;
+          selectedIndices?: number[];
+          truncated?: boolean;
+        };
+
+        // Returns the verbatim, budget-capped selected text (plus outcome
+        // classification), or a null text on any failure/decline —
+        // callers must treat a null text exactly like "no Wikipedia
+        // summary available" (i.e. fall through to the existing
         // truncation path).
         const selectEvidenceParagraphs = async (
           extract: string,
           placeName: string,
           address: string | undefined,
-        ): Promise<string | null> => {
+        ): Promise<EvidenceSelectorResult> => {
           const paragraphs = enumerateEvidenceParagraphs(extract);
-          if (paragraphs.length === 0) return null;
+          if (paragraphs.length === 0)
+            return { outcome: "noParagraphs", text: null };
 
           const lines = paragraphs.map(
             (p) => `[${p.index}] section="${p.section}"\n${p.text}`,
@@ -2740,6 +2764,7 @@ router.post("/explore/discover", async (req, res) => {
             EVIDENCE_SELECTOR_TIMEOUT_MS,
           );
           try {
+            // @prompt-region discover
             const res = await openai.chat.completions.create(
               {
                 model: "gpt-4.1-mini",
@@ -2752,13 +2777,16 @@ router.post("/explore/discover", async (req, res) => {
               },
               { signal: selectorAbort.signal },
             );
+            // @end-prompt-region discover
             const raw = res.choices[0]?.message?.content ?? "";
             const parsed = JSON.parse(raw) as {
               selected_indices?: unknown;
               insufficient?: unknown;
             };
-            if (parsed.insufficient === true) return null;
-            if (!Array.isArray(parsed.selected_indices)) return null;
+            if (parsed.insufficient === true)
+              return { outcome: "declined", text: null };
+            if (!Array.isArray(parsed.selected_indices))
+              return { outcome: "invalidIndices", text: null };
 
             const byIndex = new Map(paragraphs.map((p) => [p.index, p]));
             const retained: EvidenceParagraph[] = [];
@@ -2766,25 +2794,34 @@ router.post("/explore/discover", async (req, res) => {
               // Any index outside the pool invalidates the whole selection
               // for this candidate — fall back entirely rather than
               // reconstructing a partial/uncertain result.
-              if (typeof idx !== "number" || !byIndex.has(idx)) return null;
+              if (typeof idx !== "number" || !byIndex.has(idx))
+                return { outcome: "invalidIndices", text: null };
               retained.push(byIndex.get(idx)!);
             }
-            if (retained.length === 0) return null;
+            if (retained.length === 0)
+              return { outcome: "emptySelection", text: null };
 
             let out = "";
+            let truncated = false;
             for (const p of retained) {
-              if (out.length + p.text.length > EVIDENCE_SELECTOR_OUTPUT_CAP)
+              if (out.length + p.text.length > EVIDENCE_SELECTOR_OUTPUT_CAP) {
+                truncated = true;
                 break;
+              }
               out += (out ? "\n\n" : "") + p.text;
             }
-            return out || null;
+            return {
+              outcome: "success",
+              text: out || null,
+              selectedIndices: parsed.selected_indices as number[],
+              truncated,
+            };
           } catch {
-            return null;
+            return { outcome: "timeoutOrAbort", text: null };
           } finally {
             clearTimeout(timer);
           }
         };
-        // @end-prompt-region discover
 
         // @prompt-region discover
         const formatForCopy = (
@@ -2975,7 +3012,6 @@ router.post("/explore/discover", async (req, res) => {
           }
         }
 
-        // @prompt-region discover
         // Evidence-selector invocation (Option A, Walk Mode field test).
         // Walk Mode requests only, capped to the 3 closest Wikipedia-
         // enriched candidates by straight-line distance — see the design
@@ -2986,7 +3022,15 @@ router.post("/explore/discover", async (req, res) => {
         // which formatForCopy already treats identically to "no enhanced
         // content" — the original truncation path, unchanged.
         const selectorEnhancedWikiContent = new Map<string, string>();
+        // TEMP-A3-EVIDENCE-CORRELATION: ephemeral request/slot-scoped
+        // correlation token for the up-to-3 candidates that receive A3
+        // evidence selection, so a field-test log investigation can trace
+        // discover candidate -> selector outcome -> copy-gen output ->
+        // final narration without logging a stable place identifier. See
+        // MEMORY.md removal note.
+        const evidenceRefByOsmId = new Map<string, string>();
         if (walkMode && wikiMap.size > 0) {
+          // @prompt-region discover
           const closestEnriched = [...wikiMap.entries()]
             .map(([osmId, summary]) => {
               const candidate = cappedCandidates.find((x) => x.osmId === osmId);
@@ -3006,19 +3050,37 @@ router.post("/explore/discover", async (req, res) => {
             .filter((x): x is NonNullable<typeof x> => x !== null)
             .sort((a, b) => a.distance - b.distance)
             .slice(0, 3);
+          // @end-prompt-region discover
 
           await Promise.all(
-            closestEnriched.map(async ({ osmId, summary, candidate }) => {
-              const selected = await selectEvidenceParagraphs(
-                summary.extract,
-                candidate.name,
-                buildOsmAddr(candidate.tags) || undefined,
-              );
-              if (selected) selectorEnhancedWikiContent.set(osmId, selected);
-            }),
+            closestEnriched.map(
+              async ({ osmId, summary, candidate }, candidateSlot) => {
+                const evidenceRef = `${req.id}:${candidateSlot}`;
+                evidenceRefByOsmId.set(osmId, evidenceRef);
+                const selected = await selectEvidenceParagraphs(
+                  summary.extract,
+                  candidate.name,
+                  buildOsmAddr(candidate.tags) || undefined,
+                );
+                if (selected.text)
+                  selectorEnhancedWikiContent.set(osmId, selected.text);
+                req.log.info(
+                  {
+                    tag: "TEMP-A3-EVIDENCE-CORRELATION",
+                    reqId: req.id,
+                    evidenceRef,
+                    candidateSlot,
+                    selectorOutcome: selected.outcome,
+                    selectedIndices: selected.selectedIndices,
+                    evidenceTruncated: selected.truncated,
+                    selectedEvidenceText: selected.text,
+                  },
+                  "[TEMP-A3-EVIDENCE-CORRELATION] evidence selector outcome",
+                );
+              },
+            ),
           );
         }
-        // @end-prompt-region discover
 
         const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
         // @prompt-region discover
@@ -3274,6 +3336,23 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         const copyMap = new Map<string, CopyResult>(
           copyResults.map((r) => [r.id, r]),
         );
+        // TEMP-A3-EVIDENCE-CORRELATION: stage-C log — the copy-gen
+        // summary/facts produced for the same up-to-3 candidates that
+        // received A3 evidence selection, correlated via evidenceRef. See
+        // MEMORY.md removal note.
+        for (const [osmId, evidenceRef] of evidenceRefByOsmId) {
+          const copy = copyMap.get(osmId);
+          req.log.info(
+            {
+              tag: "TEMP-A3-EVIDENCE-CORRELATION",
+              reqId: req.id,
+              evidenceRef,
+              copySummary: copy?.summary,
+              copyFacts: copy?.facts,
+            },
+            "[TEMP-A3-EVIDENCE-CORRELATION] copy-gen output",
+          );
+        }
         let mergedPlaces: any[] = candidates.map((p) => {
           const copy = copyMap.get(p.osmId);
           const addr = buildOsmAddr(p.tags);
@@ -3292,6 +3371,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             address: addr || undefined,
             coordSource: "osm",
             osmId: p.osmId,
+            evidenceRef: evidenceRefByOsmId.get(p.osmId),
             candidateSource: "osm",
             trustLevel: placeTrustLevel,
             osmTags:
@@ -5079,8 +5159,15 @@ router.post("/explore/walk-narration", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, facts, address, crossStreets } =
-    parsed.data;
+  const {
+    placeName,
+    category,
+    summary,
+    facts,
+    address,
+    crossStreets,
+    evidenceRef,
+  } = parsed.data;
 
   // @prompt-region walk-narration
   const factsKeyPart = (facts || [])
@@ -5103,7 +5190,11 @@ router.post("/explore/walk-narration", async (req, res) => {
     );
     // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
     req.log.info(
-      { reqId: req.id, narrationTextDiagnostic: cachedNarration.narration },
+      {
+        reqId: req.id,
+        narrationTextDiagnostic: cachedNarration.narration,
+        evidenceRef,
+      },
       "[TEMP-A3-NARRATION-LOG] full narration text",
     );
     res.json(cachedNarration);
@@ -5127,7 +5218,7 @@ router.post("/explore/walk-narration", async (req, res) => {
       );
       // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
       req.log.info(
-        { reqId: req.id, narrationTextDiagnostic: text },
+        { reqId: req.id, narrationTextDiagnostic: text, evidenceRef },
         "[TEMP-A3-NARRATION-LOG] full narration text",
       );
       res.json({ narration: text });
@@ -5262,7 +5353,7 @@ How to write for speech:
   );
   // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
   req.log.info(
-    { reqId: req.id, narrationTextDiagnostic: narrationText },
+    { reqId: req.id, narrationTextDiagnostic: narrationText, evidenceRef },
     "[TEMP-A3-NARRATION-LOG] full narration text",
   );
   const result = { narration: narrationText };
@@ -5357,8 +5448,15 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     res.status(400).json({ error: "Invalid request body" });
     return;
   }
-  const { placeName, category, summary, facts, address, crossStreets } =
-    parsed.data;
+  const {
+    placeName,
+    category,
+    summary,
+    facts,
+    address,
+    crossStreets,
+    evidenceRef,
+  } = parsed.data;
 
   // Abort controller wired to the response close event so that any in-flight
   // audio conversion (e.g. ffmpeg via ensureCompatibleFormat) is cancelled
@@ -5560,7 +5658,7 @@ How to write for speech:
 
   // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
   req.log.info(
-    { reqId: req.id, narrationTextDiagnostic: narrationText },
+    { reqId: req.id, narrationTextDiagnostic: narrationText, evidenceRef },
     "[TEMP-A3-NARRATION-LOG] full narration text",
   );
 

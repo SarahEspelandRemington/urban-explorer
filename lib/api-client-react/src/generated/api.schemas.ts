@@ -200,6 +200,9 @@ export interface Place {
   photoUrl?: string;
   /** Overpass element reference (e.g. 'node/12345678'). Present only on OSM-anchored Walk Mode discoveries. */
   osmId?: string;
+  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic correlation token (never a stable place identifier) for temporary field-test log correlation of the A3 evidence selector → copy-generation → narration pipeline. Present only for the up-to-3 candidates that received A3 evidence selection. Not intended as a durable identifier or production analytics field.
+   */
+  evidenceRef?: string;
   /** How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path). */
   candidateSource?: PlaceCandidateSource;
   /** OSM trust classification for this place. Present only on OSM-anchored candidates (candidateSource: osm). */
@@ -396,6 +399,9 @@ export interface WalkNarrationRequest {
   /** Approximate block context derived from the user's current GPS position (e.g. "W 49th St, Hell's Kitchen, Manhattan"). Used as the spatial anchor when no specific place address is available. The model will open the narration with the most precise signal it has: address > crossStreets > generic phrase.
    */
   crossStreets?: string;
+  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic correlation token (never a stable place identifier) echoed back unchanged from the discover response that produced this place, for temporary field-test log correlation. Not intended as a durable identifier or production analytics field.
+   */
+  evidenceRef?: string;
 }
 
 export interface WalkNarrationResponse {

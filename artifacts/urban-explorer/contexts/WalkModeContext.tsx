@@ -155,6 +155,12 @@ export interface WalkPlace {
   /** Overpass element reference (e.g. 'node/12345678'). Present only on
    *  OSM-anchored Walk Mode discoveries. */
   osmId?: string;
+  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic
+   *  correlation token (never a stable place identifier) echoed from the
+   *  discover response. Passed unchanged into the narration request so
+   *  field-test logs can be traced end-to-end. Remove after the diagnostic
+   *  window — see MEMORY.md removal note. */
+  evidenceRef?: string;
   /** How this place's location was established: osm = Overpass coordinates
    *  (verified), llm = LLM-generated coordinates (legacy path). */
   candidateSource?: "osm" | "llm";
