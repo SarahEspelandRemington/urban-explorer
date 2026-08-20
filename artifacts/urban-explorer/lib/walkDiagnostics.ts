@@ -168,6 +168,32 @@ export interface DiagDiscoverError {
   kind: "busy" | "error" | "network" | "malformed";
 }
 
+/**
+ * TEMP-LOCK-CYCLE-DIAG: one ordered log for a single lock/resume investigation
+ * — proving or disproving whether an ordinary iPhone screen lock causes our
+ * own AppState "active -> inactive" handler to call beginInterruption() (and
+ * therefore pause narration ourselves), as opposed to some separate native
+ * pause mechanism. Not a general-purpose field-test surface; remove once the
+ * hypothesis is confirmed or disproven (grep TEMP-LOCK-CYCLE-DIAG for every
+ * site). See MEMORY.md for the removal note.
+ *
+ * "appstate" entries log every AppStateStatus value observed, unconditionally
+ * — not just the ones the existing listener acts on — so a plain lock/unlock
+ * cycle's full active/inactive/background sequence is visible even though
+ * only the active<->inactive leg currently triggers begin/endInterruption.
+ *
+ * wasPlaying (only set on "pauseCalled") is expo-audio's AudioPlayer.playing
+ * getter read synchronously immediately before we call pause() as part of
+ * beginInterruption() — null when there's no active AudioPlayer (e.g. the
+ * web/native-speech text fallback path, which has no such getter).
+ */
+export interface DiagLockCycleEvent {
+  ts: number;
+  kind: "appstate" | "beginInterruption" | "pauseCalled" | "endInterruption";
+  appState?: string;
+  wasPlaying?: boolean | null;
+}
+
 export interface DiagState {
   lastSnapshot: DiagSelectionSnapshot | null;
   rejections: DiagRejection[]; // capped, most recent first
@@ -176,10 +202,13 @@ export interface DiagState {
   lastBlock: DiagBlock | null;
   lastLockScreenError: DiagLockScreenError | null;
   lastDiscoverError: DiagDiscoverError | null;
+  /** TEMP-LOCK-CYCLE-DIAG — capped, most recent first. */
+  lockCycleEvents: DiagLockCycleEvent[];
 }
 
 const REJECTION_CAP = 30;
 const FETCH_CAP = 20;
+const LOCK_CYCLE_CAP = 40; // TEMP-LOCK-CYCLE-DIAG
 
 const state: DiagState = {
   lastSnapshot: null,
@@ -189,6 +218,7 @@ const state: DiagState = {
   lastBlock: null,
   lastLockScreenError: null,
   lastDiscoverError: null,
+  lockCycleEvents: [], // TEMP-LOCK-CYCLE-DIAG
 };
 
 const subscribers = new Set<() => void>();
@@ -274,6 +304,15 @@ export function clearDiscoverError(): void {
   }
 }
 
+/** TEMP-LOCK-CYCLE-DIAG — see the doc comment on DiagLockCycleEvent. */
+export function recordLockCycleEvent(event: DiagLockCycleEvent): void {
+  state.lockCycleEvents.unshift(event);
+  if (state.lockCycleEvents.length > LOCK_CYCLE_CAP) {
+    state.lockCycleEvents.length = LOCK_CYCLE_CAP;
+  }
+  notify();
+}
+
 export function resetWalkDiagnostics(): void {
   state.lastSnapshot = null;
   state.rejections = [];
@@ -282,5 +321,6 @@ export function resetWalkDiagnostics(): void {
   state.lastBlock = null;
   state.lastLockScreenError = null;
   state.lastDiscoverError = null;
+  state.lockCycleEvents = []; // TEMP-LOCK-CYCLE-DIAG
   notify();
 }

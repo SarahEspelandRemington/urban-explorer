@@ -54,6 +54,7 @@ export function WalkModeDebugOverlay() {
     lastBlock,
     lastLockScreenError,
     lastDiscoverError,
+    lockCycleEvents, // TEMP-LOCK-CYCLE-DIAG
   } = getWalkDiagnostics();
 
   return (
@@ -264,6 +265,32 @@ export function WalkModeDebugOverlay() {
                   · {Math.round((Date.now() - lastDiscoverError.ts) / 1000)}s
                   ago
                 </Text>
+              </>
+            )}
+
+            {/* TEMP-LOCK-CYCLE-DIAG — remove once the lock/resume hypothesis
+                investigation is done; see MEMORY.md removal note. */}
+            {lockCycleEvents.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>
+                  Lock cycle ({lockCycleEvents.length})
+                </Text>
+                {lockCycleEvents
+                  .slice()
+                  .reverse()
+                  .map((e, i) => (
+                    <Text
+                      key={`${e.ts}-${i}`}
+                      style={styles.lineDim}
+                      numberOfLines={1}
+                    >
+                      {new Date(e.ts).toLocaleTimeString()} · {e.kind}
+                      {e.appState ? ` → ${e.appState}` : ""}
+                      {e.wasPlaying !== undefined
+                        ? ` · wasPlaying=${e.wasPlaying}`
+                        : ""}
+                    </Text>
+                  ))}
               </>
             )}
 

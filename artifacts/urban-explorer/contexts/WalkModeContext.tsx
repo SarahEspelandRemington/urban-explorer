@@ -63,6 +63,7 @@ import {
   recordBlock,
   recordDiscoverError,
   recordDiscoverResult,
+  recordLockCycleEvent, // TEMP-LOCK-CYCLE-DIAG
   recordNarrationFetch,
   recordRejection,
   recordSelectionSnapshot,
@@ -2668,6 +2669,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     const sub = AppState.addEventListener("change", (next) => {
       const prev = appStateRef.current;
       appStateRef.current = next;
+      // TEMP-LOCK-CYCLE-DIAG: logs every observed value unconditionally,
+      // not just the active<->inactive leg the logic below acts on.
+      recordLockCycleEvent({
+        ts: Date.now(),
+        kind: "appstate",
+        appState: next,
+      });
       if (prev === "active" && next === "inactive") {
         beginInterruption();
       } else if (prev === "inactive" && next === "active") {

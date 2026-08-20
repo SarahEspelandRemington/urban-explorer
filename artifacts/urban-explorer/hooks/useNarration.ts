@@ -10,6 +10,7 @@ import {
 import { IS_EXPO_GO } from "../lib/expoEnv";
 import {
   clearLockScreenError,
+  recordLockCycleEvent, // TEMP-LOCK-CYCLE-DIAG
   recordLockScreenError,
 } from "../lib/walkDiagnostics";
 
@@ -642,7 +643,22 @@ export function useNarration() {
   const beginInterruption = useCallback(() => {
     if (interruptedRef.current) return;
     interruptedRef.current = true;
+    // TEMP-LOCK-CYCLE-DIAG
+    recordLockCycleEvent({ ts: Date.now(), kind: "beginInterruption" });
     if (!speakingRef.current) return;
+    // TEMP-LOCK-CYCLE-DIAG: read synchronously, before pause() flips it.
+    // Wrapped so a diagnostic-only read can never block the real pause below.
+    let wasPlaying: boolean | null = null;
+    try {
+      wasPlaying = currentPlayerRef.current
+        ? currentPlayerRef.current.playing
+        : null;
+    } catch {}
+    recordLockCycleEvent({
+      ts: Date.now(),
+      kind: "pauseCalled",
+      wasPlaying,
+    });
     try {
       if (currentPlayerRef.current) {
         currentPlayerRef.current.pause();
@@ -659,6 +675,8 @@ export function useNarration() {
   const endInterruption = useCallback(() => {
     if (!interruptedRef.current) return;
     interruptedRef.current = false;
+    // TEMP-LOCK-CYCLE-DIAG
+    recordLockCycleEvent({ ts: Date.now(), kind: "endInterruption" });
     if (speakingRef.current) {
       try {
         if (currentPlayerRef.current) {
