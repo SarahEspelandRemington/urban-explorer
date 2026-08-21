@@ -2813,8 +2813,11 @@ router.post("/explore/discover", async (req, res) => {
             let truncated = false;
             for (const p of retained) {
               if (out.length + p.text.length > EVIDENCE_SELECTOR_OUTPUT_CAP) {
+                // Skip (don't stop): a single oversized paragraph earlier in
+                // priority order must not zero out the whole packet — later,
+                // smaller selected paragraphs are still worth trying.
                 truncated = true;
-                break;
+                continue;
               }
               out += (out ? "\n\n" : "") + p.text;
             }
