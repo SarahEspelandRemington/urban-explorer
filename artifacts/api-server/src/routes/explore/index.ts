@@ -1651,7 +1651,7 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
 
 // @prompt-region wiki-summary
 // ---------------------------------------------------------------------------
-// Wikipedia summary cache — in-memory, keyed wiki:v3:{lang}:{encoded_title}
+// Wikipedia summary cache — in-memory, keyed wiki:v4:{lang}:{encoded_title}
 // ---------------------------------------------------------------------------
 // v2: switched from REST /page/summary/ (lead paragraph only) to the action
 // API (prop=extracts&explaintext=1) which returns the full article text,
@@ -1662,11 +1662,17 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
 // region's migration from whole-module-prefix hashing to scoped marked
 // extraction (see promptManifestLib.ts), so the old module-prefix hash
 // (shared with nbhd-label/wiki-photo) can't be reused under stale semantics.
+// v4: no prompt/behavior change — bumped because the non-ok HTTP branch now
+// distinguishes transient failures (429, 5xx) from a stable miss (404),
+// which changes which requests hit the negative cache; old v3 entries could
+// otherwise be misread under the new semantics.
 
-/** 4-hour TTL applied to both successful fetches and permanent failures
- *  (404, empty extract, malformed JSON) so a bad OSM tag doesn't hammer
- *  Wikipedia on every detail request.  Transient errors (timeout, abort)
- *  are NOT cached — they may succeed on the next attempt. */
+/** 4-hour TTL applied to successful fetches and to stable "no article"
+ *  outcomes (404, missing/empty extract, malformed JSON) so a bad OSM tag
+ *  doesn't hammer Wikipedia on every detail request.  Transient failures —
+ *  thrown network/timeout errors, HTTP 429, and HTTP 5xx — are NOT cached,
+ *  since they say nothing about whether the title has an article; they may
+ *  succeed on the very next attempt once Wikipedia recovers. */
 const WIKIPEDIA_SUMMARY_CACHE_TTL_MS = 4 * 60 * 60 * 1000;
 
 const wikipediaSummaryCache = new Map<
@@ -1680,7 +1686,7 @@ const wikipediaSummaryCache = new Map<
  * than only the lead paragraph, so named sections such as "History and
  * architecture" are available to the copy LLM.
  *
- * Cache key: wiki:v3:{lang}:{encoded_title}
+ * Cache key: wiki:v4:{lang}:{encoded_title}
  *
  * Only called when `osmTags.wikipedia` is well-formed — never guesses from
  * place names.  Always falls back gracefully: any failure returns null so
@@ -1692,7 +1698,7 @@ async function fetchWikipediaSummary(
   signal?: AbortSignal,
 ): Promise<WikipediaSummary | null> {
   const encodedTitle = encodeURIComponent(title);
-  const cacheKey = `wiki:v3:${lang}:${encodedTitle}`;
+  const cacheKey = `wiki:v4:${lang}:${encodedTitle}`;
 
   const cached = wikipediaSummaryCache.get(cacheKey);
   if (
@@ -1728,11 +1734,37 @@ async function fetchWikipediaSummary(
     clearTimeout(timer);
 
     if (!resp.ok) {
-      // Permanent failure — cache null to avoid hammering Wikipedia.
-      wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
+      if (resp.status === 429 || resp.status >= 500) {
+        // Rate-limited or Wikipedia-side outage — transient, says nothing
+        // about whether the title has an article. Do NOT cache, so the
+        // next request for this title can succeed once Wikipedia recovers.
+        logger.info(
+          { lang, title, status: resp.status },
+          "[wikipedia] action-api transient failure — not caching",
+        );
+        return null;
+      }
+
+      if (resp.status === 404) {
+        // Stable miss — cache null to avoid hammering Wikipedia.
+        wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
+        logger.info(
+          { lang, title, status: resp.status },
+          "[wikipedia] action-api 404 — caching null",
+        );
+        return null;
+      }
+
+      // Any other 4xx (400, 401, 403, 410, etc.): this action-API endpoint
+      // signals a genuinely missing page via pageid === -1 in a 200
+      // response, not via HTTP status, so an unclassified 4xx here isn't a
+      // confirmed "no article" fact about this title — it more likely
+      // reflects an edge/WAF condition. Don't risk poisoning the cache on
+      // an unconfirmed semantic; treat conservatively like a transient
+      // failure and let the next request retry.
       logger.info(
         { lang, title, status: resp.status },
-        "[wikipedia] action-api fetch non-ok — caching null",
+        "[wikipedia] action-api unclassified non-ok status — not caching",
       );
       return null;
     }
