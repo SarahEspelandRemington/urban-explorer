@@ -459,31 +459,44 @@ async function evictExcessAudioDbEntries(): Promise<void> {
   }
 }
 
-// Delete DB rows whose cache_key matches a known prefix but carries an old
-// version segment.  This runs once at startup, before warmCachesFromDb, so
-// stale rows are never loaded into the in-memory caches.
+// Delete DB rows whose cache_key matches a known prefix but carries a
+// version segment that matches none of that prefix's currently-allowed
+// version(s).  This runs once at startup, before warmCachesFromDb, so stale
+// rows are never loaded into the in-memory caches.
 async function cleanupStaleCacheVersions(): Promise<void> {
   let totalDeleted = 0;
 
   for (const [prefix, currentVersion] of LLM_CACHE_CURRENT_VERSIONS) {
+    const allowedVersions = Array.isArray(currentVersion)
+      ? currentVersion
+      : [currentVersion];
+
     try {
+      const notLikeClauses = sql.join(
+        allowedVersions.map(
+          (version) =>
+            sql`${apiCache.cacheKey} NOT LIKE ${prefix + ":" + version + ":%"}`,
+        ),
+        sql` AND `,
+      );
+
       const result = await db.execute(
         sql`DELETE FROM ${apiCache}
             WHERE ${apiCache.namespace} = ${"llm"}
             AND ${apiCache.cacheKey} LIKE ${prefix + ":%"}
-            AND ${apiCache.cacheKey} NOT LIKE ${prefix + ":" + currentVersion + ":%"}`,
+            AND ${notLikeClauses}`,
       );
       const count = result.rowCount ?? 0;
       if (count > 0) {
         totalDeleted += count;
         logger.info(
-          { prefix, currentVersion, count },
+          { prefix, allowedVersions, count },
           "Deleted stale LLM cache entries for old prompt version",
         );
       }
     } catch (err) {
       logger.warn(
-        { err, prefix, currentVersion },
+        { err, prefix, allowedVersions },
         "Failed to delete stale LLM cache entries for prefix",
       );
     }

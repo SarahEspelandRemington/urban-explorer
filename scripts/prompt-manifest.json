@@ -5,9 +5,9 @@
     "artifacts/api-server/src/lib/cacheVersions.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "6a1cd9c0af0f65cb5e315c53f5e32eb45fb40034631ed69bd28494f2c499aac7",
-      "versions": ["v4"],
-      "registered": "2026-07-19"
+      "sectionHash": "c7ae752553a685f3409a839cc9acdd72fa4577dc2f74eeef5a0de61a9ecbb85f",
+      "versions": ["v6"],
+      "registered": "2026-08-21"
     },
     "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
