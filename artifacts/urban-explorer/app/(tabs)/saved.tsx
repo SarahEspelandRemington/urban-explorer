@@ -513,7 +513,7 @@ export default function SavedScreen() {
           { paddingBottom: insets.bottom + webBottomInset + 90 },
         ]}
         showsVerticalScrollIndicator={false}
-        removeClippedSubviews
+        removeClippedSubviews={filtered.length > 0}
         windowSize={5}
         maxToRenderPerBatch={6}
         initialNumToRender={8}
