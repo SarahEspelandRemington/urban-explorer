@@ -2659,13 +2659,36 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // which we explicitly want to keep narrating through). When the
   // interruption ends iOS bounces us back to 'active' and we resume.
   //
+  // Ordinary screen lock also passes through 'inactive' on its way to
+  // 'background', so 'inactive' alone can't distinguish the two cases.
+  // We defer the interruption decision briefly: if 'background' arrives
+  // before the timer fires, this was ordinary lock — do nothing, narration
+  // keeps playing via the background-audio capability. If we're still
+  // 'inactive' when the timer fires, treat it as a genuine interruption.
+  //
   // Android doesn't expose 'inactive' so this listener is a no-op there;
   // the OS handles call-time ducking via the audio focus we already request
   // through `interruptionMode: 'duckOthers'` in enableBackgroundAudio.
   const { beginInterruption, endInterruption } = narration;
+  // No precise on-device timing data distinguishes 'inactive'->'background'
+  // latency from 'inactive'->'active' (genuine interruption) latency, so this
+  // is a conservative fixed choice rather than a value tuned from field
+  // evidence: ordinary lock reaches 'background' effectively immediately in
+  // practice, and 500ms is a short enough delay that a genuine interruption
+  // (call, Siri) still pauses narration promptly.
+  const INTERRUPTION_DEFER_MS = 500;
+  const pendingInterruptionTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   useEffect(() => {
     if (!isWalking || Platform.OS !== "ios") return;
     const appStateRef = { current: AppState.currentState as AppStateStatus };
+    const clearPendingInterruptionTimer = () => {
+      if (pendingInterruptionTimerRef.current !== null) {
+        clearTimeout(pendingInterruptionTimerRef.current);
+        pendingInterruptionTimerRef.current = null;
+      }
+    };
     const sub = AppState.addEventListener("change", (next) => {
       const prev = appStateRef.current;
       appStateRef.current = next;
@@ -2677,12 +2700,29 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         appState: next,
       });
       if (prev === "active" && next === "inactive") {
-        beginInterruption();
+        clearPendingInterruptionTimer();
+        pendingInterruptionTimerRef.current = setTimeout(() => {
+          pendingInterruptionTimerRef.current = null;
+          if (appStateRef.current === "inactive") {
+            beginInterruption();
+          }
+        }, INTERRUPTION_DEFER_MS);
+      } else if (next === "background") {
+        // Ordinary lock/background reached — this was not a genuine
+        // interruption. Cancel any pending decision, and defensively
+        // undo an interruption if the timer had already fired (idempotent
+        // no-op via endInterruption's own guard when none is active).
+        clearPendingInterruptionTimer();
+        endInterruption();
       } else if (prev === "inactive" && next === "active") {
+        clearPendingInterruptionTimer();
         endInterruption();
       }
     });
-    return () => sub.remove();
+    return () => {
+      clearPendingInterruptionTimer();
+      sub.remove();
+    };
   }, [isWalking, beginInterruption, endInterruption]);
 
   // Free-roam narration loop: belt-and-suspenders foreground tick. Background
