@@ -122,7 +122,8 @@ export interface DiagBlock {
     | "cooldown"
     | "movementGate"
     | "noEligibleCandidate"
-    | "reValidationDrop";
+    | "reValidationDrop"
+    | "prefetchInFlight";
   detail?: string;
 }
 

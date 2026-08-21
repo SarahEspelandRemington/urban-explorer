@@ -2634,6 +2634,25 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // A prefetch for this exact candidate is already in flight — don't
+      // start a second, independent live fetch for the same place. Leave it
+      // unmarked so pickNext() can re-select it on a later tick, once the
+      // prefetch resolves into the cache (consumed as a fast-path HIT) or
+      // fails (prefetchInFlightRef is cleared, falling back to a normal
+      // live fetch).
+      if (prefetchInFlightRef.current === next.id) {
+        if (__DEV__)
+          console.log(
+            `[maybeNarrate] BLOCKED: prefetch in flight for "${next.name}"`,
+          );
+        recordBlock({
+          ts: Date.now(),
+          reason: "prefetchInFlight",
+          detail: `"${next.name}"`,
+        });
+        return;
+      }
+
       if (__DEV__)
         console.log(
           `[maybeNarrate] PASSED — fetching narration for "${next.name}"`,
