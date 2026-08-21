@@ -19,9 +19,9 @@
     "artifacts/api-server/src/routes/explore/index.ts::discover": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "645760a87b8b81e5c6dc4643dfd993dca01f92dfe87f962f80b09e406c28b88a",
-      "versions": ["v63", "v75"],
-      "registered": "2026-08-19"
+      "sectionHash": "3782086d557052baa46d559f82be23de0d634de6562c08b81348af8afeba384f",
+      "versions": ["v63", "v76"],
+      "registered": "2026-08-21"
     },
     "artifacts/api-server/src/routes/explore/index.ts::geocode": {
       "kind": "route",

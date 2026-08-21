@@ -2068,7 +2068,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v75:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v76:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2626,7 +2626,7 @@ router.post("/explore/discover", async (req, res) => {
           "You are evaluating paragraphs of Wikipedia text as evidence for a local-history app entry about a real place. " +
           "You will be given the numbered paragraphs only. You have no other information about why this place was chosen " +
           "or what anyone expects you to find -- judge only from the text provided.\n\n" +
-          "Select the indices of all paragraphs that meet at least one of the following evidence-value criteria:\n\n" +
+          "Select only the smallest set of the highest-value paragraphs that, together, fit within a combined budget of about 2,500 characters of paragraph text -- not every paragraph that merely clears one of the following evidence-value criteria. The five criteria below define what counts as evidence; use them to identify the strongest candidates, not to justify including everything that qualifies:\n\n" +
           "1. Explanatory force — Prefer evidence that explains why the place looks, exists, or functions as it does, rather than merely describing it or listing chronology.\n\n" +
           "2. Broader context — Value evidence that connects the place to a larger historical, cultural, social, economic, or neighborhood pattern when that connection deepens understanding of the place itself.\n\n" +
           "3. Human stakes — Value evidence that reveals what people or communities did, experienced, changed, created, preserved, lost, or contested at a place. Institutional, transactional, or procedural facts gain value when they illuminate those human stakes rather than functioning merely as administrative detail.\n\n" +
@@ -2635,8 +2635,16 @@ router.post("/explore/discover", async (req, res) => {
           "Tie-break principle: When evidence is otherwise comparable, prefer the material with the greatest potential to change how someone understands or experiences the place.\n\n" +
           "Boundary: These are evidence-value dimensions, not a strict lexicographic priority order. A passage can be strong through one or several dimensions. Rank/select based on overall editorial value to Streetlit, using the tie-break principle when needed.\n\n" +
           "Explicitly excluded: Physical persistence is not a criterion. Continued physical presence does not inherently increase a story's editorial value; vanished places and invisible earlier layers remain valid Streetlit territory.\n\n" +
+          "Selection discipline:\n" +
+          "- Select only the strongest evidence, not everything that clears a minimum bar.\n" +
+          "- Prefer a few high-value passages over a broad factual overview.\n" +
+          "- Do not select material merely because it efficiently describes the building or place.\n" +
+          "- Dimensions, dates, architect/style attribution, landmark status, ownership chronology, and tenant lists are usually weak on their own. Include them only when they support stronger explanatory, contextual, human, revelatory, or observational value.\n" +
+          "- Prefer hidden, explanatory, human, or contextual stories over competent descriptions.\n" +
+          "- If several passages support the same idea, choose the strongest paragraph or the smallest necessary combination, not all of them.\n" +
+          "- Do not knowingly select more evidence than can fit within a combined budget of about 2,500 characters of paragraph text.\n\n" +
           "It is acceptable, and expected in some cases, to select none of the paragraphs if nothing in the list clears this bar. Do not summarize, paraphrase, or add any information beyond selecting indices.\n\n" +
-          'Respond only with JSON in this exact shape: {"selected_indices": [numbers], "insufficient": boolean}. Set "insufficient" to true and "selected_indices" to an empty array if no paragraph clears the bar. Do not include any other text, explanation, or field.';
+          'Respond only with JSON in this exact shape: {"selected_indices": [numbers], "insufficient": boolean}. List "selected_indices" in descending order of editorial value, strongest evidence first -- not article order. Set "insufficient" to true and "selected_indices" to an empty array if nothing in the paragraphs clears the bar. Do not include any other text, explanation, or field.';
 
         // Fixed, blunt cap — no packing/ranking logic. Deliberately larger
         // than today's 1,000-char truncation budget: the selector operates
