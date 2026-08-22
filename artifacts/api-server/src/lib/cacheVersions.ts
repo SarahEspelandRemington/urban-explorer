@@ -1,4 +1,4 @@
-// cache-versions:v6:
+// cache-versions:v8:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -19,6 +19,22 @@
  * runtime cache-key literal changed; this file's own version bump is a
  * prompt-manifest bookkeeping requirement only (whole-file/self-tag
  * tracking), not a cache-behavior change.
+ *
+ * v6-v7: Green Room curated-local-history Pilot A — osm-anchor discover
+ * cache-key literal bumped v76->v77 (formatForCopy gained curatedContent/
+ * curatedClaimScope fields and the copy-gen system prompt gained rule 12;
+ * see routes/explore/index.ts). Registry entries updated to match; v76 is
+ * retired (no rows can carry it going forward) and is removed from the
+ * quick/full entries below, same as any other single-version bump.
+ *
+ * v7-v8: Pilot A pre-production corrections — osm-anchor discover cache-key
+ * literal bumped v77->v78 (formatForCopy now also sends curatedTrust; rule
+ * 12 reworded to remove "higher-trust source material" framing, embed the
+ * new CURATED_COPY_RULES tiers, and add an explicit precedence clause so
+ * osm_bare's restrictions don't contradict claims inside curatedClaimScope;
+ * see routes/explore/index.ts and lib/curatedLocalHistory.ts). Registry
+ * entries updated to match; v77 is retired and removed from the quick/full
+ * entries below.
  */
 
 /**
@@ -37,8 +53,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string | ReadonlyArray<string>]
 > = [
-  ["quick", ["v63", "v76"]], // discover — quick mode (legacy v63, osm-anchor v76)
-  ["full", ["v63", "v76"]], // discover — full mode (legacy v63, osm-anchor v76)
+  ["quick", ["v63", "v78"]], // discover — quick mode (legacy v63, osm-anchor v78)
+  ["full", ["v63", "v78"]], // discover — full mode (legacy v63, osm-anchor v78)
   ["suggest", "v12"], // location suggestions
   ["geocode", "v4"], // geocode
   ["revgeo", "v12"], // reverse geocode

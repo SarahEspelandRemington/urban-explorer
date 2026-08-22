@@ -47,6 +47,10 @@ import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
+import {
+  getApprovedCuratedEntry,
+  CURATED_COPY_RULES,
+} from "../../lib/curatedLocalHistory";
 import { sanitizeDisplayTags } from "../../lib/sanitizeDisplayTags";
 import { haversineDistance } from "../../lib/geo";
 import {
@@ -2113,7 +2117,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v76:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v78:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2912,6 +2916,16 @@ router.post("/explore/discover", async (req, res) => {
             // REST /page/summary/ lead-paragraph never included.
             obj.wikipediaContent = wikiSummary.extract.slice(0, 1_000);
           }
+          // TEMP-PILOT-A: curated local-history evidence, sibling to
+          // wikipediaContent — never merged into it. Human-selected text,
+          // bypasses the A3 selector entirely (rule 12 in the system
+          // prompt governs how the two fields interact).
+          const curatedEntry = getApprovedCuratedEntry(p.osmId);
+          if (curatedEntry) {
+            obj.curatedContent = curatedEntry.evidence.text;
+            obj.curatedClaimScope = curatedEntry.evidence.claimScope;
+            obj.curatedTrust = curatedEntry.evidence.curatedTrust;
+          }
           return obj;
         };
         // @end-prompt-region discover
@@ -2981,9 +2995,18 @@ router.post("/explore/discover", async (req, res) => {
         // sample. Excluded candidates still flow through the merge step below
         // via the existing copyMap.get(...) ?? fallback — identical to a
         // candidate whose copy generation genuinely failed.
-        const copyGenCandidates = candidates.filter(
-          (p) => computeOsmTrustLevel(p.tags) !== "osm_bare",
-        );
+        // TEMP-PILOT-A: narrow osm_bare exception. A candidate that is
+        // osm_bare still bypasses the general exclusion above ONLY if it
+        // carries an approved curated-local-history entry (Pilot A, Green
+        // Room). This does not change trustLevel, computeOsmTrustLevel, or
+        // OSM_COPY_RULES — the candidate still reports osm_bare downstream
+        // (see formatForCopy) and still gets bare-tier copy rules; it is
+        // only exempted from the exclusion filter itself. Every other
+        // osm_bare candidate remains excluded exactly as before.
+        const copyGenCandidates = candidates.filter((p) => {
+          if (computeOsmTrustLevel(p.tags) !== "osm_bare") return true;
+          return getApprovedCuratedEntry(p.osmId) !== undefined;
+        });
         const excludedBareCount = candidates.length - copyGenCandidates.length;
         // Provisional hard cap on how many post-bare-exclusion candidates are
         // sent to the copy-generation LLM call. Dense areas (Union Square,
@@ -3014,6 +3037,33 @@ router.post("/explore/discover", async (req, res) => {
             : copyGenCandidates;
         const excludedCapCount =
           copyGenCandidates.length - cappedCandidates.length;
+
+        // TEMP-PILOT-A-CURATED-EVIDENCE: diagnostic-only, sufficient for
+        // manual per-output auditing of the Green Room curated-evidence
+        // pilot. Logs which of the candidates actually being sent to
+        // copy-gen carry an approved curated entry, and the full evidence
+        // payload for each — does not affect any gating/filtering/prompt
+        // behavior. Remove after the pilot review window.
+        for (const c of cappedCandidates) {
+          const curated = getApprovedCuratedEntry(c.osmId);
+          if (!curated) continue;
+          req.log.info(
+            {
+              tag: "TEMP-PILOT-A-CURATED-EVIDENCE",
+              reqId: req.id,
+              osmId: c.osmId,
+              osmTrustLevel: computeOsmTrustLevel(c.tags),
+              sourceTitle: curated.source.title,
+              sourceType: curated.source.sourceType,
+              claimScope: curated.evidence.claimScope,
+              verificationStatus: curated.evidence.verificationStatus,
+              verificationConfidence: curated.evidence.verificationConfidence,
+              curatedTrust: curated.evidence.curatedTrust,
+              curatedEvidenceText: curated.evidence.text,
+            },
+            "[TEMP-PILOT-A-CURATED-EVIDENCE] curated evidence entering copy generation",
+          );
+        }
 
         // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
         // wikipedia= tag. Scoped to cappedCandidates — the only candidates
@@ -3212,6 +3262,13 @@ Flag any claim not directly supported by the candidate's tags with "Reportedly" 
 9. NEVER write raw GPS coordinates in any text field.
 10. DISPLAY TAGS — the "tags" array must contain only short, human-readable descriptor phrases a general audience would understand (e.g. "historic mansion", "place of worship", "Victorian building", "art deco", "immigrant heritage"). NEVER put raw database identifiers, Wikidata IDs (e.g. Q4891444), Wikipedia slugs, OSM field names (wikidata, wikipedia, building:levels, denomination, operator), key:value pairs, or any technical metadata in tags. Tags are user-visible copy, not metadata echo.
 11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content. Standalone attribution facts — "designed by architect X", "built in year Y", "listed on the National Register", "in a Beaux Arts style" — are NOT sufficient on their own for a discovery-worthy summary. Only use them to anchor a broader story: explain why the architect matters, what else they built, who commissioned the building and why, or what notable events occurred here. If the Wikipedia content contains only architectural metadata with no narrative context (no notable people, no events, no transformation over time), reflect that in a lower-confidence summary rather than dressing up dry facts as a compelling discovery.
+12. CURATED LOCAL-HISTORY CONTENT — when a candidate includes a "curatedContent" field, curatedContent contains human-vetted evidence whose permitted claim strength is governed by "curatedTrust" and limited to the scope declared in "curatedClaimScope", independently of the candidate's OSM "trustLevel". Apply the rule below matching the candidate's curatedTrust value:
+
+${CURATED_COPY_RULES.high}
+${CURATED_COPY_RULES.medium}
+${CURATED_COPY_RULES.low}
+
+This rule 12 permission is independent of, and takes precedence over, the trustLevel-based restrictions in rules 5-8 (including the osm_bare restriction against dates, founding claims, and former-use claims) for claims that fall inside curatedClaimScope specifically. Rules 5-8 continue to govern any claim NOT grounded in curatedContent, including for osm_bare candidates — they do not forbid the specific claims inside curatedClaimScope that curatedContent supports. Outside the declared curatedClaimScope, "wikipediaContent" (if present) may still supplement with additional grounded, non-conflicting context. If "wikipediaContent" directly conflicts with a claim inside curatedClaimScope, follow curatedContent and omit the conflicting Wikipedia detail entirely — do not blend the two versions, average them, or present both as equally valid. As with rule 11, do not mention "curated," "verified," Wikipedia, or any source by name — write unified historical prose.
 
 Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
                   },
@@ -3407,6 +3464,27 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
               copyFacts: copy?.facts,
             },
             "[TEMP-A3-EVIDENCE-CORRELATION] copy-gen output",
+          );
+        }
+        // TEMP-PILOT-A-CURATED-EVIDENCE: stage-2 log — the copy-gen
+        // summary/facts actually produced for candidates that had approved
+        // curated evidence in this request, correlated by osmId with the
+        // "curated evidence entering copy generation" log above. Diagnostic
+        // only. Remove after the pilot review window.
+        for (const c of cappedCandidates) {
+          const curated = getApprovedCuratedEntry(c.osmId);
+          if (!curated) continue;
+          const copy = copyMap.get(c.osmId);
+          req.log.info(
+            {
+              tag: "TEMP-PILOT-A-CURATED-EVIDENCE",
+              reqId: req.id,
+              osmId: c.osmId,
+              osmTrustLevel: computeOsmTrustLevel(c.tags),
+              copySummary: copy?.summary,
+              copyFacts: copy?.facts,
+            },
+            "[TEMP-PILOT-A-CURATED-EVIDENCE] copy-gen output for curated candidate",
           );
         }
         let mergedPlaces: any[] = candidates.map((p) => {
