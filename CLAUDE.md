@@ -62,9 +62,21 @@ it to verify production behavior.
   bundle, iOS Simulator, API cache — is independently versioned and must be
   explicitly refreshed. See the Runtime Sync / Testing Matrix (Section 8) for
   the full per-layer reference.
-- Do not assume any action on GitHub, your local machine, or the Replit
-  fallback has any effect on the Render production deployment. Render must be
-  explicitly redeployed to pick up new code.
+- Pushing to GitHub `main` currently triggers a Render auto-deploy of the
+  production service. Confirmed live 2026-08-23: `render deploys list`
+  showed a deploy with trigger `new_commit` already `build_in_progress`
+  seconds after the push, with no manual trigger involved. Do not assume a
+  manual redeploy is required by default. Before manually triggering a
+  deploy, check `render deploys list <service-id> -o json --confirm` to see
+  whether the expected auto-deploy is already in progress or live (status
+  moves `build_in_progress` -> `update_in_progress` -> `live`). Only run a
+  manual deploy (`render deploys create <service-id> --output text
+--confirm`) if the expected auto-deploy did not occur, or a redeploy is
+  intentionally needed without a new commit (e.g. restarting the process).
+  Do not trigger a second deploy of a commit that is already deploying or
+  live — it just queues a redundant deploy of the same commit. Local machine
+  and Replit-fallback actions still have no effect on the Render production
+  deployment.
 
 **Things that must not be changed casually:**
 
