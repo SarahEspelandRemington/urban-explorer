@@ -58,4 +58,28 @@ export const STREETLIT_PLACES: readonly StreetlitPlace[] = [
     address: "557 8th Avenue",
     identityType: "building",
   },
+  {
+    streetlitId: "streetlit/2301-fairmount-ave-rothacker-orth",
+    displayName: "Rothacker-Orth Brewery and Lager Beer Saloon",
+    latitude: 39.9675427,
+    longitude: -75.1754632,
+    address: "2301 Fairmount Avenue",
+    identityType: "building",
+  },
+  {
+    streetlitId: "streetlit/2133-spring-garden-polonia",
+    displayName: "Polonia Federal Savings Bank",
+    latitude: 39.9643516,
+    longitude: -75.1741986,
+    address: "2133-35 Spring Garden Street",
+    identityType: "building",
+  },
+  {
+    streetlitId: "streetlit/2101-mount-vernon-st",
+    displayName: "2101 Mount Vernon Street",
+    latitude: 39.9661417,
+    longitude: -75.1724873,
+    address: "2101 Mount Vernon Street",
+    identityType: "building",
+  },
 ];
