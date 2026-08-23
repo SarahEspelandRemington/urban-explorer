@@ -102,6 +102,17 @@ export const NAMED_NEIGHBORHOOD_RE =
  * LLM-only places (no Nominatim confirmation) are downgraded for summary
  * mentions. Verified places with clean names survive even if their summary
  * references a street.
+ *
+ * Streetlit-owned exemption (candidateSource: "streetlit"): Rules 2/3/3.5
+ * exist to catch LLM-hallucinated coordinates smuggled in via a suspicious
+ * NAME — a real OSM/LLM candidate is never legitimately named after its own
+ * cross-street or numbered address. That heuristic does not hold for a
+ * manually registered, server-verified Streetlit identity (streetlitPlaces.ts),
+ * whose displayName may legitimately BE a street address (e.g. "557 Eighth
+ * Avenue"). Streetlit-owned candidates skip Rules 2/3/3.5 entirely. Rule 4
+ * needs no separate carve-out — it only fires when coordSource is absent,
+ * and a Streetlit-owned candidate's coordSource is always "streetlit", so
+ * Rule 4 was already a no-op for them before this exemption existed.
  */
 export function applyLlmPrecisionFilter(places: any[]): void {
   for (const p of places) {
@@ -112,6 +123,11 @@ export function applyLlmPrecisionFilter(places: any[]): void {
       }
       continue;
     }
+
+    // Streetlit-owned exemption — see module doc comment above. Skips
+    // Rules 2/3/3.5 (name-based) below; Rule 4 is unaffected, since it was
+    // already a no-op for these candidates (coordSource is always set).
+    if (p.candidateSource === "streetlit") continue;
 
     // Universal name checks (independent of coordSource):
     // Both the ordinal-intersection and named-street patterns are LLM

@@ -51,6 +51,7 @@ import {
   getApprovedCuratedEntry,
   CURATED_COPY_RULES,
 } from "../../lib/curatedLocalHistory";
+import { STREETLIT_PLACES } from "../../lib/streetlitPlaces";
 import { sanitizeDisplayTags } from "../../lib/sanitizeDisplayTags";
 import { haversineDistance } from "../../lib/geo";
 import {
@@ -67,8 +68,18 @@ interface OSMPlace {
   lon: number;
   type: string;
   tags: Record<string, string>;
-  /** Overpass element reference, e.g. "node/12345678". Set in the Overpass parser. */
+  /** Internal join key: an Overpass element reference (e.g.
+   *  "node/12345678") for real OSM candidates, or a Streetlit-owned
+   *  streetlitId (e.g. "streetlit/557-8th-ave") when candidateOrigin is
+   *  "streetlit". Opaque everywhere it's read internally (copyMap, wikiMap,
+   *  curated-evidence lookup, etc.) — never presented to the client under
+   *  the `osmId` response field for a Streetlit-owned candidate; see
+   *  mergedPlaces construction below. */
   osmId: string;
+  /** Set only on candidates normalized in from STREETLIT_PLACES
+   *  (streetlitPlaces.ts). Undefined = real OSM candidate (unchanged at
+   *  every Overpass-construction site). */
+  candidateOrigin?: "streetlit";
 }
 
 const OVERPASS_PROVIDERS = [
@@ -2611,11 +2622,31 @@ router.post("/explore/discover", async (req, res) => {
         }
 
         // 4. Limit to candidates within the search radius (10% headroom)
-        const candidates = osmCandidates.filter(
+        const osmRadiusCandidates = osmCandidates.filter(
           (p) =>
             haversineDistance(latitude, longitude, p.lat, p.lon) <=
             searchRadius * 1.1,
         );
+        // Streetlit-owned point identities (streetlitPlaces.ts) normalized
+        // into the same candidate shape as real OSM candidates, using the
+        // same radius-inclusion rule. tags: {} so computeOsmTrustLevel
+        // self-computes osm_bare with no special-casing. No suppression or
+        // dedupe against a coexisting OSM candidate at the same address —
+        // both remain distinct entries in the response.
+        const streetlitCandidates: OSMPlace[] = STREETLIT_PLACES.filter(
+          (sp) =>
+            haversineDistance(latitude, longitude, sp.latitude, sp.longitude) <=
+            searchRadius * 1.1,
+        ).map((sp) => ({
+          name: sp.displayName,
+          lat: sp.latitude,
+          lon: sp.longitude,
+          type: sp.identityType,
+          tags: {},
+          osmId: sp.streetlitId,
+          candidateOrigin: "streetlit" as const,
+        }));
+        const candidates = osmRadiusCandidates.concat(streetlitCandidates);
         // Diagnostic-only. candidatesForCopyGen in the funnel log is the same
         // value — this filter is the only thing that produces it.
         const afterRadiusFilter = candidates.length;
@@ -3488,6 +3519,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           );
         }
         let mergedPlaces: any[] = candidates.map((p) => {
+          const isStreetlitOwned = p.candidateOrigin === "streetlit";
           const copy = copyMap.get(p.osmId);
           const addr = buildOsmAddr(p.tags);
           const placeTrustLevel = computeOsmTrustLevel(p.tags);
@@ -3503,10 +3535,15 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             latitude: p.lat,
             longitude: p.lon,
             address: addr || undefined,
-            coordSource: "osm",
-            osmId: p.osmId,
+            coordSource: isStreetlitOwned ? "streetlit" : "osm",
+            // Streetlit-owned candidates never emit a fake osmId — their
+            // join key (p.osmId, which holds their streetlitId) is exposed
+            // under streetlitId instead. See OSMPlace doc comment above.
+            ...(isStreetlitOwned
+              ? { streetlitId: p.osmId }
+              : { osmId: p.osmId }),
             evidenceRef: evidenceRefByOsmId.get(p.osmId),
-            candidateSource: "osm",
+            candidateSource: isStreetlitOwned ? "streetlit" : "osm",
             trustLevel: placeTrustLevel,
             osmTags:
               Object.keys(placeOsmTags).length > 0 ? placeOsmTags : undefined,

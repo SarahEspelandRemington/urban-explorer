@@ -29,7 +29,7 @@ export interface DiagSelectionSnapshot {
     bearingDiff: number | null;
     score: number;
     osmId?: string;
-    candidateSource?: "osm" | "llm";
+    candidateSource?: "osm" | "llm" | "streetlit";
     /** Deterministic quality tier from the server-side classifier (1–4). */
     discoveryTier?: number;
     /** Debug label for why Tier 4 was assigned (e.g. "metadataOnly"). */

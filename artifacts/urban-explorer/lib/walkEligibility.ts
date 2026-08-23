@@ -56,7 +56,7 @@ export interface EligibilityCandidate {
   osmId?: string;
   /** How this place's location was established. Display-only — never read
    *  by eligibility logic. */
-  candidateSource?: "osm" | "llm";
+  candidateSource?: "osm" | "llm" | "streetlit";
   /** Server-assigned discovery quality tier (1–4). When 4, the place is
    *  metadata-only (no historical depth) and is suppressed from auto-narration
    *  with reason `lowQuality`. Absent when the classifier was not confident. */

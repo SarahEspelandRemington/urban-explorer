@@ -163,8 +163,10 @@ export interface WalkPlace {
    *  window — see MEMORY.md removal note. */
   evidenceRef?: string;
   /** How this place's location was established: osm = Overpass coordinates
-   *  (verified), llm = LLM-generated coordinates (legacy path). */
-  candidateSource?: "osm" | "llm";
+   *  (verified), llm = LLM-generated coordinates (legacy path), streetlit =
+   *  a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-
+   *  verified, not an Overpass candidate). */
+  candidateSource?: "osm" | "llm" | "streetlit";
   /** OSM trust classification from discover. Passed through to the detail
    *  endpoint so the detail prompt can ground its response in tag data. */
   trustLevel?: string;
@@ -1063,15 +1065,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               (p as any).coordSource === "llm"
             )
               continue;
-            // Accept Overpass-sourced places (candidateSource:"osm") OR
-            // LLM-sourced places that Nominatim externally verified. When
-            // Overpass is unavailable (IP-blocked) the server falls back to
-            // the LLM path; those places carry coordSource:"nominatim-confirmed"
-            // or "nominatim-corrected" and are as spatially trustworthy as
-            // OSM-anchored candidates. The coordSource gate above already
-            // ensures only Nominatim-verified places reach this point.
+            // Accept Overpass-sourced places (candidateSource:"osm"),
+            // Streetlit-owned places (candidateSource:"streetlit" —
+            // server-verified exact-point identities, not Overpass
+            // candidates), OR LLM-sourced places that Nominatim externally
+            // verified. When Overpass is unavailable (IP-blocked) the server
+            // falls back to the LLM path; those places carry
+            // coordSource:"nominatim-confirmed" or "nominatim-corrected" and
+            // are as spatially trustworthy as OSM-anchored candidates. The
+            // coordSource gate above already ensures only Nominatim-verified
+            // places reach this point.
             if (
               (p as any).candidateSource !== "osm" &&
+              (p as any).candidateSource !== "streetlit" &&
               (p as any).coordSource !== "nominatim-confirmed" &&
               (p as any).coordSource !== "nominatim-corrected"
             )
@@ -1250,13 +1256,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
               // so the pool stays clean against a stale merged-in entry or
               // a future filter regression.
               if (looksGenericCommercial(p as any)) continue;
-              // Accept Overpass-sourced places (candidateSource:"osm") OR
-              // LLM-sourced places that Nominatim externally verified. When
-              // Overpass is unavailable (overpassFallback flag) also accept
-              // coordSource:"llm" places — the server cleared autoNarrationBlocked
-              // on them and the ordinal-mismatch check still applies.
+              // Accept Overpass-sourced places (candidateSource:"osm"),
+              // Streetlit-owned places (candidateSource:"streetlit" —
+              // server-verified exact-point identities, not Overpass
+              // candidates), OR LLM-sourced places that Nominatim externally
+              // verified. When Overpass is unavailable (overpassFallback flag)
+              // also accept coordSource:"llm" places — the server cleared
+              // autoNarrationBlocked on them and the ordinal-mismatch check
+              // still applies.
               if (
                 (p as any).candidateSource !== "osm" &&
+                (p as any).candidateSource !== "streetlit" &&
                 (p as any).coordSource !== "nominatim-confirmed" &&
                 (p as any).coordSource !== "nominatim-corrected" &&
                 !(isOverpassFallback && (p as any).coordSource === "llm")
@@ -1281,19 +1291,23 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // stores the full set of discovered places for this tile.
             //
             // Guard: only write if the server response contains at least one
-            // OSM-stamped place. Caching a response where every place is
-            // LLM-sourced (candidateSource !== "osm") would poison the tile
+            // spatially grounded place — Overpass-stamped (candidateSource:
+            // "osm") or a Streetlit-owned exact-point identity (candidateSource:
+            // "streetlit", server-verified, not an Overpass candidate).
+            // Caching a response where every place is LLM-sourced
+            // (candidateSource !== "osm"/"streetlit") would poison the tile
             // for 24 h — the Walk pool gate would block every candidate and
             // the user would see zero pins until the TTL expired. Skipping
             // the write lets the server be retried on the next walk session,
             // when Overpass may return results or the API server may be fresh.
-            const hasOsmPlace = allIncoming.some(
+            const hasGroundedPlace = allIncoming.some(
               (p) =>
                 (p as any).candidateSource === "osm" ||
+                (p as any).candidateSource === "streetlit" ||
                 (p as any).coordSource === "nominatim-confirmed" ||
                 (p as any).coordSource === "nominatim-corrected",
             );
-            if (hasOsmPlace) {
+            if (hasGroundedPlace) {
               setPlaceCache(tile, data.places as unknown[]);
             }
             fetchedTilesRef.current.add(tile);
@@ -2169,7 +2183,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           bearingDiff: number | null;
           score: number;
           osmId?: string;
-          candidateSource?: "osm" | "llm";
+          candidateSource?: "osm" | "llm" | "streetlit";
         }> = [];
         // Reuse `eligibleSet` (built above from the exact same
         // evaluateEligibility + filterFailureBackoff pipeline that produced
