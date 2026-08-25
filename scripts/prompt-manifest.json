@@ -54,9 +54,9 @@
     "artifacts/api-server/src/routes/explore/index.ts::module:wiki-summary": {
       "kind": "module",
       "extraction": "marked",
-      "sectionHash": "a1beadb72dff880c108b643eeb52d425dc69b4a33a0c0a60d7200397d04c062f",
-      "versions": ["v4"],
-      "registered": "2026-08-21"
+      "sectionHash": "f31ad58bd8ad71aca8015ed3472288a2810bbedbfe2d106e1c8d6c0b810b85c5",
+      "versions": ["v5"],
+      "registered": "2026-08-25"
     },
     "artifacts/api-server/src/routes/explore/index.ts::place-detail": {
       "kind": "route",

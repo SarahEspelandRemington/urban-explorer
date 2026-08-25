@@ -1679,7 +1679,7 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
 
 // @prompt-region wiki-summary
 // ---------------------------------------------------------------------------
-// Wikipedia summary cache — in-memory, keyed wiki:v4:{lang}:{encoded_title}
+// Wikipedia summary cache — in-memory, keyed wiki:v5:{lang}:{encoded_title}
 // ---------------------------------------------------------------------------
 // v2: switched from REST /page/summary/ (lead paragraph only) to the action
 // API (prop=extracts&explaintext=1) which returns the full article text,
@@ -1714,7 +1714,7 @@ const wikipediaSummaryCache = new Map<
  * than only the lead paragraph, so named sections such as "History and
  * architecture" are available to the copy LLM.
  *
- * Cache key: wiki:v4:{lang}:{encoded_title}
+ * Cache key: wiki:v5:{lang}:{encoded_title}
  *
  * Only called when `osmTags.wikipedia` is well-formed — never guesses from
  * place names.  Always falls back gracefully: any failure returns null so
@@ -1726,7 +1726,7 @@ async function fetchWikipediaSummary(
   signal?: AbortSignal,
 ): Promise<WikipediaSummary | null> {
   const encodedTitle = encodeURIComponent(title);
-  const cacheKey = `wiki:v4:${lang}:${encodedTitle}`;
+  const cacheKey = `wiki:v5:${lang}:${encodedTitle}`;
 
   const cached = wikipediaSummaryCache.get(cacheKey);
   if (
@@ -1745,9 +1745,10 @@ async function fetchWikipediaSummary(
   try {
     const params = new URLSearchParams({
       action: "query",
-      prop: "extracts",
+      prop: "extracts|pageprops",
       explaintext: "1",
       redirects: "1",
+      ppprop: "disambiguation",
       titles: title,
       format: "json",
     });
@@ -1801,7 +1802,12 @@ async function fetchWikipediaSummary(
       query?: {
         pages?: Record<
           string,
-          { pageid?: number; title?: string; extract?: string }
+          {
+            pageid?: number;
+            title?: string;
+            extract?: string;
+            pageprops?: { disambiguation?: string };
+          }
         >;
       };
     };
@@ -1822,6 +1828,20 @@ async function fetchWikipediaSummary(
       logger.info(
         { lang, title },
         "[wikipedia] action-api page missing or empty — caching null",
+      );
+      return null;
+    }
+
+    // A disambiguation page (MediaWiki's own pageprops.disambiguation, set
+    // via the {{disambiguation}} template / Wikidata instance-of) is not
+    // usable evidence about a specific place — it's a list of unrelated
+    // same-named entities. Treat identically to a missing page rather than
+    // let its extract flow into the evidence selector or copy-gen.
+    if (page.pageprops?.disambiguation !== undefined) {
+      wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
+      logger.info(
+        { lang, title },
+        "[wikipedia] action-api page is a disambiguation page — caching null",
       );
       return null;
     }
