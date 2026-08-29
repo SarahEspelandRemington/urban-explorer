@@ -48,6 +48,78 @@ export function parseWikipediaOsmTag(
   return { lang, title };
 }
 
+/** Abbreviations whose trailing period should not be treated as a sentence end. */
+const SENTENCE_SPLIT_ABBREVIATIONS = new Set([
+  "u.s.",
+  "u.k.",
+  "u.s.a.",
+  "d.c.",
+  "mr.",
+  "mrs.",
+  "ms.",
+  "dr.",
+  "jr.",
+  "sr.",
+  "st.",
+  "ave.",
+  "no.",
+  "vs.",
+  "etc.",
+  "rev.",
+  "gen.",
+  "sen.",
+  "rep.",
+  "ft.",
+  "mt.",
+  "approx.",
+  "inc.",
+  "co.",
+  "ltd.",
+  "prof.",
+  "capt.",
+  "col.",
+  "lt.",
+]);
+
+/**
+ * Split a block of source text (e.g. an A3-selected Wikipedia paragraph) into
+ * source-bounded sentence-level units, using the platform's built-in
+ * `Intl.Segmenter` (no new NLP dependency). A rich source sentence containing
+ * multiple facts is kept as one unit — this only splits on true sentence
+ * boundaries (with an abbreviation-aware merge pass) and, secondarily, on
+ * semicolons joining independent clauses. Fragments under 20 characters or
+ * with no letters are dropped as noise.
+ */
+export function splitIntoSentenceUnits(text: string): string[] {
+  if (!text) return [];
+  const seg = new Intl.Segmenter("en", { granularity: "sentence" });
+  const raw = [...seg.segment(text)].map((s) => s.segment);
+
+  const merged: string[] = [];
+  for (const piece of raw) {
+    if (merged.length > 0) {
+      const prevTrimmed = merged[merged.length - 1].trimEnd();
+      const lastWord = prevTrimmed.split(/\s+/).pop() ?? "";
+      if (SENTENCE_SPLIT_ABBREVIATIONS.has(lastWord.toLowerCase())) {
+        merged[merged.length - 1] += piece;
+        continue;
+      }
+    }
+    merged.push(piece);
+  }
+
+  const units: string[] = [];
+  for (const sentence of merged) {
+    for (const part of sentence.split(/;\s+/)) {
+      const trimmed = part.trim().replace(/[;\s]+$/, "");
+      if (trimmed.length < 20) continue;
+      if (!/[A-Za-z]/.test(trimmed)) continue;
+      units.push(trimmed);
+    }
+  }
+  return units;
+}
+
 /**
  * Build the prompt block injected into `buildDetailUserTurn` when a
  * Wikipedia summary has been successfully fetched.

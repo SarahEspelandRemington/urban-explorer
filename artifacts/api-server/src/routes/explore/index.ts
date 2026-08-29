@@ -58,6 +58,7 @@ import {
   type WikipediaSummary,
   parseWikipediaOsmTag,
   buildWikiPromptBlock,
+  splitIntoSentenceUnits,
 } from "../../lib/wikipediaEnrichment";
 
 const router = Router();
@@ -2148,7 +2149,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v78:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v79:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2934,11 +2935,120 @@ router.post("/explore/discover", async (req, res) => {
           }
         };
 
+        // One-primary-unit selector: takes the A3-approved evidence text
+        // (already selected by selectEvidenceParagraphs above) and narrows
+        // it further to exactly ONE source-bounded sentence-level unit, so
+        // the copy-gen writer's factual universe for this candidate is a
+        // single unit rather than a multi-fact packet it must decide how to
+        // relate. Reuses the same editorial-value criteria as the paragraph
+        // selector; must not construct a story spine, infer relationships,
+        // merge units, or rewrite text. On any failure/decline, callers must
+        // fall back to the paragraph-selector text unchanged — no new
+        // fallback semantics.
+        // @prompt-region discover
+        const PRIMARY_UNIT_SELECTOR_SYSTEM_PROMPT =
+          "You are choosing ONE sentence-level unit of Wikipedia evidence for a local-history app entry about a real place. " +
+          "You will be given numbered units only, already pre-approved as strong evidence -- your job is to pick the single strongest one, not to judge overall quality.\n\n" +
+          "Use these editorial-value criteria to judge which ONE unit would create the strongest shift in how a walker understands this place:\n\n" +
+          "1. Explanatory force — does it explain why the place looks, exists, or functions as it does?\n" +
+          "2. Broader context — does it connect the place to a larger historical, cultural, social, or economic pattern?\n" +
+          "3. Human stakes — does it reveal what people or communities did, experienced, changed, or lost here?\n" +
+          "4. Revelatory value — does it reveal a hidden or unexpected dimension of the place?\n" +
+          "5. Observational value — does it carry a distinctive, easily overlooked physical detail worth noticing?\n\n" +
+          "Tie-break: prefer the unit with the greatest potential to change how someone understands or experiences the place.\n\n" +
+          "Strict boundaries: select exactly one unit VERBATIM as given -- do not rewrite, combine, or paraphrase it. Do not infer a relationship between units. Do not construct a narrative arc across units. Each unit stands alone as the source composed it.\n\n" +
+          "It is acceptable to select none if no unit clears the bar.\n\n" +
+          'Respond only with JSON in this exact shape: {"selected_index": number|null, "insufficient": boolean}. Do not include any other text, explanation, or field.';
+        const PRIMARY_UNIT_SELECTOR_TIMEOUT_MS = 6_000;
+        // @end-prompt-region discover
+
+        type PrimaryUnitOutcome =
+          | "success"
+          | "declined"
+          | "invalidIndex"
+          | "parseError"
+          | "timeoutOrAbort"
+          | "noUnits";
+
+        type PrimaryUnitResult = {
+          outcome: PrimaryUnitOutcome;
+          text: string | null;
+          selectedIndex?: number;
+        };
+
+        // Returns the verbatim text of exactly one selected sentence-level
+        // unit, or a null text on any failure/decline. Callers must fall
+        // back to the pre-existing (paragraph-level) selector text on any
+        // non-success outcome.
+        const selectPrimaryUnit = async (
+          approvedEvidenceText: string,
+          placeName: string,
+          address: string | undefined,
+        ): Promise<PrimaryUnitResult> => {
+          const units = splitIntoSentenceUnits(approvedEvidenceText);
+          if (units.length === 0) return { outcome: "noUnits", text: null };
+
+          const lines = units.map((u, i) => `[${i + 1}] ${u}`);
+          const userPrompt =
+            `Place: ${placeName}${address ? `\nAddress: ${address}` : ""}\n\n` +
+            `Units:\n\n${lines.join("\n\n")}`;
+
+          const selectorAbort = new AbortController();
+          const timer = setTimeout(
+            () => selectorAbort.abort(),
+            PRIMARY_UNIT_SELECTOR_TIMEOUT_MS,
+          );
+          try {
+            // @prompt-region discover
+            const res = await openai.chat.completions.create(
+              {
+                model: "gpt-4.1-mini",
+                max_completion_tokens: 200,
+                messages: [
+                  {
+                    role: "system",
+                    content: PRIMARY_UNIT_SELECTOR_SYSTEM_PROMPT,
+                  },
+                  { role: "user", content: userPrompt },
+                ],
+                response_format: { type: "json_object" },
+              },
+              { signal: selectorAbort.signal },
+            );
+            // @end-prompt-region discover
+            const raw = res.choices[0]?.message?.content ?? "";
+            const parsed = JSON.parse(raw) as {
+              selected_index?: unknown;
+              insufficient?: unknown;
+            };
+            if (parsed.insufficient === true)
+              return { outcome: "declined", text: null };
+            if (
+              typeof parsed.selected_index !== "number" ||
+              !Number.isInteger(parsed.selected_index) ||
+              parsed.selected_index < 1 ||
+              parsed.selected_index > units.length
+            ) {
+              return { outcome: "invalidIndex", text: null };
+            }
+            return {
+              outcome: "success",
+              text: units[parsed.selected_index - 1]!,
+              selectedIndex: parsed.selected_index,
+            };
+          } catch {
+            return { outcome: "timeoutOrAbort", text: null };
+          } finally {
+            clearTimeout(timer);
+          }
+        };
+
         // @prompt-region discover
         const formatForCopy = (
           p: OSMPlace,
           wikiSummary?: WikipediaSummary | null,
           enhancedWikipediaContent?: string,
+          isPrimaryUnit?: boolean,
         ): Record<string, unknown> => {
           const obj: Record<string, unknown> = {
             id: p.osmId,
@@ -2958,6 +3068,7 @@ router.post("/explore/discover", async (req, res) => {
           // original first-1,000-char behavior otherwise, unchanged.
           if (enhancedWikipediaContent) {
             obj.wikipediaContent = enhancedWikipediaContent;
+            if (isPrimaryUnit) obj.wikipediaUnitOnly = true;
           } else if (wikiSummary?.extract) {
             // Inject the first 1,000 chars of the Wikipedia extract when available.
             // The copy LLM uses this as factual grounding (rule 11 in the system
@@ -3179,6 +3290,10 @@ router.post("/explore/discover", async (req, res) => {
         // which formatForCopy already treats identically to "no enhanced
         // content" — the original truncation path, unchanged.
         const selectorEnhancedWikiContent = new Map<string, string>();
+        // osmIds whose selectorEnhancedWikiContent entry is a single
+        // primary-unit selection (not a multi-paragraph A3 selection) —
+        // formatForCopy uses this to flag wikipediaUnitOnly for the writer.
+        const selectorSingleUnitOsmIds = new Set<string>();
         // TEMP-A3-EVIDENCE-CORRELATION: ephemeral request/slot-scoped
         // correlation token for the up-to-3 candidates that receive A3
         // evidence selection, so a field-test log investigation can trace
@@ -3234,6 +3349,35 @@ router.post("/explore/discover", async (req, res) => {
                   },
                   "[TEMP-A3-EVIDENCE-CORRELATION] evidence selector outcome",
                 );
+
+                // One-primary-unit narrowing: only attempted when the
+                // paragraph selector above succeeded. On success, this
+                // REPLACES the paragraph-level text with a single unit; on
+                // any failure/decline, selectorEnhancedWikiContent for this
+                // osmId is left as the paragraph-level text from above —
+                // the existing, unchanged fallback.
+                if (selected.text) {
+                  const unitResult = await selectPrimaryUnit(
+                    selected.text,
+                    candidate.name,
+                    buildOsmAddr(candidate.tags) || undefined,
+                  );
+                  if (unitResult.text) {
+                    selectorEnhancedWikiContent.set(osmId, unitResult.text);
+                    selectorSingleUnitOsmIds.add(osmId);
+                  }
+                  req.log.info(
+                    {
+                      reqId: req.id,
+                      evidenceRef,
+                      candidateSlot,
+                      primaryUnitOutcome: unitResult.outcome,
+                      primaryUnitSelectedIndex: unitResult.selectedIndex,
+                      primaryUnitText: unitResult.text,
+                    },
+                    "[A3] primary unit selector outcome",
+                  );
+                }
               },
             ),
           );
@@ -3313,6 +3457,7 @@ Flag any claim not directly supported by the candidate's tags with "Reportedly" 
 9. NEVER write raw GPS coordinates in any text field.
 10. DISPLAY TAGS — the "tags" array must contain only short, human-readable descriptor phrases a general audience would understand (e.g. "historic mansion", "place of worship", "Victorian building", "art deco", "immigrant heritage"). NEVER put raw database identifiers, Wikidata IDs (e.g. Q4891444), Wikipedia slugs, OSM field names (wikidata, wikipedia, building:levels, denomination, operator), key:value pairs, or any technical metadata in tags. Tags are user-visible copy, not metadata echo.
 11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content. Standalone attribution facts — "designed by architect X", "built in year Y", "listed on the National Register", "in a Beaux Arts style" — are NOT sufficient on their own for a discovery-worthy summary. Only use them to anchor a broader story: explain why the architect matters, what else they built, who commissioned the building and why, or what notable events occurred here. If the Wikipedia content contains only architectural metadata with no narrative context (no notable people, no events, no transformation over time), reflect that in a lower-confidence summary rather than dressing up dry facts as a compelling discovery.
+11a. SINGLE-UNIT WIKIPEDIA CONTENT — when a candidate's "wikipediaContent" is accompanied by "wikipediaUnitOnly": true, that field contains exactly one complete, already-selected source unit, not an excerpt of a larger passage. Write the summary and facts using ONLY what that unit states. Do not import facts from outside it, add causes, motives, or consequences it doesn't state, or infer a relationship to other information about the place. Do not construct a narrative arc beyond what the unit itself supports. Facts may restate or lightly rephrase the unit, but must not introduce anything beyond it — an empty facts array is acceptable rather than padding with unrelated OSM tag data.
 12. CURATED LOCAL-HISTORY CONTENT — when a candidate includes a "curatedContent" field, curatedContent contains human-vetted evidence whose permitted claim strength is governed by "curatedTrust" and limited to the scope declared in "curatedClaimScope", independently of the candidate's OSM "trustLevel". Apply the rule below matching the candidate's curatedTrust value:
 
 ${CURATED_COPY_RULES.high}
@@ -3325,7 +3470,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                   },
                   {
                     role: "user",
-                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(cappedCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId), selectorEnhancedWikiContent.get(c.osmId))))}`,
+                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(cappedCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId), selectorEnhancedWikiContent.get(c.osmId), selectorSingleUnitOsmIds.has(c.osmId))))}`,
                   },
                 ],
                 response_format: { type: "json_object" },

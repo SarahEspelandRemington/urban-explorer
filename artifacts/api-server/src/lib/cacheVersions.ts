@@ -1,4 +1,4 @@
-// cache-versions:v8:
+// cache-versions:v9:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -35,6 +35,13 @@
  * see routes/explore/index.ts and lib/curatedLocalHistory.ts). Registry
  * entries updated to match; v77 is retired and removed from the quick/full
  * entries below.
+ *
+ * v8-v9: One-primary-unit narration — osm-anchor discover cache-key literal
+ * bumped v78->v79 (new selectPrimaryUnit stage narrows A3-approved Wikipedia
+ * evidence to a single sentence-level unit; formatForCopy gained
+ * wikipediaUnitOnly and the copy-gen system prompt gained rule 11a; see
+ * routes/explore/index.ts). Registry entries updated to match; v78 is
+ * retired and removed from the quick/full entries below.
  */
 
 /**
@@ -53,8 +60,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string | ReadonlyArray<string>]
 > = [
-  ["quick", ["v63", "v78"]], // discover — quick mode (legacy v63, osm-anchor v78)
-  ["full", ["v63", "v78"]], // discover — full mode (legacy v63, osm-anchor v78)
+  ["quick", ["v63", "v79"]], // discover — quick mode (legacy v63, osm-anchor v79)
+  ["full", ["v63", "v79"]], // discover — full mode (legacy v63, osm-anchor v79)
   ["suggest", "v12"], // location suggestions
   ["geocode", "v4"], // geocode
   ["revgeo", "v12"], // reverse geocode
