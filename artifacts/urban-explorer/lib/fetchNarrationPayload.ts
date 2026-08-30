@@ -53,6 +53,16 @@ export interface NarrationPlace {
    *  can trace discover candidate -> selector -> copy-gen -> narration.
    *  Remove after the diagnostic window — see MEMORY.md removal note. */
   evidenceRef?: string;
+  /** TEMP-SHADOW-GATE: diagnostic-only fields computed by WalkModeContext
+   *  immediately before this fetch, so the resulting narration can be
+   *  correlated in Render logs with what a future narration-time editorial
+   *  gate would have done. Do not use to alter narration content or
+   *  eligibility here — this function only forwards them. Remove after the
+   *  Aug. 31 field-test window. */
+  capturedHadEvidenceRef?: boolean;
+  resolvedHadEvidenceRef?: boolean;
+  curatedApproved?: boolean;
+  wouldGate?: boolean;
 }
 
 export async function fetchNarrationPayload(
@@ -85,6 +95,18 @@ export async function fetchNarrationPayload(
     ...(place.address ? { address: place.address } : {}),
     ...(place.crossStreets ? { crossStreets: place.crossStreets } : {}),
     ...(place.evidenceRef ? { evidenceRef: place.evidenceRef } : {}),
+    // Boolean diagnostics: use !== undefined (not truthy) so `false` values
+    // are still forwarded rather than silently dropped.
+    ...(place.capturedHadEvidenceRef !== undefined
+      ? { capturedHadEvidenceRef: place.capturedHadEvidenceRef }
+      : {}),
+    ...(place.resolvedHadEvidenceRef !== undefined
+      ? { resolvedHadEvidenceRef: place.resolvedHadEvidenceRef }
+      : {}),
+    ...(place.curatedApproved !== undefined
+      ? { curatedApproved: place.curatedApproved }
+      : {}),
+    ...(place.wouldGate !== undefined ? { wouldGate: place.wouldGate } : {}),
   });
   const headers = {
     "Content-Type": "application/json",

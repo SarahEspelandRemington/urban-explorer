@@ -402,6 +402,18 @@ export interface WalkNarrationRequest {
   /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic correlation token (never a stable place identifier) echoed back unchanged from the discover response that produced this place, for temporary field-test log correlation. Not intended as a durable identifier or production analytics field.
    */
   evidenceRef?: string;
+  /** TEMP-SHADOW-GATE: whether the WalkPlace object originally captured for this narration (e.g. at pickNext/prefetch time) had an evidenceRef. Diagnostic only — does not affect narration content or eligibility. Remove after the Aug. 31 field-test window.
+   */
+  capturedHadEvidenceRef?: boolean;
+  /** TEMP-SHADOW-GATE: whether the freshest in-memory candidate for this place (re-resolved from the live pool immediately before narration) had an evidenceRef. Diagnostic only. Remove after the Aug. 31 field-test window.
+   */
+  resolvedHadEvidenceRef?: boolean;
+  /** TEMP-SHADOW-GATE: whether the re-resolved candidate is a curated Streetlit-owned entry (candidateSource: streetlit). Diagnostic only. Remove after the Aug. 31 field-test window.
+   */
+  curatedApproved?: boolean;
+  /** TEMP-SHADOW-GATE: whether a future narration-time editorial gate (evidenceRef OR curated approval) would have suppressed this narration. Does not currently suppress anything. Remove after the Aug. 31 field-test window.
+   */
+  wouldGate?: boolean;
 }
 
 export interface WalkNarrationResponse {

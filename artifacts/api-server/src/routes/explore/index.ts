@@ -5792,6 +5792,12 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     address,
     crossStreets,
     evidenceRef,
+    // TEMP-SHADOW-GATE: diagnostic-only fields, not used for narration
+    // content, eligibility, or cache keys. See TEMP-A3-NARRATION-LOG below.
+    capturedHadEvidenceRef,
+    resolvedHadEvidenceRef,
+    curatedApproved,
+    wouldGate,
   } = parsed.data;
 
   // Abort controller wired to the response close event so that any in-flight
@@ -5993,8 +5999,19 @@ How to write for speech:
   }
 
   // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+  // TEMP-SHADOW-GATE fields riding along on the same log line — diagnostic
+  // only, remove alongside TEMP-A3-NARRATION-LOG. See the client-side
+  // shadow-gate diagnostic in WalkModeContext.tsx.
   req.log.info(
-    { reqId: req.id, narrationTextDiagnostic: narrationText, evidenceRef },
+    {
+      reqId: req.id,
+      narrationTextDiagnostic: narrationText,
+      evidenceRef,
+      capturedHadEvidenceRef,
+      resolvedHadEvidenceRef,
+      curatedApproved,
+      wouldGate,
+    },
     "[TEMP-A3-NARRATION-LOG] full narration text",
   );
 
