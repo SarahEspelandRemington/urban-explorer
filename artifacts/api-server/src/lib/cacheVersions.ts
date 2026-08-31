@@ -1,4 +1,4 @@
-// cache-versions:v9:
+// cache-versions:v10:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -42,6 +42,14 @@
  * wikipediaUnitOnly and the copy-gen system prompt gained rule 11a; see
  * routes/explore/index.ts). Registry entries updated to match; v78 is
  * retired and removed from the quick/full entries below.
+ *
+ * v9-v10: A3 candidate-window widened 3->6 — osm-anchor discover cache-key
+ * literal bumped v79->v80 (the closestEnriched slice in the Walk Mode
+ * evidence-selector invocation now takes the 6 closest Wikipedia-enriched
+ * candidates instead of 3; no other A3 logic, prompts, fallback behavior,
+ * or response contract changed; see routes/explore/index.ts). Registry
+ * entries updated to match; v79 is retired and removed from the quick/full
+ * entries below.
  */
 
 /**
@@ -60,8 +68,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string | ReadonlyArray<string>]
 > = [
-  ["quick", ["v63", "v79"]], // discover — quick mode (legacy v63, osm-anchor v79)
-  ["full", ["v63", "v79"]], // discover — full mode (legacy v63, osm-anchor v79)
+  ["quick", ["v63", "v80"]], // discover — quick mode (legacy v63, osm-anchor v80)
+  ["full", ["v63", "v80"]], // discover — full mode (legacy v63, osm-anchor v80)
   ["suggest", "v12"], // location suggestions
   ["geocode", "v4"], // geocode
   ["revgeo", "v12"], // reverse geocode

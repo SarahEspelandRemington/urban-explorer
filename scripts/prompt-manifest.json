@@ -5,9 +5,9 @@
     "artifacts/api-server/src/lib/cacheVersions.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "d70e51cd5887755e6b43bfa08822d55143c8a466887ed77ce79e1c4664c9ed46",
-      "versions": ["v9"],
-      "registered": "2026-08-29"
+      "sectionHash": "38ff89d7007490dade56baf52e8cc2b69c91bf9762d9e20bfc31e5d9e51faf65",
+      "versions": ["v10"],
+      "registered": "2026-08-31"
     },
     "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
@@ -19,9 +19,9 @@
     "artifacts/api-server/src/routes/explore/index.ts::discover": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "5d7ed80f99f6b7efc6f1f73fb11edc8fa971bcd7f81fd12654e33627f2a5442e",
-      "versions": ["v63", "v79"],
-      "registered": "2026-08-29"
+      "sectionHash": "0a69b6c36d655d0a31bc92f424c824aafb76703f32a9600b3d5d4aa99af3ca9c",
+      "versions": ["v63", "v80"],
+      "registered": "2026-08-31"
     },
     "artifacts/api-server/src/routes/explore/index.ts::geocode": {
       "kind": "route",
