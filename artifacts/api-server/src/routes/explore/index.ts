@@ -2149,7 +2149,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v80:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v81:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2709,11 +2709,11 @@ router.post("/explore/discover", async (req, res) => {
         //
         // Scope for this field-test version, deliberately narrow:
         //  - Walk Mode requests only (see the invocation site below).
-        //  - Only the 6 closest Wikipedia-enriched candidates by straight-
+        //  - Only the 3 closest Wikipedia-enriched candidates by straight-
         //    line distance — a server-side proxy for "candidates the user
         //    is likely to reach soon," NOT a replica of pickNext's live,
         //    heading-aware, single-best-pick scoring (which only exists
-        //    client-side and has no stable "top 6" to reproduce here).
+        //    client-side and has no stable "top 3" to reproduce here).
         //  - Every failure mode (timeout, invalid indices, parse/network
         //    error, or the selector declining) falls back to today's exact
         //    first-1,000-char truncation for that candidate only — this
@@ -3281,7 +3281,7 @@ router.post("/explore/discover", async (req, res) => {
         }
 
         // Evidence-selector invocation (Option A, Walk Mode field test).
-        // Walk Mode requests only, capped to the 6 closest Wikipedia-
+        // Walk Mode requests only, capped to the 3 closest Wikipedia-
         // enriched candidates by straight-line distance — see the design
         // note above formatForCopy for why this is a distance proxy, not a
         // pickNext replica. Runs after wikiMap (needs its entries) and
@@ -3295,7 +3295,7 @@ router.post("/explore/discover", async (req, res) => {
         // formatForCopy uses this to flag wikipediaUnitOnly for the writer.
         const selectorSingleUnitOsmIds = new Set<string>();
         // TEMP-A3-EVIDENCE-CORRELATION: ephemeral request/slot-scoped
-        // correlation token for the up-to-6 candidates that receive A3
+        // correlation token for the up-to-3 candidates that receive A3
         // evidence selection, so a field-test log investigation can trace
         // discover candidate -> selector outcome -> copy-gen output ->
         // final narration without logging a stable place identifier. See
@@ -3321,7 +3321,7 @@ router.post("/explore/discover", async (req, res) => {
             })
             .filter((x): x is NonNullable<typeof x> => x !== null)
             .sort((a, b) => a.distance - b.distance)
-            .slice(0, 6);
+            .slice(0, 3);
           // @end-prompt-region discover
 
           await Promise.all(
