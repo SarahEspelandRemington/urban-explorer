@@ -3741,6 +3741,45 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
         classifyDiscovery(mergedPlaces);
         applyDiscoveryTier(mergedPlaces);
+        // Walk Mode lodging guardrail (Aug. 31 field test): a chain hotel's
+        // bare `start_date` tag alone gives the discoveryTier text classifier
+        // hasYear=true, which escapes its T4-A/T4-C rules without any real
+        // story ever existing — confirmed against the actual failures (Aliz
+        // Hotel, Element, Hampton Inn), none of which carry wikidata/
+        // wikipedia/historic/description/heritage:description and none of
+        // which have Wikipedia A3 evidence. Forces those into the existing
+        // Tier-4 -> "lowQuality" suppression already consumed client-side by
+        // walkEligibility.ts (no client change). Never overrides an existing
+        // Tier 1-3 classification, an osm_enriched trust level, an A3
+        // evidenceRef, or an approved curated entry. Walk Mode only — the
+        // Explore tab's non-walkMode osm-anchor branch is unaffected.
+        if (walkMode) {
+          const LODGING_CATEGORIES = new Set([
+            "hotel",
+            "hostel",
+            "guest_house",
+            "motel",
+            "apartment",
+          ]);
+          for (const p of mergedPlaces) {
+            if (
+              p.discoveryTier === 1 ||
+              p.discoveryTier === 2 ||
+              p.discoveryTier === 3
+            )
+              continue;
+            if (
+              !LODGING_CATEGORIES.has((p.category ?? "").toLowerCase().trim())
+            )
+              continue;
+            if (p.trustLevel === "osm_enriched") continue;
+            if (p.evidenceRef) continue;
+            if (getApprovedCuratedEntry(p.osmId ?? p.streetlitId ?? ""))
+              continue;
+            p.discoveryTier = 4;
+            p.discoveryRejectionReason = "genericLodging";
+          }
+        }
         // Diagnostic-only, read-only: cross-tab of trustLevel (OSM tag
         // richness, known pre-copy) x discoveryTier (regex-classified from
         // generated prose, known only post-copy). Investigates whether
