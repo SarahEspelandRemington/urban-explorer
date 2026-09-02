@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("@workspace/db", () => ({ pool: {}, db: {} }));
+
 import { buildDetailUserTurn } from "../routes/explore/index";
 
 const BASE_TURN = `Tell me everything interesting about "St. Clement's Church" — category: place of worship — located in this area of 51.500, -0.125`;
