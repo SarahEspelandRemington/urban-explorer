@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@workspace/db", () => ({ pool: {}, db: {} }));
+vi.mock("@workspace/integrations-openai-ai-server", () => ({ openai: {} }));
+vi.mock("@workspace/integrations-openai-ai-server/audio", () => ({
+  textToSpeech: vi.fn(),
+}));
 
 import {
   parseWikipediaOsmTag,
