@@ -117,7 +117,7 @@ export const PlaceSpatialSuppression = {
 } as const;
 
 /**
- * How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path).
+ * How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path), streetlit = a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-verified, not an Overpass candidate).
  */
 export type PlaceCandidateSource =
   (typeof PlaceCandidateSource)[keyof typeof PlaceCandidateSource];
@@ -125,6 +125,7 @@ export type PlaceCandidateSource =
 export const PlaceCandidateSource = {
   osm: "osm",
   llm: "llm",
+  streetlit: "streetlit",
 } as const;
 
 /**
@@ -192,18 +193,20 @@ export interface Place {
   confidence?: PlaceConfidence;
   /** Spatial trust classification derived server-side. VERIFIED_PLACE has a geocoder-confirmed anchor; APPROXIMATE_SITE is a former/demolished entity at a plausible location; INTERPRETIVE_OVERLAY is an inferred area-level phenomenon (buried waterways, corridors, etc.) without a pinpointable coordinate. */
   discoveryClass?: PlaceDiscoveryClass;
-  /** How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified). */
+  /** How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified); streetlit means a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-verified, not an Overpass candidate). */
   coordSource?: string;
   /** Spatial trust rejection reason. Present when the discovery's coordinate cannot support its stated location. llmCoordWithSpecificLocationText: LLM-only coordinate with a specific named-street reference in the title or description. interpretiveOverlay: inferred area-level phenomenon without a pinpointable coordinate. */
   spatialSuppression?: PlaceSpatialSuppression;
   /** URL of a representative photo for this place, when available (sourced from Wikipedia) */
   photoUrl?: string;
-  /** Overpass element reference (e.g. 'node/12345678'). Present only on OSM-anchored Walk Mode discoveries. */
+  /** Overpass element reference (e.g. 'node/12345678'). Present only on OSM-anchored Walk Mode discoveries (candidateSource: osm). Absent on Streetlit-owned candidates — see streetlitId. */
   osmId?: string;
+  /** Streetlit-owned point-identity reference (e.g. 'streetlit/557-8th-ave', see streetlitPlaces.ts). Present only on Streetlit-owned candidates (candidateSource: streetlit) in place of osmId. */
+  streetlitId?: string;
   /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic correlation token (never a stable place identifier) for temporary field-test log correlation of the A3 evidence selector → copy-generation → narration pipeline. Present only for the up-to-3 candidates that received A3 evidence selection. Not intended as a durable identifier or production analytics field.
    */
   evidenceRef?: string;
-  /** How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path). */
+  /** How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path), streetlit = a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-verified, not an Overpass candidate). */
   candidateSource?: PlaceCandidateSource;
   /** OSM trust classification for this place. Present only on OSM-anchored candidates (candidateSource: osm). */
   trustLevel?: PlaceTrustLevel;

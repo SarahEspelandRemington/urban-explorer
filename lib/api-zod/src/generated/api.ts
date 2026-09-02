@@ -132,7 +132,7 @@ export const DiscoverPlacesResponse = zod.object({
         .string()
         .optional()
         .describe(
-          "How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified).",
+          "How the place coordinates were established: nominatim-corrected means Nominatim moved the pin; llm means pure LLM output (unverified); streetlit means a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-verified, not an Overpass candidate).",
         ),
       spatialSuppression: zod
         .enum(["llmCoordWithSpecificLocationText", "interpretiveOverlay"])
@@ -150,7 +150,13 @@ export const DiscoverPlacesResponse = zod.object({
         .string()
         .optional()
         .describe(
-          "Overpass element reference (e.g. 'node\/12345678'). Present only on OSM-anchored Walk Mode discoveries.",
+          "Overpass element reference (e.g. 'node\/12345678'). Present only on OSM-anchored Walk Mode discoveries (candidateSource: osm). Absent on Streetlit-owned candidates — see streetlitId.",
+        ),
+      streetlitId: zod
+        .string()
+        .optional()
+        .describe(
+          "Streetlit-owned point-identity reference (e.g. 'streetlit\/557-8th-ave', see streetlitPlaces.ts). Present only on Streetlit-owned candidates (candidateSource: streetlit) in place of osmId.",
         ),
       evidenceRef: zod
         .string()
@@ -159,10 +165,10 @@ export const DiscoverPlacesResponse = zod.object({
           "TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request\/slot-scoped diagnostic correlation token (never a stable place identifier) for temporary field-test log correlation of the A3 evidence selector → copy-generation → narration pipeline. Present only for the up-to-3 candidates that received A3 evidence selection. Not intended as a durable identifier or production analytics field.\n",
         ),
       candidateSource: zod
-        .enum(["osm", "llm"])
+        .enum(["osm", "llm", "streetlit"])
         .optional()
         .describe(
-          "How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore\/Walk path).",
+          "How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore\/Walk path), streetlit = a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-verified, not an Overpass candidate).",
         ),
       trustLevel: zod
         .enum(["osm_enriched", "osm_standard", "osm_bare"])
