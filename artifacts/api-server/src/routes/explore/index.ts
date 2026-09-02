@@ -5837,7 +5837,33 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     resolvedHadEvidenceRef,
     curatedApproved,
     wouldGate,
+    // Build 14 identity plumbing: accepted but not yet read by any narration
+    // logic, cache key, or content decision — transport only. No JIT lookup,
+    // ranking, or narration-content change is wired to these fields.
+    subjectId,
+    candidateSource,
+    wikipediaTag,
+    latitude,
+    longitude,
   } = parsed.data;
+
+  // TEMP-BUILD14-IDENTITY-PLUMBING: presence-only diagnostic to confirm the
+  // new identity fields arrive on a real device request. No raw values
+  // logged (subjectId/wikipediaTag are opaque place identifiers, not user
+  // data, but kept out of logs anyway; lat/lon are place coordinates, not
+  // user location, but also withheld as a matter of course). Remove once
+  // confirmed on a real Build 14 narration request.
+  req.log.info(
+    {
+      tag: "TEMP-BUILD14-IDENTITY-PLUMBING",
+      reqId: req.id,
+      hasSubjectId: subjectId !== undefined,
+      candidateSource,
+      hasWikipediaTag: wikipediaTag !== undefined,
+      hasLatLon: latitude !== undefined && longitude !== undefined,
+    },
+    "[walk-narration-audio] Build 14 identity fields received",
+  );
 
   // Abort controller wired to the response close event so that any in-flight
   // audio conversion (e.g. ffmpeg via ensureCompatibleFormat) is cancelled

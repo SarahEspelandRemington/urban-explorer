@@ -63,6 +63,24 @@ export interface NarrationPlace {
   resolvedHadEvidenceRef?: boolean;
   curatedApproved?: boolean;
   wouldGate?: boolean;
+  /** Build 14 identity plumbing: opaque candidate join key (osmId ??
+   *  streetlitId), echoed unchanged from the discover response. Transport
+   *  only — not read by any narration logic yet. No JIT lookup is wired to
+   *  this field. */
+  subjectId?: string;
+  /** Build 14 identity plumbing: echoed unchanged from the discover
+   *  response's candidateSource. Transport only. */
+  candidateSource?: "osm" | "llm" | "streetlit";
+  /** Build 14 identity plumbing: the exact OSM wikipedia=lang:Title tag
+   *  value from the discover response's osmTags, when present. Transport
+   *  only — not read by any narration logic yet. No JIT Wikipedia fetch is
+   *  wired to this field. */
+  wikipediaTag?: string;
+  /** Build 14 identity plumbing: the place's coordinates, echoed unchanged
+   *  from the discover response. Advisory staleness context only — never a
+   *  content lookup key. Transport only. */
+  latitude?: number;
+  longitude?: number;
 }
 
 export async function fetchNarrationPayload(
@@ -107,6 +125,14 @@ export async function fetchNarrationPayload(
       ? { curatedApproved: place.curatedApproved }
       : {}),
     ...(place.wouldGate !== undefined ? { wouldGate: place.wouldGate } : {}),
+    // Build 14 identity plumbing: transport only, see NarrationPlace above.
+    ...(place.subjectId ? { subjectId: place.subjectId } : {}),
+    ...(place.candidateSource
+      ? { candidateSource: place.candidateSource }
+      : {}),
+    ...(place.wikipediaTag ? { wikipediaTag: place.wikipediaTag } : {}),
+    ...(place.latitude !== undefined ? { latitude: place.latitude } : {}),
+    ...(place.longitude !== undefined ? { longitude: place.longitude } : {}),
   });
   const headers = {
     "Content-Type": "application/json",

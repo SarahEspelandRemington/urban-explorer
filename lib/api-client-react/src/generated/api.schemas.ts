@@ -390,6 +390,19 @@ export interface PlaceTimelineResponse {
   eras: TimelineEra[];
 }
 
+/**
+ * Build 14 identity plumbing: how this place's location was established, echoed unchanged from the discover response (see Place.candidateSource). Not currently read by the handler.
+
+ */
+export type WalkNarrationRequestCandidateSource =
+  (typeof WalkNarrationRequestCandidateSource)[keyof typeof WalkNarrationRequestCandidateSource];
+
+export const WalkNarrationRequestCandidateSource = {
+  osm: "osm",
+  llm: "llm",
+  streetlit: "streetlit",
+} as const;
+
 export interface WalkNarrationRequest {
   placeName: string;
   category?: string;
@@ -417,6 +430,21 @@ export interface WalkNarrationRequest {
   /** TEMP-SHADOW-GATE: whether a future narration-time editorial gate (evidenceRef OR curated approval) would have suppressed this narration. Does not currently suppress anything. Remove after the Aug. 31 field-test window.
    */
   wouldGate?: boolean;
+  /** Build 14 identity plumbing: opaque candidate join key, derived client-side as osmId ?? streetlitId from the discover response that produced this place. Not currently read by the handler — carried through so a future narration-time JIT evidence lookup (not yet implemented) can key off it without a name-based guess.
+   */
+  subjectId?: string;
+  /** Build 14 identity plumbing: how this place's location was established, echoed unchanged from the discover response (see Place.candidateSource). Not currently read by the handler.
+   */
+  candidateSource?: WalkNarrationRequestCandidateSource;
+  /** Build 14 identity plumbing: the exact OSM wikipedia=lang:Title tag value from the discover response's osmTags, when present. Authoritative source-lookup key for a future narration-time JIT Wikipedia fetch (not yet implemented) — never a name-based or coordinate-based guess. Not currently read by the handler.
+   */
+  wikipediaTag?: string;
+  /** Build 14 identity plumbing: the place's coordinates, echoed unchanged from the discover response. Advisory staleness context only — never a content lookup key. Not currently read by the handler.
+   */
+  latitude?: number;
+  /** Build 14 identity plumbing: the place's coordinates, echoed unchanged from the discover response. Advisory staleness context only — never a content lookup key. Not currently read by the handler.
+   */
+  longitude?: number;
 }
 
 export interface WalkNarrationResponse {

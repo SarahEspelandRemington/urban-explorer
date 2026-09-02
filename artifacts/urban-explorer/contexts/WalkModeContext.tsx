@@ -154,8 +154,15 @@ export interface WalkPlace {
   netScore?: number;
   photoUrl?: string;
   /** Overpass element reference (e.g. 'node/12345678'). Present only on
-   *  OSM-anchored Walk Mode discoveries. */
+   *  OSM-anchored Walk Mode discoveries (candidateSource: osm). Absent on
+   *  Streetlit-owned candidates — see streetlitId. */
   osmId?: string;
+  /** Streetlit-owned point-identity reference (e.g. 'streetlit/557-8th-ave').
+   *  Present only on Streetlit-owned candidates (candidateSource: streetlit)
+   *  in place of osmId. Already present at runtime today via the raw
+   *  `data.places as WalkPlace[]` cast in the discover-response handlers —
+   *  this only adds the type so it's usable by name. */
+  streetlitId?: string;
   /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic
    *  correlation token (never a stable place identifier) echoed from the
    *  discover response. Passed unchanged into the narration request so
@@ -1526,10 +1533,21 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         : null;
       const userIsAdjacent =
         distToPlace !== null && distToPlace <= cfg.maxQueueDistance;
-      const enriched =
-        !placeHasAddress && userIsAdjacent && cachedAddressHintRef.current
-          ? { ...place, crossStreets: cachedAddressHintRef.current }
-          : place;
+      // Build 14 identity plumbing: derive the two fields that don't already
+      // exist as WalkPlace properties. candidateSource/latitude/longitude
+      // are forwarded as-is via the spread below (already on WalkPlace with
+      // matching names). Transport only — nothing here reads or acts on
+      // these fields; no JIT lookup is wired up.
+      const subjectId = place.osmId ?? place.streetlitId;
+      const wikipediaTag = place.osmTags?.["wikipedia"];
+      const enriched = {
+        ...place,
+        ...(subjectId ? { subjectId } : {}),
+        ...(wikipediaTag ? { wikipediaTag } : {}),
+        ...(!placeHasAddress && userIsAdjacent && cachedAddressHintRef.current
+          ? { crossStreets: cachedAddressHintRef.current }
+          : {}),
+      };
       return fetchNarrationPayloadUtil(enriched, {
         apiBase: API_BASE,
         isExpoGo: IS_EXPO_GO,

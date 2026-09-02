@@ -523,6 +523,36 @@ export const GetWalkNarrationBody = zod.object({
     .describe(
       "TEMP-SHADOW-GATE: whether a future narration-time editorial gate (evidenceRef OR curated approval) would have suppressed this narration. Does not currently suppress anything. Remove after the Aug. 31 field-test window.\n",
     ),
+  subjectId: zod
+    .string()
+    .optional()
+    .describe(
+      "Build 14 identity plumbing: opaque candidate join key, derived client-side as osmId ?? streetlitId from the discover response that produced this place. Not currently read by the handler — carried through so a future narration-time JIT evidence lookup (not yet implemented) can key off it without a name-based guess.\n",
+    ),
+  candidateSource: zod
+    .enum(["osm", "llm", "streetlit"])
+    .optional()
+    .describe(
+      "Build 14 identity plumbing: how this place's location was established, echoed unchanged from the discover response (see Place.candidateSource). Not currently read by the handler.\n",
+    ),
+  wikipediaTag: zod
+    .string()
+    .optional()
+    .describe(
+      "Build 14 identity plumbing: the exact OSM wikipedia=lang:Title tag value from the discover response's osmTags, when present. Authoritative source-lookup key for a future narration-time JIT Wikipedia fetch (not yet implemented) — never a name-based or coordinate-based guess. Not currently read by the handler.\n",
+    ),
+  latitude: zod
+    .number()
+    .optional()
+    .describe(
+      "Build 14 identity plumbing: the place's coordinates, echoed unchanged from the discover response. Advisory staleness context only — never a content lookup key. Not currently read by the handler.\n",
+    ),
+  longitude: zod
+    .number()
+    .optional()
+    .describe(
+      "Build 14 identity plumbing: the place's coordinates, echoed unchanged from the discover response. Advisory staleness context only — never a content lookup key. Not currently read by the handler.\n",
+    ),
 });
 
 export const GetWalkNarrationResponse = zod.object({
