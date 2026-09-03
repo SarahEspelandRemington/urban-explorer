@@ -1,4 +1,4 @@
-// cache-versions:v11:
+// cache-versions:v12:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -58,6 +58,18 @@
  * with no other A3 logic, prompts, fallback behavior, or response contract
  * change; see routes/explore/index.ts). Registry entries updated to match;
  * v80 is retired and removed from the quick/full entries below.
+ *
+ * v11-v12: Narration-time JIT A3 — selectEvidenceParagraphs/selectPrimaryUnit
+ * hoisted from a discover-only closure to module scope in
+ * routes/explore/index.ts so /explore/walk-narration-audio can reuse them
+ * (relocation only, no prompt/model/call-parameter change); osm-anchor
+ * discover cache-key literal bumped v81->v82 for the manifest hash change
+ * from that relocation. Separately, the shared narration cache-key literal
+ * (used by both /explore/walk-narration and /explore/walk-narration-audio)
+ * bumped v20->v21: /walk-narration-audio's live-call branch can now feed the
+ * narration LLM a JIT-enriched facts list, a real content-input change for
+ * the same nominal key; /walk-narration's own literal moved in lockstep so
+ * the two routes keep sharing one cache. v81 and v20 are retired.
  */
 
 /**
@@ -76,8 +88,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string | ReadonlyArray<string>]
 > = [
-  ["quick", ["v63", "v81"]], // discover — quick mode (legacy v63, osm-anchor v81)
-  ["full", ["v63", "v81"]], // discover — full mode (legacy v63, osm-anchor v81)
+  ["quick", ["v63", "v82"]], // discover — quick mode (legacy v63, osm-anchor v82)
+  ["full", ["v63", "v82"]], // discover — full mode (legacy v63, osm-anchor v82)
   ["suggest", "v12"], // location suggestions
   ["geocode", "v4"], // geocode
   ["revgeo", "v12"], // reverse geocode
@@ -86,7 +98,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v10"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v20"], // walk narration (short)
+  ["narration", "v21"], // walk narration (short)
   ["deep-narration", "v14"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];

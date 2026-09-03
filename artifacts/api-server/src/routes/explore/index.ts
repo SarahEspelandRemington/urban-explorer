@@ -2104,6 +2104,346 @@ function applyRatingSortWithMap(
   });
 }
 
+// Evidence-selector (Option A, Walk Mode field test). Given a candidate's
+// full Wikipedia extract, an isolated LLM call selects which whole
+// paragraphs clear a fixed editorial-value bar, and the selected text is
+// reconstructed verbatim (never summarized or paraphrased) — replacing the
+// naive first-1,000-char truncation for a bounded set of candidates. See
+// the read-only design/measurement pass (2026-08-17) for the diagnostic
+// history behind this: naive truncation regularly cut off story-bearing
+// content that a topic-blind, closed-set selector could reliably recover
+// across 15 real test places (6 non-blind, 9 blind).
+//
+// Hoisted to module scope 2026-09-03 (originally a closure inside the
+// osm-anchor branch of /explore/discover) so /explore/walk-narration-audio
+// can reuse the exact same selector for its narration-time JIT A3 path
+// instead of duplicating it. Purely a location change — no prompt, model,
+// or call-parameter text below differs from the original discover-only
+// version. See MEMORY.md for why this required a discoverCacheKey version
+// bump (the hash-guard is span-text-based and has no "relocation-only, no
+// prompt-content change" exception).
+//
+// Every failure mode (timeout, invalid indices, parse/network error, or the
+// selector declining) must leave callers falling back to their own
+// pre-existing behavior for that candidate only — this function guarantees
+// no worse than "no enhanced evidence available," never a thrown error.
+// @prompt-region wiki-evidence-selector
+// wiki-evidence-selector:v1: manifest-protection token for this shared
+// module — bump when EVIDENCE_SELECTOR_SYSTEM_PROMPT,
+// PRIMARY_UNIT_SELECTOR_SYSTEM_PROMPT, their models, or their call
+// parameters change. This module has no cache of its own; the token exists
+// solely so prompt-manifest guards this LLM-facing text the same way
+// route-level prompts are guarded.
+const EVIDENCE_SELECTOR_SYSTEM_PROMPT =
+  "You are evaluating paragraphs of Wikipedia text as evidence for a local-history app entry about a real place. " +
+  "You will be given the numbered paragraphs only. You have no other information about why this place was chosen " +
+  "or what anyone expects you to find -- judge only from the text provided.\n\n" +
+  "Select only the smallest set of the highest-value paragraphs that, together, fit within a combined budget of about 2,500 characters of paragraph text -- not every paragraph that merely clears one of the following evidence-value criteria. The five criteria below define what counts as evidence; use them to identify the strongest candidates, not to justify including everything that qualifies:\n\n" +
+  "1. Explanatory force — Prefer evidence that explains why the place looks, exists, or functions as it does, rather than merely describing it or listing chronology.\n\n" +
+  "2. Broader context — Value evidence that connects the place to a larger historical, cultural, social, economic, or neighborhood pattern when that connection deepens understanding of the place itself.\n\n" +
+  "3. Human stakes — Value evidence that reveals what people or communities did, experienced, changed, created, preserved, lost, or contested at a place. Institutional, transactional, or procedural facts gain value when they illuminate those human stakes rather than functioning merely as administrative detail.\n\n" +
+  "4. Revelatory value — Value evidence that reveals a hidden, unexpected, or easily overlooked dimension of the place and meaningfully changes how it can be understood. Surprise alone is not sufficient; the revelation should add explanatory, contextual, or human significance.\n\n" +
+  "5. Observational value — Distinctive, easily overlooked physical details can carry editorial value simply by helping the user notice the place more closely. Explanatory context can strengthen that value, but is not required when the detail itself rewards attention.\n\n" +
+  "Tie-break principle: When evidence is otherwise comparable, prefer the material with the greatest potential to change how someone understands or experiences the place.\n\n" +
+  "Boundary: These are evidence-value dimensions, not a strict lexicographic priority order. A passage can be strong through one or several dimensions. Rank/select based on overall editorial value to Streetlit, using the tie-break principle when needed.\n\n" +
+  "Explicitly excluded: Physical persistence is not a criterion. Continued physical presence does not inherently increase a story's editorial value; vanished places and invisible earlier layers remain valid Streetlit territory.\n\n" +
+  "Selection discipline:\n" +
+  "- Select only the strongest evidence, not everything that clears a minimum bar.\n" +
+  "- Prefer a few high-value passages over a broad factual overview.\n" +
+  "- Do not select material merely because it efficiently describes the building or place.\n" +
+  "- Dimensions, dates, architect/style attribution, landmark status, ownership chronology, and tenant lists are usually weak on their own. Include them only when they support stronger explanatory, contextual, human, revelatory, or observational value.\n" +
+  "- Prefer hidden, explanatory, human, or contextual stories over competent descriptions.\n" +
+  "- If several passages support the same idea, choose the strongest paragraph or the smallest necessary combination, not all of them.\n" +
+  "- Do not knowingly select more evidence than can fit within a combined budget of about 2,500 characters of paragraph text.\n\n" +
+  "It is acceptable, and expected in some cases, to select none of the paragraphs if nothing in the list clears this bar. Do not summarize, paraphrase, or add any information beyond selecting indices.\n\n" +
+  'Respond only with JSON in this exact shape: {"selected_indices": [numbers], "insufficient": boolean}. List "selected_indices" in descending order of editorial value, strongest evidence first -- not article order. Set "insufficient" to true and "selected_indices" to an empty array if nothing in the paragraphs clears the bar. Do not include any other text, explanation, or field.';
+
+// Fixed, blunt cap — no packing/ranking logic. Deliberately larger than
+// today's 1,000-char truncation budget: the selector operates on whole
+// paragraphs, and a 1,000-char cap can reject or truncate a single strong
+// paragraph, effectively recreating the truncation problem this field test
+// exists to test against.
+const EVIDENCE_SELECTOR_OUTPUT_CAP = 2_500;
+const EVIDENCE_SELECTOR_TIMEOUT_MS = 6_000;
+// @end-prompt-region wiki-evidence-selector
+
+const NON_PROSE_SECTION_DENYLIST = new Set([
+  "references",
+  "external links",
+  "see also",
+  "notes",
+  "further reading",
+  "bibliography",
+  "citations",
+  "sources",
+  "footnotes",
+  "works cited",
+  "notes and references",
+  "gallery",
+]);
+
+function splitWikipediaSections(
+  text: string,
+): Array<{ title: string; content: string }> {
+  const headerRe = /^(=+)\s*([A-Za-z0-9 ,'-]+?)\s*(=+)\s*$/gm;
+  const matches = [...text.matchAll(headerRe)];
+  if (matches.length === 0) return [{ title: "Introduction", content: text }];
+  const sections: Array<{ title: string; content: string }> = [];
+  const intro = text.slice(0, matches[0]!.index).trim();
+  if (intro) sections.push({ title: "Introduction", content: intro });
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i]!;
+    const title = m[2]!.trim();
+    const start = m.index! + m[0].length;
+    const end = i + 1 < matches.length ? matches[i + 1]!.index! : text.length;
+    sections.push({ title, content: text.slice(start, end).trim() });
+  }
+  return sections;
+}
+
+type EvidenceParagraph = {
+  index: number;
+  section: string;
+  text: string;
+};
+
+// Broader than a topical allowlist deliberately — see the paragraph-
+// enumeration methodology from the blind selector test this reuses: a
+// keyword/section filter would silently reintroduce a deterministic
+// relevance heuristic. The selector, not this function, is the sole
+// arbiter of relevance; this only excludes clearly non-prose sections.
+function enumerateEvidenceParagraphs(extract: string): EvidenceParagraph[] {
+  const paras: Array<{ section: string; text: string }> = [];
+  for (const { title, content } of splitWikipediaSections(extract)) {
+    if (NON_PROSE_SECTION_DENYLIST.has(title.trim().toLowerCase())) continue;
+    if (!content) continue;
+    for (const chunkRaw of content.split(/\n\s*\n/)) {
+      const chunk = chunkRaw.trim();
+      if (chunk.length < 20) continue;
+      if (!/[A-Za-z]/.test(chunk)) continue;
+      paras.push({ section: title, text: chunk });
+    }
+  }
+  return paras.map((p, i) => ({
+    index: i + 1,
+    section: p.section,
+    text: p.text,
+  }));
+}
+
+// TEMP-A3-EVIDENCE-CORRELATION: outcome classification for the evidence
+// selector, added for temporary A3 field-test log correlation only.
+// Purely additive over the prior string | null return — every prior
+// return-null site is preserved unchanged, just labeled with why. See
+// MEMORY.md removal note.
+type EvidenceSelectorOutcome =
+  | "success"
+  | "declined"
+  | "invalidIndices"
+  | "emptySelection"
+  | "parseError"
+  | "timeoutOrAbort"
+  | "noParagraphs";
+
+type EvidenceSelectorResult = {
+  outcome: EvidenceSelectorOutcome;
+  text: string | null;
+  selectedIndices?: number[];
+  truncated?: boolean;
+};
+
+// Returns the verbatim, budget-capped selected text (plus outcome
+// classification), or a null text on any failure/decline — callers must
+// treat a null text exactly like "no Wikipedia summary available" (i.e.
+// fall through to their own existing truncation/fallback path).
+async function selectEvidenceParagraphs(
+  extract: string,
+  placeName: string,
+  address: string | undefined,
+): Promise<EvidenceSelectorResult> {
+  const paragraphs = enumerateEvidenceParagraphs(extract);
+  if (paragraphs.length === 0) return { outcome: "noParagraphs", text: null };
+
+  const lines = paragraphs.map(
+    (p) => `[${p.index}] section="${p.section}"\n${p.text}`,
+  );
+  const userPrompt =
+    `Place: ${placeName}${address ? `\nAddress: ${address}` : ""}\n\n` +
+    `Paragraphs:\n\n${lines.join("\n\n")}`;
+
+  const selectorAbort = new AbortController();
+  const timer = setTimeout(
+    () => selectorAbort.abort(),
+    EVIDENCE_SELECTOR_TIMEOUT_MS,
+  );
+  try {
+    // @prompt-region wiki-evidence-selector
+    const res = await openai.chat.completions.create(
+      {
+        model: "gpt-4.1-mini",
+        max_completion_tokens: 2000,
+        messages: [
+          { role: "system", content: EVIDENCE_SELECTOR_SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { signal: selectorAbort.signal },
+    );
+    // @end-prompt-region wiki-evidence-selector
+    const raw = res.choices[0]?.message?.content ?? "";
+    const parsed = JSON.parse(raw) as {
+      selected_indices?: unknown;
+      insufficient?: unknown;
+    };
+    if (parsed.insufficient === true)
+      return { outcome: "declined", text: null };
+    if (!Array.isArray(parsed.selected_indices))
+      return { outcome: "invalidIndices", text: null };
+
+    const byIndex = new Map(paragraphs.map((p) => [p.index, p]));
+    const retained: EvidenceParagraph[] = [];
+    for (const idx of parsed.selected_indices) {
+      // Any index outside the pool invalidates the whole selection for
+      // this candidate — fall back entirely rather than reconstructing a
+      // partial/uncertain result.
+      if (typeof idx !== "number" || !byIndex.has(idx))
+        return { outcome: "invalidIndices", text: null };
+      retained.push(byIndex.get(idx)!);
+    }
+    if (retained.length === 0) return { outcome: "emptySelection", text: null };
+
+    let out = "";
+    let truncated = false;
+    for (const p of retained) {
+      if (out.length + p.text.length > EVIDENCE_SELECTOR_OUTPUT_CAP) {
+        // Skip (don't stop): a single oversized paragraph earlier in
+        // priority order must not zero out the whole packet — later,
+        // smaller selected paragraphs are still worth trying.
+        truncated = true;
+        continue;
+      }
+      out += (out ? "\n\n" : "") + p.text;
+    }
+    return {
+      outcome: "success",
+      text: out || null,
+      selectedIndices: parsed.selected_indices as number[],
+      truncated,
+    };
+  } catch {
+    return { outcome: "timeoutOrAbort", text: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// One-primary-unit selector: takes the A3-approved evidence text (already
+// selected by selectEvidenceParagraphs above) and narrows it further to
+// exactly ONE source-bounded sentence-level unit, so the caller's factual
+// universe for this candidate is a single unit rather than a multi-fact
+// packet it must decide how to relate. Reuses the same editorial-value
+// criteria as the paragraph selector; must not construct a story spine,
+// infer relationships, merge units, or rewrite text. On any failure/
+// decline, callers must fall back to the paragraph-selector text
+// unchanged — no new fallback semantics.
+// @prompt-region wiki-evidence-selector
+const PRIMARY_UNIT_SELECTOR_SYSTEM_PROMPT =
+  "You are choosing ONE sentence-level unit of Wikipedia evidence for a local-history app entry about a real place. " +
+  "You will be given numbered units only, already pre-approved as strong evidence -- your job is to pick the single strongest one, not to judge overall quality.\n\n" +
+  "Use these editorial-value criteria to judge which ONE unit would create the strongest shift in how a walker understands this place:\n\n" +
+  "1. Explanatory force — does it explain why the place looks, exists, or functions as it does?\n" +
+  "2. Broader context — does it connect the place to a larger historical, cultural, social, or economic pattern?\n" +
+  "3. Human stakes — does it reveal what people or communities did, experienced, changed, or lost here?\n" +
+  "4. Revelatory value — does it reveal a hidden or unexpected dimension of the place?\n" +
+  "5. Observational value — does it carry a distinctive, easily overlooked physical detail worth noticing?\n\n" +
+  "Tie-break: prefer the unit with the greatest potential to change how someone understands or experiences the place.\n\n" +
+  "Strict boundaries: select exactly one unit VERBATIM as given -- do not rewrite, combine, or paraphrase it. Do not infer a relationship between units. Do not construct a narrative arc across units. Each unit stands alone as the source composed it.\n\n" +
+  "It is acceptable to select none if no unit clears the bar.\n\n" +
+  'Respond only with JSON in this exact shape: {"selected_index": number|null, "insufficient": boolean}. Do not include any other text, explanation, or field.';
+const PRIMARY_UNIT_SELECTOR_TIMEOUT_MS = 6_000;
+// @end-prompt-region wiki-evidence-selector
+
+type PrimaryUnitOutcome =
+  | "success"
+  | "declined"
+  | "invalidIndex"
+  | "parseError"
+  | "timeoutOrAbort"
+  | "noUnits";
+
+type PrimaryUnitResult = {
+  outcome: PrimaryUnitOutcome;
+  text: string | null;
+  selectedIndex?: number;
+};
+
+// Returns the verbatim text of exactly one selected sentence-level unit,
+// or a null text on any failure/decline. Callers must fall back to the
+// pre-existing (paragraph-level) selector text on any non-success outcome.
+async function selectPrimaryUnit(
+  approvedEvidenceText: string,
+  placeName: string,
+  address: string | undefined,
+): Promise<PrimaryUnitResult> {
+  const units = splitIntoSentenceUnits(approvedEvidenceText);
+  if (units.length === 0) return { outcome: "noUnits", text: null };
+
+  const lines = units.map((u, i) => `[${i + 1}] ${u}`);
+  const userPrompt =
+    `Place: ${placeName}${address ? `\nAddress: ${address}` : ""}\n\n` +
+    `Units:\n\n${lines.join("\n\n")}`;
+
+  const selectorAbort = new AbortController();
+  const timer = setTimeout(
+    () => selectorAbort.abort(),
+    PRIMARY_UNIT_SELECTOR_TIMEOUT_MS,
+  );
+  try {
+    // @prompt-region wiki-evidence-selector
+    const res = await openai.chat.completions.create(
+      {
+        model: "gpt-4.1-mini",
+        max_completion_tokens: 200,
+        messages: [
+          {
+            role: "system",
+            content: PRIMARY_UNIT_SELECTOR_SYSTEM_PROMPT,
+          },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { signal: selectorAbort.signal },
+    );
+    // @end-prompt-region wiki-evidence-selector
+    const raw = res.choices[0]?.message?.content ?? "";
+    const parsed = JSON.parse(raw) as {
+      selected_index?: unknown;
+      insufficient?: unknown;
+    };
+    if (parsed.insufficient === true)
+      return { outcome: "declined", text: null };
+    if (
+      typeof parsed.selected_index !== "number" ||
+      !Number.isInteger(parsed.selected_index) ||
+      parsed.selected_index < 1 ||
+      parsed.selected_index > units.length
+    ) {
+      return { outcome: "invalidIndex", text: null };
+    }
+    return {
+      outcome: "success",
+      text: units[parsed.selected_index - 1]!,
+      selectedIndex: parsed.selected_index,
+    };
+  } catch {
+    return { outcome: "timeoutOrAbort", text: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 router.post("/explore/discover", async (req, res) => {
   const requestStartTime = Date.now();
   const parsed = DiscoverPlacesBody.safeParse(req.body);
@@ -2149,7 +2489,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v81:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v82:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -2696,353 +3036,14 @@ router.post("/explore/discover", async (req, res) => {
           "building:levels",
         ] as const;
 
-        // Evidence-selector (Option A, Walk Mode field test). Given a
-        // candidate's full Wikipedia extract, an isolated LLM call selects
-        // which whole paragraphs clear a fixed editorial-value bar, and the
-        // selected text is reconstructed verbatim (never summarized or
-        // paraphrased) — replacing the naive first-1,000-char truncation
-        // below for a bounded set of candidates. See the read-only
-        // design/measurement pass (2026-08-17) for the diagnostic history
-        // behind this: naive truncation regularly cut off story-bearing
-        // content that a topic-blind, closed-set selector could reliably
-        // recover across 15 real test places (6 non-blind, 9 blind).
-        //
-        // Scope for this field-test version, deliberately narrow:
-        //  - Walk Mode requests only (see the invocation site below).
-        //  - Only the 3 closest Wikipedia-enriched candidates by straight-
-        //    line distance — a server-side proxy for "candidates the user
-        //    is likely to reach soon," NOT a replica of pickNext's live,
-        //    heading-aware, single-best-pick scoring (which only exists
-        //    client-side and has no stable "top 3" to reproduce here).
-        //  - Every failure mode (timeout, invalid indices, parse/network
-        //    error, or the selector declining) falls back to today's exact
-        //    first-1,000-char truncation for that candidate only — this
-        //    guarantees no functional regression (no worse than today's
-        //    behavior) on selector failure. It does NOT guarantee better
-        //    editorial copy on selector success: a valid selection could
-        //    still read worse than the truncation it replaces, which is
-        //    part of what this field test is meant to surface.
-        // @prompt-region discover
-        const EVIDENCE_SELECTOR_SYSTEM_PROMPT =
-          "You are evaluating paragraphs of Wikipedia text as evidence for a local-history app entry about a real place. " +
-          "You will be given the numbered paragraphs only. You have no other information about why this place was chosen " +
-          "or what anyone expects you to find -- judge only from the text provided.\n\n" +
-          "Select only the smallest set of the highest-value paragraphs that, together, fit within a combined budget of about 2,500 characters of paragraph text -- not every paragraph that merely clears one of the following evidence-value criteria. The five criteria below define what counts as evidence; use them to identify the strongest candidates, not to justify including everything that qualifies:\n\n" +
-          "1. Explanatory force — Prefer evidence that explains why the place looks, exists, or functions as it does, rather than merely describing it or listing chronology.\n\n" +
-          "2. Broader context — Value evidence that connects the place to a larger historical, cultural, social, economic, or neighborhood pattern when that connection deepens understanding of the place itself.\n\n" +
-          "3. Human stakes — Value evidence that reveals what people or communities did, experienced, changed, created, preserved, lost, or contested at a place. Institutional, transactional, or procedural facts gain value when they illuminate those human stakes rather than functioning merely as administrative detail.\n\n" +
-          "4. Revelatory value — Value evidence that reveals a hidden, unexpected, or easily overlooked dimension of the place and meaningfully changes how it can be understood. Surprise alone is not sufficient; the revelation should add explanatory, contextual, or human significance.\n\n" +
-          "5. Observational value — Distinctive, easily overlooked physical details can carry editorial value simply by helping the user notice the place more closely. Explanatory context can strengthen that value, but is not required when the detail itself rewards attention.\n\n" +
-          "Tie-break principle: When evidence is otherwise comparable, prefer the material with the greatest potential to change how someone understands or experiences the place.\n\n" +
-          "Boundary: These are evidence-value dimensions, not a strict lexicographic priority order. A passage can be strong through one or several dimensions. Rank/select based on overall editorial value to Streetlit, using the tie-break principle when needed.\n\n" +
-          "Explicitly excluded: Physical persistence is not a criterion. Continued physical presence does not inherently increase a story's editorial value; vanished places and invisible earlier layers remain valid Streetlit territory.\n\n" +
-          "Selection discipline:\n" +
-          "- Select only the strongest evidence, not everything that clears a minimum bar.\n" +
-          "- Prefer a few high-value passages over a broad factual overview.\n" +
-          "- Do not select material merely because it efficiently describes the building or place.\n" +
-          "- Dimensions, dates, architect/style attribution, landmark status, ownership chronology, and tenant lists are usually weak on their own. Include them only when they support stronger explanatory, contextual, human, revelatory, or observational value.\n" +
-          "- Prefer hidden, explanatory, human, or contextual stories over competent descriptions.\n" +
-          "- If several passages support the same idea, choose the strongest paragraph or the smallest necessary combination, not all of them.\n" +
-          "- Do not knowingly select more evidence than can fit within a combined budget of about 2,500 characters of paragraph text.\n\n" +
-          "It is acceptable, and expected in some cases, to select none of the paragraphs if nothing in the list clears this bar. Do not summarize, paraphrase, or add any information beyond selecting indices.\n\n" +
-          'Respond only with JSON in this exact shape: {"selected_indices": [numbers], "insufficient": boolean}. List "selected_indices" in descending order of editorial value, strongest evidence first -- not article order. Set "insufficient" to true and "selected_indices" to an empty array if nothing in the paragraphs clears the bar. Do not include any other text, explanation, or field.';
-
-        // Fixed, blunt cap — no packing/ranking logic. Deliberately larger
-        // than today's 1,000-char truncation budget: the selector operates
-        // on whole paragraphs, and a 1,000-char cap can reject or truncate
-        // a single strong paragraph, effectively recreating the truncation
-        // problem this field test exists to test against.
-        const EVIDENCE_SELECTOR_OUTPUT_CAP = 2_500;
-        const EVIDENCE_SELECTOR_TIMEOUT_MS = 6_000;
-        // @end-prompt-region discover
-
-        const NON_PROSE_SECTION_DENYLIST = new Set([
-          "references",
-          "external links",
-          "see also",
-          "notes",
-          "further reading",
-          "bibliography",
-          "citations",
-          "sources",
-          "footnotes",
-          "works cited",
-          "notes and references",
-          "gallery",
-        ]);
-
-        const splitWikipediaSections = (
-          text: string,
-        ): Array<{ title: string; content: string }> => {
-          const headerRe = /^(=+)\s*([A-Za-z0-9 ,'-]+?)\s*(=+)\s*$/gm;
-          const matches = [...text.matchAll(headerRe)];
-          if (matches.length === 0)
-            return [{ title: "Introduction", content: text }];
-          const sections: Array<{ title: string; content: string }> = [];
-          const intro = text.slice(0, matches[0]!.index).trim();
-          if (intro) sections.push({ title: "Introduction", content: intro });
-          for (let i = 0; i < matches.length; i++) {
-            const m = matches[i]!;
-            const title = m[2]!.trim();
-            const start = m.index! + m[0].length;
-            const end =
-              i + 1 < matches.length ? matches[i + 1]!.index! : text.length;
-            sections.push({ title, content: text.slice(start, end).trim() });
-          }
-          return sections;
-        };
-
-        type EvidenceParagraph = {
-          index: number;
-          section: string;
-          text: string;
-        };
-
-        // Broader than a topical allowlist deliberately — see the paragraph-
-        // enumeration methodology from the blind selector test this reuses:
-        // a keyword/section filter would silently reintroduce a deterministic
-        // relevance heuristic. The selector, not this function, is the sole
-        // arbiter of relevance; this only excludes clearly non-prose sections.
-        const enumerateEvidenceParagraphs = (
-          extract: string,
-        ): EvidenceParagraph[] => {
-          const paras: Array<{ section: string; text: string }> = [];
-          for (const { title, content } of splitWikipediaSections(extract)) {
-            if (NON_PROSE_SECTION_DENYLIST.has(title.trim().toLowerCase()))
-              continue;
-            if (!content) continue;
-            for (const chunkRaw of content.split(/\n\s*\n/)) {
-              const chunk = chunkRaw.trim();
-              if (chunk.length < 20) continue;
-              if (!/[A-Za-z]/.test(chunk)) continue;
-              paras.push({ section: title, text: chunk });
-            }
-          }
-          return paras.map((p, i) => ({
-            index: i + 1,
-            section: p.section,
-            text: p.text,
-          }));
-        };
-
-        // TEMP-A3-EVIDENCE-CORRELATION: outcome classification for the
-        // evidence selector, added for temporary A3 field-test log
-        // correlation only. Purely additive over the prior string | null
-        // return — every prior return-null site is preserved unchanged,
-        // just labeled with why. See MEMORY.md removal note.
-        type EvidenceSelectorOutcome =
-          | "success"
-          | "declined"
-          | "invalidIndices"
-          | "emptySelection"
-          | "parseError"
-          | "timeoutOrAbort"
-          | "noParagraphs";
-
-        type EvidenceSelectorResult = {
-          outcome: EvidenceSelectorOutcome;
-          text: string | null;
-          selectedIndices?: number[];
-          truncated?: boolean;
-        };
-
-        // Returns the verbatim, budget-capped selected text (plus outcome
-        // classification), or a null text on any failure/decline —
-        // callers must treat a null text exactly like "no Wikipedia
-        // summary available" (i.e. fall through to the existing
-        // truncation path).
-        const selectEvidenceParagraphs = async (
-          extract: string,
-          placeName: string,
-          address: string | undefined,
-        ): Promise<EvidenceSelectorResult> => {
-          const paragraphs = enumerateEvidenceParagraphs(extract);
-          if (paragraphs.length === 0)
-            return { outcome: "noParagraphs", text: null };
-
-          const lines = paragraphs.map(
-            (p) => `[${p.index}] section="${p.section}"\n${p.text}`,
-          );
-          const userPrompt =
-            `Place: ${placeName}${address ? `\nAddress: ${address}` : ""}\n\n` +
-            `Paragraphs:\n\n${lines.join("\n\n")}`;
-
-          const selectorAbort = new AbortController();
-          const timer = setTimeout(
-            () => selectorAbort.abort(),
-            EVIDENCE_SELECTOR_TIMEOUT_MS,
-          );
-          try {
-            // @prompt-region discover
-            const res = await openai.chat.completions.create(
-              {
-                model: "gpt-4.1-mini",
-                max_completion_tokens: 2000,
-                messages: [
-                  { role: "system", content: EVIDENCE_SELECTOR_SYSTEM_PROMPT },
-                  { role: "user", content: userPrompt },
-                ],
-                response_format: { type: "json_object" },
-              },
-              { signal: selectorAbort.signal },
-            );
-            // @end-prompt-region discover
-            const raw = res.choices[0]?.message?.content ?? "";
-            const parsed = JSON.parse(raw) as {
-              selected_indices?: unknown;
-              insufficient?: unknown;
-            };
-            if (parsed.insufficient === true)
-              return { outcome: "declined", text: null };
-            if (!Array.isArray(parsed.selected_indices))
-              return { outcome: "invalidIndices", text: null };
-
-            const byIndex = new Map(paragraphs.map((p) => [p.index, p]));
-            const retained: EvidenceParagraph[] = [];
-            for (const idx of parsed.selected_indices) {
-              // Any index outside the pool invalidates the whole selection
-              // for this candidate — fall back entirely rather than
-              // reconstructing a partial/uncertain result.
-              if (typeof idx !== "number" || !byIndex.has(idx))
-                return { outcome: "invalidIndices", text: null };
-              retained.push(byIndex.get(idx)!);
-            }
-            if (retained.length === 0)
-              return { outcome: "emptySelection", text: null };
-
-            let out = "";
-            let truncated = false;
-            for (const p of retained) {
-              if (out.length + p.text.length > EVIDENCE_SELECTOR_OUTPUT_CAP) {
-                // Skip (don't stop): a single oversized paragraph earlier in
-                // priority order must not zero out the whole packet — later,
-                // smaller selected paragraphs are still worth trying.
-                truncated = true;
-                continue;
-              }
-              out += (out ? "\n\n" : "") + p.text;
-            }
-            return {
-              outcome: "success",
-              text: out || null,
-              selectedIndices: parsed.selected_indices as number[],
-              truncated,
-            };
-          } catch {
-            return { outcome: "timeoutOrAbort", text: null };
-          } finally {
-            clearTimeout(timer);
-          }
-        };
-
-        // One-primary-unit selector: takes the A3-approved evidence text
-        // (already selected by selectEvidenceParagraphs above) and narrows
-        // it further to exactly ONE source-bounded sentence-level unit, so
-        // the copy-gen writer's factual universe for this candidate is a
-        // single unit rather than a multi-fact packet it must decide how to
-        // relate. Reuses the same editorial-value criteria as the paragraph
-        // selector; must not construct a story spine, infer relationships,
-        // merge units, or rewrite text. On any failure/decline, callers must
-        // fall back to the paragraph-selector text unchanged — no new
-        // fallback semantics.
-        // @prompt-region discover
-        const PRIMARY_UNIT_SELECTOR_SYSTEM_PROMPT =
-          "You are choosing ONE sentence-level unit of Wikipedia evidence for a local-history app entry about a real place. " +
-          "You will be given numbered units only, already pre-approved as strong evidence -- your job is to pick the single strongest one, not to judge overall quality.\n\n" +
-          "Use these editorial-value criteria to judge which ONE unit would create the strongest shift in how a walker understands this place:\n\n" +
-          "1. Explanatory force — does it explain why the place looks, exists, or functions as it does?\n" +
-          "2. Broader context — does it connect the place to a larger historical, cultural, social, or economic pattern?\n" +
-          "3. Human stakes — does it reveal what people or communities did, experienced, changed, or lost here?\n" +
-          "4. Revelatory value — does it reveal a hidden or unexpected dimension of the place?\n" +
-          "5. Observational value — does it carry a distinctive, easily overlooked physical detail worth noticing?\n\n" +
-          "Tie-break: prefer the unit with the greatest potential to change how someone understands or experiences the place.\n\n" +
-          "Strict boundaries: select exactly one unit VERBATIM as given -- do not rewrite, combine, or paraphrase it. Do not infer a relationship between units. Do not construct a narrative arc across units. Each unit stands alone as the source composed it.\n\n" +
-          "It is acceptable to select none if no unit clears the bar.\n\n" +
-          'Respond only with JSON in this exact shape: {"selected_index": number|null, "insufficient": boolean}. Do not include any other text, explanation, or field.';
-        const PRIMARY_UNIT_SELECTOR_TIMEOUT_MS = 6_000;
-        // @end-prompt-region discover
-
-        type PrimaryUnitOutcome =
-          | "success"
-          | "declined"
-          | "invalidIndex"
-          | "parseError"
-          | "timeoutOrAbort"
-          | "noUnits";
-
-        type PrimaryUnitResult = {
-          outcome: PrimaryUnitOutcome;
-          text: string | null;
-          selectedIndex?: number;
-        };
-
-        // Returns the verbatim text of exactly one selected sentence-level
-        // unit, or a null text on any failure/decline. Callers must fall
-        // back to the pre-existing (paragraph-level) selector text on any
-        // non-success outcome.
-        const selectPrimaryUnit = async (
-          approvedEvidenceText: string,
-          placeName: string,
-          address: string | undefined,
-        ): Promise<PrimaryUnitResult> => {
-          const units = splitIntoSentenceUnits(approvedEvidenceText);
-          if (units.length === 0) return { outcome: "noUnits", text: null };
-
-          const lines = units.map((u, i) => `[${i + 1}] ${u}`);
-          const userPrompt =
-            `Place: ${placeName}${address ? `\nAddress: ${address}` : ""}\n\n` +
-            `Units:\n\n${lines.join("\n\n")}`;
-
-          const selectorAbort = new AbortController();
-          const timer = setTimeout(
-            () => selectorAbort.abort(),
-            PRIMARY_UNIT_SELECTOR_TIMEOUT_MS,
-          );
-          try {
-            // @prompt-region discover
-            const res = await openai.chat.completions.create(
-              {
-                model: "gpt-4.1-mini",
-                max_completion_tokens: 200,
-                messages: [
-                  {
-                    role: "system",
-                    content: PRIMARY_UNIT_SELECTOR_SYSTEM_PROMPT,
-                  },
-                  { role: "user", content: userPrompt },
-                ],
-                response_format: { type: "json_object" },
-              },
-              { signal: selectorAbort.signal },
-            );
-            // @end-prompt-region discover
-            const raw = res.choices[0]?.message?.content ?? "";
-            const parsed = JSON.parse(raw) as {
-              selected_index?: unknown;
-              insufficient?: unknown;
-            };
-            if (parsed.insufficient === true)
-              return { outcome: "declined", text: null };
-            if (
-              typeof parsed.selected_index !== "number" ||
-              !Number.isInteger(parsed.selected_index) ||
-              parsed.selected_index < 1 ||
-              parsed.selected_index > units.length
-            ) {
-              return { outcome: "invalidIndex", text: null };
-            }
-            return {
-              outcome: "success",
-              text: units[parsed.selected_index - 1]!,
-              selectedIndex: parsed.selected_index,
-            };
-          } catch {
-            return { outcome: "timeoutOrAbort", text: null };
-          } finally {
-            clearTimeout(timer);
-          }
-        };
-
+        // Evidence-selector functions (selectEvidenceParagraphs,
+        // selectPrimaryUnit) and their supporting types/constants were
+        // hoisted to module scope on 2026-09-03 (see the marked
+        // wiki-evidence-selector block above this route) so
+        // /walk-narration-audio's JIT path can reuse the exact same
+        // implementation. This route's call sites below are unchanged and
+        // resolve to the hoisted module-level definitions via normal JS
+        // scoping.
         // @prompt-region discover
         const formatForCopy = (
           p: OSMPlace,
@@ -5549,7 +5550,15 @@ router.post("/explore/walk-narration", async (req, res) => {
     .map((f) => f.slice(0, 80).toLowerCase())
     .sort()
     .join("|");
-  const narrationCacheKey = `narration:v20:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v21 (2026-09-03): bumped in lockstep with /explore/walk-narration-audio's
+  // own narrationCacheKey below — the two routes share this exact literal so
+  // a narration generated by either can satisfy the other's cache lookup for
+  // the same key. Nothing about this route's own prompt content changed; the
+  // audio route's cache key had to move because /walk-narration-audio's
+  // live-call branch can now feed the narration LLM a JIT-enriched facts
+  // list (narration-time JIT A3), and the version must stay identical across
+  // both routes for cache-sharing to keep working.
+  const narrationCacheKey = `narration:v21:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   // @end-prompt-region walk-narration
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
@@ -5809,6 +5818,101 @@ function setAudioCache(key: string, bytes: Buffer): void {
   ).then(() => evictExcessAudioDbEntries());
 }
 
+// Narration-time JIT A3 (2026-09-03). When a Build 14 narration request
+// arrives without usable discover-time A3 evidence (no evidenceRef), and the
+// candidate carries trustworthy Build 14 identity, this runs the *same*
+// trusted evidence path discover-time A3 uses — selectEvidenceParagraphs,
+// selectPrimaryUnit, and the curated-local-history lookup — for just this
+// one candidate, at narration time. Deliberately does not duplicate any of
+// that logic: it only orchestrates calls to the existing, hoisted functions.
+//
+// No name-based or coordinate-based lookup: only exact Build 14 identity is
+// trusted. subjectId/candidateSource/wikipediaTag are authoritative;
+// latitude/longitude are advisory only and never used as a lookup key.
+//   - candidateSource "streetlit": curated-evidence path only
+//     (getApprovedCuratedEntry(subjectId)) — never forces a Wikipedia guess.
+//   - candidateSource "osm" with a valid exact wikipediaTag: Wikipedia JIT
+//     (fetchWikipediaSummary -> selectEvidenceParagraphs -> selectPrimaryUnit,
+//     falling back to the paragraph-level text on a primary-unit decline —
+//     identical fallback semantics to discover-time A3).
+//   - candidateSource "llm"/absent, or "osm" without a wikipediaTag: no JIT,
+//     no guessing — falls back to today's unenriched narration.
+type NarrationJitOutcome =
+  | "skippedHasEvidenceRef"
+  | "skippedNoTrustworthyIdentity"
+  | "skippedNoWikipediaTag"
+  | "skippedInvalidWikipediaTag"
+  | "curatedSuccess"
+  | "curatedNotFound"
+  | "wikipediaSuccess"
+  | "wikipediaNoSummary"
+  | "wikipediaDeclined"
+  | "timedOut"
+  | "failed";
+
+type NarrationJitResult = {
+  outcome: NarrationJitOutcome;
+  factText: string | null;
+};
+
+// Outer budget for the whole JIT sequence (Wikipedia fetch -> paragraph
+// selector -> primary-unit selector, or the synchronous curated lookup),
+// bounded well inside the 15s /walk-narration-audio client timeout (A10).
+// JIT is the first of three sequential network-dependent phases in this
+// route (JIT evidence, narration text LLM, TTS audio conversion) — 4s
+// reserves the large majority of the 15s ceiling for the latter two phases.
+// Deliberately shorter than the worst-case sum of the reused functions' own
+// internal timeouts (Wikipedia fetch 5s + selectEvidenceParagraphs 6s +
+// selectPrimaryUnit 6s = 17s) so this outer race actually binds and falls
+// back well before that worst case could itself approach the 15s ceiling.
+const NARRATION_JIT_TIMEOUT_MS = 4_000;
+
+async function runNarrationJitEvidence(
+  candidateSource: "osm" | "llm" | "streetlit" | undefined,
+  subjectId: string | undefined,
+  wikipediaTag: string | undefined,
+  placeName: string,
+  address: string | undefined,
+): Promise<NarrationJitResult> {
+  if (candidateSource === "streetlit") {
+    if (!subjectId)
+      return { outcome: "skippedNoTrustworthyIdentity", factText: null };
+    const curated = getApprovedCuratedEntry(subjectId);
+    if (!curated) return { outcome: "curatedNotFound", factText: null };
+    return { outcome: "curatedSuccess", factText: curated.evidence.text };
+  }
+  if (candidateSource === "osm") {
+    if (!wikipediaTag)
+      return { outcome: "skippedNoWikipediaTag", factText: null };
+    const parsedTag = parseWikipediaOsmTag(wikipediaTag);
+    if (!parsedTag)
+      return { outcome: "skippedInvalidWikipediaTag", factText: null };
+    const summary = await fetchWikipediaSummary(
+      parsedTag.lang,
+      parsedTag.title,
+    );
+    if (!summary?.extract)
+      return { outcome: "wikipediaNoSummary", factText: null };
+    const paragraphResult = await selectEvidenceParagraphs(
+      summary.extract,
+      placeName,
+      address,
+    );
+    if (!paragraphResult.text)
+      return { outcome: "wikipediaDeclined", factText: null };
+    const unitResult = await selectPrimaryUnit(
+      paragraphResult.text,
+      placeName,
+      address,
+    );
+    return {
+      outcome: "wikipediaSuccess",
+      factText: unitResult.text ?? paragraphResult.text,
+    };
+  }
+  return { outcome: "skippedNoTrustworthyIdentity", factText: null };
+}
+
 // POST /explore/walk-narration-audio — returns natural-voice MP3 audio for a place.
 // Generates the same narration text as /walk-narration (and shares its cache),
 // then runs it through OpenAI's gpt-audio TTS so the phone can play a real
@@ -5897,7 +6001,12 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     .map((f) => f.slice(0, 80).toLowerCase())
     .sort()
     .join("|");
-  const narrationCacheKey = `narration:v20:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v21 (2026-09-03): bumped in lockstep with /explore/walk-narration's own
+  // narrationCacheKey — see that route's comment for why. This route's own
+  // reason: the live-call branch below can now feed the narration LLM a
+  // JIT-enriched facts list (narration-time JIT A3), a real content-input
+  // change for the same nominal cache key that deserves a fresh cache slot.
+  const narrationCacheKey = `narration:v21:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
   // @end-prompt-region walk-narration-audio
 
@@ -5956,6 +6065,68 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         return;
       }
     } else {
+      // Narration-time JIT A3. Only attempted when discover-time A3 evidence
+      // (evidenceRef) is absent and the candidate carries trustworthy Build
+      // 14 identity (subjectId/candidateSource/wikipediaTag — lat/lon are
+      // advisory only and never used as a lookup key). Deliberately placed
+      // outside the marked prompt-region below: this decides WHAT goes into
+      // the facts list fed to the existing narration prompt, it does not
+      // change the prompt itself. On any skip/timeout/failure, narrationFacts
+      // falls back to the unmodified request facts — identical to today's
+      // behavior.
+      let jitOutcome: NarrationJitOutcome;
+      let jitFactText: string | null = null;
+      let jitAttempted = false;
+      let jitMs = 0;
+      if (evidenceRef) {
+        jitOutcome = "skippedHasEvidenceRef";
+      } else if (candidateSource !== "osm" && candidateSource !== "streetlit") {
+        jitOutcome = "skippedNoTrustworthyIdentity";
+      } else {
+        jitAttempted = true;
+        const jitStart = Date.now();
+        const jitResult = await Promise.race<NarrationJitResult>([
+          runNarrationJitEvidence(
+            candidateSource,
+            subjectId,
+            wikipediaTag,
+            placeName,
+            address,
+          ).catch(
+            (): NarrationJitResult => ({
+              outcome: "failed",
+              factText: null,
+            }),
+          ),
+          new Promise<NarrationJitResult>((resolve) =>
+            setTimeout(
+              () => resolve({ outcome: "timedOut", factText: null }),
+              NARRATION_JIT_TIMEOUT_MS,
+            ),
+          ),
+        ]);
+        jitMs = Date.now() - jitStart;
+        jitOutcome = jitResult.outcome;
+        jitFactText = jitResult.factText;
+      }
+      // TEMP-A3-JIT-NARRATION: diagnostic only, presence/outcome/timing only
+      // — no raw evidence text, no subjectId/wikipediaTag values. Remove
+      // once the JIT path has been field-verified (see MEMORY.md).
+      req.log.info(
+        {
+          tag: "TEMP-A3-JIT-NARRATION",
+          reqId: req.id,
+          attempted: jitAttempted,
+          outcome: jitOutcome,
+          jitMs,
+          injected: jitFactText !== null,
+        },
+        "[TEMP-A3-JIT-NARRATION] narration-time JIT A3 outcome",
+      );
+      const narrationFacts = jitFactText
+        ? [...(facts || []), jitFactText]
+        : facts;
+
       // @prompt-region walk-narration-audio
       // Build the location context string — same priority as /walk-narration.
       const audioLocationContext = address
@@ -6012,7 +6183,7 @@ How to write for speech:
               },
               {
                 role: "user",
-                content: `I'm walking past "${placeName}" (${category || "place"}).${audioLocationContext} Here's what's interesting: ${summary}${(facts || []).length ? ` Also: ${(facts || []).join(" ")}` : ""}. Give me a brief, natural narration.`,
+                content: `I'm walking past "${placeName}" (${category || "place"}).${audioLocationContext} Here's what's interesting: ${summary}${(narrationFacts || []).length ? ` Also: ${(narrationFacts || []).join(" ")}` : ""}. Give me a brief, natural narration.`,
               },
             ],
           },

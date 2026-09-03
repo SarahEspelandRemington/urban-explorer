@@ -5,9 +5,9 @@
     "artifacts/api-server/src/lib/cacheVersions.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "96cb3ca6b366dd0d893352497c003a8bb73148f055ad4c4e7c0eba103cd67fab",
-      "versions": ["v11"],
-      "registered": "2026-09-01"
+      "sectionHash": "e5b0c359540d6414d55019fa64d0c364dbb4f734c6b8072fe10ab68b6a5c6453",
+      "versions": ["v12"],
+      "registered": "2026-09-03"
     },
     "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
@@ -19,9 +19,9 @@
     "artifacts/api-server/src/routes/explore/index.ts::discover": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "b269af474c8d6227dac3b071b7b1c75fcfde2201b2b2234f72f3129922c9fc64",
-      "versions": ["v63", "v81"],
-      "registered": "2026-09-01"
+      "sectionHash": "66ec73a3b39d51a8283bad3d13eb2a90cb5482a33cdf530fb22c0676587bc9b4",
+      "versions": ["v63", "v82"],
+      "registered": "2026-09-03"
     },
     "artifacts/api-server/src/routes/explore/index.ts::geocode": {
       "kind": "route",
@@ -43,6 +43,13 @@
       "sectionHash": "173b6097ba0b0f4bf8aa11b570160d37268cdbe0f9f83d884e151f31bd259b8f",
       "versions": ["v2"],
       "registered": "2026-07-31"
+    },
+    "artifacts/api-server/src/routes/explore/index.ts::module:wiki-evidence-selector": {
+      "kind": "module",
+      "extraction": "marked",
+      "sectionHash": "62cadbb5b9d9ac3d3430889202b34fd6fe27ac9ce64225de12f55119a6207cc2",
+      "versions": ["v1"],
+      "registered": "2026-09-03"
     },
     "artifacts/api-server/src/routes/explore/index.ts::module:wiki-photo": {
       "kind": "module",
@@ -96,16 +103,16 @@
     "artifacts/api-server/src/routes/explore/index.ts::walk-narration": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "2e9d576598e02bc664b8fd83e80e9aa15109237715bc9dc941eff31c4ca76aee",
-      "versions": ["v20"],
-      "registered": "2026-07-19"
+      "sectionHash": "422ca2363c86bc6a0f53c5fff6f434d9d32c3120ed28d319a626d81ce8353a0a",
+      "versions": ["v21"],
+      "registered": "2026-09-03"
     },
     "artifacts/api-server/src/routes/explore/index.ts::walk-narration-audio": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "d8576fe401bde4d15a74503fca41465b722fcfe37e13b326656122713c1f8fc9",
-      "versions": ["v20"],
-      "registered": "2026-07-19"
+      "sectionHash": "a8ba21cb8b9a49c3b3ffdeee08027da7a208dbdb4f63907a5828306fc794b126",
+      "versions": ["v21"],
+      "registered": "2026-09-03"
     }
   }
 }
