@@ -5941,9 +5941,10 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     resolvedHadEvidenceRef,
     curatedApproved,
     wouldGate,
-    // Build 14 identity plumbing: accepted but not yet read by any narration
-    // logic, cache key, or content decision — transport only. No JIT lookup,
-    // ranking, or narration-content change is wired to these fields.
+    // Build 14 identity plumbing: read by the narration-time JIT A3 path
+    // below (runNarrationJitEvidence) when evidenceRef is absent. Not used
+    // for the narration cache key, ranking, or any other content decision.
+    // latitude/longitude remain advisory-only — never a JIT lookup key.
     subjectId,
     candidateSource,
     wikipediaTag,
