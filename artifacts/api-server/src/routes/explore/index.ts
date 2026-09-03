@@ -2231,11 +2231,9 @@ function enumerateEvidenceParagraphs(extract: string): EvidenceParagraph[] {
   }));
 }
 
-// TEMP-A3-EVIDENCE-CORRELATION: outcome classification for the evidence
-// selector, added for temporary A3 field-test log correlation only.
-// Purely additive over the prior string | null return — every prior
-// return-null site is preserved unchanged, just labeled with why. See
-// MEMORY.md removal note.
+// Outcome classification for the evidence selector. Purely additive over
+// the prior string | null return — every prior return-null site is
+// preserved unchanged, just labeled with why.
 type EvidenceSelectorOutcome =
   | "success"
   | "declined"
@@ -3295,12 +3293,12 @@ router.post("/explore/discover", async (req, res) => {
         // primary-unit selection (not a multi-paragraph A3 selection) —
         // formatForCopy uses this to flag wikipediaUnitOnly for the writer.
         const selectorSingleUnitOsmIds = new Set<string>();
-        // TEMP-A3-EVIDENCE-CORRELATION: ephemeral request/slot-scoped
-        // correlation token for the up-to-3 candidates that receive A3
-        // evidence selection, so a field-test log investigation can trace
-        // discover candidate -> selector outcome -> copy-gen output ->
-        // final narration without logging a stable place identifier. See
-        // MEMORY.md removal note.
+        // Per-candidate slot token for the up-to-3 candidates that receive
+        // A3 evidence selection, exposed on the discover response as
+        // evidenceRef. /walk-narration-audio's JIT A3 path
+        // (runNarrationJitEvidence) uses its presence as the "discover
+        // already ran evidence selection for this candidate" eligibility
+        // gate — this map is functional, not diagnostic-only.
         const evidenceRefByOsmId = new Map<string, string>();
         if (walkMode && wikiMap.size > 0) {
           // @prompt-region discover
@@ -3337,19 +3335,6 @@ router.post("/explore/discover", async (req, res) => {
                 );
                 if (selected.text)
                   selectorEnhancedWikiContent.set(osmId, selected.text);
-                req.log.info(
-                  {
-                    tag: "TEMP-A3-EVIDENCE-CORRELATION",
-                    reqId: req.id,
-                    evidenceRef,
-                    candidateSlot,
-                    selectorOutcome: selected.outcome,
-                    selectedIndices: selected.selectedIndices,
-                    evidenceTruncated: selected.truncated,
-                    selectedEvidenceText: selected.text,
-                  },
-                  "[TEMP-A3-EVIDENCE-CORRELATION] evidence selector outcome",
-                );
 
                 // One-primary-unit narrowing: only attempted when the
                 // paragraph selector above succeeded. On success, this
@@ -3367,17 +3352,6 @@ router.post("/explore/discover", async (req, res) => {
                     selectorEnhancedWikiContent.set(osmId, unitResult.text);
                     selectorSingleUnitOsmIds.add(osmId);
                   }
-                  req.log.info(
-                    {
-                      reqId: req.id,
-                      evidenceRef,
-                      candidateSlot,
-                      primaryUnitOutcome: unitResult.outcome,
-                      primaryUnitSelectedIndex: unitResult.selectedIndex,
-                      primaryUnitText: unitResult.text,
-                    },
-                    "[A3] primary unit selector outcome",
-                  );
                 }
               },
             ),
@@ -3646,23 +3620,6 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         const copyMap = new Map<string, CopyResult>(
           copyResults.map((r) => [r.id, r]),
         );
-        // TEMP-A3-EVIDENCE-CORRELATION: stage-C log — the copy-gen
-        // summary/facts produced for the same up-to-3 candidates that
-        // received A3 evidence selection, correlated via evidenceRef. See
-        // MEMORY.md removal note.
-        for (const [osmId, evidenceRef] of evidenceRefByOsmId) {
-          const copy = copyMap.get(osmId);
-          req.log.info(
-            {
-              tag: "TEMP-A3-EVIDENCE-CORRELATION",
-              reqId: req.id,
-              evidenceRef,
-              copySummary: copy?.summary,
-              copyFacts: copy?.facts,
-            },
-            "[TEMP-A3-EVIDENCE-CORRELATION] copy-gen output",
-          );
-        }
         // TEMP-PILOT-A-CURATED-EVIDENCE: stage-2 log — the copy-gen
         // summary/facts actually produced for candidates that had approved
         // curated evidence in this request, correlated by osmId with the
@@ -5572,7 +5529,9 @@ router.post("/explore/walk-narration", async (req, res) => {
       },
       "[walk-narration] served from cache",
     );
-    // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+    // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the
+    // first two ordinary Build 14 JIT field walks, or through 2026-09-07,
+    // whichever comes first. Review/remove immediately afterward.
     req.log.info(
       {
         reqId: req.id,
@@ -5600,7 +5559,10 @@ router.post("/explore/walk-narration", async (req, res) => {
         },
         "[walk-narration] coalesced onto in-flight LLM call — success",
       );
-      // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+      // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the
+      // first two ordinary Build 14 JIT field walks, or through
+      // 2026-09-07, whichever comes first. Review/remove immediately
+      // afterward.
       req.log.info(
         { reqId: req.id, narrationTextDiagnostic: text, evidenceRef },
         "[TEMP-A3-NARRATION-LOG] full narration text",
@@ -5735,7 +5697,9 @@ How to write for speech:
     },
     "[walk-narration] live LLM call succeeded",
   );
-  // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+  // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the first
+  // two ordinary Build 14 JIT field walks, or through 2026-09-07,
+  // whichever comes first. Review/remove immediately afterward.
   req.log.info(
     { reqId: req.id, narrationTextDiagnostic: narrationText, evidenceRef },
     "[TEMP-A3-NARRATION-LOG] full narration text",
@@ -6111,8 +6075,10 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         jitFactText = jitResult.factText;
       }
       // TEMP-A3-JIT-NARRATION: diagnostic only, presence/outcome/timing only
-      // — no raw evidence text, no subjectId/wikipediaTag values. Remove
-      // once the JIT path has been field-verified (see MEMORY.md).
+      // — no raw evidence text, no subjectId/wikipediaTag values. Authorized
+      // through the first two ordinary Build 14 JIT field walks, or through
+      // 2026-09-07, whichever comes first. Review/remove immediately
+      // afterward.
       req.log.info(
         {
           tag: "TEMP-A3-JIT-NARRATION",
@@ -6235,7 +6201,9 @@ How to write for speech:
     }
   }
 
-  // TEMP-A3-NARRATION-LOG — diagnostic only, remove after A3 field-test week.
+  // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the first
+  // two ordinary Build 14 JIT field walks, or through 2026-09-07,
+  // whichever comes first. Review/remove immediately afterward.
   // TEMP-SHADOW-GATE fields riding along on the same log line — diagnostic
   // only, remove alongside TEMP-A3-NARRATION-LOG. See the client-side
   // shadow-gate diagnostic in WalkModeContext.tsx.
