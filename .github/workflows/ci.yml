@@ -761,6 +761,39 @@ jobs:
           path: tc-counts.json
           retention-days: 90
 
+  test-api-server:
+    name: Test (Vitest — api-server)
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Restore node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            artifacts/api-server/node_modules
+            artifacts/mockup-sandbox/node_modules
+            artifacts/urban-explorer/node_modules
+            lib/api-client-react/node_modules
+            lib/api-zod/node_modules
+            lib/api-spec/node_modules
+            lib/db/node_modules
+            lib/integrations-openai-ai-server/node_modules
+            lib/integrations/openai_ai_integrations/node_modules
+            scripts/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Test (Vitest — api-server)
+        run: pnpm --filter @workspace/api-server run test
+
   record-warn-history:
     name: Record warning history
     runs-on: ubuntu-latest
