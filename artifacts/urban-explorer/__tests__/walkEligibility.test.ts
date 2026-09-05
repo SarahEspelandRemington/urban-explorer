@@ -1,4 +1,5 @@
 import {
+  discoveryTierBonusMeters,
   evaluateEligibility,
   haversineMeters,
   looksGenericCommercial,
@@ -439,6 +440,63 @@ describe("evaluateEligibility — lowQuality (Tier 4 suppression)", () => {
       baseState({ heading: 0, velocityHeadingFresh: true }),
     );
     expect(result.evaluations[0].reason).toBe("lowQuality");
+  });
+});
+
+describe("discoveryTierBonusMeters (A19)", () => {
+  it("gives Tier 1 a 20m advantage", () => {
+    expect(discoveryTierBonusMeters(1)).toBe(20);
+  });
+
+  it("gives Tier 2 a 12m advantage", () => {
+    expect(discoveryTierBonusMeters(2)).toBe(12);
+  });
+
+  it("gives Tier 3 a 6m advantage", () => {
+    expect(discoveryTierBonusMeters(3)).toBe(6);
+  });
+
+  it("gives an unclassified (undefined) tier no advantage", () => {
+    expect(discoveryTierBonusMeters(undefined)).toBe(0);
+  });
+
+  it("gives Tier 4 no advantage (Tier 4 is excluded from selection upstream)", () => {
+    expect(discoveryTierBonusMeters(4)).toBe(0);
+  });
+
+  it("gives an unrecognized tier value no advantage", () => {
+    expect(discoveryTierBonusMeters(99)).toBe(0);
+  });
+
+  // These simulate pickNext's `score = distance − bonus` formula (lower
+  // score wins) without pulling in the full WalkModeContext, since the
+  // bonus is purely additive over distance.
+  it("lets a farther Tier-1 candidate beat a nearer unclassified candidate when the bonus covers the distance gap", () => {
+    const nearUnclassified = {
+      dist: 55,
+      tier: undefined as number | undefined,
+    };
+    const fartherTier1 = { dist: 70, tier: 1 };
+    const scoreA =
+      nearUnclassified.dist - discoveryTierBonusMeters(nearUnclassified.tier);
+    const scoreB =
+      fartherTier1.dist - discoveryTierBonusMeters(fartherTier1.tier);
+    // 70 − 20 = 50 < 55 − 0 = 55 → the farther Tier-1 place wins.
+    expect(scoreB).toBeLessThan(scoreA);
+  });
+
+  it("does not let a much-farther Tier-1 candidate win merely because it has a tier", () => {
+    const nearUnclassified = {
+      dist: 50,
+      tier: undefined as number | undefined,
+    };
+    const muchFartherTier1 = { dist: 100, tier: 1 };
+    const scoreA =
+      nearUnclassified.dist - discoveryTierBonusMeters(nearUnclassified.tier);
+    const scoreB =
+      muchFartherTier1.dist - discoveryTierBonusMeters(muchFartherTier1.tier);
+    // 100 − 20 = 80 > 50 − 0 = 50 → the near unclassified place still wins.
+    expect(scoreA).toBeLessThan(scoreB);
   });
 });
 

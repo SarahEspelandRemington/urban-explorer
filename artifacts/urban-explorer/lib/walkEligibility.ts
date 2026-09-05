@@ -211,6 +211,29 @@ export function angularDiff(a: number, b: number): number {
   return d > 180 ? 360 - d : d;
 }
 
+/**
+ * A19: discovery-quality bonus for Walk Mode selection scoring (pickNext).
+ * Positive-only distance-equivalent bonus (in metres, subtracted from the
+ * selection score — lower score wins) so a stronger discovery can beat a
+ * weaker nearby one. This is a ranking bonus applied only to candidates that
+ * evaluateEligibility has already accepted; it never affects eligibility:
+ * - Tier 1–3 candidates become more competitive.
+ * - Unclassified places (discoveryTier undefined) get exactly 0 — identical
+ *   to today's behavior.
+ * - Tier 4 places never reach this function because evaluateEligibility
+ *   already excludes them with reason "lowQuality".
+ */
+export const DISCOVERY_TIER_BONUS_METERS: Record<number, number> = {
+  1: 20,
+  2: 12,
+  3: 6,
+};
+
+export function discoveryTierBonusMeters(tier: number | undefined): number {
+  if (tier === undefined) return 0;
+  return DISCOVERY_TIER_BONUS_METERS[tier] ?? 0;
+}
+
 export function evaluateEligibility(
   pool: readonly EligibilityCandidate[],
   state: EligibilityState,

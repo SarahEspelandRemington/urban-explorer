@@ -52,6 +52,7 @@ import {
   type StalePrefetchPool,
 } from "@/lib/narrationPrefetchPipeline";
 import {
+  discoveryTierBonusMeters,
   evaluateEligibility,
   looksGenericCommercial,
   type EligibilityState,
@@ -163,6 +164,12 @@ export interface WalkPlace {
    *  `data.places as WalkPlace[]` cast in the discover-response handlers —
    *  this only adds the type so it's usable by name. */
   streetlitId?: string;
+  /** Server-assigned discovery quality tier (1–4). Tier 4 is excluded from
+   *  auto-narration entirely (see evaluateEligibility's "lowQuality" reason).
+   *  Tiers 1–3 receive a positive-only ranking bonus in pickNext (A19) —
+   *  see discoveryTierBonusMeters in walkEligibility.ts. Absent when the
+   *  classifier was not confident; absence never penalizes a candidate. */
+  discoveryTier?: number;
   /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic
    *  correlation token (never a stable place identifier) echoed from the
    *  discover response. Passed unchanged into the narration request so
@@ -2167,6 +2174,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // Rating bonus: each net upvote shaves up to 10 m, capped at 30 m.
         score -= Math.min(30, Math.max(-30, (p.netScore ?? 0) * 10));
 
+        // A19: discovery-quality bonus (positive-only, does not affect
+        // eligibility — see discoveryTierBonusMeters in walkEligibility.ts).
+        score -= discoveryTierBonusMeters(p.discoveryTier);
+
         if (__DEV__) {
           const diffStr =
             diffForLog !== null ? ` diff=${Math.round(diffForLog)}°` : "";
@@ -2236,9 +2247,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       //
       // IMPORTANT: the `score` shown here MUST be the same score pickNext uses
       // for selection (distance + off-axis penalty − forward bias − rating
-      // bonus), so the "Top candidates" list explains why a particular place
-      // was picked. Earlier versions exposed the raw netScore (a rating
-      // signal) which left the overlay disagreeing with the actual selection.
+      // bonus − discovery-tier bonus [A19]), so the "Top candidates" list
+      // explains why a particular place was picked. Earlier versions exposed
+      // the raw netScore (a rating signal) which left the overlay disagreeing
+      // with the actual selection.
       try {
         const visible = placesRef.current;
         const candidates: Array<{
@@ -2293,6 +2305,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             if (dd > penaltyDeg) s += penaltyMeters;
           }
           s -= Math.min(30, Math.max(-30, net * 10));
+          s -= discoveryTierBonusMeters(p.discoveryTier);
           candidates.push({
             id: p.id,
             name: p.name,
