@@ -1,4 +1,4 @@
-// cache-versions:v12:
+// cache-versions:v13:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -70,6 +70,15 @@
  * narration LLM a JIT-enriched facts list, a real content-input change for
  * the same nominal key; /walk-narration's own literal moved in lockstep so
  * the two routes keep sharing one cache. v81 and v20 are retired.
+ *
+ * v12-v13: Evidence-floor fix — /explore/walk-narration now also runs
+ * narration-time JIT A3 evidence resolution (previously audio-route only)
+ * and both narration routes gained curated-before-Wikipedia evidence
+ * ordering plus a deterministic pre-copy-gen evidence floor (see
+ * runNarrationJitEvidence/resolveNarrationEvidence/evidenceFloorPasses in
+ * routes/explore/index.ts). Shared narration cache-key literal bumped
+ * v21->v22 in lockstep across both routes, a real content/gating-input
+ * change for the same nominal key. v21 is retired.
  */
 
 /**
@@ -98,7 +107,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v10"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v21"], // walk narration (short)
+  ["narration", "v22"], // walk narration (short)
   ["deep-narration", "v14"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];
