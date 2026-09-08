@@ -170,21 +170,14 @@ export interface WalkPlace {
    *  see discoveryTierBonusMeters in walkEligibility.ts. Absent when the
    *  classifier was not confident; absence never penalizes a candidate. */
   discoveryTier?: number;
-  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic
-   *  correlation token (never a stable place identifier) echoed from the
-   *  discover response. Passed unchanged into the narration request so
-   *  field-test logs can be traced end-to-end. Remove after the diagnostic
-   *  window — see MEMORY.md removal note. */
+  /** Correlation token identifying that this candidate received A3 evidence
+   *  selection during discover (paragraph/unit selection over its Wikipedia
+   *  extract). Present only for the up-to-3 candidates selected for A3.
+   *  Echoed unchanged into the narration request so the server can skip its
+   *  redundant narration-time JIT evidence lookup when discover already
+   *  resolved evidence for this candidate. Not a stable place identifier —
+   *  scoped to the discover response that produced it. */
   evidenceRef?: string;
-  /** TEMP-SHADOW-GATE: diagnostic-only fields computed by fetchNarration
-   *  immediately before this narration attempt, then stamped onto the
-   *  fresher pool object so they ride along into the narration request.
-   *  Not durable place data — a new value every narration attempt. Remove
-   *  after the Aug. 31 field-test window. */
-  capturedHadEvidenceRef?: boolean;
-  resolvedHadEvidenceRef?: boolean;
-  curatedApproved?: boolean;
-  wouldGate?: boolean;
   /** How this place's location was established: osm = Overpass coordinates
    *  (verified), llm = LLM-generated coordinates (legacy path), streetlit =
    *  a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-
@@ -1702,43 +1695,18 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // happens immediately before each enqueueNarration call below.
       if (!isStillCloseEnough(place, "fetchNarration:pre")) return;
 
-      // TEMP-SHADOW-GATE (diagnostic only, does not suppress narration):
-      // re-resolve the candidate from the live pool using the same identity
+      // Re-resolve the candidate from the live pool using the same identity
       // isStillCloseEnough uses, so the narration request below reflects the
       // freshest known data instead of a copy captured earlier (e.g. at
       // pickNext or prefetch time) that may have since been overwritten by a
-      // fresh discover response. Also records what a future narration-time
-      // editorial gate (evidenceRef OR curated approval) would suppress.
-      //
-      // Render logging (via the request body below, logged server-side
-      // alongside TEMP-A3-NARRATION-LOG) is the authoritative diagnostic for
-      // a standalone preview build with no attached Sentry DSN — a Sentry
-      // breadcrumb here would be a silent no-op in that build, so this only
-      // logs locally in __DEV__ for Metro-attached sessions.
+      // fresh discover response.
       const resolvedPlace =
         placesRef.current.find((q) => q.id === place.id) ?? place;
-      const capturedHadEvidenceRef = Boolean(place.evidenceRef);
-      const resolvedHadEvidenceRef = Boolean(resolvedPlace.evidenceRef);
-      const curatedApproved = resolvedPlace.candidateSource === "streetlit";
-      const wouldGate = !resolvedHadEvidenceRef && !curatedApproved;
-      if (__DEV__) {
-        console.log(
-          `[shadowGate] "${resolvedPlace.name}" (${resolvedPlace.id}) capturedEvidenceRef=${capturedHadEvidenceRef} resolvedEvidenceRef=${resolvedHadEvidenceRef} curatedApproved=${curatedApproved} wouldGate=${wouldGate}`,
-        );
-      }
       // Use the fresher object for the rest of this fetch — request body,
       // cache keys, and the eventual enqueueNarration call all key off
       // `place` below, so reassigning here is sufficient to apply it
-      // everywhere without touching each call site individually. The
-      // diagnostic booleans ride along on the same object so they reach
-      // fetchNarrationPayload -> the walk-narration-audio request body.
-      place = {
-        ...resolvedPlace,
-        capturedHadEvidenceRef,
-        resolvedHadEvidenceRef,
-        curatedApproved,
-        wouldGate,
-      };
+      // everywhere without touching each call site individually.
+      place = resolvedPlace;
       // --- Narration pipeline: fast path ---
       // Check if we already pre-fetched the narration for this place while the
       // previous story was playing. If so, enqueue it immediately (no round-trip)

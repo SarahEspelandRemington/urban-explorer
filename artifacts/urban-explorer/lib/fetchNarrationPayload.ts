@@ -47,22 +47,12 @@ export interface NarrationPlace {
    * the user's reverse-geocoded block is approximately correct for the place.
    */
   crossStreets?: string;
-  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic
-   *  correlation token (never a stable place identifier) echoed unchanged
-   *  from the discover response. Passed through so field-test server logs
-   *  can trace discover candidate -> selector -> copy-gen -> narration.
-   *  Remove after the diagnostic window — see MEMORY.md removal note. */
+  /** Correlation token echoed back unchanged from the discover response that
+   *  produced this place. When present, the server skips its narration-time
+   *  JIT evidence lookup (runNarrationJitEvidence) since discover already
+   *  resolved A3 evidence for this candidate. Not a stable place identifier
+   *  — scoped to the discover response that produced it. */
   evidenceRef?: string;
-  /** TEMP-SHADOW-GATE: diagnostic-only fields computed by WalkModeContext
-   *  immediately before this fetch, so the resulting narration can be
-   *  correlated in Render logs with what a future narration-time editorial
-   *  gate would have done. Do not use to alter narration content or
-   *  eligibility here — this function only forwards them. Remove after the
-   *  Aug. 31 field-test window. */
-  capturedHadEvidenceRef?: boolean;
-  resolvedHadEvidenceRef?: boolean;
-  curatedApproved?: boolean;
-  wouldGate?: boolean;
   /** Build 14 identity plumbing: opaque candidate join key (osmId ??
    *  streetlitId), echoed unchanged from the discover response. Transport
    *  only — not read by any narration logic yet. No JIT lookup is wired to
@@ -113,18 +103,6 @@ export async function fetchNarrationPayload(
     ...(place.address ? { address: place.address } : {}),
     ...(place.crossStreets ? { crossStreets: place.crossStreets } : {}),
     ...(place.evidenceRef ? { evidenceRef: place.evidenceRef } : {}),
-    // Boolean diagnostics: use !== undefined (not truthy) so `false` values
-    // are still forwarded rather than silently dropped.
-    ...(place.capturedHadEvidenceRef !== undefined
-      ? { capturedHadEvidenceRef: place.capturedHadEvidenceRef }
-      : {}),
-    ...(place.resolvedHadEvidenceRef !== undefined
-      ? { resolvedHadEvidenceRef: place.resolvedHadEvidenceRef }
-      : {}),
-    ...(place.curatedApproved !== undefined
-      ? { curatedApproved: place.curatedApproved }
-      : {}),
-    ...(place.wouldGate !== undefined ? { wouldGate: place.wouldGate } : {}),
     // Build 14 identity plumbing: transport only, see NarrationPlace above.
     ...(place.subjectId ? { subjectId: place.subjectId } : {}),
     ...(place.candidateSource

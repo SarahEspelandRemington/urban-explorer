@@ -5683,17 +5683,6 @@ router.post("/explore/walk-narration", async (req, res) => {
       },
       "[walk-narration] served from cache",
     );
-    // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the
-    // first two ordinary Build 14 JIT field walks, or through 2026-09-07,
-    // whichever comes first. Review/remove immediately afterward.
-    req.log.info(
-      {
-        reqId: req.id,
-        narrationTextDiagnostic: cachedNarration.narration,
-        evidenceRef,
-      },
-      "[TEMP-A3-NARRATION-LOG] full narration text",
-    );
     res.json(cachedNarration);
     return;
   }
@@ -5712,14 +5701,6 @@ router.post("/explore/walk-narration", async (req, res) => {
           durationMs: Date.now() - requestStartTime,
         },
         "[walk-narration] coalesced onto in-flight LLM call — success",
-      );
-      // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the
-      // first two ordinary Build 14 JIT field walks, or through
-      // 2026-09-07, whichever comes first. Review/remove immediately
-      // afterward.
-      req.log.info(
-        { reqId: req.id, narrationTextDiagnostic: text, evidenceRef },
-        "[TEMP-A3-NARRATION-LOG] full narration text",
       );
       res.json({ narration: text });
     } catch {
@@ -5751,13 +5732,7 @@ router.post("/explore/walk-narration", async (req, res) => {
   // suppression. Deliberately placed outside the marked prompt-region
   // below: this decides WHAT goes into the facts list fed to the existing
   // narration prompt, it does not change the prompt itself.
-  const {
-    narrationFacts,
-    jitOutcome,
-    jitAttempted,
-    jitMs,
-    curatedEvidenceFoundBeforeJit,
-  } = await resolveNarrationEvidence({
+  const { narrationFacts, jitOutcome } = await resolveNarrationEvidence({
     evidenceRef,
     candidateSource,
     subjectId,
@@ -5766,24 +5741,6 @@ router.post("/explore/walk-narration", async (req, res) => {
     address,
     facts,
   });
-  // TEMP-A3-JIT-NARRATION: diagnostic only, presence/outcome/timing only —
-  // no raw evidence text, no subjectId/wikipediaTag values. Authorized
-  // through the first two ordinary Build 14 JIT field walks, or through
-  // 2026-09-07, whichever comes first. Review/remove immediately afterward.
-  req.log.info(
-    {
-      tag: "TEMP-A3-JIT-NARRATION",
-      reqId: req.id,
-      route: "walk-narration",
-      attempted: jitAttempted,
-      outcome: jitOutcome,
-      jitMs,
-      injected: narrationFacts !== facts,
-      curatedEvidenceFoundBeforeJit,
-    },
-    "[TEMP-A3-JIT-NARRATION] narration-time JIT A3 outcome",
-  );
-
   // TEMP-EVIDENCE-FLOOR: diagnostic only, outcome-only (no raw
   // summary/fact text). Authorized through the first two ordinary
   // evidence-floor field walks, or through 2026-09-12, whichever comes
@@ -5926,13 +5883,6 @@ How to write for speech:
       durationMs: Date.now() - requestStartTime,
     },
     "[walk-narration] live LLM call succeeded",
-  );
-  // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the first
-  // two ordinary Build 14 JIT field walks, or through 2026-09-07,
-  // whichever comes first. Review/remove immediately afterward.
-  req.log.info(
-    { reqId: req.id, narrationTextDiagnostic: narrationText, evidenceRef },
-    "[TEMP-A3-NARRATION-LOG] full narration text",
   );
   const result = { narration: narrationText };
   setLLMCache(narrationCacheKey, result);
@@ -6258,40 +6208,13 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     address,
     crossStreets,
     evidenceRef,
-    // TEMP-SHADOW-GATE: diagnostic-only fields, not used for narration
-    // content, eligibility, or cache keys. See TEMP-A3-NARRATION-LOG below.
-    capturedHadEvidenceRef,
-    resolvedHadEvidenceRef,
-    curatedApproved,
-    wouldGate,
     // Build 14 identity plumbing: read by the narration-time JIT A3 path
     // below (runNarrationJitEvidence) when evidenceRef is absent. Not used
     // for the narration cache key, ranking, or any other content decision.
-    // latitude/longitude remain advisory-only — never a JIT lookup key.
     subjectId,
     candidateSource,
     wikipediaTag,
-    latitude,
-    longitude,
   } = parsed.data;
-
-  // TEMP-BUILD14-IDENTITY-PLUMBING: presence-only diagnostic to confirm the
-  // new identity fields arrive on a real device request. No raw values
-  // logged (subjectId/wikipediaTag are opaque place identifiers, not user
-  // data, but kept out of logs anyway; lat/lon are place coordinates, not
-  // user location, but also withheld as a matter of course). Remove once
-  // confirmed on a real Build 14 narration request.
-  req.log.info(
-    {
-      tag: "TEMP-BUILD14-IDENTITY-PLUMBING",
-      reqId: req.id,
-      hasSubjectId: subjectId !== undefined,
-      candidateSource,
-      hasWikipediaTag: wikipediaTag !== undefined,
-      hasLatLon: latitude !== undefined && longitude !== undefined,
-    },
-    "[walk-narration-audio] Build 14 identity fields received",
-  );
 
   // Abort controller wired to the response close event so that any in-flight
   // audio conversion (e.g. ffmpeg via ensureCompatibleFormat) is cancelled
@@ -6401,13 +6324,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
       // prompt itself. On any skip/timeout/failure, narrationFacts falls
       // back to the unmodified request facts — identical to today's
       // behavior.
-      const {
-        narrationFacts,
-        jitOutcome,
-        jitAttempted,
-        jitMs,
-        curatedEvidenceFoundBeforeJit,
-      } = await resolveNarrationEvidence({
+      const { narrationFacts, jitOutcome } = await resolveNarrationEvidence({
         evidenceRef,
         candidateSource,
         subjectId,
@@ -6416,24 +6333,6 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         address,
         facts,
       });
-      // TEMP-A3-JIT-NARRATION: diagnostic only, presence/outcome/timing only
-      // — no raw evidence text, no subjectId/wikipediaTag values. Authorized
-      // through the first two ordinary Build 14 JIT field walks, or through
-      // 2026-09-07, whichever comes first. Review/remove immediately
-      // afterward.
-      req.log.info(
-        {
-          tag: "TEMP-A3-JIT-NARRATION",
-          reqId: req.id,
-          attempted: jitAttempted,
-          outcome: jitOutcome,
-          jitMs,
-          injected: narrationFacts !== facts,
-          curatedEvidenceFoundBeforeJit,
-        },
-        "[TEMP-A3-JIT-NARRATION] narration-time JIT A3 outcome",
-      );
-
       // TEMP-EVIDENCE-FLOOR: diagnostic only, outcome-only (no raw
       // summary/fact text). Authorized through the first two ordinary
       // evidence-floor field walks, or through 2026-09-12, whichever comes
@@ -6573,25 +6472,6 @@ How to write for speech:
       setLLMCache(narrationCacheKey, { narration: narrationText });
     }
   }
-
-  // TEMP-A3-NARRATION-LOG — diagnostic only. Authorized through the first
-  // two ordinary Build 14 JIT field walks, or through 2026-09-07,
-  // whichever comes first. Review/remove immediately afterward.
-  // TEMP-SHADOW-GATE fields riding along on the same log line — diagnostic
-  // only, remove alongside TEMP-A3-NARRATION-LOG. See the client-side
-  // shadow-gate diagnostic in WalkModeContext.tsx.
-  req.log.info(
-    {
-      reqId: req.id,
-      narrationTextDiagnostic: narrationText,
-      evidenceRef,
-      capturedHadEvidenceRef,
-      resolvedHadEvidenceRef,
-      curatedApproved,
-      wouldGate,
-    },
-    "[TEMP-A3-NARRATION-LOG] full narration text",
-  );
 
   // Cheap sub-timing split (no flow restructuring): everything above this
   // point is the "chat" phase (cache lookup, coalesced wait, or a live LLM

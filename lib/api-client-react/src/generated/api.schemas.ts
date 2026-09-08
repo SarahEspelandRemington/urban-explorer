@@ -203,7 +203,7 @@ export interface Place {
   osmId?: string;
   /** Streetlit-owned point-identity reference (e.g. 'streetlit/557-8th-ave', see streetlitPlaces.ts). Present only on Streetlit-owned candidates (candidateSource: streetlit) in place of osmId. */
   streetlitId?: string;
-  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic correlation token (never a stable place identifier) for temporary field-test log correlation of the A3 evidence selector → copy-generation → narration pipeline. Present only for the up-to-3 candidates that received A3 evidence selection. Not intended as a durable identifier or production analytics field.
+  /** Correlation token identifying that this candidate received A3 evidence selection during discover (paragraph/unit selection over its Wikipedia extract). Present only for the up-to-3 candidates selected for A3. Echoed unchanged into the narration request so the server can skip its redundant narration-time JIT evidence lookup when discover already resolved evidence for this candidate. Not a stable place identifier — scoped to this discover response only.
    */
   evidenceRef?: string;
   /** How this place's location was established: osm = coordinates from Overpass (verified), llm = LLM-generated coordinates (legacy Explore/Walk path), streetlit = a Streetlit-owned exact-point identity (streetlitPlaces.ts, server-verified, not an Overpass candidate). */
@@ -415,21 +415,9 @@ export interface WalkNarrationRequest {
   /** Approximate block context derived from the user's current GPS position (e.g. "W 49th St, Hell's Kitchen, Manhattan"). Used as the spatial anchor when no specific place address is available. The model will open the narration with the most precise signal it has: address > crossStreets > generic phrase.
    */
   crossStreets?: string;
-  /** TEMP-A3-EVIDENCE-CORRELATION: ephemeral, request/slot-scoped diagnostic correlation token (never a stable place identifier) echoed back unchanged from the discover response that produced this place, for temporary field-test log correlation. Not intended as a durable identifier or production analytics field.
+  /** Correlation token echoed back unchanged from the discover response that produced this place. When present, the server skips its narration-time JIT evidence lookup (runNarrationJitEvidence) since discover already resolved A3 evidence for this candidate. Not a stable place identifier — scoped to the discover response that produced it.
    */
   evidenceRef?: string;
-  /** TEMP-SHADOW-GATE: whether the WalkPlace object originally captured for this narration (e.g. at pickNext/prefetch time) had an evidenceRef. Diagnostic only — does not affect narration content or eligibility. Remove after the Aug. 31 field-test window.
-   */
-  capturedHadEvidenceRef?: boolean;
-  /** TEMP-SHADOW-GATE: whether the freshest in-memory candidate for this place (re-resolved from the live pool immediately before narration) had an evidenceRef. Diagnostic only. Remove after the Aug. 31 field-test window.
-   */
-  resolvedHadEvidenceRef?: boolean;
-  /** TEMP-SHADOW-GATE: whether the re-resolved candidate is a curated Streetlit-owned entry (candidateSource: streetlit). Diagnostic only. Remove after the Aug. 31 field-test window.
-   */
-  curatedApproved?: boolean;
-  /** TEMP-SHADOW-GATE: whether a future narration-time editorial gate (evidenceRef OR curated approval) would have suppressed this narration. Does not currently suppress anything. Remove after the Aug. 31 field-test window.
-   */
-  wouldGate?: boolean;
   /** Build 14 identity plumbing: opaque candidate join key, derived client-side as osmId ?? streetlitId from the discover response that produced this place. Not currently read by the handler — carried through so a future narration-time JIT evidence lookup (not yet implemented) can key off it without a name-based guess.
    */
   subjectId?: string;
