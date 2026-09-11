@@ -2879,8 +2879,16 @@ router.post("/explore/discover", async (req, res) => {
         const afterDenylist = osmCandidates.length;
         // Suppress plain residential buildings with no story-bearing OSM tags.
         // Applied after the denylist so the two filters compose cleanly.
+        // TEMP-PILOT-A: narrow curated-evidence rescue. A residential
+        // building that would otherwise be suppressed survives ONLY if it
+        // carries an approved curated-local-history entry (exact osmId
+        // match) — same principle as the existing osm_bare copy-gen
+        // exception below. Absence of curated evidence changes nothing;
+        // isBoringResidentialBuilding itself is unmodified.
         osmCandidates = osmCandidates.filter(
-          (p) => !isBoringResidentialBuilding(p.tags),
+          (p) =>
+            !isBoringResidentialBuilding(p.tags) ||
+            getApprovedCuratedEntry(p.osmId) !== undefined,
         );
         const afterResidentialFilter = osmCandidates.length;
         // Suppress ordinary shops/offices/craft businesses with no

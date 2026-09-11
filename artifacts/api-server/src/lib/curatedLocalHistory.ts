@@ -229,6 +229,70 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       lastVerifiedDate: "2026-08-24",
     },
   },
+  "streetlit/1700-spring-garden-carnegie-library": {
+    source: {
+      title:
+        "An Architectural Census: Philadelphia's 25 Carnegie Branch Libraries",
+      url: "https://blog.phillyhistory.org/index.php/2019/03/an-architectural-census-philadelphias-25-carnegie-branch-libraries/",
+      sourceType:
+        "local-history/institutional blog (PhillyHistory, City of Philadelphia Department of Records)",
+      usageNote:
+        "Controls the architect, 1907 opening date, Carnegie-branch number, Gothic Revival style, and the building's 'no longer extant' status. The branch's later reuse as the Free Library's Library for the Blind (c. 1957) and its demolition (reported elsewhere as 1975) to make way for the Community College of Philadelphia campus are corroborated across multiple search results referencing Free Library of Philadelphia digital collections and the Library for Accessible Media for Pennsylvanians' own institutional history, but a primary source page for that specific chronology could not be directly opened in this session (candidate pages returned a non-rendering script-only page or a 403 error) — treated as generally corroborated, not independently verified from a directly read primary source. Not accepted for any historic-register designation claim — this could not be independently verified and must not appear in generated copy.",
+      publicationDate: "2019-03-01",
+    },
+    evidence: {
+      subjectId: "streetlit/1700-spring-garden-carnegie-library",
+      text: "The Spring Garden Branch of the Free Library of Philadelphia opened on November 18, 1907, at the southwest corner of 17th and Spring Garden Streets — the seventh library building in the city funded by Andrew Carnegie's 1903 gift to the Free Library. Designed by the architectural firm Field & Medary in the Gothic Revival style, it served the neighborhood as a branch library for nearly five decades. The branch closed around 1955, and the building was reused by around 1957 as the Free Library's Library for the Blind, before being demolished — reportedly in 1975 — to make way for the campus of the newly established Community College of Philadelphia, which occupies the site today. No trace of the historic library building remains.",
+      claimScope:
+        "The Spring Garden Branch's 1907 opening date, its status as the seventh Carnegie-funded Free Library branch in Philadelphia, its location at the southwest corner of 17th and Spring Garden Streets, its Field & Medary Gothic Revival design, and the fact that it is no longer standing today. Also covers, with hedged/attributed language rather than flat assertion, its closure as a branch library (c. 1955), its reuse as the Free Library's Library for the Blind (c. 1957), and its demolition (reported as 1975) to make way for the Community College of Philadelphia campus, which now occupies the site. Do not state or imply that the historic library building is still standing today, that any present-day Community College of Philadelphia building is or occupies the exact historic library structure, or that the building holds any current or former historic-register designation — register status could not be independently verified in this session and must not be asserted.",
+      verificationStatus: "approved",
+      verificationConfidence: "medium",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-10",
+    },
+  },
+  "way/1359685411": {
+    source: {
+      title: "Fishtown Adaptation",
+      url: "https://hiddencityphila.org/2016/05/fishtown-adaptation/",
+      sourceType:
+        "local-history/preservation journalism (Hidden City Philadelphia)",
+      usageNote:
+        "Corroborated by a second Hidden City Philadelphia article, 'Historic Fishtown, Tier 2' (https://hiddencityphila.org/2016/05/historic-fishtown-tier-2/), which additionally documents the mill's 1886 opening and 1925 expansion and its listing on the National Register of Historic Places (not the Philadelphia Register). Accepted for the mill's labor-strike history, adaptive-reuse conversion, and construction chronology — not for a specific NRHP listing year, which was not stated in either reviewed source.",
+      publicationDate: "2016-05-01",
+    },
+    evidence: {
+      subjectId: "way/1359685411",
+      text: "The building at 1421 East Columbia Avenue, at the corner of Columbia and Memphis Streets, was the Brownhill & Kramer Hosiery Mill — one of Philadelphia's full-fashioned silk hosiery manufacturers, opened in 1886 and expanded in 1925. In the 1920s and 1930s the mill was the site of numerous, innovative labor strikes — including disruptive sit-down strikes in the 1930s that drew national attention — that helped shape unionization and bargaining power for hosiery workers in Philadelphia and beyond. Though lacking local historic designation and legally demolishable, the mill complex is listed on the National Register of Historic Places, and developer Domani Developers chose to preserve and convert it rather than tear it down, rehabbing it into 57 apartments along Memphis Street with rebuilt townhomes on the Columbia Avenue side.",
+      claimScope:
+        "The building at 1421 East Columbia Avenue as the former Brownhill & Kramer Hosiery Mill, its 1886 opening and 1925 expansion, its role as the site of significant 1920s-30s hosiery-worker labor strikes (including 1930s sit-down strikes), its listing on the National Register of Historic Places (not the Philadelphia Register), and its adaptive-reuse conversion into 57 apartments plus rebuilt townhomes. Do not state a specific NRHP listing year — this was not confirmed in the reviewed source material. Do not describe the building as still operating as a hosiery mill or factory today.",
+      verificationStatus: "approved",
+      verificationConfidence: "medium",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-10",
+    },
+  },
+  "way/963718616": {
+    source: {
+      title: "Fishtown Adaptation",
+      url: "https://hiddencityphila.org/2016/05/fishtown-adaptation/",
+      sourceType:
+        "local-history/preservation journalism (Hidden City Philadelphia)",
+      usageNote:
+        "Accepted for the building's original industrial uses, adaptive-reuse chronology, and physical description — single-source citation; no independent corroborating source was reviewed for this specific building.",
+      publicationDate: "2016-05-01",
+    },
+    evidence: {
+      subjectId: "way/963718616",
+      text: "The four-story brick-and-concrete industrial building at 1714 Memphis Street, overlooking Palmer Cemetery, was built around 1920 to manufacture baseball equipment for A.J. Reach's sporting goods empire. It later served as a Pepsi-Cola bottling plant and, still later, a popcorn factory, before being converted into loft apartments in 2008 — one of the earliest buildings in this part of Fishtown to make that residential conversion.",
+      claimScope:
+        "The building at 1714 Memphis Street as a c.1920 industrial building originally built for A.J. Reach's sporting goods manufacturing, its later use as a Pepsi-Cola bottling plant and then a popcorn factory, and its 2008 conversion into loft apartments as an early example of residential adaptive reuse in this part of Fishtown. Do not describe the building as still operating as a factory or bottling plant today.",
+      verificationStatus: "approved",
+      verificationConfidence: "medium",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-10",
+    },
+  },
 };
 
 /**

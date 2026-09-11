@@ -6,8 +6,21 @@
  * present-day OSM entity representing the historic building/place itself
  * (see the read-only identity diagnostics for 475 10th Avenue / Hill
  * Publishing and 557 Eighth Avenue). Each entry is a Streetlit-owned
- * exact-point identity — not an OSM element, not a fuzzy match, not a
- * vanished-site reconstruction (all out of scope for this registry).
+ * exact-point identity — not an OSM element, not a fuzzy match, and not a
+ * general vanished-site reconstruction system.
+ *
+ * identityType is "building" for a real, currently-standing structure with
+ * no usable present-day OSM entity of its own. identityType: "former_site"
+ * is a single, deliberately narrow exception (added for the Spring Garden
+ * Carnegie Library prototype case): the place this entry describes no
+ * longer physically exists at this location. This is NOT a general
+ * approximate/fuzzy-location or historical-polygon mechanism — it is one
+ * exact point, used only when a place has been independently confirmed
+ * demolished/removed and no current OSM entity represents it. Narration for
+ * a former_site entry must never imply the historic structure still stands;
+ * that constraint is enforced via the entry's curated-evidence claimScope
+ * (see curatedLocalHistory.ts), not via any code branch on identityType
+ * itself.
  *
  * Entries are normalized into the discover candidate stream in
  * routes/explore/index.ts as an OSMPlace with candidateOrigin: "streetlit"
@@ -31,7 +44,7 @@ export interface StreetlitPlace {
   latitude: number;
   longitude: number;
   address: string;
-  identityType: "building";
+  identityType: "building" | "former_site";
   /** Present only when a related-but-distinct real OSM element exists at
    *  or near this identity's coordinates that should not be conflated with
    *  it (e.g. a current tenant under a different name). Omitted for both
@@ -81,5 +94,13 @@ export const STREETLIT_PLACES: readonly StreetlitPlace[] = [
     longitude: -75.1724873,
     address: "2101 Mount Vernon Street",
     identityType: "building",
+  },
+  {
+    streetlitId: "streetlit/1700-spring-garden-carnegie-library",
+    displayName: "Spring Garden Carnegie Library (former site)",
+    latitude: 39.9628,
+    longitude: -75.1664,
+    address: "SW corner of 17th & Spring Garden Streets",
+    identityType: "former_site",
   },
 ];
