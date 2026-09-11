@@ -293,6 +293,46 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       lastVerifiedDate: "2026-09-10",
     },
   },
+  "streetlit/1818-spring-garden-reyburn-mansion": {
+    source: {
+      title: "History of Philadelphia College of Osteopathic Medicine",
+      url: "https://www.pcom.edu/campuses/philadelphia-campus/history.html",
+      sourceType:
+        "institutional history page (Philadelphia College of Osteopathic Medicine)",
+      usageNote:
+        "Accepted as the primary institutional source for the Reyburn Mansion's location (19th and Spring Garden Streets), its identity as former Philadelphia Mayor John E. Reyburn's residence, and PCOM's (then Philadelphia College of Osteopathy) 1917-1929 occupancy, including the DeArmond, Ashmead & Bickley renovation and the rear hospital building. The present-day address (1818-1820 Spring Garden Street) and the fact that a modern apartment building ('Spring Garden Towers') now occupies the site were corroborated via OpenStreetMap data and a local-history site (matthiasbaldwinpark.org, whose page for this address is titled 'Spring Garden Towers/PCOM') — the latter could not be directly fetched in this session (Wix-framework client-rendered site, a known limitation) and was accepted only via WebSearch-returned excerpts. A separate WebSearch-derived claim citing a specific street number of 1822 Spring Garden and a post-PCOM chronology (casket showroom, present-day retail tenants) could not be corroborated — the cited source for that claim resolved to an unrelated Chestnut Street building — and is explicitly excluded from claimScope.",
+    },
+    evidence: {
+      subjectId: "streetlit/1818-spring-garden-reyburn-mansion",
+      text: "The mansion that once stood near 19th and Spring Garden Streets belonged to John Edgar Reyburn, who served as mayor of Philadelphia from 1907 to 1911. In 1917, the newly forming Philadelphia College of Osteopathy — known today as the Philadelphia College of Osteopathic Medicine (PCOM) — acquired the Reyburn mansion as its first campus. Architects DeArmond, Ashmead & Bickley converted the brick-and-terra-cotta mansion into classrooms and laboratories, and the college later built a three-story, 52-bed hospital building to its rear. PCOM operated from this site for about a dozen years before relocating in 1929. The historic mansion no longer stands; a modern apartment building occupies the site today.",
+      claimScope:
+        "This site was the Reyburn Mansion, associated with Philadelphia Mayor John E. Reyburn, and served as the first campus of the Philadelphia College of Osteopathy, now PCOM, from 1917 to 1929. Do not state or imply that the historic mansion is still standing today, or that the present-day apartment building at this site ('Spring Garden Towers') is, or occupies, the historic Reyburn Mansion structure — that building is a distinct, unrelated real OSM entity (see osmAlias in streetlitPlaces.ts) and must not be conflated with this historic identity. Do not include the casket-showroom claim, any post-1929 chronology, or any specific demolition date or architectural style for what replaced the mansion — none of this is directly supported by verified sources reviewed in this session.",
+      verificationStatus: "approved",
+      verificationConfidence: "medium",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-11",
+    },
+  },
+  "node/3499206770": {
+    source: {
+      title: "1500 Spring Garden Street",
+      url: "https://www.baldwinparkphilly.org/1500-spring-garden-street",
+      sourceType:
+        "local neighborhood-history organization site (Matthias Baldwin Park), corroborated by the Encyclopedia of Greater Philadelphia's Baldwin Locomotive Works entry and Library Company of Philadelphia digital-collection material",
+      usageNote:
+        "Accepted, via WebSearch-returned excerpts, for: Baldwin Locomotive Works' sale of this site to Smith Kline & French in 1945 and SKF's 1948 headquarters move onto the former industrial land; and the Baldwin complex's footprint (bounded by Spring Garden Street, Broad Street, 18th Street, and the Reading Railroad) and its status as the world's largest steam-locomotive manufacturer at its peak. This baldwinparkphilly.org page could not be directly fetched in this session (Wix-framework client-rendered site, a known limitation also affecting the 2101 Mount Vernon Street entry's source) — accepted only via WebSearch-returned excerpts, cross-checked against the Encyclopedia of Greater Philadelphia's entry and Library Company of Philadelphia digital-collection captions referencing the same Spring Garden/Broad/18th Street/Reading Railroad footprint. Not accepted for a specific year of Baldwin's departure from the site for Eddystone, PA — sources conflict (1920 vs. 1928) — or for any claim of building-level continuity between the present-day library building and either the historic Baldwin or Smith Kline & French use.",
+    },
+    evidence: {
+      subjectId: "node/3499206770",
+      text: "This site, at 1500 Spring Garden Street, sits within the footprint of the former Baldwin Locomotive Works — a manufacturing complex that once occupied roughly eight square blocks bounded by Spring Garden Street, Broad Street, 18th Street, and the Reading Railroad. At its peak, Baldwin was the world's largest producer of steam locomotives. After Baldwin relocated its operations away from the site, the pharmaceutical firm Smith Kline & French acquired the vacated industrial land and built its new corporate headquarters here in 1948 — the company would go on to grow into one of the world's largest pharmaceutical firms.",
+      claimScope:
+        "This site was part of the vast Baldwin Locomotive Works complex, once the world's largest producer of steam locomotives. After Baldwin left the area, Smith Kline & French established its headquarters on the former industrial land, moving in during 1948. Do not state or imply that the current library building at this address is, or occupies the same physical structure as, the historic Baldwin Locomotive Works or the 1948 Smith Kline & French headquarters building — building-level continuity between the present-day structure and either historic use is not established by the reviewed sources. Do not assert a specific year for Baldwin's departure from the site — sources conflict between 1920 and 1928.",
+      verificationStatus: "approved",
+      verificationConfidence: "medium",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-11",
+    },
+  },
 };
 
 /**

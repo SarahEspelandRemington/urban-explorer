@@ -103,4 +103,17 @@ export const STREETLIT_PLACES: readonly StreetlitPlace[] = [
     address: "SW corner of 17th & Spring Garden Streets",
     identityType: "former_site",
   },
+  {
+    streetlitId: "streetlit/1818-spring-garden-reyburn-mansion",
+    displayName: "Reyburn Mansion — First PCOM Campus (former site)",
+    latitude: 39.9629506,
+    longitude: -75.1690731,
+    address: "1818-1820 Spring Garden Street",
+    identityType: "former_site",
+    // A real, named OSM building (an unrelated modern apartment building,
+    // "Spring Garden Towers") occupies this exact site today. Not the
+    // historic mansion — see curatedLocalHistory.ts for the claimScope
+    // guard against conflating the two.
+    osmAlias: "way/250836804",
+  },
 ];
