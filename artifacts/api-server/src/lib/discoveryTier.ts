@@ -32,7 +32,22 @@
  *     often omit explicit dates yet contain genuine historical content.
  *   - applyDiscoveryTier() runs on every response path (fresh + cached),
  *     so pre-change cache entries are classified on the way out.
+ *
+ * Curated-entry override: applyDiscoveryTier() also checks whether a place
+ * is backed by an approved curated-evidence entry (curatedLocalHistory.ts)
+ * carrying an explicit `explicitDiscoveryTier`. When present — and the
+ * place's text is not the exact placeholder-fallback shape — that fixed
+ * editorial tier is used instead of running the regex classifier below.
+ * This exists because the regex classifier scores the LLM's freshly
+ * regenerated narration prose, which can vary request-to-request for a
+ * curated candidate even though its underlying evidence never changes; see
+ * the `explicitDiscoveryTier` doc comment in curatedLocalHistory.ts for the
+ * full rationale. Non-curated places, and curated places without an
+ * explicit tier set, are entirely unaffected — they always go through
+ * classifyDiscoveryTier() exactly as before.
  */
+
+import { getApprovedCuratedEntry } from "./curatedLocalHistory";
 
 export type DiscoveryTier = 1 | 2 | 3 | 4;
 
@@ -355,6 +370,23 @@ export function classifyDiscoveryTier(place: {
 export function applyDiscoveryTier(places: any[]): void {
   for (const p of places) {
     const result = classifyDiscoveryTier(p);
+
+    // Curated-entry override — see module doc comment above. Only applies
+    // when the place is NOT the exact placeholder-fallback shape, so a
+    // genuine copy-generation failure for this specific request still
+    // suppresses to Tier 4 exactly as it would for any other candidate.
+    const subjectId: string | undefined = p.osmId ?? p.streetlitId;
+    const curated = subjectId ? getApprovedCuratedEntry(subjectId) : undefined;
+    const explicitTier = curated?.evidence.explicitDiscoveryTier;
+    if (
+      explicitTier !== undefined &&
+      result.rejectionReason !== "placeholderFallback"
+    ) {
+      p.discoveryTier = explicitTier;
+      delete p.discoveryRejectionReason;
+      continue;
+    }
+
     if (result.tier !== undefined) {
       p.discoveryTier = result.tier;
     } else {

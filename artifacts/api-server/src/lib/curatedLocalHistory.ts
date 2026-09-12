@@ -28,7 +28,24 @@
  * fields exist to preserve. Neither field derives from, overrides, or is
  * written back to OSM-derived `trustLevel` (see osmTrustLevel.ts, which
  * this module does not import or modify).
+ *
+ * `explicitDiscoveryTier` (optional) is a separate, deliberately narrow
+ * mechanism: an editorial call on the STORY's quality tier (Streetlit
+ * Discovery Acceptance Model v1, see discoveryTier.ts), set manually per
+ * entry, independent of `curatedTrust`/`verificationConfidence`. It exists
+ * because `classifyDiscoveryTier()` scores the LLM's freshly regenerated
+ * narration prose for a candidate on every non-cached request — for a
+ * curated entry the underlying evidence is fixed, but Walk Mode's snap-grid
+ * cache key forces frequent re-generation, so the same approved story could
+ * otherwise flip between tiers (or unclassified) purely from incidental
+ * wording differences across requests. Set this field only when the
+ * curated story's tier is genuinely clear-cut; leave it unset for anything
+ * ambiguous — an unset entry falls through to the ordinary classifier
+ * unchanged. See applyDiscoveryTier() in discoveryTier.ts for how this is
+ * consumed; it never applies over the exact placeholder-fallback shape.
  */
+
+import type { DiscoveryTier } from "./discoveryTier";
 
 export interface CuratedSource {
   /** Title/identity of the source material. */
@@ -61,6 +78,9 @@ export interface CuratedEvidence {
   curatedTrust: TrustSignal;
   /** Date of the last editorial verification pass over this entry. */
   lastVerifiedDate: string;
+  /** Editorial discovery-tier override — see module doc comment above.
+   *  Optional; omit when the entry's tier is genuinely ambiguous. */
+  explicitDiscoveryTier?: DiscoveryTier;
 }
 
 export interface CuratedEntry {
@@ -102,6 +122,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "high",
       lastVerifiedDate: "2026-08-22",
+      explicitDiscoveryTier: 1,
     },
   },
   "streetlit/475-10th-ave-hill-publishing": {
@@ -143,6 +164,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "high",
       lastVerifiedDate: "2026-08-23",
+      explicitDiscoveryTier: 2,
     },
   },
   "streetlit/2301-fairmount-ave-rothacker-orth": {
@@ -165,6 +187,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "high",
       curatedTrust: "high",
       lastVerifiedDate: "2026-08-24",
+      explicitDiscoveryTier: 1,
     },
   },
   "streetlit/2133-spring-garden-polonia": {
@@ -186,6 +209,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "high",
       lastVerifiedDate: "2026-08-24",
+      explicitDiscoveryTier: 1,
     },
   },
   "streetlit/2101-mount-vernon-st": {
@@ -205,6 +229,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "medium",
       lastVerifiedDate: "2026-08-24",
+      explicitDiscoveryTier: 2,
     },
   },
   "way/338306649": {
@@ -227,6 +252,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "medium",
       lastVerifiedDate: "2026-08-24",
+      explicitDiscoveryTier: 1,
     },
   },
   "streetlit/1700-spring-garden-carnegie-library": {
@@ -249,6 +275,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "medium",
       lastVerifiedDate: "2026-09-10",
+      explicitDiscoveryTier: 1,
     },
   },
   "way/1359685411": {
@@ -270,6 +297,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "medium",
       lastVerifiedDate: "2026-09-10",
+      explicitDiscoveryTier: 1,
     },
   },
   "way/963718616": {
@@ -291,6 +319,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "medium",
       lastVerifiedDate: "2026-09-10",
+      explicitDiscoveryTier: 2,
     },
   },
   "streetlit/1818-spring-garden-reyburn-mansion": {
@@ -311,6 +340,7 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "medium",
       lastVerifiedDate: "2026-09-11",
+      explicitDiscoveryTier: 1,
     },
   },
   "node/3499206770": {
@@ -331,6 +361,50 @@ export const CURATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       verificationConfidence: "medium",
       curatedTrust: "medium",
       lastVerifiedDate: "2026-09-11",
+      explicitDiscoveryTier: 1,
+    },
+  },
+  "streetlit/1903-spring-garden-la-milagrosa": {
+    source: {
+      title: "100 Years and Still Going Strong at La Milagrosa Chapel",
+      url: "https://catholicphilly.com/2011/05/news/100-years-and-still-going-strong-at-la-milagrosa-chapel/",
+      sourceType:
+        "Archdiocese-affiliated news publication (CatholicPhilly), corroborated by two directly-fetched Philadelphia Inquirer articles",
+      usageNote:
+        "CatholicPhilly, directly fetched, is accepted as the primary source for the chapel's April 26, 1912 founding, Mother (later Saint) Katharine Drexel's $1,080 donation and its explicit anti-exclusion condition (the donation would be forfeited if Spanish-speaking people of African descent were excluded from the congregation), and its status as the first place in the Archdiocese of Philadelphia with a regular, exclusively Spanish-language Mass. The 2013 closure — the Vincentian order's decision to sell the property to help fund retirement costs for priests in Spain, with a final Mass on June 23, 2013 — is corroborated by a directly-fetched, contemporaneous Philadelphia Inquirer article (https://www.inquirer.com/philly/news/20130420_La_Milagrosa_chapel_to_close_in_June.html). The building's later conversion to residential use is corroborated by a directly-fetched 2023 Philadelphia Inquirer follow-up (https://www.inquirer.com/news/la-milagrosa-latino-community-using-parish-trust-oldest-spanish-speaking-church-scholarships-20230428.html), which describes the sold building as a renovated condo building ($750,000 sale) and documents a surviving scholarship fund but no active congregation anywhere. A separate, less-authoritative 2013-era account describes the conversion as seven apartments — sources are not reconciled on apartments vs. condos or on exact unit count, so neither is asserted in claimScope. Not accepted for any claim that the congregation still exists or holds services anywhere as an active parish today.",
+      publicationDate: "2011-05-01",
+    },
+    evidence: {
+      subjectId: "streetlit/1903-spring-garden-la-milagrosa",
+      text: "The building at 1903 Spring Garden Street was, for over a century, La Milagrosa — formally the Capilla Católica Hispana de la Medalla Milagrosa — founded on April 26, 1912, with the help of a $1,080 donation from Mother Katharine Drexel, later canonized a saint. Drexel's donation came with a condition: it would be forfeited if Spanish-speaking people of African descent were excluded from the congregation. La Milagrosa became the first place in the Archdiocese of Philadelphia with a regular, exclusively Spanish-language Mass, and served generations of the city's Spanish-speaking Catholics, including Mexican, Colombian, Puerto Rican, Paraguayan, and Cuban communities. In 2013, the Vincentian order that ran the chapel decided to sell the property to help fund retirement costs for priests in Spain, and La Milagrosa held its final Mass on June 23 of that year. The building was later sold and converted to residential use.",
+      claimScope:
+        "The building at 1903 Spring Garden Street as the former home of La Milagrosa (Capilla Católica Hispana de la Medalla Milagrosa), founded April 26, 1912, with Katharine Drexel's $1,080 donation and its explicit anti-exclusion condition; its status as the first place in the Archdiocese of Philadelphia with a regular, exclusively Spanish-language Mass; its role serving Philadelphia's diverse Spanish-speaking Catholic communities; its 2013 closure (the Vincentian order's decision to sell to fund retiring priests in Spain, final Mass June 23, 2013); and its later conversion to residential use. Do not state or imply that La Milagrosa still holds services at this address, still exists as an active congregation anywhere, or that the building is still a place of worship today. Do not assert a specific number of residential units or whether the conversion is apartments or condos — sources are not reconciled on this point.",
+      verificationStatus: "approved",
+      verificationConfidence: "high",
+      curatedTrust: "high",
+      lastVerifiedDate: "2026-09-12",
+      explicitDiscoveryTier: 1,
+    },
+  },
+  "streetlit/1717-spring-garden-stetson-house": {
+    source: {
+      title: "Stetson Mansion",
+      url: "https://www.baldwinparkphilly.org/stetson-mansion",
+      sourceType:
+        "local neighborhood-history organization site (Matthias Baldwin Park)",
+      usageNote:
+        "This baldwinparkphilly.org page could not be directly fetched in this session (Wix-framework client-rendered site, the same limitation previously noted for the 2101 Mount Vernon Street and 1500 Spring Garden Street entries) — accepted only via WebSearch-returned excerpts. Corroborated by a directly-fetched real-estate listing (https://www.thecondoshops.com/listing/1717-spring-garden-street/) confirming the building was 'originally built for the famous Stetson Hat family' and describing its current condition as 4 bi-level lofts retaining original mansion-era architectural detail. Important correction: an initial identification of this Philadelphia building with the Wikipedia article 'John B. Stetson House' (NRHP-listed November 21, 1978, reference 78000957) was incorrect — that NRHP-listed property is a distinct building, the Stetson family's winter mansion in DeLand, Florida, designed by architect George T. Pearson in 1886. No National Register or other historic-register listing for 1717 Spring Garden Street, Philadelphia was found in this session and must not be asserted. Not accepted for a specific loft/condo conversion year — an unconfirmed secondary WebSearch summary cited 2008, but this could not be corroborated against a primary source.",
+    },
+    evidence: {
+      subjectId: "streetlit/1717-spring-garden-stetson-house",
+      text: "The building at 1717 Spring Garden Street was, for about ten years beginning in 1878, the home of hat manufacturer John B. Stetson, during the early growth years of his hat-making company. Stetson sold the property in 1888 and moved to a larger suburban estate in Elkins Park, just north of the city. The Spring Garden Street building remained a single-family home until the 1970s, when it became office space, used mostly by lawyers. It was later converted into residential condominium/loft units, and today retains original mansion-era architectural detail, including mosaic tile work, stained glass, and marble and ceramic fireplaces.",
+      claimScope:
+        "This site was the Philadelphia residence of hat manufacturer John B. Stetson for approximately ten years beginning in 1878, before he sold the property in 1888 and relocated to a larger estate in Elkins Park. Also covers the building's later use as law-office space beginning in the 1970s, its eventual conversion into residential condominium/loft units, and the survival of original mansion-era architectural detail. Do not state or imply that this building holds any National Register of Historic Places listing or other formal historic-register designation — no such listing was found in this session; this building must not be conflated with the separate, NRHP-listed Stetson mansion in DeLand, Florida. Do not assert a specific year for the condominium/loft conversion — this is not confirmed by a primary source.",
+      verificationStatus: "approved",
+      verificationConfidence: "medium",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-12",
+      explicitDiscoveryTier: 1,
     },
   },
 };

@@ -52,7 +52,7 @@ import {
   getApprovedCuratedEntry,
   CURATED_COPY_RULES,
 } from "../../lib/curatedLocalHistory";
-import { STREETLIT_PLACES } from "../../lib/streetlitPlaces";
+import { STREETLIT_PLACES, STALE_OSM_IDS } from "../../lib/streetlitPlaces";
 import { sanitizeDisplayTags } from "../../lib/sanitizeDisplayTags";
 import { haversineDistance } from "../../lib/geo";
 import {
@@ -2900,6 +2900,15 @@ router.post("/explore/discover", async (req, res) => {
           (p) => !isOrdinaryCommercialUse(p.tags),
         );
         const afterCommercialUseFilter = osmCandidates.length;
+
+        // Exclude real OSM elements whose tags misrepresent the present-day
+        // use of the place (e.g. a chapel that closed years ago but is still
+        // tagged as a current place of worship). See STALE_OSM_IDS in
+        // streetlitPlaces.ts. Distinct from the curated-evidence rescue
+        // above: this drops a candidate outright, it never lets one survive.
+        osmCandidates = osmCandidates.filter(
+          (p) => !STALE_OSM_IDS.has(p.osmId),
+        );
 
         // 2. Density counts at three radius tiers (before any radius filter)
         const countWithin = (r: number) =>
@@ -7053,6 +7062,12 @@ out center body ${overpassLimit};
       const buildingTag = el.tags?.building as string | undefined;
       if (buildingTag && BORING_BUILDING_TYPES.has(buildingTag.toLowerCase()))
         continue;
+      const osmId = `${el.type}/${el.id}`;
+      // Same stale-OSM-identity exclusion as the main discover route — see
+      // STALE_OSM_IDS in streetlitPlaces.ts. This query's
+      // amenity=place_of_worship clause can otherwise surface the same
+      // stale La Milagrosa entity here too.
+      if (STALE_OSM_IDS.has(osmId)) continue;
       seen.add(normKey);
       const elLat = el.lat ?? el.center?.lat;
       const elLon = el.lon ?? el.center?.lon;
@@ -7065,7 +7080,7 @@ out center body ${overpassLimit};
         el.tags?.man_made ||
         "place";
       results.push({
-        osmId: `${el.type}/${el.id}`,
+        osmId,
         name,
         lat: elLat,
         lon: elLon,

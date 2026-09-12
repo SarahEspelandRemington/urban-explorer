@@ -116,4 +116,61 @@ export const STREETLIT_PLACES: readonly StreetlitPlace[] = [
     // guard against conflating the two.
     osmAlias: "way/250836804",
   },
+  {
+    streetlitId: "streetlit/1903-spring-garden-la-milagrosa",
+    displayName: "La Milagrosa Chapel (former Spanish Catholic chapel)",
+    latitude: 39.963738,
+    longitude: -75.1696196,
+    address: "1903 Spring Garden Street",
+    // The historic chapel building still physically stands (converted to
+    // residential use after the congregation closed in 2013) — "building",
+    // not "former_site". The real OSM entity at this address (way/1314403624)
+    // is still tagged amenity=place_of_worship/denomination=catholic, which
+    // is stale by over a decade. That OSM entity is deliberately excluded
+    // from the candidate pool via STALE_OSM_IDS below rather than left to
+    // coexist under osmAlias, so it never independently surfaces as a
+    // current church — see curatedLocalHistory.ts for the bounded former-use
+    // history this entry carries instead.
+    identityType: "building",
+  },
+  {
+    streetlitId: "streetlit/1717-spring-garden-stetson-house",
+    displayName: "John B. Stetson House",
+    latitude: 39.9634535,
+    longitude: -75.1669028,
+    address: "1717 Spring Garden Street",
+    // The building still stands (converted to condominium/loft units) —
+    // "building", not "former_site". No current-day OSM entity at this
+    // address carries a name tag (confirmed via Overpass), so it is
+    // categorically absent from the raw discover candidate fetch, which
+    // requires a named building/way — see curatedLocalHistory.ts for the
+    // bounded curated evidence this entry carries.
+    identityType: "building",
+  },
 ];
+
+/**
+ * Real OSM element ids whose current tags misrepresent the present-day use
+ * of the place — e.g. a chapel that closed years ago but whose OSM entity is
+ * still tagged amenity=place_of_worship. Distinct from STREETLIT_PLACES
+ * (which adds identities OSM has no usable current entity for at all): this
+ * set instead suppresses a real, currently-mapped OSM candidate that would
+ * otherwise surface as if it were still a legitimate current place. Excluded
+ * from the raw candidate pool in both user-facing candidate paths in
+ * routes/explore/index.ts that can independently surface this id: the main
+ * /explore/discover route (before radius filtering) and the
+ * /explore/places-along-route route's fetchOSMPlacesInBoundingBox Overpass
+ * fetch (whose amenity=place_of_worship clause can otherwise return it too).
+ * This is a targeted exclusion of specific known-stale ids, not a general
+ * staleness-detection mechanism. The corresponding historic story (if any)
+ * belongs in a separate STREETLIT_PLACES + curatedLocalHistory.ts entry, not
+ * as a coexisting osmAlias — see the La Milagrosa entry above.
+ */
+export const STALE_OSM_IDS: ReadonlySet<string> = new Set([
+  // La Milagrosa Chapel closed permanently in June 2013; the building was
+  // later sold and converted to residential use. This OSM way is still
+  // tagged amenity=place_of_worship/denomination=catholic as of the most
+  // recent check. See streetlitPlaces.ts's La Milagrosa entry and
+  // curatedLocalHistory.ts for the bounded former-use history.
+  "way/1314403624",
+]);
