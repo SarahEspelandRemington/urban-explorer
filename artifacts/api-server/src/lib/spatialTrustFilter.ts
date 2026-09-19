@@ -5,6 +5,8 @@
  * independently of the full Express route file and its heavy dependencies.
  */
 
+import { getApprovedCuratedEntry } from "./curatedLocalHistory";
+
 /**
  * Matches a named street reference in free-form prose — checked against the
  * place's name and summary, NOT the address field (which always contains a
@@ -113,6 +115,20 @@ export const NAMED_NEIGHBORHOOD_RE =
  * needs no separate carve-out — it only fires when coordSource is absent,
  * and a Streetlit-owned candidate's coordSource is always "streetlit", so
  * Rule 4 was already a no-op for them before this exemption existed.
+ *
+ * Approved-evidence exemption (Hybrid Discovery v1.2): a real OSM candidate
+ * with no `name` tag is displayed under a synthesized street-address fallback
+ * (buildOsmAddr() — see routes/explore/index.ts), which trips Rule 3/3.5
+ * exactly like an LLM confabulation would. Rules 2/3/3.5 exist because an
+ * address-shaped NAME is otherwise a signal that the coordinate itself may be
+ * unverifiable/LLM-invented. That risk does not exist for a candidate backed
+ * by an approved curated/generated evidence entry (curatedLocalHistory.ts) —
+ * its osmId is an exact, server-verified production identity (never a fuzzy
+ * or LLM-asserted match), and its coordinate comes from the real OSM element,
+ * not LLM prose. Scoped narrowly to `getApprovedCuratedEntry()` lookups only
+ * — never a general allowance for address-style names. Does not touch Rule 1
+ * (already-overlay places stay suppressed) or Rule 4 (unaffected either way,
+ * since these candidates always carry a real coordSource).
  */
 export function applyLlmPrecisionFilter(places: any[]): void {
   for (const p of places) {
@@ -128,6 +144,9 @@ export function applyLlmPrecisionFilter(places: any[]): void {
     // Rules 2/3/3.5 (name-based) below; Rule 4 is unaffected, since it was
     // already a no-op for these candidates (coordSource is always set).
     if (p.candidateSource === "streetlit") continue;
+
+    // Approved-evidence exemption — see module doc comment above.
+    if (getApprovedCuratedEntry(p.osmId ?? p.streetlitId ?? "")) continue;
 
     // Universal name checks (independent of coordSource):
     // Both the ordinal-intersection and named-street patterns are LLM

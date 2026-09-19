@@ -30,9 +30,34 @@ export const INTERPRETIVE_CATEGORIES = new Set([
  * Text signals in name/summary/tags that indicate an interpretive rather than
  * pinpointable place.  Includes ghost signs, faded advertisements, culverts,
  * storm-drain infrastructure, and underground/subsurface language.
+ *
+ * Hybrid Discovery v1.3: the bare word "buried" was removed from this
+ * alternation because it false-matches ordinary biographical language (e.g.
+ * "...noted local resident buried at Laurel Hill Cemetery..."), which is not
+ * interpretive/buried-infrastructure content. "buried" is now checked
+ * separately by BURIED_INFRASTRUCTURE_RE below, which requires it to co-occur
+ * with an infrastructure/landscape term.
  */
 export const INTERPRETIVE_TEXT_RE =
-  /\b(buried|beneath|underground|subsurface|speakeasy|tunnel|unexcavated|oral histor(?:y|ies)|hidden.{0,6}under|corridor|invisible infrastructure|inferred|ghost waterway|filled.{0,6}(creek|canal|river)|ran beneath|flows beneath|once flowed|ghost sign|faded.{0,10}(sign|painted|ad|advertisement|mural)|painted.{0,10}advertisement|wall.{0,6}ad(vertisement)?|culvert|storm.{0,6}drain|stormwater|subterranean)\b/i;
+  /\b(beneath|underground|subsurface|speakeasy|tunnel|unexcavated|oral histor(?:y|ies)|hidden.{0,6}under|corridor|invisible infrastructure|inferred|ghost waterway|filled.{0,6}(creek|canal|river)|ran beneath|flows beneath|once flowed|ghost sign|faded.{0,10}(sign|painted|ad|advertisement|mural)|painted.{0,10}advertisement|wall.{0,6}ad(vertisement)?|culvert|storm.{0,6}drain|stormwater|subterranean)\b/i;
+
+/**
+ * Narrow, context-bound companion to INTERPRETIVE_TEXT_RE for "buried".
+ * Only matches when "buried" co-occurs (within a short, same-sentence
+ * window, in either order) with a buried-infrastructure/landscape term —
+ * e.g. "a buried creek", "buried rail line", "buried utilities". This
+ * excludes ordinary biographical phrases like "buried at Laurel Hill
+ * Cemetery" or "was buried in 1897", which describe a person's burial, not
+ * hidden urban fabric.
+ */
+const BURIED_CONTEXT_TERMS =
+  "(?:creek|canal|river|waterway|stream|brook|railway|railroad|track|tunnel|culvert|drain|sewer|utilit(?:y|ies)|pipe(?:line)?|conduit|foundation|infrastructure|line)";
+
+export const BURIED_INFRASTRUCTURE_RE = new RegExp(
+  `\\bburied\\b(?:(?![.!?]).){0,40}?\\b${BURIED_CONTEXT_TERMS}\\b` +
+    `|\\b${BURIED_CONTEXT_TERMS}\\b(?:(?![.!?]).){0,40}?\\bburied\\b`,
+  "i",
+);
 
 export const APPROXIMATE_TEXT_RE =
   /\b(site of|former site|demolished|ruins? of|approximate location|once stood|formerly stood|former location)\b/i;
@@ -61,7 +86,8 @@ export function classifyDiscovery(places: any[]): void {
 
     if (
       INTERPRETIVE_CATEGORIES.has(category) ||
-      INTERPRETIVE_TEXT_RE.test(combined)
+      INTERPRETIVE_TEXT_RE.test(combined) ||
+      BURIED_INFRASTRUCTURE_RE.test(combined)
     ) {
       cls = "INTERPRETIVE_OVERLAY";
     } else if (APPROXIMATE_TEXT_RE.test(combined)) {

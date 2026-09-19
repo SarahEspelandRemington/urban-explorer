@@ -114,6 +114,60 @@ describe("classifyDiscovery", () => {
     expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
   });
 
+  // ---------------------------------------------------------------------------
+  // Hybrid Discovery v1.3 — "buried" false-positive narrowing. The bare word
+  // "buried" used to match ordinary biographical burial language (a person
+  // being buried at a cemetery), which is not interpretive/buried-
+  // infrastructure content. BURIED_INFRASTRUCTURE_RE now requires "buried" to
+  // co-occur with an infrastructure/landscape term.
+  // ---------------------------------------------------------------------------
+
+  it("does not classify a biographical burial reference as INTERPRETIVE_OVERLAY", () => {
+    const places = [
+      place({
+        name: "2013 Spring Garden Street",
+        summary:
+          "2013 Spring Garden Street is a listed historic building that once housed Robert Carson, noted local resident buried at Laurel Hill Cemetery alongside Matthias Baldwin.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("VERIFIED_PLACE");
+  });
+
+  it('classifies "a buried creek runs beneath the block" as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Test Place",
+        summary: "A buried creek runs beneath the block.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it('classifies "buried rail line" as INTERPRETIVE_OVERLAY', () => {
+    const places = [
+      place({
+        name: "Test Place",
+        summary: "This block sits atop a buried rail line from the 1800s.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it("does not classify an unrelated sentence mentioning burial and, separately, a river as INTERPRETIVE_OVERLAY", () => {
+    const places = [
+      place({
+        name: "Test Place",
+        summary:
+          "He was buried in 1897. The building overlooks the Delaware River.",
+      }),
+    ];
+    classifyDiscovery(places);
+    expect(places[0].discoveryClass).toBe("VERIFIED_PLACE");
+  });
+
   it('classifies "subsurface" category as INTERPRETIVE_OVERLAY', () => {
     const places = [place({ category: "subsurface" })];
     classifyDiscovery(places);

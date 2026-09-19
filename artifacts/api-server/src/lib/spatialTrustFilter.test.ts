@@ -381,4 +381,49 @@ describe("applyLlmPrecisionFilter — pass cases", () => {
     expect(p.discoveryClass).toBe("VERIFIED_PLACE");
     expect(p.spatialSuppression).toBeUndefined();
   });
+
+  // ---------------------------------------------------------------------------
+  // Approved-evidence exemption (Hybrid Discovery v1.2) — a real OSM candidate
+  // with no `name` tag is displayed under a synthesized street-address
+  // fallback (buildOsmAddr()), which otherwise trips Rule 3/3.5. An approved
+  // curated/generated evidence entry (curatedLocalHistory.ts) is an exact,
+  // server-verified production identity, not an LLM-asserted one, so the
+  // address-shaped name alone must not disqualify it.
+  // way/1313740189 is a real approved GENERATED_LOCAL_HISTORY subject id.
+  // ---------------------------------------------------------------------------
+
+  it("does not downgrade an approved-evidence candidate whose fallback name is a street address", () => {
+    const p = makePlace({
+      osmId: "way/1313740189",
+      name: "1733 Spring Garden Street",
+      candidateSource: "osm",
+      coordSource: "osm",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("VERIFIED_PLACE");
+    expect(p.spatialSuppression).toBeUndefined();
+  });
+
+  it("still downgrades a non-approved candidate with the same address-shaped name", () => {
+    const p = makePlace({
+      osmId: "way/99999999999",
+      name: "1733 Spring Garden Street",
+      candidateSource: "osm",
+      coordSource: "osm",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("INTERPRETIVE_OVERLAY");
+  });
+
+  it("does not downgrade an approved-evidence candidate identified via streetlitId", () => {
+    const p = makePlace({
+      streetlitId: "way/1313740189",
+      name: "1733 Spring Garden Street",
+      candidateSource: "osm",
+      coordSource: "osm",
+    });
+    applyLlmPrecisionFilter([p]);
+    expect(p.discoveryClass).toBe("VERIFIED_PLACE");
+    expect(p.spatialSuppression).toBeUndefined();
+  });
 });
