@@ -717,3 +717,31 @@ export function getApprovedCuratedEntry(
   }
   return undefined;
 }
+
+/** Matches a subjectId that is a real OSM element ref (e.g. "way/1234"), as
+ *  opposed to a Streetlit-owned streetlitId (e.g. "streetlit/557-8th-ave"). */
+const OSM_SUBJECT_ID_RE = /^(node|way|relation)\/\d+$/;
+
+/**
+ * All approved subjectIds across CURATED_LOCAL_HISTORY and
+ * GENERATED_LOCAL_HISTORY that are real OSM element refs. Used to fetch
+ * center coordinates for approved subjects whose OSM tags are too sparse
+ * (no name, generic building=yes) to ever match the spatial Overpass
+ * candidate query — see fetchApprovedOsmSubjects in routes/explore/index.ts.
+ * Streetlit-owned (non-OSM) subjectIds are intentionally excluded; those are
+ * already reachable via STREETLIT_PLACES (streetlitPlaces.ts).
+ */
+export function getApprovedOsmSubjectIds(): string[] {
+  const ids = new Set<string>();
+  for (const id of Object.keys(CURATED_LOCAL_HISTORY)) {
+    if (OSM_SUBJECT_ID_RE.test(id) && getApprovedCuratedEntry(id)) {
+      ids.add(id);
+    }
+  }
+  for (const id of Object.keys(GENERATED_LOCAL_HISTORY)) {
+    if (OSM_SUBJECT_ID_RE.test(id) && getApprovedCuratedEntry(id)) {
+      ids.add(id);
+    }
+  }
+  return [...ids];
+}

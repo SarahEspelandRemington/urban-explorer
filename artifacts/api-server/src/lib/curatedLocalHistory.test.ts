@@ -3,6 +3,7 @@ import {
   CURATED_LOCAL_HISTORY,
   GENERATED_LOCAL_HISTORY,
   getApprovedCuratedEntry,
+  getApprovedOsmSubjectIds,
 } from "./curatedLocalHistory";
 
 describe("getApprovedCuratedEntry — generated + hand-maintained merge precedence", () => {
@@ -109,5 +110,35 @@ describe("getApprovedCuratedEntry — generated + hand-maintained merge preceden
 
   it("returns undefined for an arbitrary unregistered subjectId", () => {
     expect(getApprovedCuratedEntry("way/000000000")).toBeUndefined();
+  });
+});
+
+describe("getApprovedOsmSubjectIds", () => {
+  it("returns only real OSM type/id refs, excluding streetlit-owned subjectIds", () => {
+    const ids = getApprovedOsmSubjectIds();
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) {
+      expect(id).toMatch(/^(node|way|relation)\/\d+$/);
+    }
+  });
+
+  it("includes every approved OSM-id subject from both registries, deduplicated", () => {
+    const expected = new Set<string>();
+    for (const id of Object.keys(CURATED_LOCAL_HISTORY)) {
+      if (/^(node|way|relation)\/\d+$/.test(id)) expected.add(id);
+    }
+    for (const id of Object.keys(GENERATED_LOCAL_HISTORY)) {
+      if (/^(node|way|relation)\/\d+$/.test(id)) expected.add(id);
+    }
+    const ids = getApprovedOsmSubjectIds();
+    expect(new Set(ids)).toEqual(expected);
+    expect(ids.length).toBe(new Set(ids).size);
+  });
+
+  it("includes the 11 generated Spring Garden subjects", () => {
+    const ids = new Set(getApprovedOsmSubjectIds());
+    for (const id of Object.keys(GENERATED_LOCAL_HISTORY)) {
+      expect(ids.has(id)).toBe(true);
+    }
   });
 });

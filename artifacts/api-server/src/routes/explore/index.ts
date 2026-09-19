@@ -50,6 +50,7 @@ import { resolve } from "path";
 import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
 import {
   getApprovedCuratedEntry,
+  getApprovedOsmSubjectIds,
   CURATED_COPY_RULES,
 } from "../../lib/curatedLocalHistory";
 import { STREETLIT_PLACES, STALE_OSM_IDS } from "../../lib/streetlitPlaces";
@@ -79,9 +80,15 @@ interface OSMPlace {
    *  mergedPlaces construction below. */
   osmId: string;
   /** Set only on candidates normalized in from STREETLIT_PLACES
-   *  (streetlitPlaces.ts). Undefined = real OSM candidate (unchanged at
-   *  every Overpass-construction site). */
-  candidateOrigin?: "streetlit";
+   *  (streetlitPlaces.ts), or on a real OSM candidate rescued by exact-id
+   *  lookup via fetchApprovedOsmSubjects (its OSM tags were too sparse to
+   *  match the spatial candidate query). Undefined = ordinary OSM candidate
+   *  fetched by the normal spatial query (unchanged at every
+   *  Overpass-construction site). "approvedRescue" candidates still carry
+   *  real OSM tags/coordinates and their own real osmId — they are not
+   *  Streetlit-owned, so mergedPlaces below reports coordSource: "osm" for
+   *  them exactly as for any other real OSM candidate. */
+  candidateOrigin?: "streetlit" | "approvedRescue";
 }
 
 const OVERPASS_PROVIDERS = [
@@ -702,6 +709,105 @@ out center body qt ${maxResults};
     logger.warn({ err }, "Overpass fetch failed, returning null");
     return null;
   }
+}
+
+function buildOsmAddr(tags: Record<string, string>): string {
+  const num = tags["addr:housenumber"] ?? "";
+  const street = tags["addr:street"] ?? "";
+  if (num && street) return `${num} ${street}`.trim();
+  if (street) return street;
+  return "";
+}
+
+// Cache for the approved-subject rescue lookup (see getApprovedOsmSubjectIds
+// in curatedLocalHistory.ts). Keyed by the exact, sorted id list so it only
+// refetches when the approved-subject set itself changes (i.e. on deploy),
+// not on every discover request. Separate from osmCache (spatial, keyed by
+// lat/lng) since this is an exact-id lookup with no location key of its own.
+let approvedOsmSubjectCache: {
+  key: string;
+  data: Map<string, { lat: number; lon: number; tags: Record<string, string> }>;
+  timestamp: number;
+} | null = null;
+
+/**
+ * Returns center coordinates + tags for a small, fixed set of approved
+ * curated/generated-evidence subjectIds (exact OSM type/id refs only), via a
+ * direct Overpass id lookup rather than the spatial candidate query in
+ * fetchNearbyOSMPlaces. Exists because some approved subjects carry OSM tags
+ * too sparse (no name, generic building=yes) to ever match any clause of
+ * that query — see the doc comments on residentialBuildingFilter.ts /
+ * commercialUseFilter.ts for the sibling suppression-bypass pattern this
+ * complements. Bounded to exactly the ids passed in; never looks up,
+ * fetches, or admits any other OSM element, and performs no address or
+ * fuzzy matching of any kind.
+ */
+async function fetchApprovedOsmSubjects(
+  ids: string[],
+): Promise<
+  Map<string, { lat: number; lon: number; tags: Record<string, string> }>
+> {
+  if (ids.length === 0) return new Map();
+  const key = [...ids].sort().join(",");
+  if (
+    approvedOsmSubjectCache &&
+    approvedOsmSubjectCache.key === key &&
+    Date.now() - approvedOsmSubjectCache.timestamp < OSM_CACHE_TTL_MS
+  ) {
+    return approvedOsmSubjectCache.data;
+  }
+
+  const clauses = ids
+    .map((id) => {
+      const [type, rawId] = id.split("/");
+      return `  ${type}(${rawId});`;
+    })
+    .join("\n");
+  const query = `[out:json][timeout:10];\n(\n${clauses}\n);\nout center tags;\n`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  const fetchOpts = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+    },
+    body: `data=${encodeURIComponent(query)}`,
+    signal: controller.signal,
+  };
+
+  const result = new Map<
+    string,
+    { lat: number; lon: number; tags: Record<string, string> }
+  >();
+  try {
+    const { resp } = await Promise.any(
+      OVERPASS_PROVIDERS.map((url) =>
+        fetch(url, fetchOpts).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return { resp: r };
+        }),
+      ),
+    );
+    clearTimeout(timeout);
+    const json = (await resp.json()) as { elements?: any[] };
+    for (const el of json.elements ?? []) {
+      const lat = el.lat ?? el.center?.lat;
+      const lon = el.lon ?? el.center?.lon;
+      if (typeof lat !== "number" || typeof lon !== "number") continue;
+      const id = `${(el.type as string | undefined) ?? "node"}/${el.id as string}`;
+      result.set(id, { lat, lon, tags: el.tags || {} });
+    }
+  } catch (err) {
+    clearTimeout(timeout);
+    logger.warn({ err }, "Approved-subject rescue Overpass fetch failed");
+    return new Map();
+  }
+
+  approvedOsmSubjectCache = { key, data: result, timestamp: Date.now() };
+  return result;
 }
 
 function sanitizeOSMText(raw: string, maxLen = 80): string {
@@ -2896,8 +3002,16 @@ router.post("/explore/discover", async (req, res) => {
         // Overpass catch-all and never carry a whitelisted amenity value, so
         // filterGenericCommercial() downstream can't recognize them by
         // category — this candidate-stage filter is the fix.
+        // TEMP-PILOT-A: narrow curated-evidence rescue, mirroring the
+        // residential bypass above — an ordinary shop/office/craft business
+        // survives suppression ONLY if it carries an approved
+        // curated-local-history entry (exact osmId match). Absence of
+        // curated evidence changes nothing; isOrdinaryCommercialUse itself
+        // is unmodified.
         osmCandidates = osmCandidates.filter(
-          (p) => !isOrdinaryCommercialUse(p.tags),
+          (p) =>
+            !isOrdinaryCommercialUse(p.tags) ||
+            getApprovedCuratedEntry(p.osmId) !== undefined,
         );
         const afterCommercialUseFilter = osmCandidates.length;
 
@@ -3050,19 +3164,59 @@ router.post("/explore/discover", async (req, res) => {
           osmId: sp.streetlitId,
           candidateOrigin: "streetlit" as const,
         }));
-        const candidates = osmRadiusCandidates.concat(streetlitCandidates);
+        // Approved-subject rescue: approved curated/generated-evidence
+        // subjects (CURATED_LOCAL_HISTORY / GENERATED_LOCAL_HISTORY) whose
+        // real OSM tags are too sparse (no name, generic building=yes) to
+        // match any clause of the spatial candidate query above. Exact OSM
+        // type/id lookup only, bounded to the fixed approved-subject list —
+        // never admits an arbitrary unnamed building, and never uses fuzzy
+        // address matching. Skips ids already present in osmCandidates
+        // (already reachable through the normal path) and applies the same
+        // radius rule as osmRadiusCandidates/streetlitCandidates above.
+        const presentOsmIds = new Set(osmCandidates.map((p) => p.osmId));
+        const missingApprovedIds = getApprovedOsmSubjectIds().filter(
+          (id) => !presentOsmIds.has(id),
+        );
+        const approvedSubjects =
+          await fetchApprovedOsmSubjects(missingApprovedIds);
+        const rescuedCandidates: OSMPlace[] = [];
+        for (const [osmId, subj] of approvedSubjects) {
+          if (
+            haversineDistance(latitude, longitude, subj.lat, subj.lon) >
+            searchRadius * 1.1
+          ) {
+            continue;
+          }
+          // No fabricated names: use the element's own name tag, or an
+          // address synthesized purely from its own addr:* tags. Skip the
+          // rescue entirely if neither exists rather than inventing one.
+          const name = subj.tags["name"] || buildOsmAddr(subj.tags);
+          if (!name) continue;
+          const osmType =
+            subj.tags["historic"] ||
+            subj.tags["tourism"] ||
+            subj.tags["amenity"] ||
+            subj.tags["building"] ||
+            subj.tags["landuse"] ||
+            subj.tags["man_made"] ||
+            "place";
+          rescuedCandidates.push({
+            name,
+            lat: subj.lat,
+            lon: subj.lon,
+            type: osmType === "yes" ? "building" : osmType,
+            tags: subj.tags,
+            osmId,
+            candidateOrigin: "approvedRescue",
+          });
+        }
+        const candidates = osmRadiusCandidates.concat(
+          streetlitCandidates,
+          rescuedCandidates,
+        );
         // Diagnostic-only. candidatesForCopyGen in the funnel log is the same
         // value — this filter is the only thing that produces it.
         const afterRadiusFilter = candidates.length;
-
-        // Helpers for address and copy formatting
-        const buildOsmAddr = (tags: Record<string, string>): string => {
-          const num = tags["addr:housenumber"] ?? "";
-          const street = tags["addr:street"] ?? "";
-          if (num && street) return `${num} ${street}`.trim();
-          if (street) return street;
-          return "";
-        };
 
         const HINT_TAGS = [
           "historic",
