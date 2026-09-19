@@ -397,6 +397,57 @@ describe("fetchNarrationPayload — graceful text fallback when Paths.cache is b
     ]);
     expect(textCallBody.fact).toBeUndefined();
   });
+
+  test("retries audio fetch once on a connection-level failure, then returns audio on success", async () => {
+    const { writeNarrationAudioToCache } = require("../lib/walkAudioCache") as {
+      writeNarrationAudioToCache: jest.Mock;
+    };
+    const mockCleanup = jest.fn();
+    writeNarrationAudioToCache.mockReturnValue({
+      uri: "file:///cache/walk-narr-retry.mp3",
+      cleanup: mockCleanup,
+    });
+    mockFetch
+      .mockRejectedValueOnce(new Error("Network request failed"))
+      .mockResolvedValueOnce(audioFetch(16));
+
+    const { fetchNarrationPayload } = require("../lib/fetchNarrationPayload");
+    const result = await fetchNarrationPayload(mockPlace, OPTS);
+    expect(result).toEqual({
+      kind: "audio",
+      audioUri: "file:///cache/walk-narr-retry.mp3",
+      cleanup: mockCleanup,
+    });
+    // Two audio attempts, no text-endpoint fallback needed.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("falls to text when both audio attempts fail on connection-level errors", async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error("Network request failed"))
+      .mockRejectedValueOnce(new Error("Network request failed"))
+      .mockResolvedValueOnce(textFetch("Fallback after retry."));
+
+    const { fetchNarrationPayload } = require("../lib/fetchNarrationPayload");
+    const result = await fetchNarrationPayload(mockPlace, OPTS);
+    expect(result).toEqual({ kind: "text", text: "Fallback after retry." });
+    // 2 audio attempts + 1 text attempt.
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  test("does not retry when the first audio attempt is our own 15s timeout (AbortError)", async () => {
+    const abortErr = new Error("Aborted");
+    abortErr.name = "AbortError";
+    mockFetch
+      .mockRejectedValueOnce(abortErr)
+      .mockResolvedValueOnce(textFetch("Fallback after timeout."));
+
+    const { fetchNarrationPayload } = require("../lib/fetchNarrationPayload");
+    const result = await fetchNarrationPayload(mockPlace, OPTS);
+    expect(result).toEqual({ kind: "text", text: "Fallback after timeout." });
+    // Exactly 1 audio attempt (no retry after a genuine timeout) + 1 text attempt.
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
 });
 
 // ─── Test group 4: narration prefetch pipeline race-condition guards ─────────

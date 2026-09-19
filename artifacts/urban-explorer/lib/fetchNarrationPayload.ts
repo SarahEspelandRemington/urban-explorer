@@ -121,12 +121,11 @@ export async function fetchNarrationPayload(
   // Skipped in Expo Go: the bundled native runtime may not match the JS
   // package versions, which can cause a native crash on file write / playback.
   if (Platform.OS !== "web" && !isExpoGo) {
-    try {
+    const attemptAudioFetch = async (): Promise<Response> => {
       const audioController = new AbortController();
       const audioTimeout = setTimeout(() => audioController.abort(), 15_000);
-      let res: Response;
       try {
-        res = await fetch(`${apiBase}/api/explore/walk-narration-audio`, {
+        return await fetch(`${apiBase}/api/explore/walk-narration-audio`, {
           method: "POST",
           headers,
           body,
@@ -134,6 +133,38 @@ export async function fetchNarrationPayload(
         });
       } finally {
         clearTimeout(audioTimeout);
+      }
+    };
+
+    try {
+      let res: Response;
+      try {
+        res = await attemptAudioFetch();
+      } catch (firstErr) {
+        // Single bounded retry, connection-level failures only. A fetch
+        // that throws AbortError came from our own 15s timeout above — the
+        // full audio time budget is already spent, so retrying would risk
+        // doubling narration latency (against the "silence over mistimed
+        // narration" Walk Mode principle). A fetch that throws anything
+        // else (DNS/TLS/connect-refused — fails fast, well under the
+        // timeout) is retried once, since this is the exact failure mode
+        // observed in the field test: no request ever reached Render.
+        const isOwnTimeout =
+          firstErr instanceof Error && firstErr.name === "AbortError";
+        if (isOwnTimeout) {
+          throw firstErr;
+        }
+        addWalkBreadcrumb(
+          "narration audio retry",
+          {
+            errorType:
+              firstErr instanceof Error
+                ? firstErr.constructor.name
+                : typeof firstErr,
+          },
+          "warning",
+        );
+        res = await attemptAudioFetch();
       }
 
       if (res.ok) {
@@ -175,9 +206,14 @@ export async function fetchNarrationPayload(
         trackNarrationFallback("bad_response");
       }
     } catch (err) {
+      // Reached after either: (a) the 15s timeout fired on the first
+      // attempt, or (b) a retried connection-level failure also threw.
       addWalkBreadcrumb(
         "narration audio endpoint error",
-        { errorType: err instanceof Error ? err.constructor.name : typeof err },
+        {
+          errorType: err instanceof Error ? err.constructor.name : typeof err,
+          afterRetry: !(err instanceof Error && err.name === "AbortError"),
+        },
         "warning",
       );
       trackNarrationFallback("endpoint_error");
