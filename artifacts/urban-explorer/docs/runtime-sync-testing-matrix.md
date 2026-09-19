@@ -172,7 +172,26 @@ Publish rebuilds and redeploys the API. The Simulator's local state (AsyncStorag
 
 ---
 
-## 7. Migration Note
+## 7. Render CLI log-filter warning
+
+**Do not treat a zero-result Render CLI query using `--path` or `--text` as proof that no requests occurred.**
+
+During the Sept. 19, 2026 Spring Garden Walk Mode field test, `render logs` queries using `--path` / `--text` silently returned 0 results even though the same time window contained confirmed successful `/explore/walk-narration` and `/explore/walk-narration-audio` requests. This produced a false "zero production traffic" conclusion that a real field test had, in fact, generated substantial server traffic.
+
+**Safe verification procedure:**
+
+1. Pull the relevant time window without `--path` or `--text` filters.
+2. Search/grep the returned raw log content locally for the route, request ID, place, or other marker.
+3. Cross-check against client-side debug evidence when available (e.g. the Walk Mode debug overlay's narration-fetch history).
+4. Only conclude "no production traffic" after the unfiltered log window has been inspected.
+
+**Also note:** `source: "live", outcome: "success"` in Walk Mode diagnostics (`WalkModeDebugOverlay`) means `fetchNarrationPayload` received a valid, successful HTTP response — it is not merely a network attempt. If the debug overlay shows `live · success` entries, real server traffic occurred, regardless of what a filtered Render CLI query reports.
+
+The failure mode to remember: filtered Render CLI output can produce a false zero and make a real production field test appear to have generated no server traffic.
+
+---
+
+## 8. Migration Note
 
 Making these layers explicit is part of a plan to migrate off Replit to a cleaner, more portable stack. Every step labeled **[Replit]** in this document is a candidate for replacement:
 

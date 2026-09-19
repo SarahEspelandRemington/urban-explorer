@@ -139,6 +139,8 @@ After a redeploy, the production log stream will show:
 
 This is the new process starting. Any log lines with the old pid are pre-redeploy.
 
+> **Render log guardrail:** never use a zero-result `render logs --path/--text` query by itself as evidence that production received no traffic; confirm with an unfiltered time-window pull first. See `artifacts/urban-explorer/docs/runtime-sync-testing-matrix.md` §7.
+
 **Step 4 — For Overpass specifically, verify the OSM anchor path is active:**
 
 ```bash
