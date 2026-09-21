@@ -695,6 +695,56 @@ export const GENERATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       admissionMethod: "automated",
     },
   },
+  // --- NYC Tuesday Walk Mode field-batch (2026-09-21) ---
+  // Two independently-proven NYC subjects, one per lane (Ephemeral New York,
+  // LPC Socrata), run through the unmodified production hybrid path. A third
+  // candidate (Clinton Court, 422 West 46th Street) was screened and cleared
+  // at the claim level but deliberately excluded from this batch because its
+  // sibling relationship claim required a manual per-batch audit exclusion —
+  // see memory: hybrid-discovery-nyc-tuesday-batch.md — not wired here.
+  "way/265322610": {
+    source: {
+      title:
+        "Ephemeral New York — The little Hell's Kitchen synagogue where old Broadway stars once worshipped",
+      url: "https://ephemeralnewyork.wordpress.com/2022/09/23/the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped/",
+      sourceType: "local public-history narrative source",
+      usageNote:
+        "Mechanically composed by the local-history admission pipeline from 1 independently AUTO-ADMIT claim(s) (eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history), drawing on: Ephemeral New York — The little Hell's Kitchen synagogue where old Broadway stars once worshipped. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+      publicationDate: "2022-09-23T05:11:24+00:00",
+    },
+    evidence: {
+      subjectId: "way/265322610",
+      text: 'Ephemeral New York\'s article "The little Hell\'s Kitchen synagogue where old Broadway stars once worshipped" states about 339 West 47th Street: "Performers like Sophie Tucker, Milton Berle, and Jack Benny came to services, and Ezrath Israel became known as the Actors\' Temple."',
+      claimScope:
+        "Mechanically composed from 1 admitted claim(s) covering: use-history. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history) for full per-claim provenance.",
+      verificationStatus: "approved",
+      verificationConfidence: "high",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-20",
+      admissionMethod: "automated",
+    },
+  },
+  "way/265319542": {
+    source: {
+      title:
+        "NYC Landmarks Preservation Commission — Actors Studio (432 West 44th Street)",
+      url: "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-0'",
+      sourceType: "government preservation record",
+      usageNote:
+        "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (lpc-row-0-construction-date, lpc-row-0-notes, lpc-row-0-owner), drawing on: NYC Landmarks Preservation Commission — Actors Studio (432 West 44th Street). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+    },
+    evidence: {
+      subjectId: "way/265319542",
+      text: 'The NYC Landmarks Preservation Commission\'s designation report gives a construction/building date for 432 West 44th Street of c. 1858. The NYC Landmarks Preservation Commission\'s own Notes field for 432 West 44th Street records: "The building style has been referred to as "Bricklayer Greek"." The NYC Landmarks Preservation Commission\'s designation report names the original owner/developer of 432 West 44th Street as Seventh Associate Presbyterian Church.',
+      claimScope:
+        "Mechanically composed from 3 admitted claim(s) covering: construction-date, event, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-0-construction-date, lpc-row-0-notes, lpc-row-0-owner) for full per-claim provenance.",
+      verificationStatus: "approved",
+      verificationConfidence: "high",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-20",
+      admissionMethod: "automated",
+    },
+  },
 };
 
 /**
