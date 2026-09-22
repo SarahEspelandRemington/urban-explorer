@@ -90,6 +90,21 @@ export interface CuratedEvidence {
    * gating, trust, or any runtime eligibility behavior.
    */
   admissionMethod?: "editorial" | "automated";
+  /**
+   * Mechanically carried-forward signal: true when the admitted claim(s)
+   * composing this entry already satisfy the local-history admission
+   * pipeline's own discovery-worthiness gate (see
+   * localHistoryAdmission/worthiness.ts, evaluateDiscoveryWorthiness) —
+   * i.e. the claim/admission pipeline itself, not this field, is the
+   * authority on whether the evidence is story-bearing versus mere
+   * identity/register metadata. Populated automatically by
+   * applyDiscoveryWorthinessGate for every entry that reaches
+   * GENERATED_LOCAL_HISTORY; hand-authored CURATED_LOCAL_HISTORY entries
+   * normally omit it. Consumed only by discoveryTier.ts, and only to
+   * cancel its T4-A ("metadataOnly") and T4-C ("noHistoricalDepth")
+   * rules — it never assigns Tier 1/2/3 itself.
+   */
+  hasStoryBearingClaim?: boolean;
 }
 
 export interface CuratedEntry {
@@ -722,6 +737,11 @@ export const GENERATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       curatedTrust: "medium",
       lastVerifiedDate: "2026-09-20",
       admissionMethod: "automated",
+      // Composed solely from a use-history claim — a STORY_CLAIM_TYPES
+      // member per worthiness.ts's evaluateDiscoveryWorthiness — so this
+      // subject already passed the discovery-worthiness gate on that
+      // basis. See hasStoryBearingClaim's doc comment above.
+      hasStoryBearingClaim: true,
     },
   },
   "way/265319542": {
@@ -743,6 +763,12 @@ export const GENERATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       curatedTrust: "medium",
       lastVerifiedDate: "2026-09-20",
       admissionMethod: "automated",
+      // Composed from construction-date/event/relationship claims; the
+      // event claim is a STORY_CLAIM_TYPES member per worthiness.ts's
+      // evaluateDiscoveryWorthiness, so this subject already passed the
+      // discovery-worthiness gate on that basis. See hasStoryBearingClaim's
+      // doc comment above.
+      hasStoryBearingClaim: true,
     },
   },
 };

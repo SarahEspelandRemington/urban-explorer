@@ -162,7 +162,7 @@ describe("applyDiscoveryWorthinessGate", () => {
     expect(gated.nonProjectableClaimIds).toEqual(["unresolved1"]);
   });
 
-  it("does not mutate the passed-through entry for a subject that clears the gate", () => {
+  it("does not mutate the input projection's entry for a subject that clears the gate", () => {
     const sources: Record<string, Source> = {
       s1: makeSource({
         id: "s1",
@@ -174,7 +174,95 @@ describe("applyDiscoveryWorthinessGate", () => {
       generatedAt: "2026-01-01T00:00:00.000Z",
     });
     const projection = projectRuntimeCompat(artifact);
+    const originalEntry = projection.entries["prod-p1"];
     const gated = applyDiscoveryWorthinessGate(projection, artifact);
-    expect(gated.entries["prod-p1"]).toEqual(projection.entries["prod-p1"]);
+    // The gated entry is a distinct object carrying the mechanically
+    // stamped hasStoryBearingClaim signal (see its doc comment) ...
+    expect(gated.entries["prod-p1"]).toEqual({
+      ...originalEntry,
+      evidence: { ...originalEntry.evidence, hasStoryBearingClaim: true },
+    });
+    // ... but the original projection's entry object itself is untouched.
+    expect(projection.entries["prod-p1"]).toBe(originalEntry);
+    expect(
+      (
+        projection.entries["prod-p1"].evidence as {
+          hasStoryBearingClaim?: boolean;
+        }
+      ).hasStoryBearingClaim,
+    ).toBeUndefined();
+  });
+
+  it("stamps hasStoryBearingClaim: true source-agnostically for both a single story-bearing claim type and a combined-supporting-types composition", () => {
+    const sources: Record<string, Source> = {
+      s1: makeSource({
+        id: "s1",
+        capabilities: [{ claimType: "use-history", strength: "high" }],
+      }),
+      s2: makeSource({
+        id: "s2",
+        capabilities: [
+          { claimType: "construction-date", strength: "high" },
+          { claimType: "architect", strength: "high" },
+        ],
+      }),
+    };
+    const claims: Claim[] = [
+      // Narrative-adapter-style: one story-bearing claim type alone.
+      makeClaim({
+        id: "narrative1",
+        placeKey: "p-narrative",
+        sourceIds: ["s1"],
+        claimType: "use-history",
+      }),
+      // Structured-adapter-style: two supporting types combine.
+      makeClaim({
+        id: "structured1",
+        placeKey: "p-structured",
+        sourceIds: ["s2"],
+        claimType: "construction-date",
+      }),
+      makeClaim({
+        id: "structured2",
+        placeKey: "p-structured",
+        sourceIds: ["s2"],
+        claimType: "architect",
+      }),
+    ];
+    const artifact = generateArtifact(claims, sources, {
+      generatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    const projection = projectRuntimeCompat(artifact);
+    const gated = applyDiscoveryWorthinessGate(projection, artifact);
+
+    expect(
+      gated.entries["prod-p-narrative"].evidence.hasStoryBearingClaim,
+    ).toBe(true);
+    expect(
+      gated.entries["prod-p-structured"].evidence.hasStoryBearingClaim,
+    ).toBe(true);
+  });
+
+  it("never stamps hasStoryBearingClaim on a subject rejected by the gate (it never reaches entries at all)", () => {
+    const sources: Record<string, Source> = {
+      s1: makeSource({
+        id: "s1",
+        capabilities: [{ claimType: "register-status", strength: "high" }],
+      }),
+    };
+    const claim = makeClaim({
+      id: "stub1",
+      placeKey: "p-thin",
+      sourceIds: ["s1"],
+      claimType: "register-status",
+    });
+    const artifact = generateArtifact([claim], sources, {
+      generatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    const projection = projectRuntimeCompat(artifact);
+    const gated = applyDiscoveryWorthinessGate(projection, artifact);
+
+    expect(gated.entries["prod-p-thin"]).toBeUndefined();
+    expect(gated.rejectedForWorthiness).toEqual(["prod-p-thin"]);
   });
 });

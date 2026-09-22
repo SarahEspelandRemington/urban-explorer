@@ -45,6 +45,20 @@
  * full rationale. Non-curated places, and curated places without an
  * explicit tier set, are entirely unaffected — they always go through
  * classifyDiscoveryTier() exactly as before.
+ *
+ * Story-bearing-claim override: separately, applyDiscoveryTier() also
+ * checks the curated entry's `hasStoryBearingClaim` signal (see its doc
+ * comment in curatedLocalHistory.ts) — a determination mechanically carried
+ * forward from the claim/admission/worthiness pipeline, which already knows
+ * whether the entry's admitted evidence is story-bearing rather than mere
+ * identity/register metadata. The regex classifier below has no access to
+ * claim types, only to surface text, so a genuinely story-bearing but
+ * short/undated narrative can be misclassified as T4-A ("metadataOnly") or
+ * T4-C ("noHistoricalDepth"). When `hasStoryBearingClaim` is true and the
+ * classifier landed on exactly one of those two rejection reasons, the
+ * Tier-4 result is cancelled and the place falls through to "unclassified"
+ * — never promoted to Tier 1/2/3 by this signal. Positive tiers remain the
+ * exclusive responsibility of the classifier's own rules above.
  */
 
 import { getApprovedCuratedEntry } from "./curatedLocalHistory";
@@ -383,6 +397,18 @@ export function applyDiscoveryTier(places: any[]): void {
       result.rejectionReason !== "placeholderFallback"
     ) {
       p.discoveryTier = explicitTier;
+      delete p.discoveryRejectionReason;
+      continue;
+    }
+
+    // Story-bearing-claim override — see module doc comment above. Narrowly
+    // scoped: only cancels T4-A/T4-C, never assigns a positive tier.
+    const isRescuableTier4 =
+      result.tier === 4 &&
+      (result.rejectionReason === "metadataOnly" ||
+        result.rejectionReason === "noHistoricalDepth");
+    if (curated?.evidence.hasStoryBearingClaim === true && isRescuableTier4) {
+      delete p.discoveryTier;
       delete p.discoveryRejectionReason;
       continue;
     }

@@ -148,7 +148,21 @@ export function applyDiscoveryWorthinessGate(
     const worthiness = evaluateDiscoveryWorthiness(claimTypes);
     worthinessBySubject[subjectId] = worthiness;
     if (worthiness.projectableForDiscovery) {
-      entries[subjectId] = projection.entries[subjectId];
+      const projected = projection.entries[subjectId];
+      entries[subjectId] = {
+        ...projected,
+        evidence: {
+          ...projected.evidence,
+          // Mechanically carry the pipeline's own story-bearing
+          // determination forward — see the hasStoryBearingClaim doc
+          // comment in curatedLocalHistory.ts. Always true here by
+          // construction (only worthy subjects reach this branch), but
+          // computed via the same evaluateDiscoveryWorthiness call rather
+          // than hardcoded, so the signal stays source-agnostic and
+          // correct if the gate's own criteria ever change.
+          hasStoryBearingClaim: worthiness.projectableForDiscovery,
+        },
+      };
       compositionMap[subjectId] = claimIds;
     } else {
       rejectedForWorthiness.push(subjectId);
