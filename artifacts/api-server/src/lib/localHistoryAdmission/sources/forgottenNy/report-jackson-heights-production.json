@@ -1,0 +1,914 @@
+{
+  "bbox": {
+    "minLat": 40.74616,
+    "maxLat": 40.75424,
+    "minLon": -73.88833,
+    "maxLon": -73.87767
+  },
+  "osmIndexSize": 1455,
+  "candidates": [
+    {
+      "postId": 114145,
+      "placeKey": "fny-crooked-house",
+      "title": "Crooked House",
+      "address": "80-19 31st Avenue",
+      "streetName": "31st Avenue",
+      "note": "Real street-number address stated in-text. Known bbox-coverage gap — 31st Avenue is not present in this bbox."
+    },
+    {
+      "postId": 52279,
+      "placeKey": "fny-last-jahns",
+      "title": "Jahn's",
+      "address": "81-04 37th Avenue",
+      "streetName": "37th Avenue",
+      "note": "Real street-number address stated in-text."
+    },
+    {
+      "postId": 103425,
+      "placeKey": "fny-andrew-jackson-apts",
+      "title": "Andrew Jackson",
+      "address": "35-20 Leverich Street",
+      "streetName": "Leverich Street",
+      "note": "Real street-number address stated in-text — apartment building erroneously named for President Andrew Jackson, embedded in a genuine correction of the neighborhood-name-origin myth (real namesake: John C. Jackson's 1857 turnpike)."
+    },
+    {
+      "postId": 52283,
+      "placeKey": "fny-jh-post-office",
+      "title": "Jackson Heights Post Office",
+      "address": "78-02 37th Avenue",
+      "streetName": "37th Avenue",
+      "note": "Real street-number address stated in-text — Georgian-style post office with a named 1940 WPA-era interior mural (Peppino Mangravite, 'Development of Jackson Heights')."
+    },
+    {
+      "postId": 52283,
+      "placeKey": "fny-robert-morris-apts",
+      "title": "Robert Morris Apartments",
+      "address": "",
+      "streetName": "37th Avenue",
+      "note": "Only a block range given (south side of 37th Avenue between 79th and 80th Street), no street-number address — deliberately empty address."
+    },
+    {
+      "postId": 118780,
+      "placeKey": "fny-leverich-cemetery",
+      "title": "Leverich Cemetery",
+      "address": "",
+      "streetName": "35th Avenue",
+      "note": "Only a cross-street given (35th Avenue at 71st Street) — deliberately empty address, identity-anchor-only extraction."
+    },
+    {
+      "postId": 118425,
+      "placeKey": "fny-barneys-shoes",
+      "title": "Barney's Ladies' Shoes",
+      "address": "",
+      "streetName": "82nd Street",
+      "note": "Only a cross-street given (82nd Street off 37th Avenue); the sign itself has already been removed to a museum — no current point to ground to either way."
+    },
+    {
+      "postId": 107781,
+      "placeKey": "fny-scrabble-sign",
+      "title": "Scrabble street sign (Alfred Butts)",
+      "address": "",
+      "streetName": "35th Avenue",
+      "note": "A DOT street sign at an intersection (35th Avenue and 82nd Street), not a building — deliberately empty address."
+    },
+    {
+      "postId": 99590,
+      "placeKey": "fny-travers-park",
+      "title": "Travers Park",
+      "address": "",
+      "streetName": "34th Avenue",
+      "note": "Named public park given only as a block range (34th Avenue between 77th and 78th Streets), no street-number address."
+    },
+    {
+      "postId": 83690,
+      "placeKey": "fny-one-room-schoolhouse-park",
+      "title": "One Room Schoolhouse Park",
+      "address": "",
+      "streetName": "Astoria Boulevard",
+      "note": "Named park given only as a cross-street (Astoria Boulevard and 90th Street) — deliberately empty address."
+    },
+    {
+      "postId": 114091,
+      "placeKey": "fny-mount-everest-way",
+      "title": "Mount Everest Way",
+      "address": "",
+      "streetName": "31st Avenue",
+      "note": "Co-named street sign at an intersection (75th Street and 31st Avenue), not a building — deliberately empty address."
+    },
+    {
+      "postId": 53214,
+      "placeKey": "fny-last-lamp-mohican",
+      "title": "Last Lamp Mohican",
+      "address": "",
+      "streetName": "Roosevelt Avenue",
+      "note": "A specific surviving lamppost at an intersection (Roosevelt Avenue and 86th Street), not a building — deliberately empty address."
+    },
+    {
+      "postId": 111082,
+      "placeKey": "fny-earle-theatre",
+      "title": "Earle Theatre",
+      "address": "",
+      "streetName": "Broadway",
+      "note": "Former movie theater (now a restaurant), identified only by nearby intersection (Broadway/Roosevelt/73rd Street) — near the JH/Elmhurst border, likely just outside this bbox. Deliberately empty address."
+    }
+  ],
+  "groundingByPlaceKey": {
+    "fny-crooked-house": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-last-jahns": {
+      "category": "unnamed-current-building",
+      "proposedIdentityType": "unnamed-current-building",
+      "matchedIdentifier": "way/250587791",
+      "matchingSignal": "exact address match to an unnamed OSM building footprint",
+      "confidence": "low",
+      "osmElementId": "way/250587791"
+    },
+    "fny-andrew-jackson-apts": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-jh-post-office": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-robert-morris-apts": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-leverich-cemetery": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-barneys-shoes": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-scrabble-sign": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-travers-park": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-one-room-schoolhouse-park": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-mount-everest-way": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-last-lamp-mohican": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-earle-theatre": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    }
+  },
+  "artifactSummary": {
+    "totalClaims": 8,
+    "byDecision": {
+      "AUTO-ADMIT": 1,
+      "HOLD": 7,
+      "SUPPRESS": 0
+    },
+    "subjectCount": 1,
+    "integrityViolations": [],
+    "nonProjectableClaimIds": [
+      "fny-111082-fny-earle-theatre-fny-earle-theatre-p2s0-construction-date",
+      "fny-52283-fny-robert-morris-apts-fny-robert-morris-apts-p1s0-construction-date",
+      "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+      "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history",
+      "fny-118425-fny-barneys-shoes-fny-barneys-shoes-p0s0-use-history",
+      "fny-103425-fny-andrew-jackson-apts-fny-andrew-jackson-apts-p1s1-legend-tradition",
+      "fny-114145-fny-crooked-house-fny-crooked-house-p0s3-urban-remnant"
+    ]
+  },
+  "worthinessBySubject": {
+    "way/250587791": {
+      "projectableForDiscovery": true,
+      "worthinessReasons": [
+        "Contains story-bearing claim type(s) — event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+      ]
+    }
+  },
+  "artifact": {
+    "version": 1,
+    "generatedAt": "2026-09-24T22:10:46.135Z",
+    "claims": [
+      {
+        "claimId": "fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event",
+        "subjectId": "way/250587791",
+        "claim": {
+          "id": "fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event",
+          "placeKey": "fny-last-jahns",
+          "address": "81-04 37th Avenue",
+          "proposedIdentityType": "unnamed-current-building",
+          "sourceIds": ["52279-fny-last-jahns"],
+          "supportingSpan": "The first Jahn’s was opened way back in 1897 in Mott Haven, Bronx by John Jahn, which (disappointingly) is pronounced “John JAN.” His three children, Elsie, Frank and Howard, opened Jahn’s in Jamaica, Richmond Hill, and Flushing respectively.",
+          "claimType": "event",
+          "claimText": "Forgotten New York's article \"THE LAST JAHN'S, Jackson Heights\" states about 81-04 37th Avenue: \"The first Jahn’s was opened way back in 1897 in Mott Haven, Bronx by John Jahn, which (disappointingly) is pronounced “John JAN.” His three children, Elsie, Frank and Howard, opened Jahn’s in Jamaica, Richmond Hill, and Flushing respectively.\"",
+          "dateRange": {
+            "start": "1897-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text",
+          "locationHints": "way/250587791 — exact address match to an unnamed OSM building footprint",
+          "productionSubjectId": "way/250587791"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "52279-fny-last-jahns",
+            "title": "Forgotten New York — THE LAST JAHN'S, Jackson Heights",
+            "url": "https://forgotten-ny.com/2015/12/the-last-jahns-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2015-12-29T10:27:01Z",
+            "capabilityForClaimType": {
+              "claimType": "event",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 3,
+          "confidence": "medium",
+          "matchedIdentity": "81-04 37th Avenue",
+          "reason": "Unnamed current building matched by exact address/geometry."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "medium",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-111082-fny-earle-theatre-fny-earle-theatre-p2s0-construction-date",
+        "claim": {
+          "id": "fny-111082-fny-earle-theatre-fny-earle-theatre-p2s0-construction-date",
+          "placeKey": "fny-earle-theatre",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["111082-fny-earle-theatre"],
+          "supportingSpan": "Pulling back a bit, the contours of the old Earle Theatre, later the Eagle, can be seen, built in 1938 in a Moderne style.",
+          "claimType": "construction-date",
+          "claimText": "Forgotten New York's article \"HYBRID AT THE EARLE, Jackson Heights\" states about Earle Theatre: \"Pulling back a bit, the contours of the old Earle Theatre, later the Eagle, can be seen, built in 1938 in a Moderne style.\"",
+          "dateRange": {
+            "start": "1938-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "111082-fny-earle-theatre",
+            "title": "Forgotten New York — HYBRID AT THE EARLE, Jackson Heights",
+            "url": "https://forgotten-ny.com/2022/01/hybrid-at-the-earle/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2022-01-08T10:03:01Z",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "low",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-52283-fny-robert-morris-apts-fny-robert-morris-apts-p1s0-construction-date",
+        "claim": {
+          "id": "fny-52283-fny-robert-morris-apts-fny-robert-morris-apts-p1s0-construction-date",
+          "placeKey": "fny-robert-morris-apts",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["52283-fny-robert-morris-apts"],
+          "supportingSpan": "The Robert Morris Apartments, built in 1929 on the south side of 37th Avenue between 79th and 80th Street, still preserves what are probably its original molded doorways and cut glass facades.",
+          "claimType": "construction-date",
+          "claimText": "Forgotten New York's article \"ROBERT MORRIS APARTMENTS, Jackson Heights\" states about Robert Morris Apartments: \"The Robert Morris Apartments, built in 1929 on the south side of 37th Avenue between 79th and 80th Street, still preserves what are probably its original molded doorways and cut glass facades.\"",
+          "dateRange": {
+            "start": "1929-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "52283-fny-robert-morris-apts",
+            "title": "Forgotten New York — ROBERT MORRIS APARTMENTS, Jackson Heights",
+            "url": "https://forgotten-ny.com/2015/12/robert-morris-apartments-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2015-12-30T10:56:29Z",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "low",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+        "claim": {
+          "id": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+          "placeKey": "fny-scrabble-sign",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["107781-fny-scrabble-sign"],
+          "supportingSpan": "In the 1940s Butts, an architect by trade, created a new word game combining the features of anagrams and crossword puzzles, calling it “Criss Cross Words,” and shopped it around to game and toy manufacturers without success.",
+          "claimType": "architect",
+          "claimText": "Forgotten New York's article \"SCRABBLE SIGN, Jackson Heights\" states about Scrabble street sign (Alfred Butts): \"In the 1940s Butts, an architect by trade, created a new word game combining the features of anagrams and crossword puzzles, calling it “Criss Cross Words,” and shopped it around to game and toy manufacturers without success.\"",
+          "relatedEntities": ["by trade"],
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "107781-fny-scrabble-sign",
+            "title": "Forgotten New York — SCRABBLE SIGN, Jackson Heights",
+            "url": "https://forgotten-ny.com/2021/05/scrabble-sign-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2021-05-21T19:00:56Z",
+            "capabilityForClaimType": {
+              "claimType": "architect",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "medium",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history",
+        "claim": {
+          "id": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history",
+          "placeKey": "fny-scrabble-sign",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["107781-fny-scrabble-sign"],
+          "supportingSpan": "The renamed Scrabble®, now distributed by Hasbro, became America’s second most popular board game, second only to Parker Brothers’ Monopoly®.",
+          "claimType": "use-history",
+          "claimText": "Forgotten New York's article \"SCRABBLE SIGN, Jackson Heights\" states about Scrabble street sign (Alfred Butts): \"The renamed Scrabble®, now distributed by Hasbro, became America’s second most popular board game, second only to Parker Brothers’ Monopoly®.\"",
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "107781-fny-scrabble-sign",
+            "title": "Forgotten New York — SCRABBLE SIGN, Jackson Heights",
+            "url": "https://forgotten-ny.com/2021/05/scrabble-sign-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2021-05-21T19:00:56Z",
+            "capabilityForClaimType": {
+              "claimType": "use-history",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "high",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-118425-fny-barneys-shoes-fny-barneys-shoes-p0s0-use-history",
+        "claim": {
+          "id": "fny-118425-fny-barneys-shoes-fny-barneys-shoes-p0s0-use-history",
+          "placeKey": "fny-barneys-shoes",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["118425-fny-barneys-shoes"],
+          "supportingSpan": "ROLANDO Pujol, the indefatigable finder of ancient NYC objects at The Retrologist , recently located this ancient vinyl sign (formerly with neon tubing) for Barney's Ladies' Shoes on 82nd Street off 37th Avenue in the heart of Jackson Heights' commercial district.",
+          "claimType": "use-history",
+          "claimText": "Forgotten New York's article \"BARNEY'S SHOES, JACKSON HEIGHTS\" states about Barney's Ladies' Shoes: \"ROLANDO Pujol, the indefatigable finder of ancient NYC objects at The Retrologist , recently located this ancient vinyl sign (formerly with neon tubing) for Barney's Ladies' Shoes on 82nd Street off 37th Avenue in the heart of Jackson Heights' commercial district.\"",
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "118425-fny-barneys-shoes",
+            "title": "Forgotten New York — BARNEY'S SHOES, JACKSON HEIGHTS",
+            "url": "https://forgotten-ny.com/2023/07/barneys-shoes-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2023-07-25T22:40:51Z",
+            "capabilityForClaimType": {
+              "claimType": "use-history",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "high",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-103425-fny-andrew-jackson-apts-fny-andrew-jackson-apts-p1s1-legend-tradition",
+        "claim": {
+          "id": "fny-103425-fny-andrew-jackson-apts-fny-andrew-jackson-apts-p1s1-legend-tradition",
+          "placeKey": "fny-andrew-jackson-apts",
+          "address": "35-20 Leverich Street",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["103425-fny-andrew-jackson-apts"],
+          "supportingSpan": "However, Andrew Jackson has nothing to do with Jackson Heights.",
+          "claimType": "legend-tradition",
+          "claimText": "Forgotten New York's article \"THE ANDREW JACKSON, Jackson Heights\" states about 35-20 Leverich Street: \"However, Andrew Jackson has nothing to do with Jackson Heights.\"",
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "103425-fny-andrew-jackson-apts",
+            "title": "Forgotten New York — THE ANDREW JACKSON, Jackson Heights",
+            "url": "https://forgotten-ny.com/2020/08/the-andrew-jackson-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2020-08-17T17:40:10Z",
+            "capabilityForClaimType": {
+              "claimType": "legend-tradition",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "high",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-114145-fny-crooked-house-fny-crooked-house-p0s3-urban-remnant",
+        "claim": {
+          "id": "fny-114145-fny-crooked-house-fny-crooked-house-p0s3-urban-remnant",
+          "placeKey": "fny-crooked-house",
+          "address": "80-19 31st Avenue",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["114145-fny-crooked-house"],
+          "supportingSpan": "Instead of facing either 31st Avenue or 81st Street, it instead is positioned in a diagonal fashion toward the corner.",
+          "claimType": "urban-remnant",
+          "claimText": "Forgotten New York's article \"CROOKED HOUSE, Jackson Heights\" states about 80-19 31st Avenue: \"Instead of facing either 31st Avenue or 81st Street, it instead is positioned in a diagonal fashion toward the corner.\"",
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "114145-fny-crooked-house",
+            "title": "Forgotten New York — CROOKED HOUSE, Jackson Heights",
+            "url": "https://forgotten-ny.com/2022/08/crooked-house-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2022-08-02T22:52:24Z",
+            "capabilityForClaimType": {
+              "claimType": "urban-remnant",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "high",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      }
+    ],
+    "summary": {
+      "totalClaims": 8,
+      "byDecision": {
+        "AUTO-ADMIT": 1,
+        "HOLD": 7,
+        "SUPPRESS": 0
+      },
+      "subjectCount": 1,
+      "integrityViolations": [],
+      "nonProjectableClaimIds": [
+        "fny-111082-fny-earle-theatre-fny-earle-theatre-p2s0-construction-date",
+        "fny-52283-fny-robert-morris-apts-fny-robert-morris-apts-p1s0-construction-date",
+        "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+        "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history",
+        "fny-118425-fny-barneys-shoes-fny-barneys-shoes-p0s0-use-history",
+        "fny-103425-fny-andrew-jackson-apts-fny-andrew-jackson-apts-p1s1-legend-tradition",
+        "fny-114145-fny-crooked-house-fny-crooked-house-p0s3-urban-remnant"
+      ]
+    }
+  },
+  "projection": {
+    "version": 1,
+    "generatedAt": "2026-09-24T22:10:46.135Z",
+    "entries": {
+      "way/250587791": {
+        "source": {
+          "title": "Forgotten New York — THE LAST JAHN'S, Jackson Heights",
+          "url": "https://forgotten-ny.com/2015/12/the-last-jahns-jackson-heights/",
+          "sourceType": "local public-history narrative source",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 1 independently AUTO-ADMIT claim(s) (fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event), drawing on: Forgotten New York — THE LAST JAHN'S, Jackson Heights. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+          "publicationDate": "2015-12-29T10:27:01Z"
+        },
+        "evidence": {
+          "subjectId": "way/250587791",
+          "text": "Forgotten New York's article \"THE LAST JAHN'S, Jackson Heights\" states about 81-04 37th Avenue: \"The first Jahn’s was opened way back in 1897 in Mott Haven, Bronx by John Jahn, which (disappointingly) is pronounced “John JAN.” His three children, Elsie, Frank and Howard, opened Jahn’s in Jamaica, Richmond Hill, and Flushing respectively.\"",
+          "claimScope": "Mechanically composed from 1 admitted claim(s) covering: event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "medium",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-24",
+          "admissionMethod": "automated"
+        }
+      }
+    },
+    "compositionMap": {
+      "way/250587791": ["fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event"]
+    },
+    "nonProjectableClaimIds": []
+  },
+  "gated": {
+    "version": 1,
+    "generatedAt": "2026-09-24T22:10:46.135Z",
+    "entries": {
+      "way/250587791": {
+        "source": {
+          "title": "Forgotten New York — THE LAST JAHN'S, Jackson Heights",
+          "url": "https://forgotten-ny.com/2015/12/the-last-jahns-jackson-heights/",
+          "sourceType": "local public-history narrative source",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 1 independently AUTO-ADMIT claim(s) (fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event), drawing on: Forgotten New York — THE LAST JAHN'S, Jackson Heights. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+          "publicationDate": "2015-12-29T10:27:01Z"
+        },
+        "evidence": {
+          "subjectId": "way/250587791",
+          "text": "Forgotten New York's article \"THE LAST JAHN'S, Jackson Heights\" states about 81-04 37th Avenue: \"The first Jahn’s was opened way back in 1897 in Mott Haven, Bronx by John Jahn, which (disappointingly) is pronounced “John JAN.” His three children, Elsie, Frank and Howard, opened Jahn’s in Jamaica, Richmond Hill, and Flushing respectively.\"",
+          "claimScope": "Mechanically composed from 1 admitted claim(s) covering: event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "medium",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-24",
+          "admissionMethod": "automated",
+          "hasStoryBearingClaim": true
+        }
+      }
+    },
+    "compositionMap": {
+      "way/250587791": ["fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event"]
+    },
+    "nonProjectableClaimIds": [],
+    "worthinessBySubject": {
+      "way/250587791": {
+        "projectableForDiscovery": true,
+        "worthinessReasons": [
+          "Contains story-bearing claim type(s) — event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+        ]
+      }
+    },
+    "rejectedForWorthiness": []
+  }
+}

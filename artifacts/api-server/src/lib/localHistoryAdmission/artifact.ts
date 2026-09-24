@@ -106,6 +106,7 @@ const CLAIM_TYPE_ORDER: ClaimType[] = [
   "statistic",
   "demolition",
   "relationship",
+  "urban-remnant",
 ];
 
 function claimTypeRank(claimType: ClaimType): number {

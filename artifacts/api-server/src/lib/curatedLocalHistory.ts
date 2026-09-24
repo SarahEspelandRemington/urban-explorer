@@ -771,6 +771,45 @@ export const GENERATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       hasStoryBearingClaim: true,
     },
   },
+  // --- Forgotten New York source-native production promotion (2026-09-24) ---
+  // Production Promotion A: first source-native narrative-discovery subject
+  // wired end-to-end (candidates introduced by the narrative source itself,
+  // OSM used only to ground/identify — not to define the candidate
+  // universe). Of 13 hand-identified Jackson Heights candidates run through
+  // the unmodified production pipeline (see
+  // sources/forgottenNy/generateJacksonHeightsArtifact.ts), only this
+  // subject cleared AUTO-ADMIT + deterministic grounding + the
+  // discovery-worthiness gate; the other 12 are HOLD (0 or unresolved
+  // claims, missing addresses, or bbox-coverage gaps) and are deliberately
+  // NOT wired here — see memory: hybrid-discovery-fny-source-native.md and
+  // hybrid-discovery-fny-hardening.md for the full candidate-by-candidate
+  // accounting.
+  "way/250587791": {
+    source: {
+      title: "Forgotten New York — THE LAST JAHN'S, Jackson Heights",
+      url: "https://forgotten-ny.com/2015/12/the-last-jahns-jackson-heights/",
+      sourceType: "local public-history narrative source",
+      usageNote:
+        "Mechanically composed by the local-history admission pipeline from 1 independently AUTO-ADMIT claim(s) (fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event), drawing on: Forgotten New York — THE LAST JAHN'S, Jackson Heights. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+      publicationDate: "2015-12-29T10:27:01Z",
+    },
+    evidence: {
+      subjectId: "way/250587791",
+      text: 'Forgotten New York\'s article "THE LAST JAHN\'S, Jackson Heights" states about 81-04 37th Avenue: "The first Jahn\u2019s was opened way back in 1897 in Mott Haven, Bronx by John Jahn, which (disappointingly) is pronounced \u201cJohn JAN.\u201d His three children, Elsie, Frank and Howard, opened Jahn\u2019s in Jamaica, Richmond Hill, and Flushing respectively."',
+      claimScope:
+        "Mechanically composed from 1 admitted claim(s) covering: event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: fny-52279-fny-last-jahns-fny-last-jahns-p0s1-event) for full per-claim provenance.",
+      verificationStatus: "approved",
+      verificationConfidence: "medium",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-09-24",
+      admissionMethod: "automated",
+      // Composed solely from an event claim — a STORY_CLAIM_TYPES member
+      // per worthiness.ts's evaluateDiscoveryWorthiness — so this subject
+      // already passed the discovery-worthiness gate on that basis. See
+      // hasStoryBearingClaim's doc comment above.
+      hasStoryBearingClaim: true,
+    },
+  },
 };
 
 /**

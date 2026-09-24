@@ -19,6 +19,7 @@ const STORY_RICH_TYPES: ClaimType[] = [
   "institutional-founding",
   "legend-tradition",
   "relationship",
+  "urban-remnant",
 ];
 
 const THIN_FACT_TYPES: ClaimType[] = ["register-status", "statistic"];

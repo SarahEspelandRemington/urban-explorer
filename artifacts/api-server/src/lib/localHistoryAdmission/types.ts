@@ -36,7 +36,19 @@ export type ClaimType =
   | "legend-tradition"
   | "statistic"
   | "demolition"
-  | "relationship";
+  | "relationship"
+  // A present-day physical characteristic (a building/lot alignment, a
+  // curb/paving trace, a low point, etc.) that is evidence of a specific
+  // vanished urban-scale pattern or feature (a demolished street, a removed
+  // rail line, a filled stream/canal, an earlier parcel boundary or
+  // street-grid). Requires BOTH a stated present physical form AND a stated
+  // specific vanished cause — an old/odd-shaped building with no identified
+  // cause, or mere decorative/stylistic evocation of the past, does not
+  // qualify. A peer claim type, not a subtype of use-history/demolition/
+  // event/relationship/legend-tradition. If the remnant explanation is
+  // presented as folklore/legend/unverified tradition rather than documented
+  // fact, classify as "legend-tradition" instead of hedging this type.
+  | "urban-remnant";
 
 /**
  * Per-claim-type strength for a given source. A source may be strong for

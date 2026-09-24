@@ -44,6 +44,7 @@ const STORY_CLAIM_TYPES: ReadonlySet<ClaimType> = new Set([
   "legend-tradition",
   "statistic",
   "demolition",
+  "urban-remnant",
 ]);
 
 // Real facts, but thin in isolation (a bare name or date with no further
