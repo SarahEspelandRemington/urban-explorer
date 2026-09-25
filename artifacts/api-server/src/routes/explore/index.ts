@@ -1796,6 +1796,10 @@ import { applyLlmPrecisionFilter } from "../../lib/spatialTrustFilter";
 import { resolveEffectiveHint } from "../../lib/areaContext";
 import { isBoringResidentialBuilding } from "../../lib/residentialBuildingFilter";
 import { isOrdinaryCommercialUse } from "../../lib/commercialUseFilter";
+import {
+  deriveLifecycleFormerUse,
+  evaluateThinLodgingCommercialGuardrail,
+} from "../../lib/thinLodgingCommercialGuardrail";
 import { validateCopyResultIds } from "../../lib/copyResultIntegrity";
 import {
   computeTierDistribution,
@@ -3904,10 +3908,17 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             const val = p.tags[key];
             if (val) placeOsmTags[key] = sanitizeOSMText(val, 120);
           }
+          // Lifecycle-derived former use (e.g. `was:tourism=hotel`,
+          // `disused:amenity=restaurant`) — an independent dimension from
+          // `category`, never merged into or allowed to overwrite it. Only
+          // consumed by the Walk Mode thin-lodging/commercial guardrail
+          // below; see thinLodgingCommercialGuardrail.ts.
+          const formerUse = deriveLifecycleFormerUse(p.tags)?.value;
           return {
             id: p.osmId.replace("/", "-"),
             name: p.name,
             category: p.type,
+            formerUse,
             latitude: p.lat,
             longitude: p.lon,
             address: addr || undefined,
@@ -3952,43 +3963,33 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
         classifyDiscovery(mergedPlaces);
         applyDiscoveryTier(mergedPlaces);
-        // Walk Mode lodging guardrail (Aug. 31 field test): a chain hotel's
-        // bare `start_date` tag alone gives the discoveryTier text classifier
-        // hasYear=true, which escapes its T4-A/T4-C rules without any real
-        // story ever existing — confirmed against the actual failures (Aliz
-        // Hotel, Element, Hampton Inn), none of which carry wikidata/
-        // wikipedia/historic/description/heritage:description and none of
-        // which have Wikipedia A3 evidence. Forces those into the existing
-        // Tier-4 -> "lowQuality" suppression already consumed client-side by
-        // walkEligibility.ts (no client change). Never overrides an existing
-        // Tier 1-3 classification, an osm_enriched trust level, an A3
-        // evidenceRef, or an approved curated entry. Walk Mode only — the
+        // Walk Mode thin-lodging/commercial guardrail (Aug. 31 field test;
+        // widened 2026-09-24 for lifecycle-prefixed former use — Production
+        // Guardrail B; exemptions revised the same day to match the settled
+        // product rule that enrichment/trust and editorial worthiness are
+        // separate dimensions). Full rationale and exemption semantics live
+        // in thinLodgingCommercialGuardrail.ts. Never overrides an existing
+        // Tier 1-3 classification, an approved curated entry, or a
+        // successful A3 Wikipedia evidence-selector result — but an
+        // osm_enriched trust level or a raw (unresolved) evidenceRef no
+        // longer exempts a candidate on their own. Walk Mode only — the
         // Explore tab's non-walkMode osm-anchor branch is unaffected.
         if (walkMode) {
-          const LODGING_CATEGORIES = new Set([
-            "hotel",
-            "hostel",
-            "guest_house",
-            "motel",
-            "apartment",
-          ]);
           for (const p of mergedPlaces) {
-            if (
-              p.discoveryTier === 1 ||
-              p.discoveryTier === 2 ||
-              p.discoveryTier === 3
-            )
-              continue;
-            if (
-              !LODGING_CATEGORIES.has((p.category ?? "").toLowerCase().trim())
-            )
-              continue;
-            if (p.trustLevel === "osm_enriched") continue;
-            if (p.evidenceRef) continue;
-            if (getApprovedCuratedEntry(p.osmId ?? p.streetlitId ?? ""))
-              continue;
+            const rejectionReason = evaluateThinLodgingCommercialGuardrail({
+              discoveryTier: p.discoveryTier,
+              category: p.category,
+              formerUse: p.formerUse,
+              hasPositiveWikiEvidence: selectorEnhancedWikiContent.has(
+                p.osmId ?? p.streetlitId ?? "",
+              ),
+              hasApprovedCuratedEntry: Boolean(
+                getApprovedCuratedEntry(p.osmId ?? p.streetlitId ?? ""),
+              ),
+            });
+            if (!rejectionReason) continue;
             p.discoveryTier = 4;
-            p.discoveryRejectionReason = "genericLodging";
+            p.discoveryRejectionReason = rejectionReason;
           }
         }
         // TEMP-DISCOVER-FUNNEL-CANDIDATES: populate the post-copy tier
