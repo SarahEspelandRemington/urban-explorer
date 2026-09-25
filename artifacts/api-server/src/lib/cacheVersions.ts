@@ -1,4 +1,4 @@
-// cache-versions:v13:
+// cache-versions:v14:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -79,6 +79,16 @@
  * routes/explore/index.ts). Shared narration cache-key literal bumped
  * v21->v22 in lockstep across both routes, a real content/gating-input
  * change for the same nominal key. v21 is retired.
+ *
+ * v13-v14: Wikidata → English Wikipedia fallback — /explore/place-detail now
+ * resolves a Wikipedia article via a candidate's wikidata= entity's explicit
+ * enwiki sitelink when wikipedia= is absent (fetchWikipediaSummaryForCandidate
+ * in routes/explore/index.ts), so candidates that previously got no Wikipedia
+ * enrichment in this prompt may now get real article content. detail cache-
+ * key literal bumped v10->v11. v10 is retired. The discover route's
+ * equivalent fallback (osm-anchor wikiMap prefetch) lives outside this
+ * route's marked region and outside any manifest-tracked span, so it did not
+ * require a version bump.
  */
 
 /**
@@ -105,7 +115,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["nbhd", "v2"], // neighbourhood label reverse-geocode (formerly named revgeo-nbhd, version 1)
   ["suggest404", "v5"], // address-not-found suggestions
   ["investigate", "v8"], // address investigation
-  ["detail", "v10"], // place detail
+  ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
   ["narration", "v22"], // walk narration (short)
   ["deep-narration", "v14"], // deep walk narration

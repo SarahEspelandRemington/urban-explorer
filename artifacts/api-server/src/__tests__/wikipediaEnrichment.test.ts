@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@workspace/db", () => ({ pool: {}, db: {} }));
 vi.mock("@workspace/integrations-openai-ai-server", () => ({ openai: {} }));
@@ -9,9 +9,15 @@ vi.mock("@workspace/integrations-openai-ai-server/audio", () => ({
 import {
   parseWikipediaOsmTag,
   buildWikiPromptBlock,
+  isValidWikidataId,
+  extractEnwikiSitelinkTitle,
   type WikipediaSummary,
 } from "../lib/wikipediaEnrichment";
-import { buildDetailUserTurn } from "../routes/explore/index";
+import {
+  buildDetailUserTurn,
+  resolveWikipediaArticleTarget,
+  fetchWikipediaSummaryForCandidate,
+} from "../routes/explore/index";
 import {
   isTechnicalTag,
   sanitizeDisplayTags,
@@ -263,5 +269,261 @@ describe("display-tag guard — Wikipedia/Wikidata values cannot become chips", 
         "wikipedia:en:olivet_covenant_presbyterian_church",
       ]),
     ).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isValidWikidataId / extractEnwikiSitelinkTitle — pure Wikidata helpers
+// ---------------------------------------------------------------------------
+
+describe("isValidWikidataId", () => {
+  it("accepts a well-formed QID", () => {
+    expect(isValidWikidataId("Q6542503")).toBe(true);
+  });
+
+  it("rejects a missing value", () => {
+    expect(isValidWikidataId(undefined)).toBe(false);
+  });
+
+  it("rejects a value without the Q prefix", () => {
+    expect(isValidWikidataId("6542503")).toBe(false);
+  });
+
+  it("rejects a lowercase q", () => {
+    expect(isValidWikidataId("q6542503")).toBe(false);
+  });
+});
+
+describe("extractEnwikiSitelinkTitle", () => {
+  it("extracts the enwiki sitelink title when present", () => {
+    const raw = {
+      entities: {
+        Q6542503: {
+          sitelinks: { enwiki: { site: "enwiki", title: "Library Hotel" } },
+        },
+      },
+    };
+    expect(extractEnwikiSitelinkTitle("Q6542503", raw)).toBe("Library Hotel");
+  });
+
+  it("returns null when the entity has no enwiki sitelink", () => {
+    const raw = {
+      entities: {
+        Q999999: { sitelinks: { dewiki: { site: "dewiki", title: "Etwas" } } },
+      },
+    };
+    expect(extractEnwikiSitelinkTitle("Q999999", raw)).toBeNull();
+  });
+
+  it("returns null for a malformed/unexpected response shape", () => {
+    expect(extractEnwikiSitelinkTitle("Q123", { not: "expected" })).toBeNull();
+  });
+
+  it("returns null for null/undefined input", () => {
+    expect(extractEnwikiSitelinkTitle("Q123", null)).toBeNull();
+    expect(extractEnwikiSitelinkTitle("Q123", undefined)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveWikipediaArticleTarget / fetchWikipediaSummaryForCandidate —
+// Wikidata → English Wikipedia fallback (deterministic, fails closed)
+// ---------------------------------------------------------------------------
+
+function wikidataEntityResponse(qid: string, enwikiTitle: string | null) {
+  return {
+    ok: true,
+    json: async () => ({
+      entities: {
+        [qid]: {
+          sitelinks: enwikiTitle
+            ? { enwiki: { site: "enwiki", title: enwikiTitle, badges: [] } }
+            : {},
+        },
+      },
+    }),
+  };
+}
+
+function wikiArticleResponse(pageTitle: string, extract: string) {
+  return {
+    ok: true,
+    json: async () => ({
+      query: { pages: { "1": { pageid: 1, title: pageTitle, extract } } },
+    }),
+  };
+}
+
+function wikiDisambiguationResponse(pageTitle: string) {
+  return {
+    ok: true,
+    json: async () => ({
+      query: {
+        pages: {
+          "1": {
+            pageid: 1,
+            title: pageTitle,
+            extract: "Springfield may refer to several places.",
+            pageprops: { disambiguation: "" },
+          },
+        },
+      },
+    }),
+  };
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("resolveWikipediaArticleTarget", () => {
+  it("direct wikipedia= tag present → uses it; does not call Wikidata", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const target = await resolveWikipediaArticleTarget({
+      wikipedia: "en:Bergdoll_Mansion",
+      wikidata: "Q4891444",
+    });
+    expect(target).toEqual({
+      lang: "en",
+      title: "Bergdoll_Mansion",
+      resolvedVia: "osmTag",
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("malformed wikipedia= tag present → does not fall back to wikidata= even if valid", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const target = await resolveWikipediaArticleTarget({
+      wikipedia: "no-colon-here",
+      wikidata: "Q6542503",
+    });
+    expect(target).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("no wikipedia= tag, valid wikidata= with enwiki sitelink → resolves via wikidataSitelink (Library Hotel/Q6542503)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(wikidataEntityResponse("Q6542503", "Library Hotel")),
+    );
+    const target = await resolveWikipediaArticleTarget({
+      wikidata: "Q6542503",
+    });
+    expect(target).toEqual({
+      lang: "en",
+      title: "Library_Hotel",
+      resolvedVia: "wikidataSitelink",
+    });
+  });
+
+  it("no wikipedia= tag, no wikidata= tag → resolves to null", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const target = await resolveWikipediaArticleTarget({ name: "Some Place" });
+    expect(target).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("wikidata= present but no enwiki sitelink → no fallback article (fails closed)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(wikidataEntityResponse("Q999999", null)),
+    );
+    const target = await resolveWikipediaArticleTarget({
+      wikidata: "Q999999",
+    });
+    expect(target).toBeNull();
+  });
+
+  it("malformed Wikidata response body → fails closed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ not: "expected" }),
+      }),
+    );
+    const target = await resolveWikipediaArticleTarget({ wikidata: "Q123" });
+    expect(target).toBeNull();
+  });
+
+  it("Wikidata entity not found (404) → fails closed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 404 }),
+    );
+    const target = await resolveWikipediaArticleTarget({ wikidata: "Q123" });
+    expect(target).toBeNull();
+  });
+
+  it("invalid wikidata= tag shape (not a QID) → resolves to null without calling fetch", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const target = await resolveWikipediaArticleTarget({
+      wikidata: "not-a-qid",
+    });
+    expect(target).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("fetchWikipediaSummaryForCandidate — end-to-end resolution + existing safeguards", () => {
+  it("no wikipedia= tag, valid wikidata= sitelink → the real resolved article reaches the summary", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("wikidata.org")) {
+        return wikidataEntityResponse("Q6542503", "Library Hotel");
+      }
+      return wikiArticleResponse(
+        "Library Hotel",
+        "The Library Hotel is a boutique hotel in Manhattan themed around the Dewey Decimal System, and was the subject of a 2003 OCLC trademark lawsuit.",
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const summary = await fetchWikipediaSummaryForCandidate({
+      wikidata: "Q6542503",
+    });
+    expect(summary).toBeDefined();
+    expect(summary?.resolvedVia).toBe("wikidataSitelink");
+    expect(summary?.extract).toContain("Dewey Decimal");
+    expect(summary?.extract).toContain("OCLC");
+  });
+
+  it("resolved sitelink pointing to a Wikipedia disambiguation page → existing refusal still applies (no summary)", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.includes("wikidata.org")) {
+        return wikidataEntityResponse("Q42", "Springfield");
+      }
+      return wikiDisambiguationResponse("Springfield");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const summary = await fetchWikipediaSummaryForCandidate({
+      wikidata: "Q42",
+    });
+    expect(summary).toBeUndefined();
+  });
+
+  it("direct wikipedia= tag still resolves and fetches normally (unchanged behavior)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          wikiArticleResponse(
+            "Bergdoll Mansion",
+            "The Bergdoll Mansion is a historic house.",
+          ),
+        ),
+    );
+    const summary = await fetchWikipediaSummaryForCandidate({
+      wikipedia: "en:Bergdoll_Mansion",
+    });
+    expect(summary?.resolvedVia).toBe("osmTag");
+    expect(summary?.extract).toContain("historic house");
   });
 });

@@ -5,9 +5,9 @@
     "artifacts/api-server/src/lib/cacheVersions.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "b59bf2fd8012303ef23cca0f922e455ec61bf342690198a953839c92f5b58069",
-      "versions": ["v13"],
-      "registered": "2026-09-05"
+      "sectionHash": "9dd090dc93c7b57c60a95b0295e5e5b4f06353f9a4cbc4b3918aab7f6e936693",
+      "versions": ["v14"],
+      "registered": "2026-09-25"
     },
     "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
@@ -68,9 +68,9 @@
     "artifacts/api-server/src/routes/explore/index.ts::place-detail": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "0aae3e1d5d54e74b1ba1180d81f71c681baa08fc388c73a250668e3dafa675ea",
-      "versions": ["v10"],
-      "registered": "2026-07-30"
+      "sectionHash": "3a2c1158a731d5819e4e1c22186d26d3517e419b6448df01163d807a002ec2b5",
+      "versions": ["v10", "v11"],
+      "registered": "2026-09-25"
     },
     "artifacts/api-server/src/routes/explore/index.ts::place-timeline": {
       "kind": "route",

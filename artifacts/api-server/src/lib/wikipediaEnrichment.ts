@@ -21,6 +21,14 @@ export interface WikipediaSummary {
   articleUrl?: string;
   /** Wikipedia language code used for the fetch (e.g. "en", "de"). */
   lang: string;
+  /**
+   * Provenance: how the article title was identified. "osmTag" means the
+   * candidate carried an explicit OSM `wikipedia` tag; "wikidataSitelink"
+   * means the tag was absent and the title was resolved from the
+   * candidate's `wikidata` entity's explicit `enwiki` sitelink. Absent for
+   * summaries built outside the candidate-resolution path (e.g. tests).
+   */
+  resolvedVia?: "osmTag" | "wikidataSitelink";
 }
 
 /**
@@ -46,6 +54,38 @@ export function parseWikipediaOsmTag(
   if (!lang || !title) return null;
   if (!/^[a-z]{2,3}$/.test(lang)) return null;
   return { lang, title };
+}
+
+/** Validates an OSM `wikidata` tag value: a bare Wikidata entity QID (e.g. `Q4891444`). */
+export function isValidWikidataId(value: string | undefined): value is string {
+  return typeof value === "string" && /^Q\d{1,12}$/.test(value);
+}
+
+/**
+ * Extract the explicit English Wikipedia (`enwiki`) sitelink title from a
+ * Wikidata `Special:EntityData/{id}.json` response, if present.
+ *
+ * Returns `null` for any shape that doesn't contain a valid `enwiki`
+ * sitelink title — malformed, missing, or unexpected-shape responses fail
+ * closed rather than guessing. Never inspects other sitelinks or falls back
+ * to name-based matching.
+ */
+export function extractEnwikiSitelinkTitle(
+  wikidataId: string,
+  raw: unknown,
+): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const entities = (raw as { entities?: unknown }).entities;
+  if (!entities || typeof entities !== "object") return null;
+  const entity = (entities as Record<string, unknown>)[wikidataId];
+  if (!entity || typeof entity !== "object") return null;
+  const sitelinks = (entity as { sitelinks?: unknown }).sitelinks;
+  if (!sitelinks || typeof sitelinks !== "object") return null;
+  const enwiki = (sitelinks as Record<string, unknown>).enwiki;
+  if (!enwiki || typeof enwiki !== "object") return null;
+  const title = (enwiki as { title?: unknown }).title;
+  if (typeof title !== "string" || title.trim().length === 0) return null;
+  return title;
 }
 
 /** Abbreviations whose trailing period should not be treated as a sentence end. */

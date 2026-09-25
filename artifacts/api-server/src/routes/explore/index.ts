@@ -61,6 +61,8 @@ import {
   parseWikipediaOsmTag,
   buildWikiPromptBlock,
   splitIntoSentenceUnits,
+  isValidWikidataId,
+  extractEnwikiSitelinkTitle,
 } from "../../lib/wikipediaEnrichment";
 
 const router = Router();
@@ -2013,6 +2015,153 @@ async function fetchWikipediaSummary(
 }
 // @end-prompt-region wiki-summary
 
+/** 4-hour TTL, same rationale as WIKIPEDIA_SUMMARY_CACHE_TTL_MS above. */
+const WIKIDATA_SITELINK_CACHE_TTL_MS = 4 * 60 * 60 * 1000;
+
+const wikidataSitelinkCache = new Map<
+  string,
+  { data: string | null; ts: number }
+>();
+
+/**
+ * Resolve a Wikidata entity's explicit English Wikipedia (`enwiki`)
+ * sitelink title, if one exists.
+ *
+ * Used only as a fallback when an OSM candidate carries a `wikidata` tag
+ * but no `wikipedia` tag — never guesses from place name, address, or
+ * coordinates. Fails closed (returns null) on any malformed, missing, or
+ * transient-error response so callers can fall back to current
+ * OSM-tag-only behaviour.
+ */
+export async function fetchWikidataEnwikiSitelink(
+  wikidataId: string,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  // Deliberately no version-token suffix (e.g. ":v1:") — this cache holds a
+  // raw Wikidata sitelink lookup, not LLM-prompt-affecting content, so it is
+  // not subject to the prompt-manifest version-token contract that applies
+  // to marked regions elsewhere in this module's prefix.
+  const cacheKey = `wikidata-entity:${wikidataId}`;
+  const cached = wikidataSitelinkCache.get(cacheKey);
+  if (
+    cached !== undefined &&
+    Date.now() - cached.ts < WIKIDATA_SITELINK_CACHE_TTL_MS
+  ) {
+    return cached.data;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  const fetchSignal = signal
+    ? AbortSignal.any([controller.signal, signal])
+    : controller.signal;
+
+  try {
+    const url = `https://www.wikidata.org/wiki/Special:EntityData/${encodeURIComponent(wikidataId)}.json`;
+    const resp = await fetch(url, {
+      signal: fetchSignal,
+      headers: {
+        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+        Accept: "application/json",
+      },
+    });
+    clearTimeout(timer);
+
+    if (!resp.ok) {
+      if (resp.status === 404) {
+        wikidataSitelinkCache.set(cacheKey, { data: null, ts: Date.now() });
+        return null;
+      }
+      // 429/5xx/other — transient, says nothing about whether the entity
+      // has an enwiki sitelink. Do NOT cache.
+      logger.info(
+        { wikidataId, status: resp.status },
+        "[wikidata] entity-data fetch non-ok — not caching",
+      );
+      return null;
+    }
+
+    let raw: unknown;
+    try {
+      raw = await resp.json();
+    } catch {
+      wikidataSitelinkCache.set(cacheKey, { data: null, ts: Date.now() });
+      return null;
+    }
+
+    const title = extractEnwikiSitelinkTitle(wikidataId, raw);
+    wikidataSitelinkCache.set(cacheKey, { data: title, ts: Date.now() });
+    return title;
+  } catch {
+    clearTimeout(timer);
+    // Timeout / network error — do NOT cache null (transient).
+    return null;
+  }
+}
+
+/** Article target resolved for a candidate, plus provenance. */
+type WikipediaArticleTarget = {
+  lang: string;
+  title: string;
+  resolvedVia: "osmTag" | "wikidataSitelink";
+};
+
+/**
+ * Determine which Wikipedia article (if any) to fetch for an OSM
+ * candidate's tags, per the OSM-tag-first / Wikidata-sitelink-fallback
+ * precedence:
+ *
+ *  1. `wikipedia` tag present → use it (authoritative). No fallback is
+ *     attempted even if the tag is malformed, so an existing tag's presence
+ *     always takes precedence over Wikidata resolution.
+ *  2. Otherwise, a valid `wikidata` QID → resolve its explicit `enwiki`
+ *     sitelink. No fallback if absent/malformed/not found — fails closed
+ *     and callers see the same "no article" behaviour as today.
+ */
+export async function resolveWikipediaArticleTarget(
+  osmTags: Record<string, string> | undefined,
+  signal?: AbortSignal,
+): Promise<WikipediaArticleTarget | null> {
+  const wikipediaTag = osmTags?.wikipedia;
+  if (wikipediaTag) {
+    const parsed = parseWikipediaOsmTag(wikipediaTag);
+    if (!parsed) return null;
+    return { lang: parsed.lang, title: parsed.title, resolvedVia: "osmTag" };
+  }
+
+  const wikidataId = osmTags?.wikidata;
+  if (!isValidWikidataId(wikidataId)) return null;
+
+  const enwikiTitle = await fetchWikidataEnwikiSitelink(wikidataId, signal);
+  if (!enwikiTitle) return null;
+
+  return {
+    lang: "en",
+    title: enwikiTitle.replace(/ /g, "_"),
+    resolvedVia: "wikidataSitelink",
+  };
+}
+
+/**
+ * Resolve and fetch the Wikipedia summary for an OSM candidate's tags,
+ * composing resolveWikipediaArticleTarget with the existing
+ * fetchWikipediaSummary (unchanged) so every existing safeguard — the
+ * in-memory cache, transient-failure handling, and disambiguation-page
+ * refusal — applies identically regardless of whether the article title
+ * came from an OSM `wikipedia` tag or a resolved Wikidata sitelink. The
+ * resulting summary carries `resolvedVia` so callers/logs can tell which
+ * path was used.
+ */
+export async function fetchWikipediaSummaryForCandidate(
+  osmTags: Record<string, string> | undefined,
+  signal?: AbortSignal,
+): Promise<WikipediaSummary | undefined> {
+  const target = await resolveWikipediaArticleTarget(osmTags, signal);
+  if (!target) return undefined;
+  const result = await fetchWikipediaSummary(target.lang, target.title, signal);
+  return result ? { ...result, resolvedVia: target.resolvedVia } : undefined;
+}
+
 /**
  * Attempt to find a representative photo for a place name via the Wikipedia
  * REST summary API. Returns the thumbnail URL or null when none is available.
@@ -3484,30 +3633,41 @@ router.post("/explore/discover", async (req, res) => {
         }
 
         // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
-        // wikipedia= tag. Scoped to cappedCandidates — the only candidates
-        // wikiMap is ever consulted for during copy-gen — rather than the
-        // full post-filter pool, so a larger raw Overpass cap can't inflate
-        // concurrent Wikipedia fetch fan-out. Fetches run in parallel
-        // (Promise.all) and are backed by the shared in-memory cache
-        // (wiki-v2, keyed by lang/title) also used by the detail-page Phase B
-        // path — a subsequent detail-page tap for the same place is a free
-        // cache hit with no second Wikipedia API call.
+        // wikipedia= tag, or — when that tag is absent — resolve one via the
+        // candidate's wikidata= entity's explicit enwiki sitelink. Scoped to
+        // cappedCandidates — the only candidates wikiMap is ever consulted
+        // for during copy-gen — rather than the full post-filter pool, so a
+        // larger raw Overpass cap can't inflate concurrent Wikipedia/
+        // Wikidata fetch fan-out. Fetches run in parallel (Promise.all) and
+        // are backed by the shared in-memory caches (wiki-v5 / wikidata-entity,
+        // keyed by lang/title and by Wikidata id respectively) also used by
+        // the detail-page Phase B path — a subsequent detail-page tap for
+        // the same place is a free cache hit with no second network call.
         // Total added latency: ~200–400 ms for the slowest single fetch, which is
         // negligible before the 3–30 s copy LLM call that follows. If any fetch
         // times out or fails, the candidate silently falls through to the
         // thin-copy path unchanged.
         const wikiMap = new Map<string, WikipediaSummary>();
         {
-          type WikiJob = { osmId: string; lang: string; title: string };
-          const jobs: WikiJob[] = cappedCandidates
-            .map((c): WikiJob | null => {
-              const tag = c.tags["wikipedia"];
-              if (!tag) return null;
-              const parsed = parseWikipediaOsmTag(tag);
-              if (!parsed) return null;
-              return { osmId: c.osmId, lang: parsed.lang, title: parsed.title };
-            })
-            .filter((x): x is WikiJob => x !== null);
+          type WikiJob = {
+            osmId: string;
+            lang: string;
+            title: string;
+            resolvedVia: "osmTag" | "wikidataSitelink";
+          };
+          const resolvedTargets = await Promise.all(
+            cappedCandidates.map(async (c): Promise<WikiJob | null> => {
+              const target = await resolveWikipediaArticleTarget(
+                c.tags,
+                copyAbort.signal,
+              );
+              if (!target) return null;
+              return { osmId: c.osmId, ...target };
+            }),
+          );
+          const jobs: WikiJob[] = resolvedTargets.filter(
+            (x): x is WikiJob => x !== null,
+          );
 
           if (jobs.length > 0) {
             req.log.debug(
@@ -3515,11 +3675,11 @@ router.post("/explore/discover", async (req, res) => {
               "[osm-anchor] pre-fetching Wikipedia summaries",
             );
             const settled = await Promise.all(
-              jobs.map(({ osmId, lang, title }) =>
+              jobs.map(({ osmId, lang, title, resolvedVia }) =>
                 fetchWikipediaSummary(lang, title, copyAbort.signal).then(
                   (s) => ({
                     osmId,
-                    summary: s,
+                    summary: s ? { ...s, resolvedVia } : null,
                   }),
                 ),
               ),
@@ -5387,7 +5547,11 @@ router.post("/explore/place-detail", async (req, res) => {
   // detail:v10: bumped after this route absorbed buildDetailUserTurn's
   // definition (relocated here for correct manifest ownership) — no change
   // to prompt content, model settings, or timeout values.
-  const detailCacheKey = `detail:v10:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  // detail:v11: bumped because Wikipedia summary resolution now also
+  // follows a wikidata= entity's enwiki sitelink when wikipedia= is absent
+  // (fetchWikipediaSummaryForCandidate) — candidates that previously got no
+  // Wikipedia enrichment in this prompt may now get real article content.
+  const detailCacheKey = `detail:v11:${placeName.toLowerCase()}:${(category || "place").toLowerCase()}:${latitude.toFixed(4)},${longitude.toFixed(4)}`;
   const cachedDetail = getLLMCache(detailCacheKey);
   if (cachedDetail) {
     clearTimeout(detailTimeout);
@@ -5417,20 +5581,13 @@ router.post("/explore/place-detail", async (req, res) => {
   // making a duplicate request.
   const buildDetail = async (): Promise<any> => {
     // Fetch Wikipedia summary before the LLM call so it can be injected into
-    // the prompt. Only follows an explicit OSM wikipedia tag — never guesses
-    // an article title from placeName.
-    let wikiSummary: WikipediaSummary | undefined;
-    if (osmTags?.wikipedia) {
-      const parsed = parseWikipediaOsmTag(osmTags.wikipedia);
-      if (parsed) {
-        const result = await fetchWikipediaSummary(
-          parsed.lang,
-          parsed.title,
-          detailController.signal,
-        );
-        wikiSummary = result ?? undefined;
-      }
-    }
+    // the prompt. Follows an explicit OSM wikipedia tag, or — when absent —
+    // a Wikidata entity's explicit enwiki sitelink. Never guesses an article
+    // title from placeName, address, or coordinates.
+    const wikiSummary = await fetchWikipediaSummaryForCandidate(
+      osmTags,
+      detailController.signal,
+    );
 
     const response = await openai.chat.completions.create(
       {
