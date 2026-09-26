@@ -17,6 +17,7 @@ import {
   buildDetailUserTurn,
   resolveWikipediaArticleTarget,
   fetchWikipediaSummaryForCandidate,
+  mapWithConcurrency,
 } from "../routes/explore/index";
 import {
   isTechnicalTag,
@@ -525,5 +526,129 @@ describe("fetchWikipediaSummaryForCandidate — end-to-end resolution + existing
     });
     expect(summary?.resolvedVia).toBe("osmTag");
     expect(summary?.extract).toContain("historic house");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fetchWikipediaSummary — 429 handling, no retry (Task D)
+//
+// A bounded short-delay retry (400ms–3s) was tested against real Wikipedia
+// 429 responses and found to recover 0% of failures: the real edge (Envoy)
+// rate limiter returns Retry-After values around 40+ seconds, far beyond any
+// delay compatible with a live request cycle. Retrying was removed in favor
+// of failing cleanly and logging the rate-limit evidence.
+//
+// Each test uses a unique article title so it can't be served from the
+// wikipediaSummaryCache module-level Map left behind by an earlier test in
+// this file. Exercised through fetchWikipediaSummaryForCandidate with a
+// direct osmTag target so exactly one network call chain (the article
+// fetch itself) is under test, with no separate Wikidata call in the way.
+// ---------------------------------------------------------------------------
+
+describe("fetchWikipediaSummary — 429 handling, no retry", () => {
+  it("first request succeeds → single fetch call", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        wikiArticleResponse("RetryTestSuccessNoRetry", "An ordinary article."),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const summary = await fetchWikipediaSummaryForCandidate({
+      wikipedia: "en:RetryTestSuccessNoRetry",
+    });
+
+    expect(summary?.extract).toBe("An ordinary article.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("429 → fails cleanly with exactly one call, no retry", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: { get: () => "42" },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const summary = await fetchWikipediaSummaryForCandidate({
+      wikipedia: "en:RetryTest429NoRetry",
+    });
+
+    expect(summary).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("429 with no Retry-After header → still fails cleanly with one call", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      headers: { get: () => null },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const summary = await fetchWikipediaSummaryForCandidate({
+      wikipedia: "en:RetryTest429NoHeader",
+    });
+
+    expect(summary).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("404 → no retry, cached as a stable miss", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 404 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const summary = await fetchWikipediaSummaryForCandidate({
+      wikipedia: "en:RetryTest404NoRetry",
+    });
+
+    expect(summary).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mapWithConcurrency — bounded fan-out primitive (Task D)
+// ---------------------------------------------------------------------------
+
+describe("mapWithConcurrency", () => {
+  it("preserves result order", async () => {
+    const results = await mapWithConcurrency(
+      [1, 2, 3, 4, 5],
+      2,
+      async (n) => n * 10,
+    );
+    expect(results).toEqual([10, 20, 30, 40, 50]);
+  });
+
+  it("never exceeds the concurrency cap, even for a dense batch", async () => {
+    const concurrencyLimit = 4;
+    let inFlight = 0;
+    let maxObservedInFlight = 0;
+    const items = Array.from({ length: 12 }, (_, i) => i); // dense-batch size,
+    // matching the field-observed "roughly a dozen concurrent" burst.
+
+    await mapWithConcurrency(items, concurrencyLimit, async (n) => {
+      inFlight++;
+      maxObservedInFlight = Math.max(maxObservedInFlight, inFlight);
+      // Yield to let other workers start before this one finishes, so the
+      // test can actually observe overlap instead of running serially.
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight--;
+      return n;
+    });
+
+    expect(maxObservedInFlight).toBeLessThanOrEqual(concurrencyLimit);
+    expect(maxObservedInFlight).toBeGreaterThan(1); // proves it did run concurrently, not serially
+  });
+
+  it("runs all items exactly once even when fewer than the concurrency cap", async () => {
+    const calls: number[] = [];
+    const results = await mapWithConcurrency([7, 8], 4, async (n) => {
+      calls.push(n);
+      return n;
+    });
+    expect(calls).toEqual([7, 8]);
+    expect(results).toEqual([7, 8]);
   });
 });

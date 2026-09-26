@@ -1820,7 +1820,7 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
 
 // @prompt-region wiki-summary
 // ---------------------------------------------------------------------------
-// Wikipedia summary cache — in-memory, keyed wiki:v5:{lang}:{encoded_title}
+// Wikipedia summary cache — in-memory, keyed wiki:v8:{lang}:{encoded_title}
 // ---------------------------------------------------------------------------
 // v2: switched from REST /page/summary/ (lead paragraph only) to the action
 // API (prop=extracts&explaintext=1) which returns the full article text,
@@ -1835,6 +1835,15 @@ const PHOTO_CACHE_MISS_TTL = 5 * 60 * 1000; // 5 minutes for misses (timeout/404
 // distinguishes transient failures (429, 5xx) from a stable miss (404),
 // which changes which requests hit the negative cache; old v3 entries could
 // otherwise be misread under the new semantics.
+// v5-v6: a rate-limited (429) response now gets exactly one bounded retry
+// after a short backoff before falling through to the existing "transient
+// failure — not caching" behavior. Root-caused from a Sept. 25 Grand
+// Central-area field test where a dense cluster of candidates fired a burst
+// of concurrent Wikipedia fetches (see the wikiMap pre-fetch site's new
+// concurrency cap) and multiple candidates — including One Vanderbilt, which
+// has a valid direct wikipedia= tag — got 429'd with no retry, losing real
+// evidence for that request cycle. 404s are never retried (a confirmed fact,
+// not a transient condition); other statuses are unchanged.
 
 /** 4-hour TTL applied to successful fetches and to stable "no article"
  *  outcomes (404, missing/empty extract, malformed JSON) so a bad OSM tag
@@ -1855,7 +1864,7 @@ const wikipediaSummaryCache = new Map<
  * than only the lead paragraph, so named sections such as "History and
  * architecture" are available to the copy LLM.
  *
- * Cache key: wiki:v5:{lang}:{encoded_title}
+ * Cache key: wiki:v8:{lang}:{encoded_title}
  *
  * Only called when `osmTags.wikipedia` is well-formed — never guesses from
  * place names.  Always falls back gracefully: any failure returns null so
@@ -1867,7 +1876,7 @@ async function fetchWikipediaSummary(
   signal?: AbortSignal,
 ): Promise<WikipediaSummary | null> {
   const encodedTitle = encodeURIComponent(title);
-  const cacheKey = `wiki:v5:${lang}:${encodedTitle}`;
+  const cacheKey = `wiki:v8:${lang}:${encodedTitle}`;
 
   const cached = wikipediaSummaryCache.get(cacheKey);
   if (
@@ -1877,37 +1886,61 @@ async function fetchWikipediaSummary(
     return cached.data;
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
-  const fetchSignal = signal
-    ? AbortSignal.any([controller.signal, signal])
-    : controller.signal;
+  const params = new URLSearchParams({
+    action: "query",
+    prop: "extracts|pageprops",
+    explaintext: "1",
+    redirects: "1",
+    ppprop: "disambiguation",
+    titles: title,
+    format: "json",
+  });
+  const url = `https://${lang}.wikipedia.org/w/api.php?${params.toString()}`;
+
+  const attemptFetch = async (): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    const fetchSignal = signal
+      ? AbortSignal.any([controller.signal, signal])
+      : controller.signal;
+    try {
+      return await fetch(url, {
+        signal: fetchSignal,
+        headers: {
+          "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+          Accept: "application/json",
+        },
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
   try {
-    const params = new URLSearchParams({
-      action: "query",
-      prop: "extracts|pageprops",
-      explaintext: "1",
-      redirects: "1",
-      ppprop: "disambiguation",
-      titles: title,
-      format: "json",
-    });
-    const url = `https://${lang}.wikipedia.org/w/api.php?${params.toString()}`;
-    const resp = await fetch(url, {
-      signal: fetchSignal,
-      headers: {
-        "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
-        Accept: "application/json",
-      },
-    });
-    clearTimeout(timer);
+    const resp = await attemptFetch();
 
     if (!resp.ok) {
-      if (resp.status === 429 || resp.status >= 500) {
-        // Rate-limited or Wikipedia-side outage — transient, says nothing
-        // about whether the title has an article. Do NOT cache, so the
-        // next request for this title can succeed once Wikipedia recovers.
+      if (resp.status === 429) {
+        // Wikipedia's edge (Envoy) rate limiter returns Retry-After values
+        // around 40+ seconds — confirmed via direct header inspection and
+        // empirically by testing 400ms/1s/2s/3s bounded retries against
+        // fresh real candidate clusters (0% recovery at every delay
+        // tested). No retry delay compatible with a live request cycle can
+        // honor that window, so retrying here only adds latency with no
+        // realistic chance of success. Fail cleanly instead; avoiding this
+        // limiter in the first place is handled upstream by pacing
+        // request starts (see WIKI_SUMMARY_PREFETCH_SPACING_MS below).
+        logger.info(
+          { lang, title, retryAfter: resp.headers.get("retry-after") },
+          "[wikipedia] action-api 429 rate-limited — not retrying, no evidence this cycle",
+        );
+        return null;
+      }
+
+      if (resp.status >= 500) {
+        // Wikipedia-side outage — transient, says nothing about whether the
+        // title has an article. Do NOT cache, so the next request for this
+        // title can succeed once Wikipedia recovers.
         logger.info(
           { lang, title, status: resp.status },
           "[wikipedia] action-api transient failure — not caching",
@@ -1916,7 +1949,9 @@ async function fetchWikipediaSummary(
       }
 
       if (resp.status === 404) {
-        // Stable miss — cache null to avoid hammering Wikipedia.
+        // Stable miss — cache null to avoid hammering Wikipedia. Never
+        // retried: a 404 is a confirmed fact about the title, not a
+        // transient condition.
         wikipediaSummaryCache.set(cacheKey, { data: null, ts: Date.now() });
         logger.info(
           { lang, title, status: resp.status },
@@ -2008,7 +2043,6 @@ async function fetchWikipediaSummary(
     );
     return summary;
   } catch {
-    clearTimeout(timer);
     // Timeout / network error — do NOT cache null (transient).
     return null;
   }
@@ -2161,6 +2195,43 @@ export async function fetchWikipediaSummaryForCandidate(
   const result = await fetchWikipediaSummary(target.lang, target.title, signal);
   return result ? { ...result, resolvedVia: target.resolvedVia } : undefined;
 }
+
+/**
+ * Run async jobs with at most `concurrency` in flight at once, instead of
+ * firing all of them at the same instant via Promise.all. Used to bound the
+ * Wikipedia summary pre-fetch fan-out below: a dense cluster of walkable
+ * candidates that all resolve a Wikipedia article can otherwise fire a
+ * dozen-plus simultaneous requests at en.wikipedia.org in one burst, which
+ * risks a self-inflicted 429 (observed in the field on a dense Grand
+ * Central-area cluster, Sept. 25). Preserves result order.
+ */
+export async function mapWithConcurrency<T, R>(
+  items: readonly T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+  async function worker(): Promise<void> {
+    while (nextIndex < items.length) {
+      const i = nextIndex++;
+      results[i] = await fn(items[i]);
+    }
+  }
+  const workerCount = Math.max(1, Math.min(concurrency, items.length));
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
+/**
+ * Max simultaneous Wikipedia summary fetches during the discover route's
+ * Site B pre-fetch. Field observation was ~12 candidates in one dense
+ * cluster firing fully-unbounded (Promise.all) requests at once and
+ * self-inflicting a 429 on en.wikipedia.org. 4 keeps the burst small enough
+ * to avoid that while still finishing well under a second for a full batch
+ * — negligible next to the multi-second copy-gen LLM call that follows.
+ */
+const WIKI_SUMMARY_PREFETCH_CONCURRENCY = 4;
 
 /**
  * Attempt to find a representative photo for a place name via the Wikipedia
@@ -3638,15 +3709,13 @@ router.post("/explore/discover", async (req, res) => {
         // cappedCandidates — the only candidates wikiMap is ever consulted
         // for during copy-gen — rather than the full post-filter pool, so a
         // larger raw Overpass cap can't inflate concurrent Wikipedia/
-        // Wikidata fetch fan-out. Fetches run in parallel (Promise.all) and
-        // are backed by the shared in-memory caches (wiki-v5 / wikidata-entity,
-        // keyed by lang/title and by Wikidata id respectively) also used by
-        // the detail-page Phase B path — a subsequent detail-page tap for
-        // the same place is a free cache hit with no second network call.
-        // Total added latency: ~200–400 ms for the slowest single fetch, which is
-        // negligible before the 3–30 s copy LLM call that follows. If any fetch
-        // times out or fails, the candidate silently falls through to the
-        // thin-copy path unchanged.
+        // Wikidata fetch fan-out. Fetches are backed by the shared in-memory
+        // caches (wiki-v6 / wikidata-entity, keyed by lang/title and by
+        // Wikidata id respectively) also used by the detail-page Phase B
+        // path — a subsequent detail-page tap for the same place is a free
+        // cache hit with no second network call. If any fetch times out or
+        // fails, the candidate silently falls through to the thin-copy path
+        // unchanged.
         const wikiMap = new Map<string, WikipediaSummary>();
         {
           type WikiJob = {
@@ -3674,15 +3743,24 @@ router.post("/explore/discover", async (req, res) => {
               { count: jobs.length },
               "[osm-anchor] pre-fetching Wikipedia summaries",
             );
-            const settled = await Promise.all(
-              jobs.map(({ osmId, lang, title, resolvedVia }) =>
+            // Bounded concurrency (not Promise.all) — a dense cluster of
+            // candidates that all resolve a Wikipedia article otherwise
+            // fires every fetch at en.wikipedia.org in the same instant,
+            // which risks a self-inflicted 429 burst (see
+            // WIKI_SUMMARY_PREFETCH_CONCURRENCY / mapWithConcurrency above,
+            // and the fetchWikipediaSummary 429-retry above it). Total added
+            // latency for a full dense batch is still well under a second,
+            // negligible before the 3–30 s copy LLM call that follows.
+            const settled = await mapWithConcurrency(
+              jobs,
+              WIKI_SUMMARY_PREFETCH_CONCURRENCY,
+              ({ osmId, lang, title, resolvedVia }) =>
                 fetchWikipediaSummary(lang, title, copyAbort.signal).then(
                   (s) => ({
                     osmId,
                     summary: s ? { ...s, resolvedVia } : null,
                   }),
                 ),
-              ),
             );
             for (const { osmId, summary } of settled) {
               if (summary) wikiMap.set(osmId, summary);
