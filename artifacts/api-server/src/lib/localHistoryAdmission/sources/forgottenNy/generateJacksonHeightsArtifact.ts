@@ -44,6 +44,10 @@ import {
 } from "../../artifact";
 import { projectRuntimeCompat } from "../../projector";
 import { applyDiscoveryWorthinessGate } from "../../worthiness";
+import {
+  groupClaimsIntoAngles,
+  resolveSubjectDiscoveryProjections,
+} from "../../angleGrouping";
 
 const JACKSON_HEIGHTS_BBOX: NarrativeBbox = {
   minLat: 40.74616,
@@ -249,6 +253,14 @@ async function main() {
   );
   const projection = projectRuntimeCompat(artifact);
   const gated = applyDiscoveryWorthinessGate(projection, artifact);
+  // First-slice angle-grouping plumbing (no-op grouping logic — see
+  // angleGrouping.ts module doc). Inspection-only in this report; not
+  // consumed by any runtime path.
+  const angleGrouping = groupClaimsIntoAngles(artifact, projection);
+  const subjectDiscoveryProjections = resolveSubjectDiscoveryProjections(
+    angleGrouping,
+    gated,
+  );
 
   console.log("--- Artifact decision totals ---");
   console.log(
@@ -285,6 +297,8 @@ async function main() {
         artifact,
         projection,
         gated,
+        angleGrouping,
+        subjectDiscoveryProjections,
       },
       null,
       2,

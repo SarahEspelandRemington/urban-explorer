@@ -1,0 +1,16 @@
+{
+  "subjectId": "way/349397298",
+  "angleGroups": [
+    {
+      "subjectId": "way/349397298",
+      "angleId": "way/349397298-ironworkers-union-tenure",
+      "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+      "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+      "claimIds": [
+        "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+        "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+      ]
+    }
+  ],
+  "ungroupedClaimIds": ["pab-75672-identity", "pab-75672-register-status"]
+}
