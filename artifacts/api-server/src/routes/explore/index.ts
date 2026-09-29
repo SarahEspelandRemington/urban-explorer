@@ -1,5 +1,4 @@
 import { Router } from "express";
-import crypto from "crypto";
 import { logger } from "../../lib/logger";
 import {
   LLM_CACHE_CURRENT_VERSIONS,
@@ -311,35 +310,12 @@ type FreshFunnelDiagnostics = {
   terminalReason?: "overpass_unavailable" | "no_osm_results";
   lastEliminatingStage?: string;
 };
-// TEMP-DISCOVER-FUNNEL-CANDIDATES: bounded field-test diagnostic record type.
-// See the diagnostic's construction site (search this tag) for scope,
-// authorization window, and removal rule.
-type TempDiscoverFunnelCandidateDiag = {
-  candidateId: string;
-  candidateSource: "osm" | "streetlit";
-  trustLevel: string;
-  preCopyRank: number;
-  hasWikipedia: boolean;
-  hasWikidata: boolean;
-  hasHistoricOrHeritage: boolean;
-  hasDescription: boolean;
-  hasStartDate: boolean;
-  hasApprovedCuratedEvidence: boolean;
-  excludedCap: boolean;
-  sentToCopyGen: boolean;
-  discoveryTier?: number;
-  discoveryRejectionReason?: string;
-};
 type AnchorDiscoverOutcome =
   | { terminal: true; response: any; funnelDiagnostics: FreshFunnelDiagnostics }
   | {
       terminal: false;
       entry: any;
       funnelDiagnostics: FreshFunnelDiagnostics;
-      // TEMP-DISCOVER-FUNNEL-CANDIDATES: keyed by raw osmId (never logged
-      // itself) so the outer response-filtering scope can compute final
-      // response inclusion without re-deriving candidate identity.
-      candidateFunnelDiag?: Map<string, TempDiscoverFunnelCandidateDiag>;
     };
 class DiscoverAbortError extends Error {}
 const inFlightDiscover = new Map<
@@ -3649,60 +3625,6 @@ router.post("/explore/discover", async (req, res) => {
           );
         }
 
-        // TEMP-DISCOVER-FUNNEL-CANDIDATES: bounded field-test diagnostic.
-        // Traces every non-bare candidate's disposition through the copy-gen
-        // cap and post-copy tier classification, at candidate level, so a
-        // field-test log review can distinguish current source/evidence
-        // sparsity, copy-generation cap loss, and post-copy tier/
-        // classification loss. Client-side pickNext loss is intentionally
-        // out of scope for this diagnostic (Build14 has no A19; see task
-        // notes). Observational only — reads already-computed values, adds
-        // no new classification logic, and does not alter candidate
-        // ordering, the cap, copy-gen selection, or discoveryTier. Walk Mode
-        // only. Correlation id is a truncated stable SHA-256 hash used for
-        // pseudonymous correlation of the candidate's existing
-        // osmId/streetlitId join key, never the raw id or name. Authorized
-        // through one ordinary historically dense field
-        // walk plus the ensuing log review/decision, and no later than
-        // 2026-09-12, whichever comes first — remove after that review
-        // unless explicitly renewed.
-        const candidateFunnelDiag = new Map<
-          string,
-          TempDiscoverFunnelCandidateDiag
-        >();
-        if (walkMode) {
-          const rankSorted = [...copyGenCandidates].sort(
-            (a, b) =>
-              haversineDistance(latitude, longitude, a.lat, a.lon) -
-              haversineDistance(latitude, longitude, b.lat, b.lon),
-          );
-          const cappedOsmIds = new Set(cappedCandidates.map((c) => c.osmId));
-          rankSorted.forEach((c, rank) => {
-            candidateFunnelDiag.set(c.osmId, {
-              candidateId: crypto
-                .createHash("sha256")
-                .update(c.osmId)
-                .digest("hex")
-                .slice(0, 12),
-              candidateSource:
-                c.candidateOrigin === "streetlit" ? "streetlit" : "osm",
-              trustLevel: computeOsmTrustLevel(c.tags),
-              preCopyRank: rank,
-              hasWikipedia: Boolean(c.tags["wikipedia"]),
-              hasWikidata: Boolean(c.tags["wikidata"]),
-              hasHistoricOrHeritage: Boolean(
-                c.tags["historic"] || c.tags["heritage:description"],
-              ),
-              hasDescription: Boolean(c.tags["description"]),
-              hasStartDate: Boolean(c.tags["start_date"]),
-              hasApprovedCuratedEvidence:
-                getApprovedCuratedEntry(c.osmId) !== undefined,
-              excludedCap: !cappedOsmIds.has(c.osmId),
-              sentToCopyGen: cappedOsmIds.has(c.osmId),
-            });
-          });
-        }
-
         // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
         // wikipedia= tag, or — when that tag is absent — resolve one via the
         // candidate's wikidata= entity's explicit enwiki sitelink. Scoped to
@@ -4230,21 +4152,6 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             p.discoveryRejectionReason = rejectionReason;
           }
         }
-        // TEMP-DISCOVER-FUNNEL-CANDIDATES: populate the post-copy tier
-        // fields onto the candidate map built above, now that
-        // applyDiscoveryTier (and the lodging guardrail immediately above)
-        // have run. Read-only lookup — does not alter mergedPlaces. See the
-        // diagnostic's construction site above for scope/authorization.
-        if (walkMode && candidateFunnelDiag.size > 0) {
-          const mergedByOsmId = new Map(
-            mergedPlaces.map((p) => [p.osmId ?? p.streetlitId, p]),
-          );
-          for (const [osmId, diag] of candidateFunnelDiag) {
-            const merged = mergedByOsmId.get(osmId);
-            diag.discoveryTier = merged?.discoveryTier;
-            diag.discoveryRejectionReason = merged?.discoveryRejectionReason;
-          }
-        }
         // Diagnostic-only, read-only: cross-tab of trustLevel (OSM tag
         // richness, known pre-copy) x discoveryTier (regex-classified from
         // generated prose, known only post-copy). Investigates whether
@@ -4364,7 +4271,6 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           terminal: false,
           entry: anchorResp,
           funnelDiagnostics,
-          ...(walkMode ? { candidateFunnelDiag } : {}),
         };
       };
 
@@ -4475,50 +4381,6 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
           ...(lastEliminatingStage ? { lastEliminatingStage } : {}),
         },
         "[osm-anchor] discover funnel",
-      );
-    }
-    // TEMP-DISCOVER-FUNNEL-CANDIDATES: single per-request diagnostic log,
-    // emitted once for this owner request's normal-completion path only
-    // (same scope as the aggregate funnel log immediately above — coalesced
-    // waiters are not re-logged). Observational only: reads
-    // anchorResponsePlaces to determine final-response inclusion; does not
-    // alter it. See the diagnostic's construction site (search this tag,
-    // earlier in this file) for full scope and authorization window
-    // (through one ordinary historically dense field walk plus the ensuing
-    // log review/decision, and no later than 2026-09-12, whichever comes
-    // first — remove after that review unless explicitly renewed).
-    if (walkMode && outcome.candidateFunnelDiag) {
-      const finalIds = new Set(
-        anchorResponsePlaces.map((p: any) => p.osmId ?? p.streetlitId),
-      );
-      const candidateDiagArray = [...outcome.candidateFunnelDiag.entries()].map(
-        ([osmId, diag]) => ({
-          ...diag,
-          includedInFinalResponse: finalIds.has(osmId),
-        }),
-      );
-      const fd = outcome.funnelDiagnostics;
-      req.log.info(
-        {
-          tag: "TEMP-DISCOVER-FUNNEL-CANDIDATES",
-          reqId: req.id,
-          perRequest: {
-            // Pool size at the pre-cap stage this diagnostic instruments
-            // (post-bare-exclusion, pre-cap) — same value as nonBareCount;
-            // named separately to match the requested field list.
-            poolSizeAtPreCapStage: candidateDiagArray.length,
-            nonBareCount: candidateDiagArray.length,
-            // Mirrors COPY_GEN_CANDIDATE_CAP (defined inside
-            // computeAnchorDiscoverResult, out of scope here) — not altered
-            // by this diagnostic.
-            capThreshold: 22,
-            excludedBareCount: fd.copyGeneration?.excludedBareCount,
-            excludedCapCount: fd.copyGeneration?.excludedCapCount,
-            sentToCopyGenCount: fd.copyGeneration?.candidatesSent,
-          },
-          candidates: candidateDiagArray,
-        },
-        "[TEMP-DISCOVER-FUNNEL-CANDIDATES] candidate-level discover funnel",
       );
     }
     res.json({
@@ -6148,10 +6010,6 @@ router.post("/explore/walk-narration", async (req, res) => {
     address,
     facts,
   });
-  // TEMP-EVIDENCE-FLOOR: diagnostic only, outcome-only (no raw
-  // summary/fact text). Authorized through the first two ordinary
-  // evidence-floor field walks, or through 2026-09-12, whichever comes
-  // first. Review/remove immediately afterward.
   if (
     !hasMinimumNarrationEvidence({
       jitOutcome,
@@ -6159,27 +6017,9 @@ router.post("/explore/walk-narration", async (req, res) => {
       narrationFacts,
     })
   ) {
-    req.log.info(
-      {
-        tag: "TEMP-EVIDENCE-FLOOR",
-        reqId: req.id,
-        route: "walk-narration",
-        result: "evidenceAbsentSuppress",
-      },
-      "[TEMP-EVIDENCE-FLOOR] no minimum evidence — suppressing narration before copy generation",
-    );
     res.json({ narration: "" });
     return;
   }
-  req.log.info(
-    {
-      tag: "TEMP-EVIDENCE-FLOOR",
-      reqId: req.id,
-      route: "walk-narration",
-      result: "evidencePresentProceed",
-    },
-    "[TEMP-EVIDENCE-FLOOR] minimum evidence present — proceeding to copy generation",
-  );
 
   // @prompt-region walk-narration
   // Build the location context string for the user message. Priority:
@@ -6740,10 +6580,6 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         address,
         facts,
       });
-      // TEMP-EVIDENCE-FLOOR: diagnostic only, outcome-only (no raw
-      // summary/fact text). Authorized through the first two ordinary
-      // evidence-floor field walks, or through 2026-09-12, whichever comes
-      // first. Review/remove immediately afterward.
       if (
         !hasMinimumNarrationEvidence({
           jitOutcome,
@@ -6751,27 +6587,9 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
           narrationFacts,
         })
       ) {
-        req.log.info(
-          {
-            tag: "TEMP-EVIDENCE-FLOOR",
-            reqId: req.id,
-            route: "walk-narration-audio",
-            result: "evidenceAbsentSuppress",
-          },
-          "[TEMP-EVIDENCE-FLOOR] no minimum evidence — suppressing narration before copy generation",
-        );
         if (!res.headersSent) res.status(204).end();
         return;
       }
-      req.log.info(
-        {
-          tag: "TEMP-EVIDENCE-FLOOR",
-          reqId: req.id,
-          route: "walk-narration-audio",
-          result: "evidencePresentProceed",
-        },
-        "[TEMP-EVIDENCE-FLOOR] minimum evidence present — proceeding to copy generation",
-      );
 
       // @prompt-region walk-narration-audio
       // Build the location context string — same priority as /walk-narration.
