@@ -1,0 +1,228 @@
+{
+  "Actors' Temple (339 West 47th Street)": {
+    "lane": "ephemeral",
+    "excludedClaimIds": [],
+    "artifactSummary": {
+      "totalClaims": 1,
+      "byDecision": {
+        "AUTO-ADMIT": 1,
+        "HOLD": 0,
+        "SUPPRESS": 0
+      },
+      "subjectCount": 1,
+      "integrityViolations": [],
+      "nonProjectableClaimIds": []
+    },
+    "claims": [
+      {
+        "claimId": "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history",
+        "claimType": "use-history",
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        },
+        "subjectId": "way/265322610",
+        "text": "Ephemeral New York's article \"The little Hell's Kitchen synagogue where old Broadway stars once worshipped\" states about 339 West 47th Street: \"Performers like Sophie Tucker, Milton Berle, and Jack Benny came to services, and Ezrath Israel became known as the Actors' Temple.\""
+      }
+    ],
+    "worthiness": {
+      "passed": ["way/265322610"],
+      "rejected": [],
+      "worthinessBySubject": {
+        "way/265322610": {
+          "projectableForDiscovery": true,
+          "worthinessReasons": [
+            "Contains story-bearing claim type(s) — use-history — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+          ]
+        }
+      }
+    },
+    "projectedEntries": {
+      "way/265322610": {
+        "source": {
+          "title": "Ephemeral New York — The little Hell's Kitchen synagogue where old Broadway stars once worshipped",
+          "url": "https://ephemeralnewyork.wordpress.com/2022/09/23/the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped/",
+          "sourceType": "local public-history narrative source",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 1 independently AUTO-ADMIT claim(s) (eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history), drawing on: Ephemeral New York — The little Hell's Kitchen synagogue where old Broadway stars once worshipped. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+          "publicationDate": "2022-09-23T05:11:24+00:00"
+        },
+        "evidence": {
+          "subjectId": "way/265322610",
+          "text": "Ephemeral New York's article \"The little Hell's Kitchen synagogue where old Broadway stars once worshipped\" states about 339 West 47th Street: \"Performers like Sophie Tucker, Milton Berle, and Jack Benny came to services, and Ezrath Israel became known as the Actors' Temple.\"",
+          "claimScope": "Mechanically composed from 1 admitted claim(s) covering: use-history. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "high",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      }
+    }
+  },
+  "Clinton Court (422 West 46th Street)": {
+    "lane": "ephemeral",
+    "excludedClaimIds": [
+      "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p10s0-relationship"
+    ],
+    "artifactSummary": {
+      "totalClaims": 1,
+      "byDecision": {
+        "AUTO-ADMIT": 1,
+        "HOLD": 0,
+        "SUPPRESS": 0
+      },
+      "subjectCount": 1,
+      "integrityViolations": [],
+      "nonProjectableClaimIds": []
+    },
+    "claims": [
+      {
+        "claimId": "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history",
+        "claimType": "use-history",
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "medium",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        },
+        "subjectId": "way/265320377",
+        "text": "Ephemeral New York's article \"A secret alley behind a street in Hell's Kitchen\" states about 422 West 46th Street: \"In 1958, the tenements at 420 and 422 West 46th Street, the carriage house, and the studio became one single apartment complex entity, says Gray—serene seclusion steeped in New York history and mere steps from Midtown.\""
+      }
+    ],
+    "worthiness": {
+      "passed": ["way/265320377"],
+      "rejected": [],
+      "worthinessBySubject": {
+        "way/265320377": {
+          "projectableForDiscovery": true,
+          "worthinessReasons": [
+            "Contains story-bearing claim type(s) — use-history — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+          ]
+        }
+      }
+    },
+    "projectedEntries": {
+      "way/265320377": {
+        "source": {
+          "title": "Ephemeral New York — A secret alley behind a street in Hell's Kitchen",
+          "url": "https://ephemeralnewyork.wordpress.com/2017/09/25/a-secret-alley-behind-a-street-in-hells-kitchen/",
+          "sourceType": "local public-history narrative source",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 1 independently AUTO-ADMIT claim(s) (eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history), drawing on: Ephemeral New York — A secret alley behind a street in Hell's Kitchen. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+          "publicationDate": "2017-09-25T04:47:59+00:00"
+        },
+        "evidence": {
+          "subjectId": "way/265320377",
+          "text": "Ephemeral New York's article \"A secret alley behind a street in Hell's Kitchen\" states about 422 West 46th Street: \"In 1958, the tenements at 420 and 422 West 46th Street, the carriage house, and the studio became one single apartment complex entity, says Gray—serene seclusion steeped in New York history and mere steps from Midtown.\"",
+          "claimScope": "Mechanically composed from 1 admitted claim(s) covering: use-history. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "medium",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      }
+    }
+  },
+  "Actors Studio (432 West 44th Street)": {
+    "lane": "lpc",
+    "excludedClaimIds": [],
+    "artifactSummary": {
+      "totalClaims": 3,
+      "byDecision": {
+        "AUTO-ADMIT": 3,
+        "HOLD": 0,
+        "SUPPRESS": 0
+      },
+      "subjectCount": 1,
+      "integrityViolations": [],
+      "nonProjectableClaimIds": []
+    },
+    "claims": [
+      {
+        "claimId": "lpc-row-0-construction-date",
+        "claimType": "construction-date",
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "high",
+          "editorialQuality": "low",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        },
+        "subjectId": "way/265319542",
+        "text": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 432 West 44th Street of c. 1858."
+      },
+      {
+        "claimId": "lpc-row-0-notes",
+        "claimType": "event",
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        },
+        "subjectId": "way/265319542",
+        "text": "The NYC Landmarks Preservation Commission's own Notes field for 432 West 44th Street records: \"The building style has been referred to as \"Bricklayer Greek\".\""
+      },
+      {
+        "claimId": "lpc-row-0-owner",
+        "claimType": "relationship",
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        },
+        "subjectId": "way/265319542",
+        "text": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 432 West 44th Street as Seventh Associate Presbyterian Church."
+      }
+    ],
+    "worthiness": {
+      "passed": ["way/265319542"],
+      "rejected": [],
+      "worthinessBySubject": {
+        "way/265319542": {
+          "projectableForDiscovery": true,
+          "worthinessReasons": [
+            "Contains story-bearing claim type(s) — event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+          ]
+        }
+      }
+    },
+    "projectedEntries": {
+      "way/265319542": {
+        "source": {
+          "title": "NYC Landmarks Preservation Commission — Actors Studio (432 West 44th Street)",
+          "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-0'",
+          "sourceType": "government preservation record",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (lpc-row-0-construction-date, lpc-row-0-notes, lpc-row-0-owner), drawing on: NYC Landmarks Preservation Commission — Actors Studio (432 West 44th Street). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+        },
+        "evidence": {
+          "subjectId": "way/265319542",
+          "text": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 432 West 44th Street of c. 1858. The NYC Landmarks Preservation Commission's own Notes field for 432 West 44th Street records: \"The building style has been referred to as \"Bricklayer Greek\".\" The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 432 West 44th Street as Seventh Associate Presbyterian Church.",
+          "claimScope": "Mechanically composed from 3 admitted claim(s) covering: construction-date, event, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-0-construction-date, lpc-row-0-notes, lpc-row-0-owner) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "high",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1358 @@
+{
+  "generatedAt": "2026-09-29T00:00:00.000Z",
+  "note": "3 anchor subjects (way/265322610, way/265320377, way/349397298) below are carried over unchanged from report-e2e.json, not re-run. 10 additional subjects were newly, blindly evaluated per manifest-broader-eval.json.",
+  "anchorSubjects": [
+    {
+      "subjectId": "way/265322610",
+      "subjectName": "Actors' Temple (339 West 47th Street)",
+      "admittedClaims": [
+        {
+          "claimId": "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history",
+          "claimType": "use-history",
+          "claimText": "Ephemeral New York's article \"The little Hell's Kitchen synagogue where old Broadway stars once worshipped\" states about 339 West 47th Street: \"Performers like Sophie Tucker, Milton Berle, and Jack Benny came to services, and Ezrath Israel became known as the Actors' Temple.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/265322610",
+        "angleGroups": [
+          {
+            "subjectId": "way/265322610",
+            "angleId": "way/265322610-broadway-stars-worship",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/265322610",
+        "candidates": [
+          {
+            "subjectId": "way/265322610",
+            "candidateId": "way/265322610-broadway-stars-worship",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1Validation": {
+        "valid": false,
+        "reasons": [
+          "AngleGroup \"way/265322610-broadway-stars-worship\" field \"perspectiveShift\" contains an entity/proper noun (\"Broadway-era\") not present in its assigned claim text or subject name."
+        ]
+      },
+      "candidates": [
+        {
+          "candidateId": "way/265322610-broadway-stars-worship",
+          "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+          "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+          "claimIds": [
+            "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+          ],
+          "stage2Input": {
+            "subjectId": "way/265322610",
+            "subjectName": "Actors' Temple (339 West 47th Street)",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claims": [
+              {
+                "claimId": "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history",
+                "claimText": "Ephemeral New York's article \"The little Hell's Kitchen synagogue where old Broadway stars once worshipped\" states about 339 West 47th Street: \"Performers like Sophie Tucker, Milton Berle, and Jack Benny came to services, and Ezrath Israel became known as the Actors' Temple.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": true,
+            "reason": "The claim reveals a hidden, surprising layer beneath an ordinary-looking Hell's Kitchen synagogue: Ezrath Israel was actually attended by famous Broadway-era performers (Sophie Tucker, Milton Berle, Jack Benny), which is why it became nicknamed the Actors' Temple. This shifts the walker's understanding of the building from a generic neighborhood synagogue to a site with a specific, humanly revealing show-business history explaining its name, not just a date or confirmation of known use."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/265322610",
+        "acceptedAngles": [
+          {
+            "subjectId": "way/265322610",
+            "angleId": "way/265322610-broadway-stars-worship",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+            ]
+          }
+        ],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": []
+      }
+    },
+    {
+      "subjectId": "way/265320377",
+      "subjectName": "Clinton Court (422 West 46th Street)",
+      "admittedClaims": [
+        {
+          "claimId": "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history",
+          "claimType": "use-history",
+          "claimText": "Ephemeral New York's article \"A secret alley behind a street in Hell's Kitchen\" states about 422 West 46th Street: \"In 1958, the tenements at 420 and 422 West 46th Street, the carriage house, and the studio became one single apartment complex entity, says Gray—serene seclusion steeped in New York history and mere steps from Midtown.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/265320377",
+        "angleGroups": [
+          {
+            "subjectId": "way/265320377",
+            "angleId": "way/265320377-consolidation-1958",
+            "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+            "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/265320377",
+        "candidates": [
+          {
+            "subjectId": "way/265320377",
+            "candidateId": "way/265320377-consolidation-1958",
+            "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+            "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/265320377-consolidation-1958",
+          "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+          "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+          "claimIds": [
+            "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+          ],
+          "stage2Input": {
+            "subjectId": "way/265320377",
+            "subjectName": "Clinton Court (422 West 46th Street)",
+            "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+            "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+            "claims": [
+              {
+                "claimId": "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history",
+                "claimText": "Ephemeral New York's article \"A secret alley behind a street in Hell's Kitchen\" states about 422 West 46th Street: \"In 1958, the tenements at 420 and 422 West 46th Street, the carriage house, and the studio became one single apartment complex entity, says Gray—serene seclusion steeped in New York history and mere steps from Midtown.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": false,
+            "reason": "The single claim only documents an administrative/legal consolidation date (1958) merging separate lots into one apartment complex entity. This is metadata about property structure, not a hidden story, visible remnant, or causal explanation for why the place looks or feels the way it does. The walker passing 422 West 46th Street sees a secluded alley enclave regardless of this fact, and the claim doesn't explain the carriage house's origin, the studio's purpose, or any visible feature of the site — it just confirms a corporate/ownership merger date, which is the kind of formal-verification detail the rejection criteria explicitly call out."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/265320377",
+        "acceptedAngles": [],
+        "rejectedCandidates": [
+          {
+            "candidate": {
+              "subjectId": "way/265320377",
+              "candidateId": "way/265320377-consolidation-1958",
+              "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+              "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+              "claimIds": [
+                "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+              ]
+            },
+            "rejectionReason": "The single claim only documents an administrative/legal consolidation date (1958) merging separate lots into one apartment complex entity. This is metadata about property structure, not a hidden story, visible remnant, or causal explanation for why the place looks or feels the way it does. The walker passing 422 West 46th Street sees a secluded alley enclave regardless of this fact, and the claim doesn't explain the carriage house's origin, the studio's purpose, or any visible feature of the site — it just confirms a corporate/ownership merger date, which is the kind of formal-verification detail the rejection criteria explicitly call out."
+          }
+        ],
+        "ungroupedClaimIds": []
+      }
+    },
+    {
+      "subjectId": "way/349397298",
+      "subjectName": "1924 Spring Garden Street",
+      "admittedClaims": [
+        {
+          "claimId": "pab-75672-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1924 SPRING GARDEN ST identifies this as \"1924 Spring Garden Street.\""
+        },
+        {
+          "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+          "claimType": "construction-date",
+          "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The squat new building at 1924 Spring Garden Street in 1971, built for the Ironworkers Union.\""
+        },
+        {
+          "claimId": "pab-75672-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1924 SPRING GARDEN ST, dated 10/11/2000."
+        },
+        {
+          "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding",
+          "claimType": "institutional-founding",
+          "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The International Association of Bridge, Structural, & Ornamental Iron Workers Union Local 401 (founded 1901), which had been at 1924 Spring Garden Street for at least four decades, sold the site to PSSU in 1993.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/349397298",
+        "angleGroups": [
+          {
+            "subjectId": "way/349397298",
+            "angleId": "way/349397298-ironworkers-union-tenure",
+            "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+            "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+            "claimIds": [
+              "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+              "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": ["pab-75672-identity", "pab-75672-register-status"]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/349397298",
+        "candidates": [
+          {
+            "subjectId": "way/349397298",
+            "candidateId": "way/349397298-ironworkers-union-tenure",
+            "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+            "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+            "claimIds": [
+              "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+              "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": ["pab-75672-identity", "pab-75672-register-status"]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/349397298-ironworkers-union-tenure",
+          "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+          "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+          "claimIds": [
+            "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+            "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+          ],
+          "stage2Input": {
+            "subjectId": "way/349397298",
+            "subjectName": "1924 Spring Garden Street",
+            "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+            "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+            "claims": [
+              {
+                "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+                "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The squat new building at 1924 Spring Garden Street in 1971, built for the Ironworkers Union.\""
+              },
+              {
+                "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding",
+                "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The International Association of Bridge, Structural, & Ornamental Iron Workers Union Local 401 (founded 1901), which had been at 1924 Spring Garden Street for at least four decades, sold the site to PSSU in 1993.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": false,
+            "reason": "This mainly documents that a union (Local 401, founded 1901) occupied a building built in 1971 until selling it in 1993 — a long-occupancy timeline restated as metadata. It doesn't reveal why this location mattered, any conflict, event, or human story tied to the union's presence, or explain the building's plain appearance beyond noting it was 'squat.' A walker learns dates and ownership history but doesn't experience the place differently."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/349397298",
+        "acceptedAngles": [],
+        "rejectedCandidates": [
+          {
+            "candidate": {
+              "subjectId": "way/349397298",
+              "candidateId": "way/349397298-ironworkers-union-tenure",
+              "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+              "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+              "claimIds": [
+                "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+                "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+              ]
+            },
+            "rejectionReason": "This mainly documents that a union (Local 401, founded 1901) occupied a building built in 1971 until selling it in 1993 — a long-occupancy timeline restated as metadata. It doesn't reveal why this location mattered, any conflict, event, or human story tied to the union's presence, or explain the building's plain appearance beyond noting it was 'squat.' A walker learns dates and ownership history but doesn't experience the place differently."
+          }
+        ],
+        "ungroupedClaimIds": ["pab-75672-identity", "pab-75672-register-status"]
+      }
+    }
+  ],
+  "additionalSubjects": [
+    {
+      "subjectId": "way/1313740189",
+      "subjectName": "1733 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "admittedClaims": [
+        {
+          "claimId": "pab-75500-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1733 SPRING GARDEN ST identifies this as \"1733 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75500-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1733 SPRING GARDEN ST, dated 10/11/2000."
+        },
+        {
+          "claimId": "bp-the-hoopes-mansion-pab-record-75500-p27s9-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"The Hoopes Mansion\" states about 1733 SPRING GARDEN ST: \"Hoopes sold his house at 1733 Spring Garden Street in 1879 to one Elizabeth Downing, and moved 5 blocks north to the southwest corner of North Street and 18th (now the site of the Spring Garden community garden plots), where he died in 1895.\""
+        },
+        {
+          "claimId": "bp-the-hoopes-mansion-pab-record-75500-p41s0-relationship",
+          "claimType": "relationship",
+          "claimText": "Baldwin Park's page \"The Hoopes Mansion\" states about 1733 SPRING GARDEN ST: \"The RBO moved to Yardley in 2015 and the building with carriage house, then advertised with 12 bedrooms, five baths, and a walled-in courtyard, was sold to an entity called 1733 Spring Garden LLC.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/1313740189",
+        "angleGroups": [],
+        "ungroupedClaimIds": [
+          "pab-75500-identity",
+          "pab-75500-register-status",
+          "bp-the-hoopes-mansion-pab-record-75500-p27s9-event",
+          "bp-the-hoopes-mansion-pab-record-75500-p41s0-relationship"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/1313740189",
+        "candidates": [],
+        "ungroupedClaimIds": [
+          "pab-75500-identity",
+          "pab-75500-register-status",
+          "bp-the-hoopes-mansion-pab-record-75500-p27s9-event",
+          "bp-the-hoopes-mansion-pab-record-75500-p41s0-relationship"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [],
+      "finalEvaluation": {
+        "subjectId": "way/1313740189",
+        "acceptedAngles": [],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": [
+          "pab-75500-identity",
+          "pab-75500-register-status",
+          "bp-the-hoopes-mansion-pab-record-75500-p27s9-event",
+          "bp-the-hoopes-mansion-pab-record-75500-p41s0-relationship"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/1353406192",
+      "subjectName": "1914 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "admittedClaims": [
+        {
+          "claimId": "pab-75523-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1914 SPRING GARDEN ST identifies this as \"Residence.\""
+        },
+        {
+          "claimId": "pab-75523-chrono-0-architect-0",
+          "claimType": "architect",
+          "claimText": "PAB's Project Chronology names Oelschlager, Charles E.  (fl. 1891 - 1935/36) as architect for the ADDITIONS/ALTERATIONS event at 1914 SPRING GARDEN ST, dated 1906."
+        },
+        {
+          "claimId": "pab-75523-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1914 SPRING GARDEN ST, dated 06/29/1971."
+        },
+        {
+          "claimId": "pab-75523-chrono-0-event",
+          "claimType": "event",
+          "claimText": "PAB's Project Chronology records a ADDITIONS/ALTERATIONS event at 1914 SPRING GARDEN ST, dated 1906, with architect Oelschlager, Charles E.  (fl. 1891 - 1935/36)."
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/1353406192",
+        "angleGroups": [],
+        "ungroupedClaimIds": [
+          "pab-75523-identity",
+          "pab-75523-chrono-0-architect-0",
+          "pab-75523-register-status",
+          "pab-75523-chrono-0-event"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/1353406192",
+        "candidates": [],
+        "ungroupedClaimIds": [
+          "pab-75523-identity",
+          "pab-75523-chrono-0-architect-0",
+          "pab-75523-register-status",
+          "pab-75523-chrono-0-event"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [],
+      "finalEvaluation": {
+        "subjectId": "way/1353406192",
+        "acceptedAngles": [],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": [
+          "pab-75523-identity",
+          "pab-75523-chrono-0-architect-0",
+          "pab-75523-register-status",
+          "pab-75523-chrono-0-event"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/250706035",
+      "subjectName": "1701-1707 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "admittedClaims": [
+        {
+          "claimId": "pab-75492-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1701-1707 SPRING GARDEN ST identifies this as \"1701-1707 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75492-chrono-0-construction",
+          "claimType": "construction-date",
+          "claimText": "PAB's Project Chronology dates the construction of 1701-1707 SPRING GARDEN ST to 1939."
+        },
+        {
+          "claimId": "pab-75492-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1701-1707 SPRING GARDEN ST, dated 10/11/2000."
+        },
+        {
+          "claimId": "pab-75492-chrono-1-event",
+          "claimType": "event",
+          "claimText": "PAB's Project Chronology records a ADDITIONS/ALTERATIONS event at 1701-1707 SPRING GARDEN ST, dated 1961."
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/250706035",
+        "angleGroups": [],
+        "ungroupedClaimIds": [
+          "pab-75492-identity",
+          "pab-75492-chrono-0-construction",
+          "pab-75492-register-status",
+          "pab-75492-chrono-1-event"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/250706035",
+        "candidates": [],
+        "ungroupedClaimIds": [
+          "pab-75492-identity",
+          "pab-75492-chrono-0-construction",
+          "pab-75492-register-status",
+          "pab-75492-chrono-1-event"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [],
+      "finalEvaluation": {
+        "subjectId": "way/250706035",
+        "acceptedAngles": [],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": [
+          "pab-75492-identity",
+          "pab-75492-chrono-0-construction",
+          "pab-75492-register-status",
+          "pab-75492-chrono-1-event"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/251417983",
+      "subjectName": "2013 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "admittedClaims": [
+        {
+          "claimId": "pab-75695-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 2013 SPRING GARDEN ST identifies this as \"2013 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75695-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 2013 SPRING GARDEN ST, dated 06/29/1971."
+        },
+        {
+          "claimId": "bp-robert-carson-pab-record-75695-p23s0-use-history",
+          "claimType": "use-history",
+          "claimText": "Baldwin Park's page \"Robert Carson\" states about 2013 SPRING GARDEN ST: \"Robert Carson, who lived at 2013 Spring Garden Street from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery.\""
+        },
+        {
+          "claimId": "bp-robert-carson-pab-record-75695-p63s1-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"Robert Carson\" states about 2013 SPRING GARDEN ST: \"It last sold in 1996 for $225,000.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/251417983",
+        "angleGroups": [
+          {
+            "subjectId": "way/251417983",
+            "angleId": "way/251417983-carson-baldwin-connection",
+            "centralQuestion": "Why is a former resident of this house buried next to Matthias Baldwin?",
+            "perspectiveShift": "This ordinary rowhouse turns out to have a personal historical connection: Robert Carson, who lived here from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery, tying the address to a notable local historical figure through the person who once lived there.",
+            "claimIds": ["bp-robert-carson-pab-record-75695-p23s0-use-history"]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "pab-75695-identity",
+          "pab-75695-register-status",
+          "bp-robert-carson-pab-record-75695-p63s1-event"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/251417983",
+        "candidates": [
+          {
+            "subjectId": "way/251417983",
+            "candidateId": "way/251417983-carson-baldwin-connection",
+            "centralQuestion": "Why is a former resident of this house buried next to Matthias Baldwin?",
+            "perspectiveShift": "This ordinary rowhouse turns out to have a personal historical connection: Robert Carson, who lived here from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery, tying the address to a notable local historical figure through the person who once lived there.",
+            "claimIds": ["bp-robert-carson-pab-record-75695-p23s0-use-history"]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "pab-75695-identity",
+          "pab-75695-register-status",
+          "bp-robert-carson-pab-record-75695-p63s1-event"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/251417983-carson-baldwin-connection",
+          "centralQuestion": "Why is a former resident of this house buried next to Matthias Baldwin?",
+          "perspectiveShift": "This ordinary rowhouse turns out to have a personal historical connection: Robert Carson, who lived here from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery, tying the address to a notable local historical figure through the person who once lived there.",
+          "claimIds": ["bp-robert-carson-pab-record-75695-p23s0-use-history"],
+          "stage2Input": {
+            "subjectId": "way/251417983",
+            "subjectName": "2013 Spring Garden Street",
+            "centralQuestion": "Why is a former resident of this house buried next to Matthias Baldwin?",
+            "perspectiveShift": "This ordinary rowhouse turns out to have a personal historical connection: Robert Carson, who lived here from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery, tying the address to a notable local historical figure through the person who once lived there.",
+            "claims": [
+              {
+                "claimId": "bp-robert-carson-pab-record-75695-p23s0-use-history",
+                "claimText": "Baldwin Park's page \"Robert Carson\" states about 2013 SPRING GARDEN ST: \"Robert Carson, who lived at 2013 Spring Garden Street from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": true,
+            "reason": "The claim gives this rowhouse a personal historical connection beyond ordinary occupancy: Robert Carson, who lived at 2013 Spring Garden Street from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery. That link to Matthias Baldwin changes how a walker understands an otherwise unremarkable house, rather than simply adding a name and a date range."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/251417983",
+        "acceptedAngles": [
+          {
+            "subjectId": "way/251417983",
+            "angleId": "way/251417983-carson-baldwin-connection",
+            "centralQuestion": "Why is a former resident of this house buried next to Matthias Baldwin?",
+            "perspectiveShift": "This ordinary rowhouse turns out to have a personal historical connection: Robert Carson, who lived here from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery, tying the address to a notable local historical figure through the person who once lived there.",
+            "claimIds": ["bp-robert-carson-pab-record-75695-p23s0-use-history"]
+          }
+        ],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": [
+          "pab-75695-identity",
+          "pab-75695-register-status",
+          "bp-robert-carson-pab-record-75695-p63s1-event"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/1314403618",
+      "subjectName": "1923 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "admittedClaims": [
+        {
+          "claimId": "pab-75671-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1923 SPRING GARDEN ST identifies this as \"1923 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75671-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1923 SPRING GARDEN ST, dated 11/06/1975."
+        },
+        {
+          "claimId": "bp-dinan-funeral-home-pab-record-75671-p84s2-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"Dinan Funeral Home\" states about 1923 SPRING GARDEN ST: \"The Dinans bought this house in 1905 and sold it in 1941.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/1314403618",
+        "angleGroups": [],
+        "ungroupedClaimIds": [
+          "pab-75671-identity",
+          "pab-75671-register-status",
+          "bp-dinan-funeral-home-pab-record-75671-p84s2-event"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/1314403618",
+        "candidates": [],
+        "ungroupedClaimIds": [
+          "pab-75671-identity",
+          "pab-75671-register-status",
+          "bp-dinan-funeral-home-pab-record-75671-p84s2-event"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [],
+      "finalEvaluation": {
+        "subjectId": "way/1314403618",
+        "acceptedAngles": [],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": [
+          "pab-75671-identity",
+          "pab-75671-register-status",
+          "bp-dinan-funeral-home-pab-record-75671-p84s2-event"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/1314403623",
+      "subjectName": "1901 Spring Garden Street (Heisher Residence)",
+      "source": "PAB/Baldwin Park",
+      "admittedClaims": [
+        {
+          "claimId": "pab-1179406-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1901 SPRING GARDEN ST identifies this as \"Heisher Residence.\""
+        },
+        {
+          "claimId": "pab-75513-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1901 SPRING GARDEN ST identifies this as \"1901 Spring Garden Street.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p26s0-construction-date",
+          "claimType": "construction-date",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"In 1875 builder Edwin Randolph built a beautiful residence at 1901 Spring Garden Street on spec and put it up for sale as \\\"an elegant double marble residence, in thorough order and beautifully frescoed.\\\" It was purchased by Abraham R.\""
+        },
+        {
+          "claimId": "pab-75513-chrono-0-construction",
+          "claimType": "construction-date",
+          "claimText": "PAB's Project Chronology dates the construction of 1901 SPRING GARDEN ST to 1865."
+        },
+        {
+          "claimId": "pab-75513-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1901 SPRING GARDEN ST, dated 11/06/1975."
+        },
+        {
+          "claimId": "bp-history-subject-way-1314403623-p265s0-use-history",
+          "claimType": "use-history",
+          "claimText": "Baldwin Park's page \"Matthias Baldwin Park, History\" states about 1901 SPRING GARDEN ST: \"George Society owned 1901 Spring Garden Street from 1922 to 1949.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p26s5-biographical",
+          "claimType": "biographical",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"In 1894 Abram Cox, his son, died and was also buried from the home at 1901 Spring Garden Street.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p52s8-biographical",
+          "claimType": "biographical",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"Dannenbaum died January 26, 1927.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p32s4-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"Penrose Fleisher sold the home at 1901 Spring Garden Street to the firm of Mastbaum & Fleisher for a nominal fee in 1911, when the assessed value was $20,000.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"George Society were put in storage and its meetings wandered until May 10, 1924 when the one-year lease was up and it moved into the 1901 Spring Garden Street building.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p52s1-statistic",
+          "claimType": "statistic",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"The purchase price was $45,000 with immediate possession.\""
+        },
+        {
+          "claimId": "pab-1179406-client",
+          "claimType": "relationship",
+          "claimText": "PAB's own record names the client for 1901 SPRING GARDEN ST as \"Heisher, Peurose.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/1314403623",
+        "angleGroups": [
+          {
+            "subjectId": "way/1314403623",
+            "angleId": "way/1314403623-george-society-relocation",
+            "centralQuestion": "Why did the George Society's meetings 'wander' before settling into this building?",
+            "perspectiveShift": "Before this building became the George Society's home from 1922 to 1949, the organization's belongings were in storage and its meetings had no fixed location, moving in only after a one-year lease came due on May 10, 1924 -- making the building the endpoint of a period of institutional displacement rather than simply a long-term tenant's address.",
+            "claimIds": [
+              "bp-history-subject-way-1314403623-p265s0-use-history",
+              "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "pab-1179406-identity",
+          "pab-75513-identity",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p26s0-construction-date",
+          "pab-75513-chrono-0-construction",
+          "pab-75513-register-status",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p26s5-biographical",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p52s8-biographical",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p32s4-event",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p52s1-statistic",
+          "pab-1179406-client"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/1314403623",
+        "candidates": [
+          {
+            "subjectId": "way/1314403623",
+            "candidateId": "way/1314403623-george-society-relocation",
+            "centralQuestion": "Why did the George Society's meetings 'wander' before settling into this building?",
+            "perspectiveShift": "Before this building became the George Society's home from 1922 to 1949, the organization's belongings were in storage and its meetings had no fixed location, moving in only after a one-year lease came due on May 10, 1924 -- making the building the endpoint of a period of institutional displacement rather than simply a long-term tenant's address.",
+            "claimIds": [
+              "bp-history-subject-way-1314403623-p265s0-use-history",
+              "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "pab-1179406-identity",
+          "pab-75513-identity",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p26s0-construction-date",
+          "pab-75513-chrono-0-construction",
+          "pab-75513-register-status",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p26s5-biographical",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p52s8-biographical",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p32s4-event",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p52s1-statistic",
+          "pab-1179406-client"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/1314403623-george-society-relocation",
+          "centralQuestion": "Why did the George Society's meetings 'wander' before settling into this building?",
+          "perspectiveShift": "Before this building became the George Society's home from 1922 to 1949, the organization's belongings were in storage and its meetings had no fixed location, moving in only after a one-year lease came due on May 10, 1924 -- making the building the endpoint of a period of institutional displacement rather than simply a long-term tenant's address.",
+          "claimIds": [
+            "bp-history-subject-way-1314403623-p265s0-use-history",
+            "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event"
+          ],
+          "stage2Input": {
+            "subjectId": "way/1314403623",
+            "subjectName": "1901 Spring Garden Street (Heisher Residence)",
+            "centralQuestion": "Why did the George Society's meetings 'wander' before settling into this building?",
+            "perspectiveShift": "Before this building became the George Society's home from 1922 to 1949, the organization's belongings were in storage and its meetings had no fixed location, moving in only after a one-year lease came due on May 10, 1924 -- making the building the endpoint of a period of institutional displacement rather than simply a long-term tenant's address.",
+            "claims": [
+              {
+                "claimId": "bp-history-subject-way-1314403623-p265s0-use-history",
+                "claimText": "Baldwin Park's page \"Matthias Baldwin Park, History\" states about 1901 SPRING GARDEN ST: \"George Society owned 1901 Spring Garden Street from 1922 to 1949.\""
+              },
+              {
+                "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event",
+                "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"George Society were put in storage and its meetings wandered until May 10, 1924 when the one-year lease was up and it moved into the 1901 Spring Garden Street building.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": false,
+            "reason": "This explains when the George Society settled into the building after a period without a fixed meeting location, but it functions as institutional occupancy documentation -- confirming a move-in date and a preceding storage and lease gap -- rather than creating a new way of experiencing the building itself. It reads as organizational occupancy history, not a perspective shift a walker would feel about the place."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/1314403623",
+        "acceptedAngles": [],
+        "rejectedCandidates": [
+          {
+            "candidate": {
+              "subjectId": "way/1314403623",
+              "candidateId": "way/1314403623-george-society-relocation",
+              "centralQuestion": "Why did the George Society's meetings 'wander' before settling into this building?",
+              "perspectiveShift": "Before this building became the George Society's home from 1922 to 1949, the organization's belongings were in storage and its meetings had no fixed location, moving in only after a one-year lease came due on May 10, 1924 -- making the building the endpoint of a period of institutional displacement rather than simply a long-term tenant's address.",
+              "claimIds": [
+                "bp-history-subject-way-1314403623-p265s0-use-history",
+                "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event"
+              ]
+            },
+            "rejectionReason": "This explains when the George Society settled into the building after a period without a fixed meeting location, but it functions as institutional occupancy documentation -- confirming a move-in date and a preceding storage and lease gap -- rather than creating a new way of experiencing the building itself. It reads as organizational occupancy history, not a perspective shift a walker would feel about the place."
+          }
+        ],
+        "ungroupedClaimIds": [
+          "pab-1179406-identity",
+          "pab-75513-identity",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p26s0-construction-date",
+          "pab-75513-chrono-0-construction",
+          "pab-75513-register-status",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p26s5-biographical",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p52s8-biographical",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p32s4-event",
+          "bp-1901-spring-garden-street-subject-way-1314403623-p52s1-statistic",
+          "pab-1179406-client"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/266149338",
+      "subjectName": "217-247 West 43rd Street (New York Times Building)",
+      "source": "NYC LPC",
+      "admittedClaims": [
+        {
+          "claimId": "lpc-row-8-identity-aka",
+          "claimType": "identity",
+          "claimText": "The NYC Landmarks Preservation Commission's own record for 217-247 West 43rd Street lists an alternate/former name: \"New York Times Building.\""
+        },
+        {
+          "claimId": "lpc-row-8-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 217-247 West 43rd Street of 1912 - 1932 (architect/builder: Buchman & Fox (architect), George A. Fuller Co. (builder))."
+        },
+        {
+          "claimId": "lpc-row-8-alteration-1-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Ludlow & Peabody; Albert Kahn, Inc. as architect for a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913."
+        },
+        {
+          "claimId": "lpc-row-8-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Buchman & Fox (architect), George A. Fuller Co. (builder) as architect/builder for 217-247 West 43rd Street."
+        },
+        {
+          "claimId": "lpc-row-8-alteration-1",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913, with architect Ludlow & Peabody; Albert Kahn, Inc.."
+        },
+        {
+          "claimId": "lpc-row-8-alteration-2",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 217-247 West 43rd Street, dated 1922 - 1924; 1930 - 1932."
+        },
+        {
+          "claimId": "lpc-row-8-notes",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 217-247 West 43rd Street records: \"Constructed in three stages between 1912 and 1932. Three major parts: 4-story east section, an 11-story main section, a 5-story set-back attic level and 7-story tower.\""
+        },
+        {
+          "claimId": "lpc-row-8-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 217-247 West 43rd Street as The New York Times."
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/266149338",
+        "angleGroups": [
+          {
+            "subjectId": "way/266149338",
+            "angleId": "way/266149338-times-building-phased-construction",
+            "centralQuestion": "Why does this building appear to be built in visibly distinct sections instead of as one uniform structure?",
+            "perspectiveShift": "The building's mismatched massing -- a 4-story east section, an 11-story main section, a 5-story set-back attic level, and a 7-story tower -- is physical evidence of its original construction in three stages between 1912 and 1932, when it was built for and known as the New York Times Building.",
+            "claimIds": [
+              "lpc-row-8-notes",
+              "lpc-row-8-construction-date",
+              "lpc-row-8-identity-aka",
+              "lpc-row-8-owner"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "lpc-row-8-alteration-1-architect",
+          "lpc-row-8-architect",
+          "lpc-row-8-alteration-1",
+          "lpc-row-8-alteration-2"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/266149338",
+        "candidates": [
+          {
+            "subjectId": "way/266149338",
+            "candidateId": "way/266149338-times-building-phased-construction",
+            "centralQuestion": "Why does this building appear to be built in visibly distinct sections instead of as one uniform structure?",
+            "perspectiveShift": "The building's mismatched massing -- a 4-story east section, an 11-story main section, a 5-story set-back attic level, and a 7-story tower -- is physical evidence of its original construction in three stages between 1912 and 1932, when it was built for and known as the New York Times Building.",
+            "claimIds": [
+              "lpc-row-8-notes",
+              "lpc-row-8-construction-date",
+              "lpc-row-8-identity-aka",
+              "lpc-row-8-owner"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "lpc-row-8-alteration-1-architect",
+          "lpc-row-8-architect",
+          "lpc-row-8-alteration-1",
+          "lpc-row-8-alteration-2"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/266149338-times-building-phased-construction",
+          "centralQuestion": "Why does this building appear to be built in visibly distinct sections instead of as one uniform structure?",
+          "perspectiveShift": "The building's mismatched massing -- a 4-story east section, an 11-story main section, a 5-story set-back attic level, and a 7-story tower -- is physical evidence of its original construction in three stages between 1912 and 1932, when it was built for and known as the New York Times Building.",
+          "claimIds": [
+            "lpc-row-8-notes",
+            "lpc-row-8-construction-date",
+            "lpc-row-8-identity-aka",
+            "lpc-row-8-owner"
+          ],
+          "stage2Input": {
+            "subjectId": "way/266149338",
+            "subjectName": "217-247 West 43rd Street (New York Times Building)",
+            "centralQuestion": "Why does this building appear to be built in visibly distinct sections instead of as one uniform structure?",
+            "perspectiveShift": "The building's mismatched massing -- a 4-story east section, an 11-story main section, a 5-story set-back attic level, and a 7-story tower -- is physical evidence of its original construction in three stages between 1912 and 1932, when it was built for and known as the New York Times Building.",
+            "claims": [
+              {
+                "claimId": "lpc-row-8-notes",
+                "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 217-247 West 43rd Street records: \"Constructed in three stages between 1912 and 1932. Three major parts: 4-story east section, an 11-story main section, a 5-story set-back attic level and 7-story tower.\""
+              },
+              {
+                "claimId": "lpc-row-8-construction-date",
+                "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 217-247 West 43rd Street of 1912 - 1932 (architect/builder: Buchman & Fox (architect), George A. Fuller Co. (builder))."
+              },
+              {
+                "claimId": "lpc-row-8-identity-aka",
+                "claimText": "The NYC Landmarks Preservation Commission's own record for 217-247 West 43rd Street lists an alternate/former name: \"New York Times Building.\""
+              },
+              {
+                "claimId": "lpc-row-8-owner",
+                "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 217-247 West 43rd Street as The New York Times."
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": true,
+            "reason": "The claim reveals that this building's mismatched massing -- a 4-story east section, an 11-story main section, a 5-story set-back attic level, and 7-story tower -- is not an aesthetic accident but physical evidence of construction in three stages between 1912 and 1932, when it was built for The New York Times. That turns a visibly odd building into a legible record of its own phased construction history, changing how a walker reads its facade rather than just adding a date."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/266149338",
+        "acceptedAngles": [
+          {
+            "subjectId": "way/266149338",
+            "angleId": "way/266149338-times-building-phased-construction",
+            "centralQuestion": "Why does this building appear to be built in visibly distinct sections instead of as one uniform structure?",
+            "perspectiveShift": "The building's mismatched massing -- a 4-story east section, an 11-story main section, a 5-story set-back attic level, and a 7-story tower -- is physical evidence of its original construction in three stages between 1912 and 1932, when it was built for and known as the New York Times Building.",
+            "claimIds": [
+              "lpc-row-8-notes",
+              "lpc-row-8-construction-date",
+              "lpc-row-8-identity-aka",
+              "lpc-row-8-owner"
+            ]
+          }
+        ],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": [
+          "lpc-row-8-alteration-1-architect",
+          "lpc-row-8-architect",
+          "lpc-row-8-alteration-1",
+          "lpc-row-8-alteration-2"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/266143344",
+      "subjectName": "214 West 42nd Street",
+      "source": "NYC LPC",
+      "admittedClaims": [
+        {
+          "claimId": "lpc-row-10-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 214 West 42nd Street of 1902 - 1903 (architect/builder: Herts & Tallant)."
+        },
+        {
+          "claimId": "lpc-row-10-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Herts & Tallant as architect/builder for 214 West 42nd Street."
+        },
+        {
+          "claimId": "lpc-row-10-alteration-1",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a significant alteration at 214 West 42nd Street, dated 1937."
+        },
+        {
+          "claimId": "lpc-row-10-alteration-2",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 214 West 42nd Street, dated 1955."
+        },
+        {
+          "claimId": "lpc-row-10-notes",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 214 West 42nd Street records: \"Entrance and signage altered in 1937; marquee and vertical electric sign were again modified in 1955.\""
+        },
+        {
+          "claimId": "lpc-row-10-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 214 West 42nd Street as Klaw & Erlanger."
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/266143344",
+        "angleGroups": [
+          {
+            "subjectId": "way/266143344",
+            "angleId": "way/266143344-marquee-alterations",
+            "centralQuestion": "Why has this building's entrance and signage been altered more than once?",
+            "perspectiveShift": "The building's entrance and signage were altered in 1937, then modified again in 1955 -- including its marquee and vertical electric sign -- showing a building that kept updating its street-level presentation over several decades rather than remaining architecturally frozen since 1902-1903.",
+            "claimIds": [
+              "lpc-row-10-notes",
+              "lpc-row-10-alteration-1",
+              "lpc-row-10-alteration-2"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "lpc-row-10-construction-date",
+          "lpc-row-10-architect",
+          "lpc-row-10-owner"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/266143344",
+        "candidates": [
+          {
+            "subjectId": "way/266143344",
+            "candidateId": "way/266143344-marquee-alterations",
+            "centralQuestion": "Why has this building's entrance and signage been altered more than once?",
+            "perspectiveShift": "The building's entrance and signage were altered in 1937, then modified again in 1955 -- including its marquee and vertical electric sign -- showing a building that kept updating its street-level presentation over several decades rather than remaining architecturally frozen since 1902-1903.",
+            "claimIds": [
+              "lpc-row-10-notes",
+              "lpc-row-10-alteration-1",
+              "lpc-row-10-alteration-2"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": [
+          "lpc-row-10-construction-date",
+          "lpc-row-10-architect",
+          "lpc-row-10-owner"
+        ]
+      },
+      "stage1Validation": {
+        "valid": false,
+        "reasons": [
+          "AngleGroup \"way/266143344-marquee-alterations\" field \"perspectiveShift\" contains a number/date (\"1902-1903\") not present in its assigned claim text or subject name."
+        ]
+      },
+      "candidates": [
+        {
+          "candidateId": "way/266143344-marquee-alterations",
+          "centralQuestion": "Why has this building's entrance and signage been altered more than once?",
+          "perspectiveShift": "The building's entrance and signage were altered in 1937, then modified again in 1955 -- including its marquee and vertical electric sign -- showing a building that kept updating its street-level presentation over several decades rather than remaining architecturally frozen since 1902-1903.",
+          "claimIds": [
+            "lpc-row-10-notes",
+            "lpc-row-10-alteration-1",
+            "lpc-row-10-alteration-2"
+          ],
+          "stage2Input": {
+            "subjectId": "way/266143344",
+            "subjectName": "214 West 42nd Street",
+            "centralQuestion": "Why has this building's entrance and signage been altered more than once?",
+            "perspectiveShift": "The building's entrance and signage were altered in 1937, then modified again in 1955 -- including its marquee and vertical electric sign -- showing a building that kept updating its street-level presentation over several decades rather than remaining architecturally frozen since 1902-1903.",
+            "claims": [
+              {
+                "claimId": "lpc-row-10-notes",
+                "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 214 West 42nd Street records: \"Entrance and signage altered in 1937; marquee and vertical electric sign were again modified in 1955.\""
+              },
+              {
+                "claimId": "lpc-row-10-alteration-1",
+                "claimText": "The NYC Landmarks Preservation Commission's designation report records a significant alteration at 214 West 42nd Street, dated 1937."
+              },
+              {
+                "claimId": "lpc-row-10-alteration-2",
+                "claimText": "The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 214 West 42nd Street, dated 1955."
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": false,
+            "reason": "This confirms two alteration dates -- entrance and signage changes in 1937, with the marquee and vertical electric sign modified again in 1955 -- but the underlying explanation is routine commercial upkeep of a theater's signage rather than a genuinely surprising or hidden layer. It restates alteration-record metadata a walker would already expect for an active theater rather than shifting how they understand the building."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/266143344",
+        "acceptedAngles": [],
+        "rejectedCandidates": [
+          {
+            "candidate": {
+              "subjectId": "way/266143344",
+              "candidateId": "way/266143344-marquee-alterations",
+              "centralQuestion": "Why has this building's entrance and signage been altered more than once?",
+              "perspectiveShift": "The building's entrance and signage were altered in 1937, then modified again in 1955 -- including its marquee and vertical electric sign -- showing a building that kept updating its street-level presentation over several decades rather than remaining architecturally frozen since 1902-1903.",
+              "claimIds": [
+                "lpc-row-10-notes",
+                "lpc-row-10-alteration-1",
+                "lpc-row-10-alteration-2"
+              ]
+            },
+            "rejectionReason": "This confirms two alteration dates -- entrance and signage changes in 1937, with the marquee and vertical electric sign modified again in 1955 -- but the underlying explanation is routine commercial upkeep of a theater's signage rather than a genuinely surprising or hidden layer. It restates alteration-record metadata a walker would already expect for an active theater rather than shifting how they understand the building."
+          }
+        ],
+        "ungroupedClaimIds": [
+          "lpc-row-10-construction-date",
+          "lpc-row-10-architect",
+          "lpc-row-10-owner"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/265301770",
+      "subjectName": "135 West 36th Street (Fashion Tower)",
+      "source": "NYC LPC",
+      "admittedClaims": [
+        {
+          "claimId": "lpc-row-12-identity-aka",
+          "claimType": "identity",
+          "claimText": "The NYC Landmarks Preservation Commission's own record for 135 West 36th Street (aka 135-139 West 36th Street) lists an alternate/former name: \"Fashion Tower.\""
+        },
+        {
+          "claimId": "lpc-row-12-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 135 West 36th Street (aka 135-139 West 36th Street) of 1924 - 1926 (architect/builder: Emery Roth)."
+        },
+        {
+          "claimId": "lpc-row-12-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Emery Roth as architect/builder for 135 West 36th Street (aka 135-139 West 36th Street)."
+        },
+        {
+          "claimId": "lpc-row-12-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 135 West 36th Street (aka 135-139 West 36th Street) as Mo-Ro Realty."
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/265301770",
+        "angleGroups": [],
+        "ungroupedClaimIds": [
+          "lpc-row-12-identity-aka",
+          "lpc-row-12-construction-date",
+          "lpc-row-12-architect",
+          "lpc-row-12-owner"
+        ]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/265301770",
+        "candidates": [],
+        "ungroupedClaimIds": [
+          "lpc-row-12-identity-aka",
+          "lpc-row-12-construction-date",
+          "lpc-row-12-architect",
+          "lpc-row-12-owner"
+        ]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [],
+      "finalEvaluation": {
+        "subjectId": "way/265301770",
+        "acceptedAngles": [],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": [
+          "lpc-row-12-identity-aka",
+          "lpc-row-12-construction-date",
+          "lpc-row-12-architect",
+          "lpc-row-12-owner"
+        ]
+      }
+    },
+    {
+      "subjectId": "way/265319542",
+      "subjectName": "432 West 44th Street",
+      "source": "NYC LPC",
+      "admittedClaims": [
+        {
+          "claimId": "lpc-row-0-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 432 West 44th Street of c. 1858."
+        },
+        {
+          "claimId": "lpc-row-0-notes",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 432 West 44th Street records: \"The building style has been referred to as \\\"Bricklayer Greek\\\".\""
+        },
+        {
+          "claimId": "lpc-row-0-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 432 West 44th Street as Seventh Associate Presbyterian Church."
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/265319542",
+        "angleGroups": [
+          {
+            "subjectId": "way/265319542",
+            "angleId": "way/265319542-bricklayer-greek-church-origin",
+            "centralQuestion": "Why is this building's style described as 'Bricklayer Greek', and what was it originally built for?",
+            "perspectiveShift": "Built around 1858 for the Seventh Associate Presbyterian Church, the building's style has been referred to as 'Bricklayer Greek' -- an unusual, specifically-named architectural treatment tied to its original religious construction.",
+            "claimIds": [
+              "lpc-row-0-construction-date",
+              "lpc-row-0-notes",
+              "lpc-row-0-owner"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/265319542",
+        "candidates": [
+          {
+            "subjectId": "way/265319542",
+            "candidateId": "way/265319542-bricklayer-greek-church-origin",
+            "centralQuestion": "Why is this building's style described as 'Bricklayer Greek', and what was it originally built for?",
+            "perspectiveShift": "Built around 1858 for the Seventh Associate Presbyterian Church, the building's style has been referred to as 'Bricklayer Greek' -- an unusual, specifically-named architectural treatment tied to its original religious construction.",
+            "claimIds": [
+              "lpc-row-0-construction-date",
+              "lpc-row-0-notes",
+              "lpc-row-0-owner"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/265319542-bricklayer-greek-church-origin",
+          "centralQuestion": "Why is this building's style described as 'Bricklayer Greek', and what was it originally built for?",
+          "perspectiveShift": "Built around 1858 for the Seventh Associate Presbyterian Church, the building's style has been referred to as 'Bricklayer Greek' -- an unusual, specifically-named architectural treatment tied to its original religious construction.",
+          "claimIds": [
+            "lpc-row-0-construction-date",
+            "lpc-row-0-notes",
+            "lpc-row-0-owner"
+          ],
+          "stage2Input": {
+            "subjectId": "way/265319542",
+            "subjectName": "432 West 44th Street",
+            "centralQuestion": "Why is this building's style described as 'Bricklayer Greek', and what was it originally built for?",
+            "perspectiveShift": "Built around 1858 for the Seventh Associate Presbyterian Church, the building's style has been referred to as 'Bricklayer Greek' -- an unusual, specifically-named architectural treatment tied to its original religious construction.",
+            "claims": [
+              {
+                "claimId": "lpc-row-0-construction-date",
+                "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 432 West 44th Street of c. 1858."
+              },
+              {
+                "claimId": "lpc-row-0-notes",
+                "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 432 West 44th Street records: \"The building style has been referred to as \\\"Bricklayer Greek\\\".\""
+              },
+              {
+                "claimId": "lpc-row-0-owner",
+                "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 432 West 44th Street as Seventh Associate Presbyterian Church."
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": false,
+            "reason": "This assembles a construction date of c. 1858, a named style label ('Bricklayer Greek'), and an original owner, Seventh Associate Presbyterian Church, but it reads as formally documenting metadata -- what the building is called stylistically and who built it -- rather than revealing a hidden layer, a visible remnant, or a changed use a walker would notice today. It restates the designation report's own descriptive fields rather than producing an independent perspective shift."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/265319542",
+        "acceptedAngles": [],
+        "rejectedCandidates": [
+          {
+            "candidate": {
+              "subjectId": "way/265319542",
+              "candidateId": "way/265319542-bricklayer-greek-church-origin",
+              "centralQuestion": "Why is this building's style described as 'Bricklayer Greek', and what was it originally built for?",
+              "perspectiveShift": "Built around 1858 for the Seventh Associate Presbyterian Church, the building's style has been referred to as 'Bricklayer Greek' -- an unusual, specifically-named architectural treatment tied to its original religious construction.",
+              "claimIds": [
+                "lpc-row-0-construction-date",
+                "lpc-row-0-notes",
+                "lpc-row-0-owner"
+              ]
+            },
+            "rejectionReason": "This assembles a construction date of c. 1858, a named style label ('Bricklayer Greek'), and an original owner, Seventh Associate Presbyterian Church, but it reads as formally documenting metadata -- what the building is called stylistically and who built it -- rather than revealing a hidden layer, a visible remnant, or a changed use a walker would notice today. It restates the designation report's own descriptive fields rather than producing an independent perspective shift."
+          }
+        ],
+        "ungroupedClaimIds": []
+      }
+    }
+  ]
+}

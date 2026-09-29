@@ -1,0 +1,17 @@
+{
+  "subjectId": "way/251417983",
+  "angleGroups": [
+    {
+      "subjectId": "way/251417983",
+      "angleId": "way/251417983-carson-baldwin-connection",
+      "centralQuestion": "Why is a former resident of this house buried next to Matthias Baldwin?",
+      "perspectiveShift": "This ordinary rowhouse turns out to have a personal historical connection: Robert Carson, who lived here from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery, tying the address to a notable local historical figure through the person who once lived there.",
+      "claimIds": ["bp-robert-carson-pab-record-75695-p23s0-use-history"]
+    }
+  ],
+  "ungroupedClaimIds": [
+    "pab-75695-identity",
+    "pab-75695-register-status",
+    "bp-robert-carson-pab-record-75695-p63s1-event"
+  ]
+}

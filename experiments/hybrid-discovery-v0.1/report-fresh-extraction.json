@@ -1,0 +1,1526 @@
+[
+  {
+    "claim": {
+      "id": "masterman-1876-origin",
+      "placeKey": "1699-spring-garden-masterman",
+      "address": "1699 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["phillyhistory-blog-girls-high"],
+      "supportingSpan": "In 1876, a new building located at 17th and Spring Garden Streets was erected... forty classrooms, terraced lecture halls, and an auditorium capable of seating 1200 people",
+      "claimType": "institutional-founding",
+      "claimText": "In 1876 a combined Girls' High and Normal School building was erected at 17th and Spring Garden Streets, with forty classrooms and an auditorium seating 1,200; only Girard College and the University of Pennsylvania used more land in the city at the time.",
+      "dateRange": {
+        "start": "1876",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1699 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "masterman-1893-split",
+      "placeKey": "1699-spring-garden-masterman",
+      "address": "1699 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["phillyhistory-blog-girls-high"],
+      "supportingSpan": "In 1893, the High School and Normal School were separated...renamed the Philadelphia High School for Girls",
+      "claimType": "event",
+      "claimText": "In 1893 the Normal School moved to 13th & Spring Garden Streets and the 17th & Spring Garden building was renamed the Philadelphia High School for Girls.",
+      "dateRange": {
+        "start": "1893",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1699 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "masterman-1933-rebuild",
+      "placeKey": "1699-spring-garden-masterman",
+      "address": "1699 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["wikipedia-masterman-nrhp"],
+      "supportingSpan": "built in 1933 and designed by architect Irwin T. Catharine in the Classical Revival architectural style",
+      "claimType": "construction-date",
+      "claimText": "The current building at 1699 Spring Garden Street was constructed in 1933, designed by architect Irwin T. Catharine in the Classical Revival style.",
+      "relatedEntities": ["Irwin T. Catharine"],
+      "dateRange": {
+        "start": "1933",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1699 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "medium",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "masterman-1958-transition",
+      "placeKey": "1699-spring-garden-masterman",
+      "address": "1699 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": [
+        "phillyhistory-blog-girls-high",
+        "wikipedia-masterman-nrhp"
+      ],
+      "supportingSpan": "Girls' High moved to its current location at Broad Street and Olney Avenue in 1958, with the old building on Spring Garden Street becoming the Julia R. Masterman School",
+      "claimType": "event",
+      "claimText": "Girls' High moved to Broad & Olney Avenue in 1958; the Spring Garden Street building became the Julia R. Masterman School.",
+      "dateRange": {
+        "start": "1958",
+        "precise": true
+      },
+      "corroborationKey": "masterman-1958-transition"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1699 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "masterman-nrhp",
+      "placeKey": "1699-spring-garden-masterman",
+      "address": "1699 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["wikipedia-masterman-nrhp"],
+      "supportingSpan": "added to the NRHP on December 4, 1986... under the name Philadelphia High School for Girls, NRHP reference number 86003302",
+      "claimType": "register-status",
+      "claimText": "Listed on the National Register of Historic Places in 1986 under the name \"Philadelphia High School for Girls\" (NRHP ref. 86003302).",
+      "dateRange": {
+        "start": "1986",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1699 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "hoopes-construction",
+      "placeKey": "1733-spring-garden-hoopes-mansion",
+      "address": "1733 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["baldwinparkphilly-hoopes-mansion"],
+      "supportingSpan": "in 1878 he built a massive four-story mansion on this lot",
+      "claimType": "construction-date",
+      "claimText": "Built in 1878 by industrialist Barton Hoopes as a four-story mansion (7,567 sq ft including the carriage house).",
+      "dateRange": {
+        "start": "1878",
+        "precise": true
+      },
+      "extractionMethod": "discovery-lead-traced-to-source"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1733 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "medium",
+      "identityConfidence": "medium",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "hoopes-biographical",
+      "placeKey": "1733-spring-garden-hoopes-mansion",
+      "address": "1733 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["baldwinparkphilly-hoopes-mansion"],
+      "supportingSpan": "Barton's partner, Samuel Sharpless Townsend... In 1852 Hoopes & Townsend moved to Broad and Buttonwood Street",
+      "claimType": "biographical",
+      "claimText": "Barton Hoopes co-owned Hoopes & Townsend, a nut/bolt/rivet manufacturer, with partner Samuel Sharpless Townsend; the factory was at Broad & Buttonwood Street, supplying industrial customers including Baldwin Locomotive Works.",
+      "relatedEntities": ["Samuel Sharpless Townsend", "Hoopes & Townsend"],
+      "extractionMethod": "discovery-lead-traced-to-source"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1733 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "hoopes-land-purchase",
+      "placeKey": "1733-spring-garden-hoopes-mansion",
+      "address": "1733 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["baldwinparkphilly-hoopes-mansion"],
+      "supportingSpan": "In 1872 Hoopes bought the block from 17th to 18th Streets and from Spring Garden to Brandywine Streets",
+      "claimType": "event",
+      "claimText": "In 1872 Hoopes bought the entire block bounded by 17th, 18th, Spring Garden, and Brandywine Streets, later selling off most of it as residential lots.",
+      "dateRange": {
+        "start": "1872",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1733 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "medium",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "hoopes-filbert-rumor-denied",
+      "placeKey": "1733-spring-garden-hoopes-mansion",
+      "address": "1733 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["baldwinparkphilly-hoopes-mansion"],
+      "supportingSpan": "Rumors that Filbert Street is named for him are incorrect",
+      "claimType": "legend-tradition",
+      "claimText": "A rumor that Filbert Street is named for a later owner of the mansion, Dr. Ludwig Spang Filbert, is explicitly stated by the source to be incorrect.",
+      "sourceRefutesThisClaim": true,
+      "epistemicMarkers": ["rumor-explicitly-denied"],
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "fail",
+        "reason": "Source explicitly states this claim (rumor/allegation) is false. Recorded for the record, never admitted as fact."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1733 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "SUPPRESS",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": [
+        "[epistemic-marker-preservation] Source explicitly states this claim (rumor/allegation) is false. Recorded for the record, never admitted as fact."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "hoopes-ownership-chain",
+      "placeKey": "1733-spring-garden-hoopes-mansion",
+      "address": "1733 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["baldwinparkphilly-hoopes-mansion"],
+      "supportingSpan": "sold his house...in 1879 to one Elizabeth Downing...purchased in 1900 by Ludwig Spang Filbert MD...sold the house to the Russian Brotherhood Organization (RBO) in 1922...sold to an entity called 1733 Spring Garden LLC",
+      "claimType": "use-history",
+      "claimText": "Sold 1879 to Elizabeth Downing; purchased 1900 by Dr. Ludwig Spang Filbert; sold 1922 to the Russian Brotherhood Organization; sold 2015 to 1733 Spring Garden LLC for $1.6 million.",
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1733 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "hoopes-current-use",
+      "placeKey": "1733-spring-garden-hoopes-mansion",
+      "address": "1733 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["baldwinparkphilly-hoopes-mansion"],
+      "supportingSpan": "Our House Montessori...basement, first floor, and rear of the second floor...designed as apartments",
+      "claimType": "use-history",
+      "claimText": "Currently home to Our House Montessori (basement, first floor, rear second floor), with the remaining upper floors and carriage house used as apartments.",
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1733 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-construction-fresh",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-1901-spring-garden-fresh"],
+      "supportingSpan": "In 1875 builder Edwin Randolph built a beautiful residence at 1901 Spring Garden Street on spec",
+      "claimType": "construction-date",
+      "claimText": "Built in 1875 by builder Edwin Randolph on speculation.",
+      "relatedEntities": ["Edwin Randolph"],
+      "dateRange": {
+        "start": "1875",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "medium",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-original-owner",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-1901-spring-garden-fresh"],
+      "supportingSpan": "lived at 1901 Spring Garden with his wife Caroline and son Abram until Abraham's death in 1890",
+      "claimType": "biographical",
+      "claimText": "Original owner Abraham R. Cox lived there with his wife Caroline and son Abram until his death in 1890.",
+      "relatedEntities": ["Abraham R. Cox"],
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-facade-1901",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-1901-spring-garden-fresh"],
+      "supportingSpan": "Architect Carl Berger put on a marble façade for Penrose Fleisher (1844-1931) in 1901",
+      "claimType": "architect",
+      "claimText": "A marble façade was added in 1901 by architect Carl Berger for then-owner Penrose Fleisher.",
+      "relatedEntities": ["Carl Berger", "Penrose Fleisher"],
+      "dateRange": {
+        "start": "1901",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "medium",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-1911-sale",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-1901-spring-garden-fresh"],
+      "supportingSpan": "Penrose Fleisher sold the home at 1901 Spring Garden Street to the firm of Mastbaum & Fleisher for a nominal fee in 1911",
+      "claimType": "event",
+      "claimText": "Fleisher sold the home to the firm of Mastbaum & Fleisher for a nominal fee in 1911.",
+      "dateRange": {
+        "start": "1911",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-1911-sale-embellishment-unverified",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["search-summary-ephemeral"],
+      "supportingSpan": "AI search summary: 'Jules Mastbaum, benefactor of the Rodin Museum, and Alfred W. Fleisher, real-estate tycoon and grandfather of Comcast CEO Brian Roberts'",
+      "claimType": "biographical",
+      "claimText": "The 1911 buying firm's partners were Jules Mastbaum (Rodin Museum benefactor) and Alfred W. Fleisher (grandfather of Comcast CEO Brian Roberts).",
+      "relatedEntities": ["Jules Mastbaum", "Alfred W. Fleisher"]
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "fail",
+        "reason": "All cited sources (search-summary-ephemeral) resolve to an inadmissible source class. Not one of the seven approved families."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "fail",
+        "reason": "Claim resolves to a synthesized AI/search-engine output (search-summary-ephemeral) rather than an admissible underlying source. Search summaries may only surface a lead for discovery, never serve as the resolved evidentiary source."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "SUPPRESS",
+      "factualTrust": "low",
+      "identityConfidence": "high",
+      "editorialQuality": "high",
+      "reasons": [
+        "[admissible-source-class] All cited sources (search-summary-ephemeral) resolve to an inadmissible source class. Not one of the seven approved families.",
+        "[synthesized-search-rejection] Claim resolves to a synthesized AI/search-engine output (search-summary-ephemeral) rather than an admissible underlying source. Search summaries may only surface a lead for discovery, never serve as the resolved evidentiary source."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-1922-purchase",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-1901-spring-garden-fresh"],
+      "supportingSpan": "In 1922 the St. George Society bought 1901 Spring Garden Street from Morris Dannenbaum...The purchase price was $45,000",
+      "claimType": "event",
+      "claimText": "The St. George Society bought the building from Morris Dannenbaum in 1922 for $45,000.",
+      "dateRange": {
+        "start": "1922",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-1949-sale-and-restaurant",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-1901-spring-garden-fresh"],
+      "supportingSpan": "In 1949 the St. George Society sold 1901 Spring Garden Street...remodeled in 1950 for commercial use...to accommodate a restaurant",
+      "claimType": "use-history",
+      "claimText": "Sold in 1949 by the St. George Society; remodeled in 1950 for commercial/restaurant use.",
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "stgeorge-1999-renovation",
+      "placeKey": "1901-spring-garden-fresh",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-1901-spring-garden-fresh"],
+      "supportingSpan": "Six apartments for the elderly, handicap accessible",
+      "claimType": "use-history",
+      "claimText": "Renovated in 1999 into six accessible apartments for the elderly.",
+      "dateRange": {
+        "start": "1999",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "towers-former-site",
+      "placeKey": "1818-1820-spring-garden-towers",
+      "address": "1818-1820 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["baldwinparkphilly-spring-garden-towers"],
+      "supportingSpan": "demolished in 1937 for the tower site...previously occupied by structures including a Reyburn mansion (razed 1937) and parts of the Philadelphia College of Osteopathic Medicine Hospital",
+      "claimType": "demolition",
+      "claimText": "A former Reyburn mansion and a Philadelphia College of Osteopathic Medicine (PCOM) hospital building on this site were demolished in 1937.",
+      "dateRange": {
+        "start": "1937",
+        "precise": true
+      },
+      "epistemicMarkers": ["author-uncertainty"],
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "block-auto-admit",
+        "reason": "Claim carries an epistemic marker (author-uncertainty) that must not be silently dropped or presented as settled fact."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1818-1820 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "HOLD",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "medium",
+      "reasons": [
+        "[epistemic-marker-preservation] Claim carries an epistemic marker (author-uncertainty) that must not be silently dropped or presented as settled fact."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "towers-pcom-relocation",
+      "placeKey": "1818-1820-spring-garden-towers",
+      "address": "1818-1820 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["baldwinparkphilly-spring-garden-towers"],
+      "supportingSpan": "moved to a new building at 48th and Spruce (still there) in 1928",
+      "claimType": "event",
+      "claimText": "PCOM relocated to a new building at 48th & Spruce Streets in 1928.",
+      "dateRange": {
+        "start": "1928",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1818-1820 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "medium",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "towers-construction",
+      "placeKey": "1818-1820-spring-garden-towers",
+      "address": "1818-1820 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-spring-garden-towers"],
+      "supportingSpan": "In 1978 Lutheran Associates completed a tower called Lutheran Elderly Housing (now called Spring Garden Towers, plural)",
+      "claimType": "construction-date",
+      "claimText": "In 1978 Lutheran Associates completed a 17-story senior-housing tower on the site, originally Lutheran Elderly Housing, now Spring Garden Towers.",
+      "dateRange": {
+        "start": "1978",
+        "precise": true
+      },
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1818-1820 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "towers-unit-details",
+      "placeKey": "1818-1820-spring-garden-towers",
+      "address": "1818-1820 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["baldwinparkphilly-spring-garden-towers"],
+      "supportingSpan": "208 units, all one bedroom, one bath with an average area of 300 square feet",
+      "claimType": "statistic",
+      "claimText": "208 one-bedroom, one-bath subsidized senior-housing units, averaging about 300 square feet each.",
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1818-1820 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "medium",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "2035-register-status",
+      "placeKey": "2035-spring-garden",
+      "address": "2035 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org"],
+      "supportingSpan": "Philadelphia Register of Historic Places -- 05/01/1975; 10/11/2000",
+      "claimType": "register-status",
+      "claimText": "Listed on the Philadelphia Register of Historic Places (05/01/1975; 10/11/2000). No architect, construction date, or use-history detail available from this source.",
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "2035 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "2229-2237-register-status",
+      "placeKey": "2229-2237-spring-garden",
+      "address": "2229-2237 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org"],
+      "supportingSpan": "Philadelphia Register of Historic Places -- 10/11/2000",
+      "claimType": "register-status",
+      "claimText": "Listed on the Philadelphia Register of Historic Places (10/11/2000). No architect, construction date, or use-history detail available from this source.",
+      "extractionMethod": "direct-source-text"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "2229-2237 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  }
+]

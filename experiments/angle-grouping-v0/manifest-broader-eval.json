@@ -1,0 +1,337 @@
+{
+  "frozenAt": "2026-09-29T00:00:00.000Z",
+  "note": "Frozen before any Stage 1/Stage 2 model runs for the broader evaluation. Stage 1 prompt = prompt-v2.ts (unchanged, same version used for the 3 anchor subjects). Stage 2 prompt = stage2-prompt.ts (unchanged). 3 anchor subjects are carried over unchanged from report-e2e.json (the checkpoint run) rather than re-run. 10 additional real subjects pulled from existing admitted-claim data: 6 from experiments/hybrid-discovery-v0.1/report-pab-baldwinpark-production-proof.json (combinedArtifact/combinedGated), 4 from experiments/hybrid-discovery-v0.1/report-lpc-production-proof.json (artifact/gated). No prompt or validator changes after this point for the duration of the broader evaluation.",
+  "anchorSubjects": ["way/265322610", "way/265320377", "way/349397298"],
+  "additionalSubjects": [
+    {
+      "subjectId": "way/1313740189",
+      "subjectName": "1733 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "claims": [
+        {
+          "claimId": "pab-75500-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1733 SPRING GARDEN ST identifies this as \"1733 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75500-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1733 SPRING GARDEN ST, dated 10/11/2000."
+        },
+        {
+          "claimId": "bp-the-hoopes-mansion-pab-record-75500-p27s9-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"The Hoopes Mansion\" states about 1733 SPRING GARDEN ST: \"Hoopes sold his house at 1733 Spring Garden Street in 1879 to one Elizabeth Downing, and moved 5 blocks north to the southwest corner of North Street and 18th (now the site of the Spring Garden community garden plots), where he died in 1895.\""
+        },
+        {
+          "claimId": "bp-the-hoopes-mansion-pab-record-75500-p41s0-relationship",
+          "claimType": "relationship",
+          "claimText": "Baldwin Park's page \"The Hoopes Mansion\" states about 1733 SPRING GARDEN ST: \"The RBO moved to Yardley in 2015 and the building with carriage house, then advertised with 12 bedrooms, five baths, and a walled-in courtyard, was sold to an entity called 1733 Spring Garden LLC.\""
+        }
+      ]
+    },
+    {
+      "subjectId": "way/1353406192",
+      "subjectName": "1914 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "claims": [
+        {
+          "claimId": "pab-75523-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1914 SPRING GARDEN ST identifies this as \"Residence.\""
+        },
+        {
+          "claimId": "pab-75523-chrono-0-architect-0",
+          "claimType": "architect",
+          "claimText": "PAB's Project Chronology names Oelschlager, Charles E.  (fl. 1891 - 1935/36) as architect for the ADDITIONS/ALTERATIONS event at 1914 SPRING GARDEN ST, dated 1906."
+        },
+        {
+          "claimId": "pab-75523-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1914 SPRING GARDEN ST, dated 06/29/1971."
+        },
+        {
+          "claimId": "pab-75523-chrono-0-event",
+          "claimType": "event",
+          "claimText": "PAB's Project Chronology records a ADDITIONS/ALTERATIONS event at 1914 SPRING GARDEN ST, dated 1906, with architect Oelschlager, Charles E.  (fl. 1891 - 1935/36)."
+        }
+      ]
+    },
+    {
+      "subjectId": "way/250706035",
+      "subjectName": "1701-1707 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "claims": [
+        {
+          "claimId": "pab-75492-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1701-1707 SPRING GARDEN ST identifies this as \"1701-1707 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75492-chrono-0-construction",
+          "claimType": "construction-date",
+          "claimText": "PAB's Project Chronology dates the construction of 1701-1707 SPRING GARDEN ST to 1939."
+        },
+        {
+          "claimId": "pab-75492-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1701-1707 SPRING GARDEN ST, dated 10/11/2000."
+        },
+        {
+          "claimId": "pab-75492-chrono-1-event",
+          "claimType": "event",
+          "claimText": "PAB's Project Chronology records a ADDITIONS/ALTERATIONS event at 1701-1707 SPRING GARDEN ST, dated 1961."
+        }
+      ]
+    },
+    {
+      "subjectId": "way/251417983",
+      "subjectName": "2013 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "claims": [
+        {
+          "claimId": "pab-75695-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 2013 SPRING GARDEN ST identifies this as \"2013 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75695-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 2013 SPRING GARDEN ST, dated 06/29/1971."
+        },
+        {
+          "claimId": "bp-robert-carson-pab-record-75695-p23s0-use-history",
+          "claimType": "use-history",
+          "claimText": "Baldwin Park's page \"Robert Carson\" states about 2013 SPRING GARDEN ST: \"Robert Carson, who lived at 2013 Spring Garden Street from 1887 to 1897, is buried next to Matthias Baldwin in Laurel Hill Cemetery.\""
+        },
+        {
+          "claimId": "bp-robert-carson-pab-record-75695-p63s1-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"Robert Carson\" states about 2013 SPRING GARDEN ST: \"It last sold in 1996 for $225,000.\""
+        }
+      ]
+    },
+    {
+      "subjectId": "way/1314403618",
+      "subjectName": "1923 Spring Garden Street",
+      "source": "PAB/Baldwin Park",
+      "claims": [
+        {
+          "claimId": "pab-75671-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1923 SPRING GARDEN ST identifies this as \"1923 Spring Garden Street.\""
+        },
+        {
+          "claimId": "pab-75671-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1923 SPRING GARDEN ST, dated 11/06/1975."
+        },
+        {
+          "claimId": "bp-dinan-funeral-home-pab-record-75671-p84s2-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"Dinan Funeral Home\" states about 1923 SPRING GARDEN ST: \"The Dinans bought this house in 1905 and sold it in 1941.\""
+        }
+      ]
+    },
+    {
+      "subjectId": "way/1314403623",
+      "subjectName": "1901 Spring Garden Street (Heisher Residence)",
+      "source": "PAB/Baldwin Park",
+      "claims": [
+        {
+          "claimId": "pab-1179406-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1901 SPRING GARDEN ST identifies this as \"Heisher Residence.\""
+        },
+        {
+          "claimId": "pab-75513-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1901 SPRING GARDEN ST identifies this as \"1901 Spring Garden Street.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p26s0-construction-date",
+          "claimType": "construction-date",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"In 1875 builder Edwin Randolph built a beautiful residence at 1901 Spring Garden Street on spec and put it up for sale as \\\"an elegant double marble residence, in thorough order and beautifully frescoed.\\\" It was purchased by Abraham R.\""
+        },
+        {
+          "claimId": "pab-75513-chrono-0-construction",
+          "claimType": "construction-date",
+          "claimText": "PAB's Project Chronology dates the construction of 1901 SPRING GARDEN ST to 1865."
+        },
+        {
+          "claimId": "pab-75513-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1901 SPRING GARDEN ST, dated 11/06/1975."
+        },
+        {
+          "claimId": "bp-history-subject-way-1314403623-p265s0-use-history",
+          "claimType": "use-history",
+          "claimText": "Baldwin Park's page \"Matthias Baldwin Park, History\" states about 1901 SPRING GARDEN ST: \"George Society owned 1901 Spring Garden Street from 1922 to 1949.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p26s5-biographical",
+          "claimType": "biographical",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"In 1894 Abram Cox, his son, died and was also buried from the home at 1901 Spring Garden Street.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p52s8-biographical",
+          "claimType": "biographical",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"Dannenbaum died January 26, 1927.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p32s4-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"Penrose Fleisher sold the home at 1901 Spring Garden Street to the firm of Mastbaum & Fleisher for a nominal fee in 1911, when the assessed value was $20,000.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event",
+          "claimType": "event",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"George Society were put in storage and its meetings wandered until May 10, 1924 when the one-year lease was up and it moved into the 1901 Spring Garden Street building.\""
+        },
+        {
+          "claimId": "bp-1901-spring-garden-street-subject-way-1314403623-p52s1-statistic",
+          "claimType": "statistic",
+          "claimText": "Baldwin Park's page \"1901 Spring Garden Street\" states about 1901 SPRING GARDEN ST: \"The purchase price was $45,000 with immediate possession.\""
+        },
+        {
+          "claimId": "pab-1179406-client",
+          "claimType": "relationship",
+          "claimText": "PAB's own record names the client for 1901 SPRING GARDEN ST as \"Heisher, Peurose.\""
+        }
+      ]
+    },
+    {
+      "subjectId": "way/266149338",
+      "subjectName": "217-247 West 43rd Street (New York Times Building)",
+      "source": "NYC LPC",
+      "claims": [
+        {
+          "claimId": "lpc-row-8-identity-aka",
+          "claimType": "identity",
+          "claimText": "The NYC Landmarks Preservation Commission's own record for 217-247 West 43rd Street lists an alternate/former name: \"New York Times Building.\""
+        },
+        {
+          "claimId": "lpc-row-8-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 217-247 West 43rd Street of 1912 - 1932 (architect/builder: Buchman & Fox (architect), George A. Fuller Co. (builder))."
+        },
+        {
+          "claimId": "lpc-row-8-alteration-1-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Ludlow & Peabody; Albert Kahn, Inc. as architect for a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913."
+        },
+        {
+          "claimId": "lpc-row-8-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Buchman & Fox (architect), George A. Fuller Co. (builder) as architect/builder for 217-247 West 43rd Street."
+        },
+        {
+          "claimId": "lpc-row-8-alteration-1",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913, with architect Ludlow & Peabody; Albert Kahn, Inc.."
+        },
+        {
+          "claimId": "lpc-row-8-alteration-2",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 217-247 West 43rd Street, dated 1922 - 1924; 1930 - 1932."
+        },
+        {
+          "claimId": "lpc-row-8-notes",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 217-247 West 43rd Street records: \"Constructed in three stages between 1912 and 1932. Three major parts: 4-story east section, an 11-story main section, a 5-story set-back attic level and 7-story tower.\""
+        },
+        {
+          "claimId": "lpc-row-8-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 217-247 West 43rd Street as The New York Times."
+        }
+      ]
+    },
+    {
+      "subjectId": "way/266143344",
+      "subjectName": "214 West 42nd Street",
+      "source": "NYC LPC",
+      "claims": [
+        {
+          "claimId": "lpc-row-10-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 214 West 42nd Street of 1902 - 1903 (architect/builder: Herts & Tallant)."
+        },
+        {
+          "claimId": "lpc-row-10-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Herts & Tallant as architect/builder for 214 West 42nd Street."
+        },
+        {
+          "claimId": "lpc-row-10-alteration-1",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a significant alteration at 214 West 42nd Street, dated 1937."
+        },
+        {
+          "claimId": "lpc-row-10-alteration-2",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 214 West 42nd Street, dated 1955."
+        },
+        {
+          "claimId": "lpc-row-10-notes",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 214 West 42nd Street records: \"Entrance and signage altered in 1937; marquee and vertical electric sign were again modified in 1955.\""
+        },
+        {
+          "claimId": "lpc-row-10-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 214 West 42nd Street as Klaw & Erlanger."
+        }
+      ]
+    },
+    {
+      "subjectId": "way/265301770",
+      "subjectName": "135 West 36th Street (Fashion Tower)",
+      "source": "NYC LPC",
+      "claims": [
+        {
+          "claimId": "lpc-row-12-identity-aka",
+          "claimType": "identity",
+          "claimText": "The NYC Landmarks Preservation Commission's own record for 135 West 36th Street (aka 135-139 West 36th Street) lists an alternate/former name: \"Fashion Tower.\""
+        },
+        {
+          "claimId": "lpc-row-12-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 135 West 36th Street (aka 135-139 West 36th Street) of 1924 - 1926 (architect/builder: Emery Roth)."
+        },
+        {
+          "claimId": "lpc-row-12-architect",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Emery Roth as architect/builder for 135 West 36th Street (aka 135-139 West 36th Street)."
+        },
+        {
+          "claimId": "lpc-row-12-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 135 West 36th Street (aka 135-139 West 36th Street) as Mo-Ro Realty."
+        }
+      ]
+    },
+    {
+      "subjectId": "way/265319542",
+      "subjectName": "432 West 44th Street",
+      "source": "NYC LPC",
+      "claims": [
+        {
+          "claimId": "lpc-row-0-construction-date",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 432 West 44th Street of c. 1858."
+        },
+        {
+          "claimId": "lpc-row-0-notes",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 432 West 44th Street records: \"The building style has been referred to as \\\"Bricklayer Greek\\\".\""
+        },
+        {
+          "claimId": "lpc-row-0-owner",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 432 West 44th Street as Seventh Associate Presbyterian Church."
+        }
+      ]
+    }
+  ]
+}

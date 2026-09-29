@@ -1,0 +1,1937 @@
+{
+  "corridorBbox": {
+    "minLat": 40.7515,
+    "maxLat": 40.7675,
+    "minLon": -74.003,
+    "maxLon": -73.988
+  },
+  "subjects": [
+    {
+      "productionSubjectId": "way/266143344",
+      "displayName": "New Amsterdam Theatre (214 West 42nd Street)",
+      "lpcPlaceKey": "lpc-record-row-10",
+      "ephemeral": {
+        "placeKey": "eny-new-amsterdam-theatre",
+        "url": "https://ephemeralnewyork.wordpress.com/2009/05/04/the-most-beautiful-girl-in-new-york-city/",
+        "address": "214 West 42nd Street",
+        "streetName": "West 42nd Street",
+        "title": "New Amsterdam Theatre",
+        "note": "Article names the theatre by identity anchor twice (\"42nd Street's New Amsterdam Theatre\", \"the New Amsterdam Theater\") but never a house number — address supplied externally from LPC's own matched Des_Address for the same building, same role as Actors' Temple in Phase 2. Exercises identity-anchor-only relevance path."
+      }
+    },
+    {
+      "productionSubjectId": "way/266149338",
+      "displayName": "New York Times Building (217-247 West 43rd Street)",
+      "lpcPlaceKey": "lpc-record-row-8",
+      "ephemeral": {
+        "placeKey": "eny-nyt-building",
+        "url": "https://ephemeralnewyork.wordpress.com/2022/11/14/when-longacre-square-became-times-square/",
+        "address": "217 West 43rd Street",
+        "streetName": "West 43rd Street",
+        "title": "New York Times Building",
+        "note": "Article's real subject is a 1905 Times Square postcard depicting multiple buildings (also the Hotel Astor, a DIFFERENT building) — a multi-building survey image, unlike Phase 2's single-subject-profile candidates. address is the first housenumber of LPC's own range Des_Address (217-247) — a legitimate entry-point address for the same building, not guessed. Relevance scoping must isolate only the Times-headquarters-naming claim and NOT pull in Hotel Astor content — checked explicitly below."
+      }
+    },
+    {
+      "productionSubjectId": "way/265301770",
+      "displayName": "Fashion Tower (135 West 36th Street)",
+      "lpcPlaceKey": "lpc-record-row-12",
+      "ephemeral": {
+        "placeKey": "eny-fashion-tower",
+        "url": "https://ephemeralnewyork.wordpress.com/2023/02/06/the-pretty-peacocks-holding-court-in-the-garment-district/",
+        "address": "135 West 36th Street",
+        "streetName": "West 36th Street",
+        "title": "Fashion Tower",
+        "note": "Article states the exact address (\"135 West 36th Street\") and building name (\"Fashion Tower\") directly in its own body text — exercises the shared extractor's address-based relevance path, same as Clinton Court in Phase 2."
+      }
+    }
+  ],
+  "osmIndexSize": 2792,
+  "bySubject": {
+    "way/266143344": {
+      "lpcClaimIds": [
+        "lpc-row-10-construction-date",
+        "lpc-row-10-architect",
+        "lpc-row-10-alteration-1",
+        "lpc-row-10-alteration-2",
+        "lpc-row-10-notes",
+        "lpc-row-10-owner"
+      ],
+      "ephemeralClaimIds": [],
+      "ephemeralGrounding": {
+        "category": "current-entity",
+        "proposedIdentityType": "current-osm-entity",
+        "matchedIdentifier": "New Amsterdam Theatre",
+        "matchingSignal": "exact address match + wikidata identity",
+        "confidence": "high",
+        "osmElementId": "way/266143344"
+      },
+      "ephemeralGroundingAgreesWithLpc": true,
+      "article": {
+        "url": "https://ephemeralnewyork.wordpress.com/2009/05/04/the-most-beautiful-girl-in-new-york-city/",
+        "title": "\"The most beautiful girl in New York City\"",
+        "publishedAt": "2009-05-04T05:42:30+00:00",
+        "bodyText": "In 1914, 20-year-old Pennsylvania native Olive Thomas was working in a Harlem department store when she entered a beauty contest run by a popular photographer.\n She won the contest, was crowned the most beautiful girl in New York City, and went on to become a model, magazine cover girl, and socialite.\n Her next move: joining the Ziegfeld Follies. Thomas performed as part of the racy Midnight Frolic, an after-hours show on the roof of 42nd Street's New Amsterdam Theatre. \n Thomas hit the silent-film circuit, married the brother of actress Mary Pickford, and then died on vacation in France in 1920 after accidentally ingesting medicine containing mercury.\n She's buried in Woodlawn Cemetery in the Bronx. Supposedly her ghost haunts the New Amsterdam Theater.\n<div"
+      }
+    },
+    "way/266149338": {
+      "lpcClaimIds": [
+        "lpc-row-8-identity-aka",
+        "lpc-row-8-construction-date",
+        "lpc-row-8-alteration-1-architect",
+        "lpc-row-8-architect",
+        "lpc-row-8-alteration-1",
+        "lpc-row-8-alteration-2",
+        "lpc-row-8-notes",
+        "lpc-row-8-owner"
+      ],
+      "ephemeralClaimIds": [
+        "eny-https-ephemeralnewyork-wordpress-com-2022-11-14-when-longacre-square-became-times-square--eny-nyt-building-p1s1-construction-date"
+      ],
+      "ephemeralGrounding": {
+        "category": "unresolved",
+        "proposedIdentityType": "unresolved",
+        "confidence": "none"
+      },
+      "ephemeralGroundingAgreesWithLpc": false,
+      "article": {
+        "url": "https://ephemeralnewyork.wordpress.com/2022/11/14/when-longacre-square-became-times-square/",
+        "title": "When Longacre Square became Times Square",
+        "publishedAt": "2022-11-14T09:15:41+00:00",
+        "bodyText": "I'm not sure what year this postcard dates to, but the image offers a few clues. For starters, that's the then-new New York Times building in the center of the image. The opening of the Times headquarters in 1904 triggered the name change from Longacre Square to Times Square.\n On the right there's another notable building, with porthole windows across a mansard roof. This was the Hotel Astor, constructed in 1905 and at the time one of the most luxurious hotels in the city. What you can't see is its fabulous roof garden—a dreamy place to go in a city largely without air conditioning.\n Times Square in 1905 isn't quite the crossroads of the world just yet. But with a major newspaper anchoring the square, plus a plethora of hotels, and theaters already occupying this junction, it's well on its way.\n [Postcard: MCNY; X2011.34.878]\n<div"
+      }
+    },
+    "way/265301770": {
+      "lpcClaimIds": [
+        "lpc-row-12-identity-aka",
+        "lpc-row-12-construction-date",
+        "lpc-row-12-architect",
+        "lpc-row-12-owner"
+      ],
+      "ephemeralClaimIds": [
+        "eny-https-ephemeralnewyork-wordpress-com-2023-02-06-the-pretty-peacocks-holding-court-in-the-garment-district--eny-fashion-tower-p2s1-construction-date"
+      ],
+      "ephemeralGrounding": {
+        "category": "current-entity",
+        "proposedIdentityType": "current-osm-entity",
+        "matchedIdentifier": "Spy Tec",
+        "matchingSignal": "exact address match + named OSM entity",
+        "confidence": "high",
+        "osmElementId": "node/5816276400"
+      },
+      "ephemeralGroundingAgreesWithLpc": false,
+      "article": {
+        "url": "https://ephemeralnewyork.wordpress.com/2023/02/06/the-pretty-peacocks-holding-court-in-the-garment-district/",
+        "title": "The pretty peacocks holding court in the Garment District",
+        "publishedAt": "2023-02-06T09:10:42+00:00",
+        "bodyText": "There's a lot of leftover loveliness in the Garment District—the wide swatch of Midtown Manhattan west of Fifth Avenue between roughly 41st and 28th Streets.\n In the early 1900s, the showrooms and factories here made the vast majority of women's clothes in the United States. These days, the remaining garment-related producers share dingy side streets with ghostly faded ads and signage from long-departed companies.\n But things are still looking bright at the Fashion Tower, at 135 West 36th Street. High above the freight entrance of this circa-1922, 17-story Emery Roth–designed building, two terra cotta painted peacocks sitting in the swirly leaves of a tree greet passersby.\n Why peacocks? With their beautiful colors and plumage, these gorgeous birds are symbols of fashion—as well as power, strength, and confidence .\n<div"
+      }
+    }
+  },
+  "artifactSummary": {
+    "totalClaims": 20,
+    "byDecision": {
+      "AUTO-ADMIT": 16,
+      "HOLD": 4,
+      "SUPPRESS": 0
+    },
+    "subjectCount": 3,
+    "integrityViolations": [],
+    "nonProjectableClaimIds": []
+  },
+  "projectedSubjectCount": 3,
+  "malformedSubjectIds": [],
+  "leakedNonAdmit": [],
+  "worthinessGateSummary": {
+    "passed": ["way/265301770", "way/266143344", "way/266149338"],
+    "rejected": []
+  },
+  "artifact": {
+    "version": 1,
+    "generatedAt": "2026-09-20T22:25:18.248Z",
+    "claims": [
+      {
+        "claimId": "lpc-row-12-identity-aka",
+        "subjectId": "way/265301770",
+        "claim": {
+          "id": "lpc-row-12-identity-aka",
+          "placeKey": "subject:way/265301770",
+          "address": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "proposedIdentityType": "unnamed-current-building",
+          "sourceIds": ["lpc-row-12"],
+          "supportingSpan": "AKA: Fashion Tower",
+          "claimType": "identity",
+          "claimText": "The NYC Landmarks Preservation Commission's own record for 135 West 36th Street (aka 135-139 West 36th Street) lists an alternate/former name: \"Fashion Tower.\"",
+          "relatedEntities": ["Fashion Tower"],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "way/265301770 — exact BIN match to an unnamed OSM building footprint",
+          "productionSubjectId": "way/265301770"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-12",
+            "title": "NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street))",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-12'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "identity",
+              "strength": "high",
+              "notes": "LPC's own designation-report-derived building record; LPC is the designating government authority itself, not a secondary compiler."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 3,
+          "confidence": "medium",
+          "matchedIdentity": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "reason": "Unnamed current building matched by exact address/geometry."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "medium",
+          "editorialQuality": "medium",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "eny-https-ephemeralnewyork-wordpress-com-2023-02-06-the-pretty-peacocks-holding-court-in-the-garment-district--eny-fashion-tower-p2s1-construction-date",
+        "subjectId": "way/265301770",
+        "claim": {
+          "id": "eny-https-ephemeralnewyork-wordpress-com-2023-02-06-the-pretty-peacocks-holding-court-in-the-garment-district--eny-fashion-tower-p2s1-construction-date",
+          "placeKey": "subject:way/265301770",
+          "address": "135 West 36th Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": [
+            "eny-https-ephemeralnewyork-wordpress-com-2023-02-06-the-pretty-peacocks-holding-court-in-the-garment-district-"
+          ],
+          "supportingSpan": "High above the freight entrance of this circa-1922, 17-story Emery Roth–designed building, two terra cotta painted peacocks sitting in the swirly leaves of a tree greet passersby.",
+          "claimType": "construction-date",
+          "claimText": "Ephemeral New York's article \"The pretty peacocks holding court in the Garment District\" states about 135 West 36th Street: \"High above the freight entrance of this circa-1922, 17-story Emery Roth–designed building, two terra cotta painted peacocks sitting in the swirly leaves of a tree greet passersby.\"",
+          "dateRange": {
+            "start": "1922-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text",
+          "productionSubjectId": "way/265301770",
+          "locationHints": "Spy Tec — exact address match + named OSM entity"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "eny-https-ephemeralnewyork-wordpress-com-2023-02-06-the-pretty-peacocks-holding-court-in-the-garment-district-",
+            "title": "Ephemeral New York — The pretty peacocks holding court in the Garment District",
+            "url": "https://ephemeralnewyork.wordpress.com/2023/02/06/the-pretty-peacocks-holding-court-in-the-garment-district/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2023-02-06T09:10:42+00:00",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "medium",
+              "notes": "Independent local-history narrative blog (ephemeralnewyork.wordpress.com); cites archival photographs/newspapers/period sources in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "block-auto-admit",
+            "reason": "Conflicts with another precise construction-date date for the same underlying fact at the same place (lpc-row-12-construction-date). Needs human resolution."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "135 West 36th Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "low",
+          "reasons": [
+            "[temporal-consistency] Conflicts with another precise construction-date date for the same underlying fact at the same place (lpc-row-12-construction-date). Needs human resolution."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-12-construction-date",
+        "subjectId": "way/265301770",
+        "claim": {
+          "id": "lpc-row-12-construction-date",
+          "placeKey": "subject:way/265301770",
+          "address": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "proposedIdentityType": "unnamed-current-building",
+          "sourceIds": ["lpc-row-12"],
+          "supportingSpan": "Date_Combo: 1924 - 1926",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 135 West 36th Street (aka 135-139 West 36th Street) of 1924 - 1926 (architect/builder: Emery Roth).",
+          "dateRange": {
+            "start": "1924-01-01",
+            "end": "1926-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text",
+          "locationHints": "way/265301770 — exact BIN match to an unnamed OSM building footprint",
+          "productionSubjectId": "way/265301770"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-12",
+            "title": "NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street))",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-12'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "high",
+              "notes": "Construction/building date (Date_Combo) transcribed directly from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "block-auto-admit",
+            "reason": "Conflicts with another precise construction-date date for the same underlying fact at the same place (eny-https-ephemeralnewyork-wordpress-com-2023-02-06-the-pretty-peacocks-holding-court-in-the-garment-district--eny-fashion-tower-p2s1-construction-date). Needs human resolution."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 3,
+          "confidence": "medium",
+          "matchedIdentity": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "reason": "Unnamed current building matched by exact address/geometry."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "high",
+          "identityConfidence": "medium",
+          "editorialQuality": "low",
+          "reasons": [
+            "[temporal-consistency] Conflicts with another precise construction-date date for the same underlying fact at the same place (eny-https-ephemeralnewyork-wordpress-com-2023-02-06-the-pretty-peacocks-holding-court-in-the-garment-district--eny-fashion-tower-p2s1-construction-date). Needs human resolution."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-12-architect",
+        "subjectId": "way/265301770",
+        "claim": {
+          "id": "lpc-row-12-architect",
+          "placeKey": "subject:way/265301770",
+          "address": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "proposedIdentityType": "unnamed-current-building",
+          "sourceIds": ["lpc-row-12"],
+          "supportingSpan": "Arch_Build: Emery Roth",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Emery Roth as architect/builder for 135 West 36th Street (aka 135-139 West 36th Street).",
+          "relatedEntities": ["Emery Roth"],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "way/265301770 — exact BIN match to an unnamed OSM building footprint",
+          "productionSubjectId": "way/265301770"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-12",
+            "title": "NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street))",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-12'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "architect",
+              "strength": "high",
+              "notes": "Architect/builder transcribed directly from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 3,
+          "confidence": "medium",
+          "matchedIdentity": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "reason": "Unnamed current building matched by exact address/geometry."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "medium",
+          "editorialQuality": "medium",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-12-owner",
+        "subjectId": "way/265301770",
+        "claim": {
+          "id": "lpc-row-12-owner",
+          "placeKey": "subject:way/265301770",
+          "address": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "proposedIdentityType": "unnamed-current-building",
+          "sourceIds": ["lpc-row-12"],
+          "supportingSpan": "Own_Devel: Mo-Ro Realty",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 135 West 36th Street (aka 135-139 West 36th Street) as Mo-Ro Realty.",
+          "relatedEntities": ["Mo-Ro Realty"],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "way/265301770 — exact BIN match to an unnamed OSM building footprint",
+          "productionSubjectId": "way/265301770"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-12",
+            "title": "NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street))",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-12'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "relationship",
+              "strength": "medium",
+              "notes": "Owner/developer transcribed from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 3,
+          "confidence": "medium",
+          "matchedIdentity": "135 West 36th Street (aka 135-139 West 36th Street)",
+          "reason": "Unnamed current building matched by exact address/geometry."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "medium",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-10-construction-date",
+        "subjectId": "way/266143344",
+        "claim": {
+          "id": "lpc-row-10-construction-date",
+          "placeKey": "subject:way/266143344",
+          "address": "214 West 42nd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-10"],
+          "supportingSpan": "Date_Combo: 1902 - 1903",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 214 West 42nd Street of 1902 - 1903 (architect/builder: Herts & Tallant).",
+          "dateRange": {
+            "start": "1902-01-01",
+            "end": "1903-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text",
+          "locationHints": "New Amsterdam Theatre — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266143344"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-10",
+            "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "high",
+              "notes": "Construction/building date (Date_Combo) transcribed directly from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "214 West 42nd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "high",
+          "editorialQuality": "low",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-10-architect",
+        "subjectId": "way/266143344",
+        "claim": {
+          "id": "lpc-row-10-architect",
+          "placeKey": "subject:way/266143344",
+          "address": "214 West 42nd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-10"],
+          "supportingSpan": "Arch_Build: Herts & Tallant",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Herts & Tallant as architect/builder for 214 West 42nd Street.",
+          "relatedEntities": ["Herts & Tallant"],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "New Amsterdam Theatre — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266143344"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-10",
+            "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "architect",
+              "strength": "high",
+              "notes": "Architect/builder transcribed directly from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "214 West 42nd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "high",
+          "editorialQuality": "medium",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-10-alteration-1",
+        "subjectId": "way/266143344",
+        "claim": {
+          "id": "lpc-row-10-alteration-1",
+          "placeKey": "subject:way/266143344",
+          "address": "214 West 42nd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-10"],
+          "supportingSpan": "Alt_Date_1: 1937",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a significant alteration at 214 West 42nd Street, dated 1937.",
+          "extractionMethod": "direct-source-text",
+          "locationHints": "New Amsterdam Theatre — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266143344"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-10",
+            "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "event",
+              "strength": "medium",
+              "notes": "LPC's own recorded significant-alteration date from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "214 West 42nd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-10-alteration-2",
+        "subjectId": "way/266143344",
+        "claim": {
+          "id": "lpc-row-10-alteration-2",
+          "placeKey": "subject:way/266143344",
+          "address": "214 West 42nd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-10"],
+          "supportingSpan": "Alt_Date_2: 1955",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 214 West 42nd Street, dated 1955.",
+          "extractionMethod": "direct-source-text",
+          "locationHints": "New Amsterdam Theatre — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266143344"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-10",
+            "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "event",
+              "strength": "medium",
+              "notes": "LPC's own recorded significant-alteration date from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "214 West 42nd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-10-notes",
+        "subjectId": "way/266143344",
+        "claim": {
+          "id": "lpc-row-10-notes",
+          "placeKey": "subject:way/266143344",
+          "address": "214 West 42nd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-10"],
+          "supportingSpan": "Entrance and signage altered in 1937; marquee and vertical electric sign were again modified in 1955.",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 214 West 42nd Street records: \"Entrance and signage altered in 1937; marquee and vertical electric sign were again modified in 1955.\"",
+          "extractionMethod": "direct-source-text",
+          "locationHints": "New Amsterdam Theatre — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266143344"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-10",
+            "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "event",
+              "strength": "medium",
+              "notes": "LPC's own recorded significant-alteration date from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "214 West 42nd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-10-owner",
+        "subjectId": "way/266143344",
+        "claim": {
+          "id": "lpc-row-10-owner",
+          "placeKey": "subject:way/266143344",
+          "address": "214 West 42nd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-10"],
+          "supportingSpan": "Own_Devel: Klaw & Erlanger",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 214 West 42nd Street as Klaw & Erlanger.",
+          "relatedEntities": ["Klaw & Erlanger"],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "New Amsterdam Theatre — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266143344"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-10",
+            "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "relationship",
+              "strength": "medium",
+              "notes": "Owner/developer transcribed from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "214 West 42nd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-identity-aka",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-identity-aka",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "AKA: New York Times Building",
+          "claimType": "identity",
+          "claimText": "The NYC Landmarks Preservation Commission's own record for 217-247 West 43rd Street lists an alternate/former name: \"New York Times Building.\"",
+          "relatedEntities": ["New York Times Building"],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "identity",
+              "strength": "high",
+              "notes": "LPC's own designation-report-derived building record; LPC is the designating government authority itself, not a secondary compiler."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "high",
+          "editorialQuality": "medium",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "eny-https-ephemeralnewyork-wordpress-com-2022-11-14-when-longacre-square-became-times-square--eny-nyt-building-p1s1-construction-date",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "eny-https-ephemeralnewyork-wordpress-com-2022-11-14-when-longacre-square-became-times-square--eny-nyt-building-p1s1-construction-date",
+          "placeKey": "subject:way/266149338",
+          "address": "217 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": [
+            "eny-https-ephemeralnewyork-wordpress-com-2022-11-14-when-longacre-square-became-times-square-"
+          ],
+          "supportingSpan": "This was the Hotel Astor, constructed in 1905 and at the time one of the most luxurious hotels in the city.",
+          "claimType": "construction-date",
+          "claimText": "Ephemeral New York's article \"When Longacre Square became Times Square\" states about 217 West 43rd Street: \"This was the Hotel Astor, constructed in 1905 and at the time one of the most luxurious hotels in the city.\"",
+          "dateRange": {
+            "start": "1905-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "eny-https-ephemeralnewyork-wordpress-com-2022-11-14-when-longacre-square-became-times-square-",
+            "title": "Ephemeral New York — When Longacre Square became Times Square",
+            "url": "https://ephemeralnewyork.wordpress.com/2022/11/14/when-longacre-square-became-times-square/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2022-11-14T09:15:41+00:00",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "medium",
+              "notes": "Independent local-history narrative blog (ephemeralnewyork.wordpress.com); cites archival photographs/newspapers/period sources in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "block-auto-admit",
+            "reason": "Conflicts with another precise construction-date date for the same underlying fact at the same place (lpc-row-8-construction-date). Needs human resolution."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "low",
+          "reasons": [
+            "[temporal-consistency] Conflicts with another precise construction-date date for the same underlying fact at the same place (lpc-row-8-construction-date). Needs human resolution."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-construction-date",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-construction-date",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "Date_Combo: 1912 - 1932",
+          "claimType": "construction-date",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 217-247 West 43rd Street of 1912 - 1932 (architect/builder: Buchman & Fox (architect), George A. Fuller Co. (builder)).",
+          "dateRange": {
+            "start": "1912-01-01",
+            "end": "1932-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "high",
+              "notes": "Construction/building date (Date_Combo) transcribed directly from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "block-auto-admit",
+            "reason": "Conflicts with another precise construction-date date for the same underlying fact at the same place (eny-https-ephemeralnewyork-wordpress-com-2022-11-14-when-longacre-square-became-times-square--eny-nyt-building-p1s1-construction-date). Needs human resolution."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "high",
+          "identityConfidence": "high",
+          "editorialQuality": "low",
+          "reasons": [
+            "[temporal-consistency] Conflicts with another precise construction-date date for the same underlying fact at the same place (eny-https-ephemeralnewyork-wordpress-com-2022-11-14-when-longacre-square-became-times-square--eny-nyt-building-p1s1-construction-date). Needs human resolution."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-alteration-1-architect",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-alteration-1-architect",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "Alt_Arch_1: Ludlow & Peabody; Albert Kahn, Inc. (1912 - 1913)",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Ludlow & Peabody; Albert Kahn, Inc. as architect for a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913.",
+          "relatedEntities": ["Ludlow & Peabody; Albert Kahn, Inc."],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "architect",
+              "strength": "high",
+              "notes": "Architect/builder transcribed directly from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "high",
+          "editorialQuality": "medium",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-architect",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-architect",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "Arch_Build: Buchman & Fox (architect), George A. Fuller Co. (builder)",
+          "claimType": "architect",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names Buchman & Fox (architect), George A. Fuller Co. (builder) as architect/builder for 217-247 West 43rd Street.",
+          "relatedEntities": [
+            "Buchman & Fox (architect), George A. Fuller Co. (builder)"
+          ],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "architect",
+              "strength": "high",
+              "notes": "Architect/builder transcribed directly from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "high",
+          "identityConfidence": "high",
+          "editorialQuality": "medium",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-alteration-1",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-alteration-1",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "Alt_Date_1: 1912 - 1913 (Alt_Arch_1: Ludlow & Peabody; Albert Kahn, Inc.)",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913, with architect Ludlow & Peabody; Albert Kahn, Inc..",
+          "relatedEntities": ["Ludlow & Peabody; Albert Kahn, Inc."],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "event",
+              "strength": "medium",
+              "notes": "LPC's own recorded significant-alteration date from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-alteration-2",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-alteration-2",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "Alt_Date_2: 1922 - 1924; 1930 - 1932",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 217-247 West 43rd Street, dated 1922 - 1924; 1930 - 1932.",
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "event",
+              "strength": "medium",
+              "notes": "LPC's own recorded significant-alteration date from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-notes",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-notes",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "Constructed in three stages between 1912 and 1932. Three major parts: 4-story east section, an 11-story main section, a 5-story set-back attic level and 7-story tower.",
+          "claimType": "event",
+          "claimText": "The NYC Landmarks Preservation Commission's own Notes field for 217-247 West 43rd Street records: \"Constructed in three stages between 1912 and 1932. Three major parts: 4-story east section, an 11-story main section, a 5-story set-back attic level and 7-story tower.\"",
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "event",
+              "strength": "medium",
+              "notes": "LPC's own recorded significant-alteration date from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      },
+      {
+        "claimId": "lpc-row-8-owner",
+        "subjectId": "way/266149338",
+        "claim": {
+          "id": "lpc-row-8-owner",
+          "placeKey": "subject:way/266149338",
+          "address": "217-247 West 43rd Street",
+          "proposedIdentityType": "current-osm-entity",
+          "sourceIds": ["lpc-row-8"],
+          "supportingSpan": "Own_Devel: The New York Times",
+          "claimType": "relationship",
+          "claimText": "The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 217-247 West 43rd Street as The New York Times.",
+          "relatedEntities": ["The New York Times"],
+          "extractionMethod": "direct-source-text",
+          "locationHints": "Times Square Building — exact BIN match + wikidata identity",
+          "productionSubjectId": "way/266149338"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "lpc-row-8",
+            "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+            "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+            "sourceClass": "government-preservation-record",
+            "capabilityForClaimType": {
+              "claimType": "relationship",
+              "strength": "medium",
+              "notes": "Owner/developer transcribed from the designation report."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 5,
+          "confidence": "high",
+          "matchedIdentity": "217-247 West 43rd Street",
+          "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+        },
+        "decision": {
+          "decision": "AUTO-ADMIT",
+          "factualTrust": "medium",
+          "identityConfidence": "high",
+          "editorialQuality": "high",
+          "reasons": [
+            "All checks passed; grounding and factual trust sufficient."
+          ]
+        }
+      }
+    ],
+    "summary": {
+      "totalClaims": 20,
+      "byDecision": {
+        "AUTO-ADMIT": 16,
+        "HOLD": 4,
+        "SUPPRESS": 0
+      },
+      "subjectCount": 3,
+      "integrityViolations": [],
+      "nonProjectableClaimIds": []
+    }
+  },
+  "projection": {
+    "version": 1,
+    "generatedAt": "2026-09-20T22:25:18.248Z",
+    "entries": {
+      "way/265301770": {
+        "source": {
+          "title": "NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street))",
+          "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-12'",
+          "sourceType": "government preservation record",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (lpc-row-12-identity-aka, lpc-row-12-architect, lpc-row-12-owner), drawing on: NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street)). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+        },
+        "evidence": {
+          "subjectId": "way/265301770",
+          "text": "The NYC Landmarks Preservation Commission's own record for 135 West 36th Street (aka 135-139 West 36th Street) lists an alternate/former name: \"Fashion Tower.\" The NYC Landmarks Preservation Commission's designation report names Emery Roth as architect/builder for 135 West 36th Street (aka 135-139 West 36th Street). The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 135 West 36th Street (aka 135-139 West 36th Street) as Mo-Ro Realty.",
+          "claimScope": "Mechanically composed from 3 admitted claim(s) covering: identity, architect, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-12-identity-aka, lpc-row-12-architect, lpc-row-12-owner) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "medium",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      },
+      "way/266143344": {
+        "source": {
+          "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+          "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+          "sourceType": "government preservation record",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 6 independently AUTO-ADMIT claim(s) (lpc-row-10-construction-date, lpc-row-10-architect, lpc-row-10-alteration-1, lpc-row-10-alteration-2, lpc-row-10-notes, lpc-row-10-owner), drawing on: NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+        },
+        "evidence": {
+          "subjectId": "way/266143344",
+          "text": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 214 West 42nd Street of 1902 - 1903 (architect/builder: Herts & Tallant). The NYC Landmarks Preservation Commission's designation report names Herts & Tallant as architect/builder for 214 West 42nd Street. The NYC Landmarks Preservation Commission's designation report records a significant alteration at 214 West 42nd Street, dated 1937. The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 214 West 42nd Street, dated 1955. The NYC Landmarks Preservation Commission's own Notes field for 214 West 42nd Street records: \"Entrance and signage altered in 1937; marquee and vertical electric sign were again modified in 1955.\" The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 214 West 42nd Street as Klaw & Erlanger.",
+          "claimScope": "Mechanically composed from 6 admitted claim(s) covering: construction-date, architect, event, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-10-construction-date, lpc-row-10-architect, lpc-row-10-alteration-1, lpc-row-10-alteration-2, lpc-row-10-notes, lpc-row-10-owner) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "high",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      },
+      "way/266149338": {
+        "source": {
+          "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+          "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+          "sourceType": "government preservation record",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 7 independently AUTO-ADMIT claim(s) (lpc-row-8-identity-aka, lpc-row-8-alteration-1-architect, lpc-row-8-architect, lpc-row-8-alteration-1, lpc-row-8-alteration-2, lpc-row-8-notes, lpc-row-8-owner), drawing on: NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+        },
+        "evidence": {
+          "subjectId": "way/266149338",
+          "text": "The NYC Landmarks Preservation Commission's own record for 217-247 West 43rd Street lists an alternate/former name: \"New York Times Building.\" The NYC Landmarks Preservation Commission's designation report names Ludlow & Peabody; Albert Kahn, Inc. as architect for a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913. The NYC Landmarks Preservation Commission's designation report names Buchman & Fox (architect), George A. Fuller Co. (builder) as architect/builder for 217-247 West 43rd Street. The NYC Landmarks Preservation Commission's designation report records a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913, with architect Ludlow & Peabody; Albert Kahn, Inc.. The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 217-247 West 43rd Street, dated 1922 - 1924; 1930 - 1932. The NYC Landmarks Preservation Commission's own Notes field for 217-247 West 43rd Street records: \"Constructed in three stages between 1912 and 1932. Three major parts: 4-story east section, an 11-story main section, a 5-story set-back attic level and 7-story tower.\" The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 217-247 West 43rd Street as The New York Times.",
+          "claimScope": "Mechanically composed from 7 admitted claim(s) covering: identity, architect, event, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-8-identity-aka, lpc-row-8-alteration-1-architect, lpc-row-8-architect, lpc-row-8-alteration-1, lpc-row-8-alteration-2, lpc-row-8-notes, lpc-row-8-owner) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "high",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      }
+    },
+    "compositionMap": {
+      "way/265301770": [
+        "lpc-row-12-identity-aka",
+        "lpc-row-12-architect",
+        "lpc-row-12-owner"
+      ],
+      "way/266143344": [
+        "lpc-row-10-construction-date",
+        "lpc-row-10-architect",
+        "lpc-row-10-alteration-1",
+        "lpc-row-10-alteration-2",
+        "lpc-row-10-notes",
+        "lpc-row-10-owner"
+      ],
+      "way/266149338": [
+        "lpc-row-8-identity-aka",
+        "lpc-row-8-alteration-1-architect",
+        "lpc-row-8-architect",
+        "lpc-row-8-alteration-1",
+        "lpc-row-8-alteration-2",
+        "lpc-row-8-notes",
+        "lpc-row-8-owner"
+      ]
+    },
+    "nonProjectableClaimIds": []
+  },
+  "gated": {
+    "version": 1,
+    "generatedAt": "2026-09-20T22:25:18.248Z",
+    "entries": {
+      "way/265301770": {
+        "source": {
+          "title": "NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street))",
+          "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-12'",
+          "sourceType": "government preservation record",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (lpc-row-12-identity-aka, lpc-row-12-architect, lpc-row-12-owner), drawing on: NYC Landmarks Preservation Commission — Fashion Tower (135 West 36th Street (aka 135-139 West 36th Street)). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+        },
+        "evidence": {
+          "subjectId": "way/265301770",
+          "text": "The NYC Landmarks Preservation Commission's own record for 135 West 36th Street (aka 135-139 West 36th Street) lists an alternate/former name: \"Fashion Tower.\" The NYC Landmarks Preservation Commission's designation report names Emery Roth as architect/builder for 135 West 36th Street (aka 135-139 West 36th Street). The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 135 West 36th Street (aka 135-139 West 36th Street) as Mo-Ro Realty.",
+          "claimScope": "Mechanically composed from 3 admitted claim(s) covering: identity, architect, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-12-identity-aka, lpc-row-12-architect, lpc-row-12-owner) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "medium",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      },
+      "way/266143344": {
+        "source": {
+          "title": "NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street)",
+          "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-10'",
+          "sourceType": "government preservation record",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 6 independently AUTO-ADMIT claim(s) (lpc-row-10-construction-date, lpc-row-10-architect, lpc-row-10-alteration-1, lpc-row-10-alteration-2, lpc-row-10-notes, lpc-row-10-owner), drawing on: NYC Landmarks Preservation Commission — New Amsterdam Theater (214 West 42nd Street). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+        },
+        "evidence": {
+          "subjectId": "way/266143344",
+          "text": "The NYC Landmarks Preservation Commission's designation report gives a construction/building date for 214 West 42nd Street of 1902 - 1903 (architect/builder: Herts & Tallant). The NYC Landmarks Preservation Commission's designation report names Herts & Tallant as architect/builder for 214 West 42nd Street. The NYC Landmarks Preservation Commission's designation report records a significant alteration at 214 West 42nd Street, dated 1937. The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 214 West 42nd Street, dated 1955. The NYC Landmarks Preservation Commission's own Notes field for 214 West 42nd Street records: \"Entrance and signage altered in 1937; marquee and vertical electric sign were again modified in 1955.\" The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 214 West 42nd Street as Klaw & Erlanger.",
+          "claimScope": "Mechanically composed from 6 admitted claim(s) covering: construction-date, architect, event, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-10-construction-date, lpc-row-10-architect, lpc-row-10-alteration-1, lpc-row-10-alteration-2, lpc-row-10-notes, lpc-row-10-owner) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "high",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      },
+      "way/266149338": {
+        "source": {
+          "title": "NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street)",
+          "url": "https://data.cityofnewyork.us/resource/gpmc-yuvp.json?$where=%3Aid%3D'row-8'",
+          "sourceType": "government preservation record",
+          "usageNote": "Mechanically composed by the local-history admission pipeline from 7 independently AUTO-ADMIT claim(s) (lpc-row-8-identity-aka, lpc-row-8-alteration-1-architect, lpc-row-8-architect, lpc-row-8-alteration-1, lpc-row-8-alteration-2, lpc-row-8-notes, lpc-row-8-owner), drawing on: NYC Landmarks Preservation Commission — New York Times Building (originally the Times Annex) (217-247 West 43rd Street). See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+        },
+        "evidence": {
+          "subjectId": "way/266149338",
+          "text": "The NYC Landmarks Preservation Commission's own record for 217-247 West 43rd Street lists an alternate/former name: \"New York Times Building.\" The NYC Landmarks Preservation Commission's designation report names Ludlow & Peabody; Albert Kahn, Inc. as architect for a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913. The NYC Landmarks Preservation Commission's designation report names Buchman & Fox (architect), George A. Fuller Co. (builder) as architect/builder for 217-247 West 43rd Street. The NYC Landmarks Preservation Commission's designation report records a significant alteration at 217-247 West 43rd Street, dated 1912 - 1913, with architect Ludlow & Peabody; Albert Kahn, Inc.. The NYC Landmarks Preservation Commission's designation report records a further significant alteration at 217-247 West 43rd Street, dated 1922 - 1924; 1930 - 1932. The NYC Landmarks Preservation Commission's own Notes field for 217-247 West 43rd Street records: \"Constructed in three stages between 1912 and 1932. Three major parts: 4-story east section, an 11-story main section, a 5-story set-back attic level and 7-story tower.\" The NYC Landmarks Preservation Commission's designation report names the original owner/developer of 217-247 West 43rd Street as The New York Times.",
+          "claimScope": "Mechanically composed from 7 admitted claim(s) covering: identity, architect, event, relationship. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: lpc-row-8-identity-aka, lpc-row-8-alteration-1-architect, lpc-row-8-architect, lpc-row-8-alteration-1, lpc-row-8-alteration-2, lpc-row-8-notes, lpc-row-8-owner) for full per-claim provenance.",
+          "verificationStatus": "approved",
+          "verificationConfidence": "high",
+          "curatedTrust": "medium",
+          "lastVerifiedDate": "2026-09-20",
+          "admissionMethod": "automated"
+        }
+      }
+    },
+    "compositionMap": {
+      "way/265301770": [
+        "lpc-row-12-identity-aka",
+        "lpc-row-12-architect",
+        "lpc-row-12-owner"
+      ],
+      "way/266143344": [
+        "lpc-row-10-construction-date",
+        "lpc-row-10-architect",
+        "lpc-row-10-alteration-1",
+        "lpc-row-10-alteration-2",
+        "lpc-row-10-notes",
+        "lpc-row-10-owner"
+      ],
+      "way/266149338": [
+        "lpc-row-8-identity-aka",
+        "lpc-row-8-alteration-1-architect",
+        "lpc-row-8-architect",
+        "lpc-row-8-alteration-1",
+        "lpc-row-8-alteration-2",
+        "lpc-row-8-notes",
+        "lpc-row-8-owner"
+      ]
+    },
+    "nonProjectableClaimIds": [],
+    "worthinessBySubject": {
+      "way/265301770": {
+        "projectableForDiscovery": true,
+        "worthinessReasons": [
+          "Combines 2 supporting claim types (architect, relationship) into a capsule design/ownership history — more than bare identity/register metadata even without a dedicated story claim type."
+        ]
+      },
+      "way/266143344": {
+        "projectableForDiscovery": true,
+        "worthinessReasons": [
+          "Contains story-bearing claim type(s) — event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+        ]
+      },
+      "way/266149338": {
+        "projectableForDiscovery": true,
+        "worthinessReasons": [
+          "Contains story-bearing claim type(s) — event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+        ]
+      }
+    },
+    "rejectedForWorthiness": []
+  }
+}

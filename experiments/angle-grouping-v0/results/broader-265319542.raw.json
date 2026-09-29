@@ -1,0 +1,17 @@
+{
+  "subjectId": "way/265319542",
+  "angleGroups": [
+    {
+      "subjectId": "way/265319542",
+      "angleId": "way/265319542-bricklayer-greek-church-origin",
+      "centralQuestion": "Why is this building's style described as 'Bricklayer Greek', and what was it originally built for?",
+      "perspectiveShift": "Built around 1858 for the Seventh Associate Presbyterian Church, the building's style has been referred to as 'Bricklayer Greek' -- an unusual, specifically-named architectural treatment tied to its original religious construction.",
+      "claimIds": [
+        "lpc-row-0-construction-date",
+        "lpc-row-0-notes",
+        "lpc-row-0-owner"
+      ]
+    }
+  ],
+  "ungroupedClaimIds": []
+}

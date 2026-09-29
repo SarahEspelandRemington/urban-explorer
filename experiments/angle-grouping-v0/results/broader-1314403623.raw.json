@@ -1,0 +1,27 @@
+{
+  "subjectId": "way/1314403623",
+  "angleGroups": [
+    {
+      "subjectId": "way/1314403623",
+      "angleId": "way/1314403623-george-society-relocation",
+      "centralQuestion": "Why did the George Society's meetings 'wander' before settling into this building?",
+      "perspectiveShift": "Before this building became the George Society's home from 1922 to 1949, the organization's belongings were in storage and its meetings had no fixed location, moving in only after a one-year lease came due on May 10, 1924 -- making the building the endpoint of a period of institutional displacement rather than simply a long-term tenant's address.",
+      "claimIds": [
+        "bp-history-subject-way-1314403623-p265s0-use-history",
+        "bp-1901-spring-garden-street-subject-way-1314403623-p52s7-event"
+      ]
+    }
+  ],
+  "ungroupedClaimIds": [
+    "pab-1179406-identity",
+    "pab-75513-identity",
+    "bp-1901-spring-garden-street-subject-way-1314403623-p26s0-construction-date",
+    "pab-75513-chrono-0-construction",
+    "pab-75513-register-status",
+    "bp-1901-spring-garden-street-subject-way-1314403623-p26s5-biographical",
+    "bp-1901-spring-garden-street-subject-way-1314403623-p52s8-biographical",
+    "bp-1901-spring-garden-street-subject-way-1314403623-p32s4-event",
+    "bp-1901-spring-garden-street-subject-way-1314403623-p52s1-statistic",
+    "pab-1179406-client"
+  ]
+}

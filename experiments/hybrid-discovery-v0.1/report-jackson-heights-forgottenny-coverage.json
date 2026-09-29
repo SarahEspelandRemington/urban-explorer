@@ -1,0 +1,371 @@
+{
+  "bbox": {
+    "minLat": 40.74616,
+    "maxLat": 40.75424,
+    "minLon": -73.88833,
+    "maxLon": -73.87767
+  },
+  "osmIndexSize": 1455,
+  "candidates": [
+    {
+      "postId": 114145,
+      "placeKey": "fny-crooked-house",
+      "title": "Crooked House",
+      "address": "80-19 31st Avenue",
+      "streetName": "31st Avenue",
+      "note": "Real street-number address stated in-text."
+    },
+    {
+      "postId": 52279,
+      "placeKey": "fny-last-jahns",
+      "title": "Jahn's",
+      "address": "81-04 37th Avenue",
+      "streetName": "37th Avenue",
+      "note": "Real street-number address stated in-text."
+    },
+    {
+      "postId": 118780,
+      "placeKey": "fny-leverich-cemetery",
+      "title": "Leverich Cemetery",
+      "address": "",
+      "streetName": "35th Avenue",
+      "note": "Only a cross-street given (35th Avenue at 71st Street) — deliberately empty address, identity-anchor-only extraction."
+    },
+    {
+      "postId": 118425,
+      "placeKey": "fny-barneys-shoes",
+      "title": "Barney's Ladies' Shoes",
+      "address": "",
+      "streetName": "82nd Street",
+      "note": "Only a cross-street given (82nd Street off 37th Avenue); the sign itself has already been removed to a museum — no current point to ground to either way."
+    },
+    {
+      "postId": 107781,
+      "placeKey": "fny-scrabble-sign",
+      "title": "Scrabble street sign (Alfred Butts)",
+      "address": "",
+      "streetName": "35th Avenue",
+      "note": "A DOT street sign at an intersection (35th Avenue and 82nd Street), not a building — deliberately empty address."
+    },
+    {
+      "postId": 99590,
+      "placeKey": "fny-travers-park",
+      "title": "Travers Park",
+      "address": "",
+      "streetName": "34th Avenue",
+      "note": "Named public park given only as a block range (34th Avenue between 77th and 78th Streets), no street-number address — deliberately empty address to test named-but-addressless civic space handling."
+    }
+  ],
+  "groundingByPlaceKey": {
+    "fny-crooked-house": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-last-jahns": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-leverich-cemetery": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-barneys-shoes": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-scrabble-sign": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    },
+    "fny-travers-park": {
+      "category": "unresolved",
+      "proposedIdentityType": "unresolved",
+      "confidence": "none"
+    }
+  },
+  "artifactSummary": {
+    "totalClaims": 3,
+    "byDecision": {
+      "AUTO-ADMIT": 0,
+      "HOLD": 3,
+      "SUPPRESS": 0
+    },
+    "subjectCount": 0,
+    "integrityViolations": [],
+    "nonProjectableClaimIds": [
+      "fny-118780-fny-leverich-cemetery-fny-leverich-cemetery-p1s2-construction-date",
+      "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+      "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history"
+    ]
+  },
+  "worthinessBySubject": {},
+  "artifact": {
+    "version": 1,
+    "generatedAt": "2026-09-23T01:30:45.870Z",
+    "claims": [
+      {
+        "claimId": "fny-118780-fny-leverich-cemetery-fny-leverich-cemetery-p1s2-construction-date",
+        "claim": {
+          "id": "fny-118780-fny-leverich-cemetery-fny-leverich-cemetery-p1s2-construction-date",
+          "placeKey": "fny-leverich-cemetery",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["fny-118780"],
+          "supportingSpan": "He built his homestead in 1670 and it stood until 1909.",
+          "claimType": "construction-date",
+          "claimText": "Forgotten New York's article \"LEVERICH CEMETERY, JACKSON HEIGHTS\" states about Leverich Cemetery: \"He built his homestead in 1670 and it stood until 1909.\"",
+          "dateRange": {
+            "start": "1670-01-01",
+            "precise": true
+          },
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "fny-118780",
+            "title": "Forgotten New York — LEVERICH CEMETERY, JACKSON HEIGHTS",
+            "url": "https://forgotten-ny.com/2023/08/leverich-cemetery-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2023-08-30T18:10:07Z",
+            "capabilityForClaimType": {
+              "claimType": "construction-date",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "low",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+        "claim": {
+          "id": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+          "placeKey": "fny-scrabble-sign",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["fny-107781"],
+          "supportingSpan": "In the 1940s Butts, an architect by trade, created a new word game combining the features of anagrams and crossword puzzles, calling it “Criss Cross Words,” and shopped it around to game and toy manufacturers without success.",
+          "claimType": "architect",
+          "claimText": "Forgotten New York's article \"SCRABBLE SIGN, Jackson Heights\" states about Scrabble street sign (Alfred Butts): \"In the 1940s Butts, an architect by trade, created a new word game combining the features of anagrams and crossword puzzles, calling it “Criss Cross Words,” and shopped it around to game and toy manufacturers without success.\"",
+          "relatedEntities": ["by trade"],
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "fny-107781",
+            "title": "Forgotten New York — SCRABBLE SIGN, Jackson Heights",
+            "url": "https://forgotten-ny.com/2021/05/scrabble-sign-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2021-05-21T19:00:56Z",
+            "capabilityForClaimType": {
+              "claimType": "architect",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "medium",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      },
+      {
+        "claimId": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history",
+        "claim": {
+          "id": "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history",
+          "placeKey": "fny-scrabble-sign",
+          "address": "",
+          "proposedIdentityType": "unresolved",
+          "sourceIds": ["fny-107781"],
+          "supportingSpan": "The renamed Scrabble®, now distributed by Hasbro, became America’s second most popular board game, second only to Parker Brothers’ Monopoly®.",
+          "claimType": "use-history",
+          "claimText": "Forgotten New York's article \"SCRABBLE SIGN, Jackson Heights\" states about Scrabble street sign (Alfred Butts): \"The renamed Scrabble®, now distributed by Hasbro, became America’s second most popular board game, second only to Parker Brothers’ Monopoly®.\"",
+          "extractionMethod": "direct-source-text"
+        },
+        "sourceCapabilitySnapshots": [
+          {
+            "sourceId": "fny-107781",
+            "title": "Forgotten New York — SCRABBLE SIGN, Jackson Heights",
+            "url": "https://forgotten-ny.com/2021/05/scrabble-sign-jackson-heights/",
+            "sourceClass": "local-public-history-narrative",
+            "publicationDate": "2021-05-21T19:00:56Z",
+            "capabilityForClaimType": {
+              "claimType": "use-history",
+              "strength": "medium",
+              "notes": "Independent long-running local-history publication (forgotten-ny.com); cites period maps, named historians, and archival photographs in-text but has no formal citation/register apparatus, so capped at medium strength, same tier as Hidden City and Ephemeral New York."
+            }
+          }
+        ],
+        "checks": [
+          {
+            "checkId": "admissible-source-class",
+            "outcome": "pass",
+            "reason": "At least one cited source belongs to an approved source class."
+          },
+          {
+            "checkId": "synthesized-search-rejection",
+            "outcome": "pass",
+            "reason": "No cited source is a synthesized search output."
+          },
+          {
+            "checkId": "provenance-tracing",
+            "outcome": "pass",
+            "reason": "No cited source has a failed provenance-verification note."
+          },
+          {
+            "checkId": "temporal-consistency",
+            "outcome": "pass",
+            "reason": "No date range asserted; nothing to check."
+          },
+          {
+            "checkId": "superlative-exclusivity-corroboration",
+            "outcome": "pass",
+            "reason": "Not a superlative/exclusivity claim."
+          },
+          {
+            "checkId": "epistemic-marker-preservation",
+            "outcome": "pass",
+            "reason": "No blocking epistemic marker present."
+          }
+        ],
+        "grounding": {
+          "tier": 0,
+          "confidence": "none",
+          "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+        },
+        "decision": {
+          "decision": "HOLD",
+          "factualTrust": "medium",
+          "identityConfidence": "none",
+          "editorialQuality": "high",
+          "reasons": [
+            "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+          ]
+        }
+      }
+    ],
+    "summary": {
+      "totalClaims": 3,
+      "byDecision": {
+        "AUTO-ADMIT": 0,
+        "HOLD": 3,
+        "SUPPRESS": 0
+      },
+      "subjectCount": 0,
+      "integrityViolations": [],
+      "nonProjectableClaimIds": [
+        "fny-118780-fny-leverich-cemetery-fny-leverich-cemetery-p1s2-construction-date",
+        "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s1-architect",
+        "fny-107781-fny-scrabble-sign-fny-scrabble-sign-p2s6-use-history"
+      ]
+    }
+  },
+  "projection": {
+    "version": 1,
+    "generatedAt": "2026-09-23T01:30:45.870Z",
+    "entries": {},
+    "compositionMap": {},
+    "nonProjectableClaimIds": []
+  },
+  "gated": {
+    "version": 1,
+    "generatedAt": "2026-09-23T01:30:45.870Z",
+    "entries": {},
+    "compositionMap": {},
+    "nonProjectableClaimIds": [],
+    "worthinessBySubject": {},
+    "rejectedForWorthiness": []
+  }
+}

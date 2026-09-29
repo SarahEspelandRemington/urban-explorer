@@ -1,0 +1,198 @@
+{
+  "generatedAt": "2026-09-16T22:54:34.371Z",
+  "corridor": "Spring Garden St 400-1200",
+  "groundedPabPlaceCount": 6,
+  "groundedPlaces": [
+    {
+      "placeKey": "pab-record-474453",
+      "address": "1100 SPRING GARDEN ST",
+      "title": "Barber Painter & Decorator",
+      "proposedIdentityType": "unnamed-current-building"
+    },
+    {
+      "placeKey": "pab-record-444815",
+      "address": "1131-1133 SPRING GARDEN ST",
+      "title": "Church of the Assumption; Assumption B.V.M.",
+      "proposedIdentityType": "unresolved"
+    },
+    {
+      "placeKey": "pab-record-41161",
+      "address": "611 SPRING GARDEN ST",
+      "title": "German Society of Pennsylvania Hall; German Society of Pennsylvania Library",
+      "proposedIdentityType": "unresolved"
+    },
+    {
+      "placeKey": "pab-record-1129847",
+      "address": "711 SPRING GARDEN ST",
+      "title": "Guild House",
+      "proposedIdentityType": "unresolved"
+    },
+    {
+      "placeKey": "pab-record-61398",
+      "address": "711 SPRING GARDEN ST",
+      "title": "Mutual Republican Club",
+      "proposedIdentityType": "unresolved"
+    },
+    {
+      "placeKey": "pab-record-37358",
+      "address": "600 SPRING GARDEN ST",
+      "title": "Northern Saving Fund Safe Deposit & Trust Company; Provident Trust Company; Northern Savings Fund Society; Northern Savings Fund; Northern Trust Co.; Provident National Bank",
+      "proposedIdentityType": "unresolved"
+    }
+  ],
+  "totalArticlesEnumerated": 2710,
+  "corridorCandidateArticleCount": 21,
+  "confidentlyMatchedCorridorPlaces": [
+    {
+      "placeKey": "pab-record-444815",
+      "address": "1131-1133 SPRING GARDEN ST",
+      "title": "Church of the Assumption; Assumption B.V.M.",
+      "proposedIdentityType": "unresolved",
+      "strongMatchCount": 2,
+      "weakMatchCount": 2,
+      "strongMatches": [
+        {
+          "articleUrl": "https://hiddencityphila.org/2012/04/court-day-for-church-of-the-assumption/",
+          "articleTitle": "Court Day For Church Of The Assumption",
+          "publishedAt": "2012-04-27T18:39:44+00:00",
+          "author": "Nathaniel Popkin",
+          "mentionCount": 1,
+          "isMaxMentionedAddress": true,
+          "distinctSpringGardenAddressCount": 1,
+          "titleNamesPlace": true
+        },
+        {
+          "articleUrl": "https://hiddencityphila.org/2025/03/historic-church-of-the-assumption-heads-to-sheriffs-sale/",
+          "articleTitle": "Historic Church of the Assumption Heads to Sheriff’s Sale",
+          "publishedAt": "2025-03-27T14:15:58+00:00",
+          "author": "Kyle Bagenstose",
+          "mentionCount": 2,
+          "isMaxMentionedAddress": true,
+          "distinctSpringGardenAddressCount": 1,
+          "titleNamesPlace": true
+        }
+      ]
+    },
+    {
+      "placeKey": "pab-record-1129847",
+      "address": "711 SPRING GARDEN ST",
+      "title": "Guild House",
+      "proposedIdentityType": "unresolved",
+      "strongMatchCount": 1,
+      "weakMatchCount": 1,
+      "strongMatches": [
+        {
+          "articleUrl": "https://hiddencityphila.org/2013/07/venturis-guild-house-50-years-of-everyday-extraordinary-design/",
+          "articleTitle": "Venturi's Guild House: 50 Years Of Everyday Extraordinary Design",
+          "publishedAt": "2013-07-29T19:18:28+00:00",
+          "author": "Jason Lempieri",
+          "mentionCount": 1,
+          "isMaxMentionedAddress": true,
+          "distinctSpringGardenAddressCount": 1,
+          "titleNamesPlace": true
+        }
+      ]
+    },
+    {
+      "placeKey": "pab-record-37358",
+      "address": "600 SPRING GARDEN ST",
+      "title": "Northern Saving Fund Safe Deposit & Trust Company; Provident Trust Company; Northern Savings Fund Society; Northern Savings Fund; Northern Trust Co.; Provident National Bank",
+      "proposedIdentityType": "unresolved",
+      "strongMatchCount": 1,
+      "weakMatchCount": 1,
+      "strongMatches": [
+        {
+          "articleUrl": "https://hiddencityphila.org/2016/06/marked-potential-northern-savings-fund/",
+          "articleTitle": "Marked Potential: Northern Savings Fund",
+          "publishedAt": "2016-06-13T14:45:37+00:00",
+          "author": "Shila Scarlet Griffith, LEED AP",
+          "mentionCount": 2,
+          "isMaxMentionedAddress": true,
+          "distinctSpringGardenAddressCount": 1,
+          "titleNamesPlace": false
+        }
+      ]
+    }
+  ],
+  "rejectedIncidentalMatches": [
+    {
+      "placeKey": "pab-record-444815",
+      "address": "1131-1133 SPRING GARDEN ST",
+      "title": "Church of the Assumption; Assumption B.V.M.",
+      "articleUrl": "https://hiddencityphila.org/2013/04/top-ten-significant-vulnerable-churches/",
+      "articleTitle": "Top Ten Significant, Vulnerable Churches",
+      "mentionCount": 1,
+      "isMaxMentionedAddress": true,
+      "distinctSpringGardenAddressCount": 1,
+      "reasonRejected": "single incidental mention, article title does not name this place"
+    },
+    {
+      "placeKey": "pab-record-61398",
+      "address": "711 SPRING GARDEN ST",
+      "title": "Mutual Republican Club",
+      "articleUrl": "https://hiddencityphila.org/2013/07/venturis-guild-house-50-years-of-everyday-extraordinary-design/",
+      "articleTitle": "Venturi's Guild House: 50 Years Of Everyday Extraordinary Design",
+      "mentionCount": 1,
+      "isMaxMentionedAddress": true,
+      "distinctSpringGardenAddressCount": 1,
+      "reasonRejected": "single incidental mention, article title does not name this place"
+    },
+    {
+      "placeKey": "pab-record-41161",
+      "address": "611 SPRING GARDEN ST",
+      "title": "German Society of Pennsylvania Hall; German Society of Pennsylvania Library",
+      "articleUrl": "https://hiddencityphila.org/2014/09/a-rich-past-and-possible-green-future-for-spring-garden-street/",
+      "articleTitle": "A Rich Past And Possible Green Future For Spring Garden Street",
+      "mentionCount": 1,
+      "isMaxMentionedAddress": false,
+      "distinctSpringGardenAddressCount": 3,
+      "reasonRejected": "not the most-mentioned Spring Garden address in a multi-address article"
+    },
+    {
+      "placeKey": "pab-record-1129847",
+      "address": "711 SPRING GARDEN ST",
+      "title": "Guild House",
+      "articleUrl": "https://hiddencityphila.org/2014/09/a-rich-past-and-possible-green-future-for-spring-garden-street/",
+      "articleTitle": "A Rich Past And Possible Green Future For Spring Garden Street",
+      "mentionCount": 1,
+      "isMaxMentionedAddress": false,
+      "distinctSpringGardenAddressCount": 3,
+      "reasonRejected": "not the most-mentioned Spring Garden address in a multi-address article"
+    },
+    {
+      "placeKey": "pab-record-61398",
+      "address": "711 SPRING GARDEN ST",
+      "title": "Mutual Republican Club",
+      "articleUrl": "https://hiddencityphila.org/2014/09/a-rich-past-and-possible-green-future-for-spring-garden-street/",
+      "articleTitle": "A Rich Past And Possible Green Future For Spring Garden Street",
+      "mentionCount": 1,
+      "isMaxMentionedAddress": false,
+      "distinctSpringGardenAddressCount": 3,
+      "reasonRejected": "not the most-mentioned Spring Garden address in a multi-address article"
+    },
+    {
+      "placeKey": "pab-record-37358",
+      "address": "600 SPRING GARDEN ST",
+      "title": "Northern Saving Fund Safe Deposit & Trust Company; Provident Trust Company; Northern Savings Fund Society; Northern Savings Fund; Northern Trust Co.; Provident National Bank",
+      "articleUrl": "https://hiddencityphila.org/2014/09/a-rich-past-and-possible-green-future-for-spring-garden-street/",
+      "articleTitle": "A Rich Past And Possible Green Future For Spring Garden Street",
+      "mentionCount": 1,
+      "isMaxMentionedAddress": false,
+      "distinctSpringGardenAddressCount": 3,
+      "reasonRejected": "not the most-mentioned Spring Garden address in a multi-address article"
+    },
+    {
+      "placeKey": "pab-record-444815",
+      "address": "1131-1133 SPRING GARDEN ST",
+      "title": "Church of the Assumption; Assumption B.V.M.",
+      "articleUrl": "https://hiddencityphila.org/2025/12/places-to-save-fall-2025/",
+      "articleTitle": "Places to Save: Fall 2025",
+      "mentionCount": 1,
+      "isMaxMentionedAddress": true,
+      "distinctSpringGardenAddressCount": 1,
+      "reasonRejected": "single incidental mention, article title does not name this place"
+    }
+  ],
+  "totalStrongMatches": 4,
+  "totalWeakIncidentalMatches": 7
+}

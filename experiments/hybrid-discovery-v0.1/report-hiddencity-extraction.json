@@ -1,0 +1,1162 @@
+{
+  "articlesProcessed": 4,
+  "claimCountsByType": {
+    "demolition": 9,
+    "construction-date": 3,
+    "event": 6
+  },
+  "totals": {
+    "admit": 0,
+    "hold": 18,
+    "suppress": 0
+  },
+  "outcomes": [
+    {
+      "claim": {
+        "id": "hc-2012-04-court-day-for-church-of-the-assumption-pab-record-444815-p0s0-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": ["hc-2012-04-court-day-for-church-of-the-assumption"],
+        "supportingSpan": "The 1849 Church of the Assumption, placed on Philadelphia's Register of Historic Places in 2009 and threatened with demolition, will have its day in Common Please Court Thursday, May 10, almost a year after a ruling by the Philadelphia Historical Commission allowing demolition was overturned by the city's Board of License and Inspection Review.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Court Day For Church Of The Assumption\" states about 1131-1133 SPRING GARDEN ST: \"The 1849 Church of the Assumption, placed on Philadelphia's Register of Historic Places in 2009 and threatened with demolition, will have its day in Common Please Court Thursday, May 10, almost a year after a ruling by the Philadelphia Historical Commission allowing demolition was overturned by the city's Board of License and Inspection Review.\"",
+        "dateRange": {
+          "start": "1849-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2012-04-court-day-for-church-of-the-assumption-pab-record-444815-p1s0-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": ["hc-2012-04-court-day-for-church-of-the-assumption"],
+        "supportingSpan": "The Historical Commission's original ruling in favor of allowing demolition of the church at 1131 Spring Garden Street was based on a financial hardship claim by the owner, the social service agency Siloam.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Court Day For Church Of The Assumption\" states about 1131-1133 SPRING GARDEN ST: \"The Historical Commission's original ruling in favor of allowing demolition of the church at 1131 Spring Garden Street was based on a financial hardship claim by the owner, the social service agency Siloam.\"",
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No date range asserted; nothing to check."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p1s0-construction-date",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "The striking church at 1133 Spring Garden Street, constructed in 1849, will go up for sale by the Philadelphia Sheriff's Office on April 4, according to notices posted earlier this month .",
+        "claimType": "construction-date",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"The striking church at 1133 Spring Garden Street, constructed in 1849, will go up for sale by the Philadelphia Sheriff's Office on April 4, according to notices posted earlier this month .\"",
+        "dateRange": {
+          "start": "1849-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "low",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p1s1-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "The impending sale could mark major movement for the property following more than a decade of limbo after neighbors and preservationists rescued the church from demolition at the 11th hour in 2013, only to watch time slowly chip away at its Gothic-Revival facade and forlorn interior.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"The impending sale could mark major movement for the property following more than a decade of limbo after neighbors and preservationists rescued the church from demolition at the 11th hour in 2013, only to watch time slowly chip away at its Gothic-Revival facade and forlorn interior.\"",
+        "dateRange": {
+          "start": "2013-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p2s1-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "The building appears to still be owned by John Wei, a Chinatown-based developer who purchased it for $1.2 million in 2012 and swiftly attempted to make good on a demolition permit obtained by the prior owner.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"The building appears to still be owned by John Wei, a Chinatown-based developer who purchased it for $1.2 million in 2012 and swiftly attempted to make good on a demolition permit obtained by the prior owner.\"",
+        "dateRange": {
+          "start": "2012-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p6s0-event",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "Just five years before the Church of the Assumption opened its doors, Philadelphia was shaken by a number of violent Nativist riots in 1844 , an explosive outgrowth of anti-immigrant sentiment among the city’s Protestant citizens toward newly arriving Italian and Irish Catholic populations.",
+        "claimType": "event",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"Just five years before the Church of the Assumption opened its doors, Philadelphia was shaken by a number of violent Nativist riots in 1844 , an explosive outgrowth of anti-immigrant sentiment among the city’s Protestant citizens toward newly arriving Italian and Irish Catholic populations.\"",
+        "dateRange": {
+          "start": "1844-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "high",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p13s0-event",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "In 1899, the Church of the Assumption received a major renovation.",
+        "claimType": "event",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"In 1899, the Church of the Assumption received a major renovation.\"",
+        "dateRange": {
+          "start": "1899-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "high",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p13s2-event",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "In 1995, the Archdiocese of Philadelphia closed the church.",
+        "claimType": "event",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"In 1995, the Archdiocese of Philadelphia closed the church.\"",
+        "dateRange": {
+          "start": "1995-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "high",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p13s3-event",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "In 2006, it sold the property to Siloam Wellness Center, a HIV/AIDS nonprofit .",
+        "claimType": "event",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"In 2006, it sold the property to Siloam Wellness Center, a HIV/AIDS nonprofit .\"",
+        "dateRange": {
+          "start": "2006-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "high",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p13s4-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "Just three years later, neighbors and preservationists moved to successfully add the church to the City’s historic register as a proactive measure against Siloam’s efforts to demolish it.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"Just three years later, neighbors and preservationists moved to successfully add the church to the City’s historic register as a proactive measure against Siloam’s efforts to demolish it.\"",
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No date range asserted; nothing to check."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p15s0-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "Siloam in turn successfully appealed to the Court of Common Pleas, whose 2012 decision left the Church of the Assumption on the very precipice of demolition .",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"Siloam in turn successfully appealed to the Court of Common Pleas, whose 2012 decision left the Church of the Assumption on the very precipice of demolition .\"",
+        "dateRange": {
+          "start": "2012-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p15s1-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "Ultimately, the nonprofit's sale of the building the same year to Wei was enough for a Commonwealth of Pennsylvania judge to again reverse course, ruling in November 2013 that the original demolition permit was now moot.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"Ultimately, the nonprofit's sale of the building the same year to Wei was enough for a Commonwealth of Pennsylvania judge to again reverse course, ruling in November 2013 that the original demolition permit was now moot.\"",
+        "dateRange": {
+          "start": "2013-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale-pab-record-444815-p15s2-demolition",
+        "placeKey": "pab-record-444815",
+        "address": "1131-1133 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2025-03-historic-church-of-the-assumption-heads-to-sheriffs-sale"
+        ],
+        "supportingSpan": "Wei never filed for a new one, which would have required him to make a fresh case for financial hardship in order to pursue demolition.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Historic Church of the Assumption Heads to Sheriff’s Sale\" states about 1131-1133 SPRING GARDEN ST: \"Wei never filed for a new one, which would have required him to make a fresh case for financial hardship in order to pursue demolition.\"",
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No date range asserted; nothing to check."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2013-07-venturis-guild-house-50-years-of-everyday-extraordinary-design-pab-record-1129847-p2s0-construction-date",
+        "placeKey": "pab-record-1129847",
+        "address": "711 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2013-07-venturis-guild-house-50-years-of-everyday-extraordinary-design"
+        ],
+        "supportingSpan": "Commissioned by the Friends Rehabilitation Program, designed from 1961-1963 by Robert Venturi (then of Venturi and Rauch), and occupied in 1964, the Guild House provides independent living options for seniors under the US Housing and Urban Development's Section 202 program (supportive housing for the elderly).",
+        "claimType": "construction-date",
+        "claimText": "Hidden City's article \"Venturi's Guild House: 50 Years Of Everyday Extraordinary Design\" states about 711 SPRING GARDEN ST: \"Commissioned by the Friends Rehabilitation Program, designed from 1961-1963 by Robert Venturi (then of Venturi and Rauch), and occupied in 1964, the Guild House provides independent living options for seniors under the US Housing and Urban Development's Section 202 program (supportive housing for the elderly).\"",
+        "dateRange": {
+          "start": "1961-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "low",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2013-07-venturis-guild-house-50-years-of-everyday-extraordinary-design-pab-record-1129847-p2s1-event",
+        "placeKey": "pab-record-1129847",
+        "address": "711 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2013-07-venturis-guild-house-50-years-of-everyday-extraordinary-design"
+        ],
+        "supportingSpan": "The building’s 91 units, which vary from mainly efficiencies to a few two-bedrooms, were renovated in 2009 under Venturi’s watchful eye and that of his successor firm, VSBA, to update the heating, cooling, security, and fire prevention features, and to make certain electrical upgrades.",
+        "claimType": "event",
+        "claimText": "Hidden City's article \"Venturi's Guild House: 50 Years Of Everyday Extraordinary Design\" states about 711 SPRING GARDEN ST: \"The building’s 91 units, which vary from mainly efficiencies to a few two-bedrooms, were renovated in 2009 under Venturi’s watchful eye and that of his successor firm, VSBA, to update the heating, cooling, security, and fire prevention features, and to make certain electrical upgrades.\"",
+        "dateRange": {
+          "start": "2009-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "high",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2013-07-venturis-guild-house-50-years-of-everyday-extraordinary-design-pab-record-1129847-p4s4-event",
+        "placeKey": "pab-record-1129847",
+        "address": "711 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": [
+          "hc-2013-07-venturis-guild-house-50-years-of-everyday-extraordinary-design"
+        ],
+        "supportingSpan": "But beyond the recent renovation and capacity occupancy, what makes this particular work of architecture so successful—worthy of addition to the Philadelphia Register of Historic Places in 2004, barely 40 years after its completion?",
+        "claimType": "event",
+        "claimText": "Hidden City's article \"Venturi's Guild House: 50 Years Of Everyday Extraordinary Design\" states about 711 SPRING GARDEN ST: \"But beyond the recent renovation and capacity occupancy, what makes this particular work of architecture so successful—worthy of addition to the Philadelphia Register of Historic Places in 2004, barely 40 years after its completion?\"",
+        "dateRange": {
+          "start": "2004-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "high",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2016-06-marked-potential-northern-savings-fund-pab-record-37358-p1s1-construction-date",
+        "placeKey": "pab-record-37358",
+        "address": "600 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": ["hc-2016-06-marked-potential-northern-savings-fund"],
+        "supportingSpan": "This landmark, the Northern Savings Fund bank, was designed by the renowned Philadelphia architects Frank Furness and George Hewitt and erected between 1872 and 1873 for the Northern Savings Fund & Safe Deposit Company.",
+        "claimType": "construction-date",
+        "claimText": "Hidden City's article \"Marked Potential: Northern Savings Fund\" states about 600 SPRING GARDEN ST: \"This landmark, the Northern Savings Fund bank, was designed by the renowned Philadelphia architects Frank Furness and George Hewitt and erected between 1872 and 1873 for the Northern Savings Fund & Safe Deposit Company.\"",
+        "relatedEntities": ["the renowned Philadelphia architects Frank"],
+        "dateRange": {
+          "start": "1872-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    },
+    {
+      "claim": {
+        "id": "hc-2016-06-marked-potential-northern-savings-fund-pab-record-37358-p1s4-demolition",
+        "placeKey": "pab-record-37358",
+        "address": "600 SPRING GARDEN ST",
+        "proposedIdentityType": "unresolved",
+        "sourceIds": ["hc-2016-06-marked-potential-northern-savings-fund"],
+        "supportingSpan": "However, it appears that demolition of the buildings additions and significant alterations have occurred both inside and out between these dates, which implies that the building remains vulnerable in a long economically strained industrial neighborhood currently experiencing a revival.",
+        "claimType": "demolition",
+        "claimText": "Hidden City's article \"Marked Potential: Northern Savings Fund\" states about 600 SPRING GARDEN ST: \"However, it appears that demolition of the buildings additions and significant alterations have occurred both inside and out between these dates, which implies that the building remains vulnerable in a long economically strained industrial neighborhood currently experiencing a revival.\"",
+        "extractionMethod": "direct-source-text"
+      },
+      "checks": [
+        {
+          "checkId": "admissible-source-class",
+          "outcome": "pass",
+          "reason": "At least one cited source belongs to an approved source class."
+        },
+        {
+          "checkId": "synthesized-search-rejection",
+          "outcome": "pass",
+          "reason": "No cited source is a synthesized search output."
+        },
+        {
+          "checkId": "provenance-tracing",
+          "outcome": "pass",
+          "reason": "No cited source has a failed provenance-verification note."
+        },
+        {
+          "checkId": "temporal-consistency",
+          "outcome": "pass",
+          "reason": "No date range asserted; nothing to check."
+        },
+        {
+          "checkId": "superlative-exclusivity-corroboration",
+          "outcome": "pass",
+          "reason": "Not a superlative/exclusivity claim."
+        },
+        {
+          "checkId": "epistemic-marker-preservation",
+          "outcome": "pass",
+          "reason": "No blocking epistemic marker present."
+        }
+      ],
+      "grounding": {
+        "tier": 0,
+        "confidence": "none",
+        "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+      },
+      "decision": {
+        "decision": "HOLD",
+        "factualTrust": "medium",
+        "identityConfidence": "none",
+        "editorialQuality": "medium",
+        "reasons": [
+          "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+        ]
+      }
+    }
+  ]
+}

@@ -14,7 +14,7 @@ export interface Stage2ValidationResult {
 const NUMBER_RE = /\d[\d,./-]*\d|\d/g;
 
 function extractCapitalizedTokens(text: string): string[] {
-  const re = /\b[A-Z][a-zA-Z'-]*(?:\s+[A-Z][a-zA-Z'-]*)*\b/g;
+  const re = /\b[A-Z][a-zA-Z'’-]*(?:\s+[A-Z][a-zA-Z'’-]*)*\b/g;
   const results: string[] = [];
   let match: RegExpExecArray | null;
   while ((match = re.exec(text)) !== null) {
@@ -74,7 +74,11 @@ export function validateStage2Output(
 
   const entities = extractCapitalizedTokens(rawOutput.reason);
   for (const entity of entities) {
-    if (!groundingText.includes(entity)) {
+    // A trailing possessive ('s or 's) is a grammatical variant, not a new
+    // entity — check the bare form too before flagging (e.g. "Spring
+    // Garden Street's" is grounded when "Spring Garden Street" is).
+    const bareForm = entity.replace(/['’]s$/, "");
+    if (!groundingText.includes(entity) && !groundingText.includes(bareForm)) {
       reasons.push(
         `Field "reason" contains an entity/proper noun ("${entity}") not present in the candidate or assigned claim text.`,
       );

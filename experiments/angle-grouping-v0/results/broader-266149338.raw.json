@@ -1,0 +1,23 @@
+{
+  "subjectId": "way/266149338",
+  "angleGroups": [
+    {
+      "subjectId": "way/266149338",
+      "angleId": "way/266149338-times-building-phased-construction",
+      "centralQuestion": "Why does this building appear to be built in visibly distinct sections instead of as one uniform structure?",
+      "perspectiveShift": "The building's mismatched massing -- a 4-story east section, an 11-story main section, a 5-story set-back attic level, and a 7-story tower -- is physical evidence of its original construction in three stages between 1912 and 1932, when it was built for and known as the New York Times Building.",
+      "claimIds": [
+        "lpc-row-8-notes",
+        "lpc-row-8-construction-date",
+        "lpc-row-8-identity-aka",
+        "lpc-row-8-owner"
+      ]
+    }
+  ],
+  "ungroupedClaimIds": [
+    "lpc-row-8-alteration-1-architect",
+    "lpc-row-8-architect",
+    "lpc-row-8-alteration-1",
+    "lpc-row-8-alteration-2"
+  ]
+}

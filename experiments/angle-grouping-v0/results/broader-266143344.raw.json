@@ -1,0 +1,21 @@
+{
+  "subjectId": "way/266143344",
+  "angleGroups": [
+    {
+      "subjectId": "way/266143344",
+      "angleId": "way/266143344-marquee-alterations",
+      "centralQuestion": "Why has this building's entrance and signage been altered more than once?",
+      "perspectiveShift": "The building's entrance and signage were altered in 1937, then modified again in 1955 -- including its marquee and vertical electric sign -- showing a building that kept updating its street-level presentation over several decades rather than remaining architecturally frozen since 1902-1903.",
+      "claimIds": [
+        "lpc-row-10-notes",
+        "lpc-row-10-alteration-1",
+        "lpc-row-10-alteration-2"
+      ]
+    }
+  ],
+  "ungroupedClaimIds": [
+    "lpc-row-10-construction-date",
+    "lpc-row-10-architect",
+    "lpc-row-10-owner"
+  ]
+}

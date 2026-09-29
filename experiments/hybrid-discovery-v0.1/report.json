@@ -1,0 +1,1538 @@
+[
+  {
+    "claim": {
+      "id": "carnegie-construction-date",
+      "placeKey": "1700-spring-garden-carnegie-library",
+      "address": "1700 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["phillyhistory-blog"],
+      "supportingSpan": "opened in 1907",
+      "claimType": "construction-date",
+      "claimText": "The Spring Garden branch of the Carnegie library system opened in 1907.",
+      "dateRange": {
+        "start": "1907",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1700 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "carnegie-architect",
+      "placeKey": "1700-spring-garden-carnegie-library",
+      "address": "1700 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["phillyhistory-blog"],
+      "supportingSpan": "designed by Field & Medary",
+      "claimType": "architect",
+      "claimText": "The branch building was designed by the firm Field & Medary.",
+      "relatedEntities": ["Field & Medary"]
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1700 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "medium",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "carnegie-use-history",
+      "placeKey": "1700-spring-garden-carnegie-library",
+      "address": "1700 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["phillyhistory-blog"],
+      "supportingSpan": "one of Philadelphia's 25 Carnegie branch libraries",
+      "claimType": "use-history",
+      "claimText": "Operated as one of Philadelphia's 25 Carnegie-funded branch libraries until demolition."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1700 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "carnegie-librarian-relationship",
+      "placeKey": "1700-spring-garden-carnegie-library",
+      "address": "1700 Spring Garden St",
+      "proposedIdentityType": "former-site",
+      "sourceIds": ["phillyhistory-blog"],
+      "supportingSpan": "branch librarian Amy Ridgway is named in passing, role/tenure not independently confirmed",
+      "claimType": "relationship",
+      "claimText": "Names Amy Ridgway as a branch librarian associated with the building, without independent confirmation of her role or tenure.",
+      "relatedEntities": ["Amy Ridgway"],
+      "epistemicMarkers": ["author-uncertainty"]
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "block-auto-admit",
+        "reason": "Claim carries an epistemic marker (author-uncertainty) that must not be silently dropped or presented as settled fact."
+      }
+    ],
+    "grounding": {
+      "tier": 1,
+      "confidence": "medium",
+      "matchedIdentity": "1700 Spring Garden St",
+      "reason": "Former-site StreetlitPlace grounding (no surviving current entity)."
+    },
+    "decision": {
+      "decision": "HOLD",
+      "factualTrust": "low",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": [
+        "[epistemic-marker-preservation] Claim carries an epistemic marker (author-uncertainty) that must not be silently dropped or presented as settled fact."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "reyburn-identity",
+      "placeKey": "1818-spring-garden-reyburn-mansion",
+      "address": "1818-1820 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["pcom-institutional-history"],
+      "supportingSpan": "the former Reyburn Mansion became an early campus building",
+      "claimType": "identity",
+      "claimText": "The former Reyburn Mansion was later occupied by the Philadelphia College of Osteopathic Medicine (PCOM)."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1818-1820 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "reyburn-institutional-founding",
+      "placeKey": "1818-spring-garden-reyburn-mansion",
+      "address": "1818-1820 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["pcom-institutional-history"],
+      "supportingSpan": "served as one of PCOM's early Philadelphia campus buildings",
+      "claimType": "institutional-founding",
+      "claimText": "Served as one of PCOM's early Philadelphia campus buildings."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1818-1820 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "1822-casket-showroom",
+      "placeKey": "1822-spring-garden-casket-claim",
+      "address": "1822 Spring Garden St",
+      "proposedIdentityType": "unresolved",
+      "sourceIds": ["baldwinparkphilly-1822-casket-claim"],
+      "supportingSpan": "F.H. Hill Co. operated a casket showroom here",
+      "claimType": "use-history",
+      "claimText": "F.H. Hill Co. operated a casket showroom at 1822 Spring Garden St, on a site now occupied by present-day retail."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "fail",
+        "reason": "Underlying citation was traced and did not support the claim: Underlying citation for this specific claim was traced and found to resolve to an unrelated Chestnut Street building, not 1822 Spring Garden Street. Do not treat as evidence even though it appears on two baldwinparkphilly.org pages."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 0,
+      "confidence": "none",
+      "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+    },
+    "decision": {
+      "decision": "SUPPRESS",
+      "factualTrust": "low",
+      "identityConfidence": "none",
+      "editorialQuality": "high",
+      "reasons": [
+        "[provenance-tracing] Underlying citation was traced and did not support the claim: Underlying citation for this specific claim was traced and found to resolve to an unrelated Chestnut Street building, not 1822 Spring Garden Street. Do not treat as evidence even though it appears on two baldwinparkphilly.org pages."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "st-george-construction-date-real",
+      "placeKey": "1901-spring-garden-st-george-society",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["spring-garden-1901-history-article"],
+      "supportingSpan": "built in 1875",
+      "claimType": "construction-date",
+      "claimText": "1901 Spring Garden Street was built in 1875.",
+      "dateRange": {
+        "start": "1875",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "st-george-architect-real",
+      "placeKey": "1901-spring-garden-st-george-society",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["spring-garden-1901-history-article"],
+      "supportingSpan": "designed by architect Edwin Randolph",
+      "claimType": "architect",
+      "claimText": "Designed by architect Edwin Randolph.",
+      "relatedEntities": ["Edwin Randolph"]
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "medium",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "st-george-construction-date-newkirk-error",
+      "placeKey": "1901-spring-garden-st-george-society",
+      "address": "1901 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["search-summary-ephemeral"],
+      "supportingSpan": "AI search summary: 'built in 1837 for railroader Matthew Newkirk, designed by Thomas U. Walter'",
+      "claimType": "construction-date",
+      "claimText": "Built in 1837 as a home for railroader Matthew Newkirk, designed by Thomas U. Walter.",
+      "relatedEntities": ["Matthew Newkirk", "Thomas U. Walter"],
+      "dateRange": {
+        "start": "1837",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "fail",
+        "reason": "All cited sources (search-summary-ephemeral) resolve to an inadmissible source class. Not one of the seven approved families."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "fail",
+        "reason": "Claim resolves to a synthesized AI/search-engine output (search-summary-ephemeral) rather than an admissible underlying source. Search summaries may only surface a lead for discovery, never serve as the resolved evidentiary source."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "block-auto-admit",
+        "reason": "Conflicts with another precise construction-date date for the same underlying fact at the same place (st-george-construction-date-real). Needs human resolution."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1901 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "SUPPRESS",
+      "factualTrust": "low",
+      "identityConfidence": "high",
+      "editorialQuality": "medium",
+      "reasons": [
+        "[admissible-source-class] All cited sources (search-summary-ephemeral) resolve to an inadmissible source class. Not one of the seven approved families.",
+        "[synthesized-search-rejection] Claim resolves to a synthesized AI/search-engine output (search-summary-ephemeral) rather than an admissible underlying source. Search summaries may only surface a lead for discovery, never serve as the resolved evidentiary source."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "polonia-identity",
+      "placeKey": "2133-spring-garden-polonia",
+      "address": "2133-35 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org", "phc-register"],
+      "supportingSpan": "individually documented cultural-resource / register entry",
+      "claimType": "identity",
+      "claimText": "Individually documented as the former Polonia Federal Savings Bank building.",
+      "corroborationKey": "polonia-identity"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "2133-35 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "polonia-construction-date",
+      "placeKey": "2133-spring-garden-polonia",
+      "address": "2133-35 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org"],
+      "supportingSpan": "construction date on record",
+      "claimType": "construction-date",
+      "claimText": "Construction date documented in the Philadelphia Architects and Buildings record."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "2133-35 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "medium",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "polonia-architect",
+      "placeKey": "2133-spring-garden-polonia",
+      "address": "2133-35 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org"],
+      "supportingSpan": "architect on record",
+      "claimType": "architect",
+      "claimText": "Architect documented in the Philadelphia Architects and Buildings record."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "2133-35 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "medium",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "1800-register-status",
+      "placeKey": "1800-spring-garden",
+      "address": "1800 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org", "phc-register"],
+      "supportingSpan": "individually listed 1971",
+      "claimType": "register-status",
+      "claimText": "Individually listed on the Philadelphia Register in 1971, predating the later Spring Garden Historic District (designated 2000).",
+      "dateRange": {
+        "start": "1971",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1800 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "1701-register-status",
+      "placeKey": "1701-1707-spring-garden",
+      "address": "1701-1707 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org"],
+      "supportingSpan": "listed building within the Spring Garden corridor",
+      "claimType": "register-status",
+      "claimText": "Listed building within the Spring Garden Historic District."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1701-1707 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "1701-local-union-98",
+      "placeKey": "1701-1707-spring-garden",
+      "address": "1701-1707 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["loopnet-listing-1701"],
+      "supportingSpan": "commercial listing copy referencing a former Local Union 98 tenancy",
+      "claimType": "use-history",
+      "claimText": "Later home to Local Union 98 (IBEW)."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "fail",
+        "reason": "All cited sources (loopnet-listing-1701) resolve to an inadmissible source class. Not one of the seven approved families."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1701-1707 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "SUPPRESS",
+      "factualTrust": "low",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": [
+        "[admissible-source-class] All cited sources (loopnet-listing-1701) resolve to an inadmissible source class. Not one of the seven approved families."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "1711-register-status",
+      "placeKey": "1711-spring-garden",
+      "address": "1711 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["philadelphiabuildings-org"],
+      "supportingSpan": "listed building within the Spring Garden corridor",
+      "claimType": "register-status",
+      "claimText": "Listed building within the Spring Garden Historic District."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1711 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "1809-register-status",
+      "placeKey": "1809-spring-garden-pa-college-optometry",
+      "address": "1809 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["philadelphiabuildings-org"],
+      "supportingSpan": "listed building within the Spring Garden corridor",
+      "claimType": "register-status",
+      "claimText": "Listed building within the Spring Garden Historic District."
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1809 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "1809-eye-clinic-superlative",
+      "placeKey": "1809-spring-garden-pa-college-optometry",
+      "address": "1809 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["baldwinparkphilly-org"],
+      "supportingSpan": "billed as one of the largest eye clinics in the region",
+      "claimType": "superlative",
+      "claimText": "Billed as one of the largest eye clinics in the region.",
+      "epistemicMarkers": ["superlative"]
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "block-auto-admit",
+        "reason": "Superlative/exclusivity claim has no independent-source-class corroboration; treat as uncorroborated boast, not fact."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1809 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "HOLD",
+      "factualTrust": "low",
+      "identityConfidence": "medium",
+      "editorialQuality": "medium",
+      "reasons": [
+        "[superlative-exclusivity-corroboration] Superlative/exclusivity claim has no independent-source-class corroboration; treat as uncorroborated boast, not fact."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "la-milagrosa-founding",
+      "placeKey": "1903-spring-garden-la-milagrosa",
+      "address": "1903 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["catholicphilly-com"],
+      "supportingSpan": "100 years and still going strong",
+      "claimType": "institutional-founding",
+      "claimText": "Founded circa 1911-1912 as a chapel serving Philadelphia's Spanish-speaking Catholic community.",
+      "dateRange": {
+        "start": "1911",
+        "precise": false
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1903 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "la-milagrosa-closure-event",
+      "placeKey": "1903-spring-garden-la-milagrosa",
+      "address": "1903 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["inquirer-la-milagrosa-2013"],
+      "supportingSpan": "La Milagrosa chapel to close in June",
+      "claimType": "event",
+      "claimText": "Chapel closed in June 2013 amid parish consolidation.",
+      "dateRange": {
+        "start": "2013-06",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1903 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "high",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "la-milagrosa-use-history-conflict",
+      "placeKey": "1903-spring-garden-la-milagrosa",
+      "address": "1903 Spring Garden St",
+      "proposedIdentityType": "current-building-former-use",
+      "sourceIds": ["inquirer-la-milagrosa-2023"],
+      "supportingSpan": "post-closure residential conversion, unit type/count disputed against a separate secondary account",
+      "claimType": "use-history",
+      "claimText": "Building later converted to residential use; a separate secondary account disputes whether the units are apartments or condos and the unit count.",
+      "epistemicMarkers": ["disputed-across-sources"]
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "block-auto-admit",
+        "reason": "Claim carries an epistemic marker (disputed-across-sources) that must not be silently dropped or presented as settled fact."
+      }
+    ],
+    "grounding": {
+      "tier": 2,
+      "confidence": "medium",
+      "matchedIdentity": "1903 Spring Garden St",
+      "reason": "Current-building-former-use StreetlitPlace grounding."
+    },
+    "decision": {
+      "decision": "HOLD",
+      "factualTrust": "medium",
+      "identityConfidence": "medium",
+      "editorialQuality": "high",
+      "reasons": [
+        "[epistemic-marker-preservation] Claim carries an epistemic marker (disputed-across-sources) that must not be silently dropped or presented as settled fact."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "stetson-identity",
+      "placeKey": "1717-spring-garden-stetson-house",
+      "address": "1717 Spring Garden St",
+      "proposedIdentityType": "current-osm-entity",
+      "sourceIds": ["stetson-house-search-excerpt", "condoshop-listing-1717"],
+      "supportingSpan": "originally built for the famous Stetson Hat family",
+      "claimType": "identity",
+      "claimText": "Originally built for the Stetson Hat family.",
+      "corroborationKey": "stetson-hat-family-identity"
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 5,
+      "confidence": "high",
+      "matchedIdentity": "1717 Spring Garden St",
+      "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+    },
+    "decision": {
+      "decision": "AUTO-ADMIT",
+      "factualTrust": "medium",
+      "identityConfidence": "high",
+      "editorialQuality": "low",
+      "reasons": ["All checks passed; grounding and factual trust sufficient."]
+    }
+  },
+  {
+    "claim": {
+      "id": "synthetic-temporal-conflict-a",
+      "placeKey": "synthetic-illustrative-not-a-real-address",
+      "proposedIdentityType": "unresolved",
+      "sourceIds": ["synthetic-illustrative-source-a"],
+      "supportingSpan": "SYNTHETIC — illustrative only",
+      "claimType": "construction-date",
+      "claimText": "SYNTHETIC — illustrative only: built in 1890.",
+      "dateRange": {
+        "start": "1890",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "block-auto-admit",
+        "reason": "Conflicts with another precise construction-date date for the same underlying fact at the same place (synthetic-temporal-conflict-b). Needs human resolution."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 0,
+      "confidence": "none",
+      "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+    },
+    "decision": {
+      "decision": "HOLD",
+      "factualTrust": "high",
+      "identityConfidence": "none",
+      "editorialQuality": "low",
+      "reasons": [
+        "[temporal-consistency] Conflicts with another precise construction-date date for the same underlying fact at the same place (synthetic-temporal-conflict-b). Needs human resolution."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "synthetic-temporal-conflict-b",
+      "placeKey": "synthetic-illustrative-not-a-real-address",
+      "proposedIdentityType": "unresolved",
+      "sourceIds": ["synthetic-illustrative-source-b"],
+      "supportingSpan": "SYNTHETIC — illustrative only",
+      "claimType": "construction-date",
+      "claimText": "SYNTHETIC — illustrative only: built in 1905.",
+      "dateRange": {
+        "start": "1905",
+        "precise": true
+      }
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "block-auto-admit",
+        "reason": "Conflicts with another precise construction-date date for the same underlying fact at the same place (synthetic-temporal-conflict-a). Needs human resolution."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 0,
+      "confidence": "none",
+      "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+    },
+    "decision": {
+      "decision": "HOLD",
+      "factualTrust": "high",
+      "identityConfidence": "none",
+      "editorialQuality": "low",
+      "reasons": [
+        "[temporal-consistency] Conflicts with another precise construction-date date for the same underlying fact at the same place (synthetic-temporal-conflict-a). Needs human resolution."
+      ]
+    }
+  },
+  {
+    "claim": {
+      "id": "synthetic-self-corrected",
+      "placeKey": "synthetic-illustrative-not-a-real-address",
+      "proposedIdentityType": "unresolved",
+      "sourceIds": ["synthetic-illustrative-source-c"],
+      "supportingSpan": "SYNTHETIC — illustrative only",
+      "claimType": "use-history",
+      "claimText": "SYNTHETIC — illustrative only: the same primary source initially reported one use, then corrected itself in a later edition of the same publication.",
+      "epistemicMarkers": ["self-corrected-primary-source"]
+    },
+    "checks": [
+      {
+        "checkId": "admissible-source-class",
+        "outcome": "pass",
+        "reason": "At least one cited source belongs to an approved source class."
+      },
+      {
+        "checkId": "synthesized-search-rejection",
+        "outcome": "pass",
+        "reason": "No cited source is a synthesized search output."
+      },
+      {
+        "checkId": "provenance-tracing",
+        "outcome": "pass",
+        "reason": "No cited source has a failed provenance-verification note."
+      },
+      {
+        "checkId": "temporal-consistency",
+        "outcome": "pass",
+        "reason": "No date range asserted; nothing to check."
+      },
+      {
+        "checkId": "superlative-exclusivity-corroboration",
+        "outcome": "pass",
+        "reason": "Not a superlative/exclusivity claim."
+      },
+      {
+        "checkId": "epistemic-marker-preservation",
+        "outcome": "pass",
+        "reason": "No blocking epistemic marker present."
+      }
+    ],
+    "grounding": {
+      "tier": 0,
+      "confidence": "none",
+      "reason": "No deterministic identity match; fuzzy identity alone is insufficient for grounding."
+    },
+    "decision": {
+      "decision": "HOLD",
+      "factualTrust": "medium",
+      "identityConfidence": "none",
+      "editorialQuality": "high",
+      "reasons": [
+        "[grounding] No deterministic identity match; fuzzy identity alone is insufficient for grounding. Fuzzy identity alone is insufficient for AUTO-ADMIT."
+      ]
+    }
+  }
+]

@@ -1,0 +1,45 @@
+{
+  "generatedAt": "2026-09-16T22:28:40.683Z",
+  "totalArticlesEnumerated": 2710,
+  "articlesWithUsableAddressMentions": 1076,
+  "corridorCandidateArticleCount": 1,
+  "corridorPlaceCount": 129,
+  "confidentlyMatchedCorridorPlaces": [],
+  "namedGapCoverage": [
+    {
+      "gap": "Carnegie / 1700",
+      "houseNumber": "1700",
+      "groundedPabRecordExists": false,
+      "placeKey": null,
+      "strongMatchCount": 0,
+      "weakMatchCount": 0
+    },
+    {
+      "gap": "1800 Spring Garden",
+      "houseNumber": "1800",
+      "groundedPabRecordExists": true,
+      "placeKey": "pab-record-75501",
+      "strongMatchCount": 0,
+      "weakMatchCount": 0
+    },
+    {
+      "gap": "Local Union 98 / 1701-1707",
+      "houseNumber": "1701-1707",
+      "groundedPabRecordExists": true,
+      "placeKey": "pab-record-75492",
+      "strongMatchCount": 0,
+      "weakMatchCount": 0
+    },
+    {
+      "gap": "Polonia / 2133-2135",
+      "houseNumber": "2133-2135",
+      "groundedPabRecordExists": true,
+      "placeKey": "pab-record-75737",
+      "strongMatchCount": 0,
+      "weakMatchCount": 0
+    }
+  ],
+  "rejectedIncidentalMatches": [],
+  "totalStrongMatches": 0,
+  "totalWeakIncidentalMatches": 0
+}

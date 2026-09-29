@@ -1,0 +1,309 @@
+{
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "subjects": [
+    {
+      "subjectId": "way/265322610",
+      "subjectName": "Actors' Temple (339 West 47th Street)",
+      "admittedClaims": [
+        {
+          "claimId": "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history",
+          "claimType": "use-history",
+          "claimText": "Ephemeral New York's article \"The little Hell's Kitchen synagogue where old Broadway stars once worshipped\" states about 339 West 47th Street: \"Performers like Sophie Tucker, Milton Berle, and Jack Benny came to services, and Ezrath Israel became known as the Actors' Temple.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/265322610",
+        "angleGroups": [
+          {
+            "subjectId": "way/265322610",
+            "angleId": "way/265322610-broadway-stars-worship",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/265322610",
+        "candidates": [
+          {
+            "subjectId": "way/265322610",
+            "candidateId": "way/265322610-broadway-stars-worship",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1Validation": {
+        "valid": false,
+        "reasons": [
+          "AngleGroup \"way/265322610-broadway-stars-worship\" field \"perspectiveShift\" contains an entity/proper noun (\"Broadway-era\") not present in its assigned claim text or subject name."
+        ]
+      },
+      "candidates": [
+        {
+          "candidateId": "way/265322610-broadway-stars-worship",
+          "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+          "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+          "claimIds": [
+            "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+          ],
+          "stage2Input": {
+            "subjectId": "way/265322610",
+            "subjectName": "Actors' Temple (339 West 47th Street)",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claims": [
+              {
+                "claimId": "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history",
+                "claimText": "Ephemeral New York's article \"The little Hell's Kitchen synagogue where old Broadway stars once worshipped\" states about 339 West 47th Street: \"Performers like Sophie Tucker, Milton Berle, and Jack Benny came to services, and Ezrath Israel became known as the Actors' Temple.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": true,
+            "reason": "The claim reveals a hidden, surprising layer beneath an ordinary-looking Hell's Kitchen synagogue: Ezrath Israel was actually attended by famous Broadway-era performers (Sophie Tucker, Milton Berle, Jack Benny), which is why it became nicknamed the Actors' Temple. This shifts the walker's understanding of the building from a generic neighborhood synagogue to a site with a specific, humanly revealing show-business history explaining its name, not just a date or confirmation of known use."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/265322610",
+        "acceptedAngles": [
+          {
+            "subjectId": "way/265322610",
+            "angleId": "way/265322610-broadway-stars-worship",
+            "centralQuestion": "Why did a Hell's Kitchen synagogue become known as the Actors' Temple?",
+            "perspectiveShift": "Reframes 339 West 47th Street from an ordinary neighborhood synagogue into a place of worship for well-known Broadway-era performers (Sophie Tucker, Milton Berle, and Jack Benny among those who came to services), explaining why the congregation Ezrath Israel came to be called the Actors' Temple.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2022-09-23-the-little-hells-kitchen-synagogue-where-old-broadway-stars-once-worshipped--eny-actors-temple-p4s1-use-history"
+            ]
+          }
+        ],
+        "rejectedCandidates": [],
+        "ungroupedClaimIds": []
+      }
+    },
+    {
+      "subjectId": "way/265320377",
+      "subjectName": "Clinton Court (422 West 46th Street)",
+      "admittedClaims": [
+        {
+          "claimId": "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history",
+          "claimType": "use-history",
+          "claimText": "Ephemeral New York's article \"A secret alley behind a street in Hell's Kitchen\" states about 422 West 46th Street: \"In 1958, the tenements at 420 and 422 West 46th Street, the carriage house, and the studio became one single apartment complex entity, says Gray—serene seclusion steeped in New York history and mere steps from Midtown.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/265320377",
+        "angleGroups": [
+          {
+            "subjectId": "way/265320377",
+            "angleId": "way/265320377-consolidation-1958",
+            "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+            "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/265320377",
+        "candidates": [
+          {
+            "subjectId": "way/265320377",
+            "candidateId": "way/265320377-consolidation-1958",
+            "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+            "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+            "claimIds": [
+              "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": []
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/265320377-consolidation-1958",
+          "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+          "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+          "claimIds": [
+            "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+          ],
+          "stage2Input": {
+            "subjectId": "way/265320377",
+            "subjectName": "Clinton Court (422 West 46th Street)",
+            "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+            "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+            "claims": [
+              {
+                "claimId": "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history",
+                "claimText": "Ephemeral New York's article \"A secret alley behind a street in Hell's Kitchen\" states about 422 West 46th Street: \"In 1958, the tenements at 420 and 422 West 46th Street, the carriage house, and the studio became one single apartment complex entity, says Gray—serene seclusion steeped in New York history and mere steps from Midtown.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": false,
+            "reason": "The single claim only documents an administrative/legal consolidation date (1958) merging separate lots into one apartment complex entity. This is metadata about property structure, not a hidden story, visible remnant, or causal explanation for why the place looks or feels the way it does. The walker passing 422 West 46th Street sees a secluded alley enclave regardless of this fact, and the claim doesn't explain the carriage house's origin, the studio's purpose, or any visible feature of the site — it just confirms a corporate/ownership merger date, which is the kind of formal-verification detail the rejection criteria explicitly call out."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/265320377",
+        "acceptedAngles": [],
+        "rejectedCandidates": [
+          {
+            "candidate": {
+              "subjectId": "way/265320377",
+              "candidateId": "way/265320377-consolidation-1958",
+              "centralQuestion": "How did separate structures at Clinton Court become the unified residential complex known today?",
+              "perspectiveShift": "Rather than seeing 420 and 422 West 46th Street, the carriage house, and the studio as distinct buildings, this reveals that in 1958 they were merged into a single apartment complex entity, explaining the site's current unified character as a secluded residential enclave.",
+              "claimIds": [
+                "eny-https-ephemeralnewyork-wordpress-com-2017-09-25-a-secret-alley-behind-a-street-in-hells-kitchen--eny-clinton-court-p16s0-use-history"
+              ]
+            },
+            "rejectionReason": "The single claim only documents an administrative/legal consolidation date (1958) merging separate lots into one apartment complex entity. This is metadata about property structure, not a hidden story, visible remnant, or causal explanation for why the place looks or feels the way it does. The walker passing 422 West 46th Street sees a secluded alley enclave regardless of this fact, and the claim doesn't explain the carriage house's origin, the studio's purpose, or any visible feature of the site — it just confirms a corporate/ownership merger date, which is the kind of formal-verification detail the rejection criteria explicitly call out."
+          }
+        ],
+        "ungroupedClaimIds": []
+      }
+    },
+    {
+      "subjectId": "way/349397298",
+      "subjectName": "1924 Spring Garden Street",
+      "admittedClaims": [
+        {
+          "claimId": "pab-75672-identity",
+          "claimType": "identity",
+          "claimText": "PAB's own record for 1924 SPRING GARDEN ST identifies this as \"1924 Spring Garden Street.\""
+        },
+        {
+          "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+          "claimType": "construction-date",
+          "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The squat new building at 1924 Spring Garden Street in 1971, built for the Ironworkers Union.\""
+        },
+        {
+          "claimId": "pab-75672-register-status",
+          "claimType": "register-status",
+          "claimText": "PAB's record shows a historic-register listing entry for 1924 SPRING GARDEN ST, dated 10/11/2000."
+        },
+        {
+          "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding",
+          "claimType": "institutional-founding",
+          "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The International Association of Bridge, Structural, & Ornamental Iron Workers Union Local 401 (founded 1901), which had been at 1924 Spring Garden Street for at least four decades, sold the site to PSSU in 1993.\""
+        }
+      ],
+      "stage1RawOutput": {
+        "subjectId": "way/349397298",
+        "angleGroups": [
+          {
+            "subjectId": "way/349397298",
+            "angleId": "way/349397298-ironworkers-union-tenure",
+            "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+            "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+            "claimIds": [
+              "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+              "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": ["pab-75672-identity", "pab-75672-register-status"]
+      },
+      "stage1ParsedGrouping": {
+        "subjectId": "way/349397298",
+        "candidates": [
+          {
+            "subjectId": "way/349397298",
+            "candidateId": "way/349397298-ironworkers-union-tenure",
+            "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+            "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+            "claimIds": [
+              "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+              "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+            ]
+          }
+        ],
+        "ungroupedClaimIds": ["pab-75672-identity", "pab-75672-register-status"]
+      },
+      "stage1Validation": {
+        "valid": true,
+        "reasons": []
+      },
+      "candidates": [
+        {
+          "candidateId": "way/349397298-ironworkers-union-tenure",
+          "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+          "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+          "claimIds": [
+            "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+            "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+          ],
+          "stage2Input": {
+            "subjectId": "way/349397298",
+            "subjectName": "1924 Spring Garden Street",
+            "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+            "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+            "claims": [
+              {
+                "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+                "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The squat new building at 1924 Spring Garden Street in 1971, built for the Ironworkers Union.\""
+              },
+              {
+                "claimId": "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding",
+                "claimText": "Baldwin Park's page \"Unions in the Neighborhood\" states about 1924 SPRING GARDEN ST: \"The International Association of Bridge, Structural, & Ornamental Iron Workers Union Local 401 (founded 1901), which had been at 1924 Spring Garden Street for at least four decades, sold the site to PSSU in 1993.\""
+              }
+            ]
+          },
+          "stage2Output": {
+            "accepted": false,
+            "reason": "This mainly documents that a union (Local 401, founded 1901) occupied a building built in 1971 until selling it in 1993 — a long-occupancy timeline restated as metadata. It doesn't reveal why this location mattered, any conflict, event, or human story tied to the union's presence, or explain the building's plain appearance beyond noting it was 'squat.' A walker learns dates and ownership history but doesn't experience the place differently."
+          },
+          "stage2Validation": {
+            "valid": true,
+            "reasons": []
+          }
+        }
+      ],
+      "finalEvaluation": {
+        "subjectId": "way/349397298",
+        "acceptedAngles": [],
+        "rejectedCandidates": [
+          {
+            "candidate": {
+              "subjectId": "way/349397298",
+              "candidateId": "way/349397298-ironworkers-union-tenure",
+              "centralQuestion": "What was 1924 Spring Garden Street's role in labor/union history, and how long did that role persist?",
+              "perspectiveShift": "A plain-looking building constructed in 1971 for the Ironworkers Union was actually the longtime home of a union with roots back to 1901 (Local 401 of the International Association of Bridge, Structural, & Ornamental Iron Workers), which occupied the site for at least four decades before selling it to PSSU in 1993 — turning an unremarkable 'squat new building' into a marker of sustained institutional labor presence in the neighborhood.",
+              "claimIds": [
+                "bp-unions-in-the-neighborhood-pab-record-75672-p79s0-construction-date",
+                "bp-unions-in-the-neighborhood-pab-record-75672-p76s0-institutional-founding"
+              ]
+            },
+            "rejectionReason": "This mainly documents that a union (Local 401, founded 1901) occupied a building built in 1971 until selling it in 1993 — a long-occupancy timeline restated as metadata. It doesn't reveal why this location mattered, any conflict, event, or human story tied to the union's presence, or explain the building's plain appearance beyond noting it was 'squat.' A walker learns dates and ownership history but doesn't experience the place differently."
+          }
+        ],
+        "ungroupedClaimIds": ["pab-75672-identity", "pab-75672-register-status"]
+      }
+    }
+  ]
+}
