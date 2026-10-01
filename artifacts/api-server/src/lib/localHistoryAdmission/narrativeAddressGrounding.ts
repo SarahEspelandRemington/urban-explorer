@@ -154,19 +154,14 @@ export function groundNarrativeAddress(
     };
   }
 
-  const scaleDisqualified = matches.filter(isScaleImplausible);
-  const plausible = matches.filter((el) => !isScaleImplausible(el));
-  if (plausible.length === 0 && scaleDisqualified.length > 0) {
-    return {
-      category: "unresolved",
-      proposedIdentityType: "unresolved",
-      confidence: "none",
-      matchedIdentifier: osmDisplayIdentifier(scaleDisqualified[0]),
-      conflictingEvidence: `Matched OSM element has building:levels=${scaleDisqualified[0].tags["building:levels"]}, implausible for the documented building — not treated as a survival match.`,
-    };
-  }
-
-  const named = plausible.filter(
+  // Identity continuity takes precedence over scale: a match carrying a
+  // name/wikidata tag is checked across ALL address matches BEFORE scale
+  // is consulted at all. Scale-implausibility is only a suspicion signal
+  // for otherwise-anonymous matches — it must never override a confirmed
+  // identity match (this previously caused false-negative rejections of
+  // real tall landmarked buildings, e.g. Film Center Building, Farley
+  // Building).
+  const named = matches.filter(
     (el) => !!el.tags["name"] || !!el.tags["wikidata"],
   );
   if (named.length > 0) {
@@ -180,6 +175,18 @@ export function groundNarrativeAddress(
         : "exact address match + named OSM entity",
       confidence: "high",
       osmElementId: `${el.type}/${el.id}`,
+    };
+  }
+
+  const scaleDisqualified = matches.filter(isScaleImplausible);
+  const plausible = matches.filter((el) => !isScaleImplausible(el));
+  if (plausible.length === 0 && scaleDisqualified.length > 0) {
+    return {
+      category: "unresolved",
+      proposedIdentityType: "unresolved",
+      confidence: "none",
+      matchedIdentifier: osmDisplayIdentifier(scaleDisqualified[0]),
+      conflictingEvidence: `Matched OSM element has building:levels=${scaleDisqualified[0].tags["building:levels"]}, implausible for the documented building — not treated as a survival match.`,
     };
   }
 

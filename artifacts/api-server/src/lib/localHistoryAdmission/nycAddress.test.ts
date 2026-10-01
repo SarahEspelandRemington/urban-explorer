@@ -59,3 +59,54 @@ describe("normalizeStreet", () => {
     expect(normalizeStreet("37th Avenue")).toBe("37TH AVE");
   });
 });
+
+describe("normalizeStreet — spelled-out ordinal normalization (Film Center Building fix)", () => {
+  it("normalizes a simple spelled-out avenue ordinal (Ninth Avenue — the Film Center Building case)", () => {
+    expect(normalizeStreet("Ninth Avenue")).toBe("9TH AVE");
+  });
+
+  it("normalizes another simple spelled-out avenue ordinal (Eighth Avenue — the Farley Building case)", () => {
+    expect(normalizeStreet("Eighth Avenue")).toBe("8TH AVE");
+  });
+
+  it("normalizes a teens-range spelled-out ordinal (Twelfth Avenue)", () => {
+    expect(normalizeStreet("Twelfth Avenue")).toBe("12TH AVE");
+  });
+
+  it("normalizes a compound hyphenated spelled-out street ordinal (Forty-Second Street)", () => {
+    expect(normalizeStreet("West Forty-Second Street")).toBe("W 42ND ST");
+  });
+
+  it("normalizes a compound space-separated spelled-out street ordinal (Forty Second Street)", () => {
+    expect(normalizeStreet("West Forty Second Street")).toBe("W 42ND ST");
+  });
+
+  it("normalizes a tens-only spelled-out ordinal (Twentieth Street)", () => {
+    expect(normalizeStreet("West Twentieth Street")).toBe("W 20TH ST");
+  });
+
+  it("is case-insensitive on spelled-out ordinals", () => {
+    expect(normalizeStreet("ninth avenue")).toBe("9TH AVE");
+  });
+
+  it("leaves an already-numeral street name byte-for-byte unaffected (negative case)", () => {
+    expect(normalizeStreet("9th Avenue")).toBe("9TH AVE");
+    expect(normalizeStreet("West 42nd Street")).toBe("W 42ND ST");
+  });
+
+  it("does not alter an ordinary street name containing no ordinal words at all (negative case)", () => {
+    expect(normalizeStreet("Madison Avenue")).toBe("MADISON AVE");
+  });
+
+  it("does not rewrite an ordinal-shaped word that is part of a real proper street name, not a numbered-grid ordinal (Carroll Gardens, Brooklyn's First/Second/Third Place — negative/adversarial case)", () => {
+    expect(normalizeStreet("First Place")).toBe("FIRST PLACE");
+    expect(normalizeStreet("Second Place")).toBe("SECOND PLACE");
+    expect(normalizeStreet("Third Place")).toBe("THIRD PLACE");
+  });
+
+  it("parseAddress resolves a full spelled-out-ordinal address to the same normalized form as its numeral equivalent", () => {
+    expect(parseAddress("630 Ninth Avenue")).toEqual(
+      parseAddress("630 9th Avenue"),
+    );
+  });
+});
