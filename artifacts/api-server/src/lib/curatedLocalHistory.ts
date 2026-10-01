@@ -810,6 +810,50 @@ export const GENERATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       hasStoryBearingClaim: true,
     },
   },
+  // --- Forgotten New York source-native production promotion, Hell's
+  // Kitchen corridor (2026-10-01) ---
+  // Verified end-to-end through the same production extractor/grounding/
+  // artifact/projector/worthiness modules as way/250587791 above (real
+  // fetchForgottenNyArticle + fetchOsmBboxIndex + groundForgottenNyAddress
+  // call against live data, not a mocked/manufactured claim set). Run via
+  // the experiment-tier harness
+  // experiments/angle-grouping-v0/run-multiangle-evidence.ts — no
+  // corridor-specific generator script has been promoted into
+  // sources/forgottenNy/ for this address range yet, unlike Jackson
+  // Heights above. Grounds correctly to the Film Center Building way
+  // itself (way/265320243), not any of the 4 real ground-floor tenant
+  // nodes present at the same address (5 Napkin Burger, Marseille, Nizza,
+  // one unnamed node). Both claims (use-history, architect) AUTO-ADMIT
+  // with 0 integrity violations; worthiness positive on the use-history
+  // claim.
+  "way/265320243": {
+    source: {
+      title:
+        "Forgotten New York — 44th STREET, Part 1: Hell's Kitchen, Theater District",
+      url: "https://forgotten-ny.com/2021/04/44th-street-part-1-hells-kitchen-theater-district/",
+      sourceType: "local public-history narrative source",
+      usageNote:
+        "Mechanically composed by the local-history admission pipeline from 2 independently AUTO-ADMIT claim(s) (fny-107376-fny-film-center-building-fny-film-center-building-p17s1-architect, fny-107376-fny-film-center-building-fny-film-center-building-p17s0-use-history), drawing on: Forgotten New York — 44th STREET, Part 1: Hell's Kitchen, Theater District. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+      publicationDate: "2021-04-25T15:24:35Z",
+    },
+    evidence: {
+      subjectId: "way/265320243",
+      text: 'Forgotten New York\'s article "44th STREET, Part 1: Hell\'s Kitchen, Theater District" states about 630 Ninth Avenue: "Both interior and exterior were designed by Jacques Kahn." Forgotten New York\'s article "44th STREET, Part 1: Hell\'s Kitchen, Theater District" states about 630 Ninth Avenue: "I should have at least attempted to get a shot of the radiant Art Deco lobby of the Film Center Building, #630 9th Avenue at East 44th, as that\'s the only really beautiful aspect of this stolid 13-story office building completed in 1929 to house businesses involved in film, theater, music and audio production."',
+      claimScope:
+        "Mechanically composed from 2 admitted claim(s) covering: architect, use-history. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: fny-107376-fny-film-center-building-fny-film-center-building-p17s1-architect, fny-107376-fny-film-center-building-fny-film-center-building-p17s0-use-history) for full per-claim provenance.",
+      verificationStatus: "approved",
+      verificationConfidence: "high",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-10-01",
+      admissionMethod: "automated",
+      // Composed from architect/use-history claims; the use-history claim
+      // is a STORY_CLAIM_TYPES member per worthiness.ts's
+      // evaluateDiscoveryWorthiness, so this subject already passed the
+      // discovery-worthiness gate on that basis. See hasStoryBearingClaim's
+      // doc comment above.
+      hasStoryBearingClaim: true,
+    },
+  },
 };
 
 /**
