@@ -122,6 +122,77 @@ function osmDisplayIdentifier(el: NarrativeOsmElement): string {
   return el.tags["name"] ?? `${el.type}/${el.id}`;
 }
 
+/** A way/relation carrying a `building` tag is the building footprint itself, as distinct from a co-located point-of-interest (shop/amenity/office node) that merely shares the building's address. A node is never treated as building-like here, regardless of its tags — in this address-only match set, the physical building is always mapped as an area (way/relation), never a point. */
+function isBuildingLikeStructure(el: NarrativeOsmElement): boolean {
+  return (
+    (el.type === "way" || el.type === "relation") &&
+    !!el.tags["building"] &&
+    el.tags["building"] !== "no"
+  );
+}
+
+/**
+ * Deterministic same-address entity-selection rule for the `named` match
+ * set below. Replaces array-order-dependent "first match wins" (which let a
+ * co-located tenant/POI outrank the actual building purely because Overpass
+ * happened to return it first — e.g. a ground-floor restaurant node beating
+ * the Film Center Building way, or a community board office node beating
+ * the McGraw-Hill Building way). Uses only OSM tag/type evidence already
+ * present on each element — no fuzzy string matching, no geospatial
+ * heuristics, and no source- or building-specific special-casing.
+ *
+ * Important semantic caveat: `groundNarrativeAddress()` receives only an
+ * address string and the pre-fetched OSM index — it is never given the
+ * narrative source's own expected entity/Wikidata id. So a candidate's
+ * `wikidata` tag is NOT a verified identity match against the narrative
+ * subject; it only means "this specific OSM element is itself externally
+ * identified" (e.g. a notable element, possibly even a chain restaurant's
+ * own Wikidata item). This grounding path is fundamentally building/
+ * place-level (see isBuildingLikeStructure, the former-site/
+ * unnamed-current-building tiers below, and the >=6-level scale check — all
+ * assume the target is the physical structure at the address), so
+ * structural building-likeness is trusted ahead of a non-building
+ * candidate's mere Wikidata presence: an unrelated, well-identified tenant
+ * is still just a tenant.
+ *
+ * Tiers, most to least significant, highest wins:
+ *   1. Building-like (isBuildingLikeStructure) AND carries `wikidata` — the
+ *      strongest available evidence: a building footprint that is itself
+ *      externally identified.
+ *   2. Building-like only (no `wikidata`) — the common case, since most
+ *      buildings carry no `wikidata` tag at all. Still outranks any
+ *      non-building candidate, including one with its own `wikidata` tag,
+ *      because that tag does not establish the non-building candidate as
+ *      the building-level subject this function is grounding.
+ *   3. Non-building candidate carrying `wikidata` — only reached when no
+ *      building-like candidate exists at this address at all. Preferred
+ *      over an unidentified tenant/POI as the least-bad fallback.
+ *   4. Any other named, non-building candidate (name only, no `wikidata`).
+ *   5. Lowest numeric OSM id — a stable, order-independent final tie-break
+ *      within an otherwise-equal tier. Never the Overpass response array
+ *      position, and not itself an identity resolution — just determinism
+ *      when the available evidence cannot distinguish two candidates.
+ */
+function candidateTier(el: NarrativeOsmElement): number {
+  const building = isBuildingLikeStructure(el);
+  const wikidata = !!el.tags["wikidata"];
+  if (building && wikidata) return 1;
+  if (building) return 2;
+  if (wikidata) return 3;
+  return 4;
+}
+
+function pickBestNamedMatch(named: NarrativeOsmElement[]): NarrativeOsmElement {
+  return named.reduce((best, candidate) => {
+    const bestTier = candidateTier(best);
+    const candidateTierValue = candidateTier(candidate);
+    if (candidateTierValue !== bestTier) {
+      return candidateTierValue < bestTier ? candidate : best;
+    }
+    return candidate.id < best.id ? candidate : best;
+  });
+}
+
 /**
  * Grounds one narrative-source-claimed address against a pre-fetched bbox
  * OSM index. Address-only (no BIN or other structured-dataset identifier —
@@ -165,7 +236,11 @@ export function groundNarrativeAddress(
     (el) => !!el.tags["name"] || !!el.tags["wikidata"],
   );
   if (named.length > 0) {
-    const el = named[0];
+    // Among multiple named/wikidata-tagged matches at the same address
+    // (e.g. a landmark building plus its ground-floor tenants), the correct
+    // entity is selected deterministically — see pickBestNamedMatch — not
+    // by which element Overpass happened to return first.
+    const el = pickBestNamedMatch(named);
     return {
       category: "current-entity",
       proposedIdentityType: "current-osm-entity",
