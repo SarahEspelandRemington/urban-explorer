@@ -770,9 +770,37 @@ function classifySentence(
     };
   }
 
+  // Construction-purpose: a construction verb (built/constructed/completed)
+  // paired with an explicit purpose clause (to house/to serve as/to
+  // accommodate) in the same sentence states the building's original
+  // purpose/use, which is more Streetlit-relevant than a bare construction
+  // date (use-history is story-bearing downstream; construction-date is
+  // only supporting metadata — see worthiness.ts/editorial.ts). Checked
+  // BEFORE the ordinary construction-date branch below so a sentence like
+  // "completed in 1929 to house businesses involved in film, theater,
+  // music and audio production" yields exactly one use-history claim, not
+  // a separate construction-date claim. The purpose-clause requirement
+  // keeps this narrow: "to house"/"to serve as"/"to accommodate" alone,
+  // with no construction verb in the same sentence, does not trigger this
+  // branch (e.g. a nonprofit's stated mission "to house" people).
+  const constructionPurposeVerbRe = /\bbuilt\b|\bconstructed\b|\bcompleted\b/i;
+  const constructionPurposeClauseRe =
+    /\bto house\b|\bto serve as\b|\bto accommodate\b/i;
+  if (
+    constructionPurposeVerbRe.test(sentence) &&
+    constructionPurposeClauseRe.test(sentence)
+  ) {
+    return {
+      claimType: "use-history",
+      dateRange: years[0]
+        ? { start: `${years[0]}-01-01`, precise: true }
+        : undefined,
+    };
+  }
+
   const constructionDateRe = ext.designedKeyword
-    ? /\bbuilt\b|\bconstructed\b|\bconstruction of\b|\bdesigned\b/i
-    : /\bbuilt\b|\bconstructed\b|\bconstruction of\b/i;
+    ? /\bbuilt\b|\bconstructed\b|\bconstruction of\b|\bcompleted\b|\bdesigned\b/i
+    : /\bbuilt\b|\bconstructed\b|\bconstruction of\b|\bcompleted\b/i;
   if (constructionDateRe.test(sentence) && years.length > 0) {
     const architects = extractNamesAfter(sentence, [
       new RegExp(`architect\\s+${NAME_CAPTURE}`, "i"),

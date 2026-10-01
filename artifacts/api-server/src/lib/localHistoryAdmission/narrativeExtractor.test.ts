@@ -445,3 +445,155 @@ The Andrew Jackson apartment building stands at 35-20 Leverich Street. Sunnyside
     ).toBe(false);
   });
 });
+
+describe("classifySentence — construction-purpose (built/constructed/completed + to house/to serve as/to accommodate) -> use-history", () => {
+  it("Film Center Building: 'completed in 1929 to house businesses involved in film, theater, music and audio production' yields exactly one use-history claim with the year preserved, not a separate construction-date claim", () => {
+    const claims = extractNarrativeClaims(
+      `FILM CENTER BUILDING, Hell's Kitchen
+
+The Film Center Building stands at 630 Ninth Avenue. It was completed in 1929 to house businesses involved in film, theater, music and audio production.`,
+      { streetName: "Ninth Avenue" },
+      {
+        placeKey: "test-film-center",
+        address: "630 Ninth Avenue",
+        title: "Film Center Building",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "test-source",
+        claimIdPrefix: "test-film-center",
+        buildClaimText: (sentence) =>
+          `Test source states about Film Center Building: "${sentence}"`,
+      },
+    );
+    const matching = claims.filter((c) =>
+      c.supportingSpan.includes("completed in 1929 to house"),
+    );
+    expect(matching).toHaveLength(1);
+    const claim = matching[0];
+    expect(claim.claimType).toBe("use-history");
+    expect(claim.dateRange).toEqual({ start: "1929-01-01", precise: true });
+    expect(claim.claimText).toBe(
+      'Test source states about Film Center Building: "It was completed in 1929 to house businesses involved in film, theater, music and audio production."',
+    );
+  });
+
+  it("'built ... to house ...' is classified as use-history", () => {
+    const claims = extractNarrativeClaims(
+      `PRINTERS ROW BUILDING, Testville
+
+The Printers Row Building stands at 200 Main Street. It was built in 1910 to house a printing company and its workers.`,
+      { streetName: "Main Street" },
+      {
+        placeKey: "test-printers-row",
+        address: "200 Main Street",
+        title: "Printers Row Building",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "test-source",
+        claimIdPrefix: "test-printers-row",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const matching = claims.filter((c) =>
+      c.supportingSpan.includes("built in 1910 to house"),
+    );
+    expect(matching).toHaveLength(1);
+    expect(matching[0].claimType).toBe("use-history");
+    expect(matching[0].dateRange).toEqual({
+      start: "1910-01-01",
+      precise: true,
+    });
+  });
+
+  it("'constructed ... to serve as ...' is classified as use-history", () => {
+    const claims = extractNarrativeClaims(
+      `OLD ENGINE HOUSE, Testville
+
+The Old Engine House stands at 50 River Road. It was constructed in 1925 to serve as a firehouse for the growing neighborhood.`,
+      { streetName: "River Road" },
+      {
+        placeKey: "test-engine-house",
+        address: "50 River Road",
+        title: "Old Engine House",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "test-source",
+        claimIdPrefix: "test-engine-house",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const matching = claims.filter((c) =>
+      c.supportingSpan.includes("constructed in 1925 to serve as"),
+    );
+    expect(matching).toHaveLength(1);
+    expect(matching[0].claimType).toBe("use-history");
+  });
+
+  it("'The building was completed in 1929.' (no purpose clause) still falls back to an ordinary construction-date claim", () => {
+    const claims = extractNarrativeClaims(
+      `SOME BUILDING, Testville
+
+Some Building stands at 10 Elm Street. The building was completed in 1929.`,
+      { streetName: "Elm Street" },
+      {
+        placeKey: "test-some-building",
+        address: "10 Elm Street",
+        title: "Some Building",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "test-source",
+        claimIdPrefix: "test-some-building",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const matching = claims.filter((c) =>
+      c.supportingSpan.includes("completed in 1929"),
+    );
+    expect(matching).toHaveLength(1);
+    expect(matching[0].claimType).toBe("construction-date");
+    expect(matching[0].dateRange).toEqual({
+      start: "1929-01-01",
+      precise: true,
+    });
+  });
+
+  it("existing 'built in YEAR' construction-date behavior (no purpose clause) is unchanged", () => {
+    const claims = extractNarrativeClaims(
+      `ANOTHER BUILDING, Testville
+
+Another Building stands at 20 Oak Street. The building was built in 1931.`,
+      { streetName: "Oak Street" },
+      {
+        placeKey: "test-another-building",
+        address: "20 Oak Street",
+        title: "Another Building",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "test-source",
+        claimIdPrefix: "test-another-building",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const matching = claims.filter((c) =>
+      c.supportingSpan.includes("built in 1931"),
+    );
+    expect(matching).toHaveLength(1);
+    expect(matching[0].claimType).toBe("construction-date");
+  });
+
+  it("'to house'/'to serve as' alone, with no construction verb in the same sentence, does not trigger the construction-purpose rule", () => {
+    const claims = extractNarrativeClaims(
+      `COMMUNITY CENTER, Testville
+
+The Community Center stands at 30 Pine Street. The nonprofit's mission is to house homeless families in the neighborhood.`,
+      { streetName: "Pine Street" },
+      {
+        placeKey: "test-community-center",
+        address: "30 Pine Street",
+        title: "Community Center",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "test-source",
+        claimIdPrefix: "test-community-center",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    expect(
+      claims.some((c) => c.supportingSpan.includes("mission is to house")),
+    ).toBe(false);
+  });
+});
