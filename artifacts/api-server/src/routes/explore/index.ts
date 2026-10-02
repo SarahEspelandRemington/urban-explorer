@@ -3598,33 +3598,6 @@ router.post("/explore/discover", async (req, res) => {
         const excludedCapCount =
           copyGenCandidates.length - cappedCandidates.length;
 
-        // TEMP-PILOT-A-CURATED-EVIDENCE: diagnostic-only, sufficient for
-        // manual per-output auditing of the Green Room curated-evidence
-        // pilot. Logs which of the candidates actually being sent to
-        // copy-gen carry an approved curated entry, and the full evidence
-        // payload for each — does not affect any gating/filtering/prompt
-        // behavior. Remove after the pilot review window.
-        for (const c of cappedCandidates) {
-          const curated = getApprovedCuratedEntry(c.osmId);
-          if (!curated) continue;
-          req.log.info(
-            {
-              tag: "TEMP-PILOT-A-CURATED-EVIDENCE",
-              reqId: req.id,
-              osmId: c.osmId,
-              osmTrustLevel: computeOsmTrustLevel(c.tags),
-              sourceTitle: curated.source.title,
-              sourceType: curated.source.sourceType,
-              claimScope: curated.evidence.claimScope,
-              verificationStatus: curated.evidence.verificationStatus,
-              verificationConfidence: curated.evidence.verificationConfidence,
-              curatedTrust: curated.evidence.curatedTrust,
-              curatedEvidenceText: curated.evidence.text,
-            },
-            "[TEMP-PILOT-A-CURATED-EVIDENCE] curated evidence entering copy generation",
-          );
-        }
-
         // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
         // wikipedia= tag, or — when that tag is absent — resolve one via the
         // candidate's wikidata= entity's explicit enwiki sitelink. Scoped to
@@ -4037,27 +4010,6 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         const copyMap = new Map<string, CopyResult>(
           copyResults.map((r) => [r.id, r]),
         );
-        // TEMP-PILOT-A-CURATED-EVIDENCE: stage-2 log — the copy-gen
-        // summary/facts actually produced for candidates that had approved
-        // curated evidence in this request, correlated by osmId with the
-        // "curated evidence entering copy generation" log above. Diagnostic
-        // only. Remove after the pilot review window.
-        for (const c of cappedCandidates) {
-          const curated = getApprovedCuratedEntry(c.osmId);
-          if (!curated) continue;
-          const copy = copyMap.get(c.osmId);
-          req.log.info(
-            {
-              tag: "TEMP-PILOT-A-CURATED-EVIDENCE",
-              reqId: req.id,
-              osmId: c.osmId,
-              osmTrustLevel: computeOsmTrustLevel(c.tags),
-              copySummary: copy?.summary,
-              copyFacts: copy?.facts,
-            },
-            "[TEMP-PILOT-A-CURATED-EVIDENCE] copy-gen output for curated candidate",
-          );
-        }
         let mergedPlaces: any[] = candidates.map((p) => {
           const isStreetlitOwned = p.candidateOrigin === "streetlit";
           const copy = copyMap.get(p.osmId);
@@ -6729,7 +6681,10 @@ How to write for speech:
         "[walk-narration-audio] coalesced TTS call failed",
       );
       if (abortController.signal.aborted) return;
-      logger.error({ err, placeName, voice }, "TTS generation failed (waiter)");
+      logger.error(
+        { err, voice, reqId: req.id, subjectId },
+        "TTS generation failed (waiter)",
+      );
       const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
       if (!res.headersSent)
         res.status(status).json({
@@ -6763,7 +6718,10 @@ How to write for speech:
         "[walk-narration-audio] live TTS call failed",
       );
       if (abortController.signal.aborted) return;
-      logger.error({ err, placeName, voice }, "TTS generation failed");
+      logger.error(
+        { err, voice, reqId: req.id, subjectId },
+        "TTS generation failed",
+      );
       const status = err?.status === 429 ? 429 : err?.status >= 500 ? 503 : 500;
       if (!res.headersSent)
         res.status(status).json({
