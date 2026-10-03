@@ -1,0 +1,749 @@
+[
+  {
+    "subject": {
+      "label": "Library Hotel",
+      "wikipediaTitle": "Library Hotel",
+      "placeKey": "wiki-library-hotel",
+      "address": "299 Madison Avenue",
+      "streetName": "Madison Avenue",
+      "anchorTitle": "Library Hotel",
+      "productionSubjectId": "way/265875639"
+    },
+    "article": {
+      "title": "Library Hotel",
+      "extract": "Library Hotel is a 60-room boutique hotel in Midtown Manhattan, New York City. It is located at 299 Madison Avenue (at 41st Street), near Bryant Park, the New York Public Library Main Branch, and Grand Central Terminal. The hotel was designed by architect Stephen B. Jacobs.\nEach of the Library Hotel's ten guest floors is themed after a major category of the Dewey Decimal Classification. The 5th floor, for example, is the 500s (the Sciences). Each room is a subcategory or genre, such as Mathematics (Room 500.001) or Botany (Room 500.004). Dewey categories 000, 100, and 200 are placed on the 10th, 11th, and 12th floors, respectively. There are 50–100 books and decorations in each room that accompany the theme, for a total of 6,000 books throughout the hotel.\nDue to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system). OCLC subsequently reached an agreement with the hotel owners, thus enabling the hotel to continue using the Dewey system.\nThe Library Hotel was once actively operated by Henry Kallan through a Limited liability limited partnership. With the 2025 reorganization and investments by multiple private investors within real estate development, Library Hotel Collection transitioned into a Limited Liability Company with Henry's minority ownership stake towards Joyful Heart Foundation, a non-profit to heal & empower women. With a new principal managing president, his fiduciary responsibility is to manage & oversee the hotel chain, branding & organization, having been appointed & selected by its stakeholders.\nThe Library Hotel Collection includes Manhattan's Hotel Giraffe, Hotel Elysée, Casablanca Hotel, Hotel X Toronto.\n\n\n== References ==\n\n\n== External links ==\nOfficial website",
+      "lang": "en",
+      "articleUrl": "https://en.wikipedia.org/wiki/Library%20Hotel"
+    },
+    "claims": [
+      {
+        "id": "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect",
+        "placeKey": "wiki-library-hotel",
+        "address": "299 Madison Avenue",
+        "proposedIdentityType": "current-osm-entity",
+        "sourceIds": ["wiki-en-library-hotel"],
+        "supportingSpan": "The hotel was designed by architect Stephen B.",
+        "claimType": "architect",
+        "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\"",
+        "relatedEntities": ["Stephen B", "architect Stephen B"],
+        "extractionMethod": "direct-source-text",
+        "productionSubjectId": "way/265875639"
+      },
+      {
+        "id": "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event",
+        "placeKey": "wiki-library-hotel",
+        "address": "299 Madison Avenue",
+        "proposedIdentityType": "current-osm-entity",
+        "sourceIds": ["wiki-en-library-hotel"],
+        "supportingSpan": "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).",
+        "claimType": "event",
+        "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
+        "dateRange": {
+          "start": "2003-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text",
+        "productionSubjectId": "way/265875639"
+      }
+    ],
+    "source": {
+      "id": "wiki-en-library-hotel",
+      "title": "Wikipedia — Library Hotel",
+      "url": "https://en.wikipedia.org/wiki/Library%20Hotel",
+      "sourceClass": "wikipedia-wikidata",
+      "capabilities": [
+        {
+          "claimType": "architect",
+          "strength": "medium",
+          "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+        },
+        {
+          "claimType": "event",
+          "strength": "medium",
+          "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+        }
+      ]
+    },
+    "artifact": {
+      "version": 1,
+      "generatedAt": "2026-10-03T02:20:20.134Z",
+      "claims": [
+        {
+          "claimId": "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect",
+          "subjectId": "way/265875639",
+          "claim": {
+            "id": "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect",
+            "placeKey": "wiki-library-hotel",
+            "address": "299 Madison Avenue",
+            "proposedIdentityType": "current-osm-entity",
+            "sourceIds": ["wiki-en-library-hotel"],
+            "supportingSpan": "The hotel was designed by architect Stephen B.",
+            "claimType": "architect",
+            "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\"",
+            "relatedEntities": ["Stephen B", "architect Stephen B"],
+            "extractionMethod": "direct-source-text",
+            "productionSubjectId": "way/265875639"
+          },
+          "sourceCapabilitySnapshots": [
+            {
+              "sourceId": "wiki-en-library-hotel",
+              "title": "Wikipedia — Library Hotel",
+              "url": "https://en.wikipedia.org/wiki/Library%20Hotel",
+              "sourceClass": "wikipedia-wikidata",
+              "capabilityForClaimType": {
+                "claimType": "architect",
+                "strength": "medium",
+                "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+              }
+            }
+          ],
+          "checks": [
+            {
+              "checkId": "admissible-source-class",
+              "outcome": "pass",
+              "reason": "At least one cited source belongs to an approved source class."
+            },
+            {
+              "checkId": "synthesized-search-rejection",
+              "outcome": "pass",
+              "reason": "No cited source is a synthesized search output."
+            },
+            {
+              "checkId": "provenance-tracing",
+              "outcome": "pass",
+              "reason": "No cited source has a failed provenance-verification note."
+            },
+            {
+              "checkId": "temporal-consistency",
+              "outcome": "pass",
+              "reason": "No date range asserted; nothing to check."
+            },
+            {
+              "checkId": "superlative-exclusivity-corroboration",
+              "outcome": "pass",
+              "reason": "Not a superlative/exclusivity claim."
+            },
+            {
+              "checkId": "epistemic-marker-preservation",
+              "outcome": "pass",
+              "reason": "No blocking epistemic marker present."
+            }
+          ],
+          "grounding": {
+            "tier": 5,
+            "confidence": "high",
+            "matchedIdentity": "299 Madison Avenue",
+            "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+          },
+          "decision": {
+            "decision": "AUTO-ADMIT",
+            "factualTrust": "medium",
+            "identityConfidence": "high",
+            "editorialQuality": "medium",
+            "reasons": [
+              "All checks passed; grounding and factual trust sufficient."
+            ]
+          }
+        },
+        {
+          "claimId": "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event",
+          "subjectId": "way/265875639",
+          "claim": {
+            "id": "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event",
+            "placeKey": "wiki-library-hotel",
+            "address": "299 Madison Avenue",
+            "proposedIdentityType": "current-osm-entity",
+            "sourceIds": ["wiki-en-library-hotel"],
+            "supportingSpan": "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).",
+            "claimType": "event",
+            "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
+            "dateRange": {
+              "start": "2003-01-01",
+              "precise": true
+            },
+            "extractionMethod": "direct-source-text",
+            "productionSubjectId": "way/265875639"
+          },
+          "sourceCapabilitySnapshots": [
+            {
+              "sourceId": "wiki-en-library-hotel",
+              "title": "Wikipedia — Library Hotel",
+              "url": "https://en.wikipedia.org/wiki/Library%20Hotel",
+              "sourceClass": "wikipedia-wikidata",
+              "capabilityForClaimType": {
+                "claimType": "event",
+                "strength": "medium",
+                "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+              }
+            }
+          ],
+          "checks": [
+            {
+              "checkId": "admissible-source-class",
+              "outcome": "pass",
+              "reason": "At least one cited source belongs to an approved source class."
+            },
+            {
+              "checkId": "synthesized-search-rejection",
+              "outcome": "pass",
+              "reason": "No cited source is a synthesized search output."
+            },
+            {
+              "checkId": "provenance-tracing",
+              "outcome": "pass",
+              "reason": "No cited source has a failed provenance-verification note."
+            },
+            {
+              "checkId": "temporal-consistency",
+              "outcome": "pass",
+              "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+            },
+            {
+              "checkId": "superlative-exclusivity-corroboration",
+              "outcome": "pass",
+              "reason": "Not a superlative/exclusivity claim."
+            },
+            {
+              "checkId": "epistemic-marker-preservation",
+              "outcome": "pass",
+              "reason": "No blocking epistemic marker present."
+            }
+          ],
+          "grounding": {
+            "tier": 5,
+            "confidence": "high",
+            "matchedIdentity": "299 Madison Avenue",
+            "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+          },
+          "decision": {
+            "decision": "AUTO-ADMIT",
+            "factualTrust": "medium",
+            "identityConfidence": "high",
+            "editorialQuality": "high",
+            "reasons": [
+              "All checks passed; grounding and factual trust sufficient."
+            ]
+          }
+        }
+      ],
+      "summary": {
+        "totalClaims": 2,
+        "byDecision": {
+          "AUTO-ADMIT": 2,
+          "HOLD": 0,
+          "SUPPRESS": 0
+        },
+        "subjectCount": 1,
+        "integrityViolations": [],
+        "nonProjectableClaimIds": []
+      }
+    },
+    "projection": {
+      "version": 1,
+      "generatedAt": "2026-10-03T02:20:20.134Z",
+      "entries": {
+        "way/265875639": {
+          "source": {
+            "title": "Wikipedia — Library Hotel",
+            "url": "https://en.wikipedia.org/wiki/Library%20Hotel",
+            "sourceType": "Wikipedia/Wikidata reference",
+            "usageNote": "Mechanically composed by the local-history admission pipeline from 2 independently AUTO-ADMIT claim(s) (wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event), drawing on: Wikipedia — Library Hotel. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+          },
+          "evidence": {
+            "subjectId": "way/265875639",
+            "text": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\" Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
+            "claimScope": "Mechanically composed from 2 admitted claim(s) covering: architect, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event) for full per-claim provenance.",
+            "verificationStatus": "approved",
+            "verificationConfidence": "high",
+            "curatedTrust": "medium",
+            "lastVerifiedDate": "2026-10-03",
+            "admissionMethod": "automated"
+          }
+        }
+      },
+      "compositionMap": {
+        "way/265875639": [
+          "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect",
+          "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event"
+        ]
+      },
+      "nonProjectableClaimIds": []
+    },
+    "gated": {
+      "version": 1,
+      "generatedAt": "2026-10-03T02:20:20.134Z",
+      "entries": {
+        "way/265875639": {
+          "source": {
+            "title": "Wikipedia — Library Hotel",
+            "url": "https://en.wikipedia.org/wiki/Library%20Hotel",
+            "sourceType": "Wikipedia/Wikidata reference",
+            "usageNote": "Mechanically composed by the local-history admission pipeline from 2 independently AUTO-ADMIT claim(s) (wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event), drawing on: Wikipedia — Library Hotel. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+          },
+          "evidence": {
+            "subjectId": "way/265875639",
+            "text": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\" Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
+            "claimScope": "Mechanically composed from 2 admitted claim(s) covering: architect, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event) for full per-claim provenance.",
+            "verificationStatus": "approved",
+            "verificationConfidence": "high",
+            "curatedTrust": "medium",
+            "lastVerifiedDate": "2026-10-03",
+            "admissionMethod": "automated",
+            "hasStoryBearingClaim": true
+          }
+        }
+      },
+      "compositionMap": {
+        "way/265875639": [
+          "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect",
+          "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event"
+        ]
+      },
+      "nonProjectableClaimIds": [],
+      "worthinessBySubject": {
+        "way/265875639": {
+          "projectableForDiscovery": true,
+          "worthinessReasons": [
+            "Contains story-bearing claim type(s) — event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+          ]
+        }
+      },
+      "rejectedForWorthiness": []
+    },
+    "worthiness": {
+      "projectableForDiscovery": true,
+      "worthinessReasons": [
+        "Contains story-bearing claim type(s) — event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+      ]
+    }
+  },
+  {
+    "subject": {
+      "label": "The Actors' Temple",
+      "wikipediaTitle": "Actors' Temple",
+      "placeKey": "wiki-actors-temple",
+      "address": "339 West 47th Street",
+      "streetName": "West 47th Street",
+      "anchorTitle": "Actors' Temple",
+      "productionSubjectId": "way/265322610"
+    },
+    "article": {
+      "title": "The Actors' Temple",
+      "extract": "The Actors' Temple, officially named Congregation Ezrath Israel, is a non-denominational Jewish synagogue located at 339 West 47th Street, in the Hell's Kitchen neighborhood of Manhattan, New York City, New York, United States.\n\n\n== History ==\nThe congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area. The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby. Many vaudeville, musical theater, television, and nightclub performers attended services there, including Sophie Tucker, Shelley Winters, Milton Berle, Al Jolson, Jack Benny, Joe E. Lewis, Edward G. Robinson, as well as two of the Three Stooges. Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.\nThe congregation declined in the wake of World War II as New York-based actors moved to California and the neighborhood changed. The congregation diminished from 300 members to approximately 30 by 2009. In 2005, in order to bring in additional income, the temple started renting out dance rehearsal space to New Dance Group and temporarily transforming into a theatre for plays.  However, even with this additional income, the $120,000 annual operating costs used up the $2 million endowment by 2009. Despite these challenges, the temple continues to operate. In 2011, the temple had a fundraising program and about 150 dues-paying members, with an average Erev Shabbat worship attendance of 20–30 people.\nThe congregation initially adhered to Orthodox Judaism but subsequently transitioned to Conservative Judaism and, later, to a non-denominational approach to Judaism.\nThe synagogue's rabbi, Jill Hausman, made an appearance in the Weekend Update portion of the season 49 finale of Saturday Night Live, sitting next to Colin Jost during his delivery of jokes written by co-host Michael Che.\n\n\n== Building ==\n\n\n== References ==\n\n\n== External links ==\n Media related to Actors' Temple at Wikimedia Commons\n\nOfficial website\nThe Actor's Temple Theatre official site\nThe Actors' Temple at the Internet Off-Broadway Database (archived)",
+      "lang": "en",
+      "articleUrl": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple"
+    },
+    "claims": [
+      {
+        "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding",
+        "placeKey": "wiki-actors-temple",
+        "address": "339 West 47th Street",
+        "proposedIdentityType": "current-osm-entity",
+        "sourceIds": ["wiki-en-the-actors-temple"],
+        "supportingSpan": "The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.",
+        "claimType": "institutional-founding",
+        "claimText": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.\"",
+        "relatedEntities": ["in"],
+        "dateRange": {
+          "start": "1917-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text",
+        "productionSubjectId": "way/265322610"
+      },
+      {
+        "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event",
+        "placeKey": "wiki-actors-temple",
+        "address": "339 West 47th Street",
+        "proposedIdentityType": "current-osm-entity",
+        "sourceIds": ["wiki-en-the-actors-temple"],
+        "supportingSpan": "The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.",
+        "claimType": "event",
+        "claimText": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.\"",
+        "dateRange": {
+          "start": "1923-01-01",
+          "precise": true
+        },
+        "extractionMethod": "direct-source-text",
+        "productionSubjectId": "way/265322610"
+      },
+      {
+        "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+        "placeKey": "wiki-actors-temple",
+        "address": "339 West 47th Street",
+        "proposedIdentityType": "current-osm-entity",
+        "sourceIds": ["wiki-en-the-actors-temple"],
+        "supportingSpan": "Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.",
+        "claimType": "biographical",
+        "claimText": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.\"",
+        "dateRange": {
+          "start": "1959-01-01",
+          "precise": false
+        },
+        "extractionMethod": "direct-source-text",
+        "productionSubjectId": "way/265322610"
+      }
+    ],
+    "source": {
+      "id": "wiki-en-the-actors-temple",
+      "title": "Wikipedia — The Actors' Temple",
+      "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
+      "sourceClass": "wikipedia-wikidata",
+      "capabilities": [
+        {
+          "claimType": "institutional-founding",
+          "strength": "medium",
+          "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+        },
+        {
+          "claimType": "event",
+          "strength": "medium",
+          "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+        },
+        {
+          "claimType": "biographical",
+          "strength": "medium",
+          "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+        }
+      ]
+    },
+    "artifact": {
+      "version": 1,
+      "generatedAt": "2026-10-03T02:20:20.280Z",
+      "claims": [
+        {
+          "claimId": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+          "subjectId": "way/265322610",
+          "claim": {
+            "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+            "placeKey": "wiki-actors-temple",
+            "address": "339 West 47th Street",
+            "proposedIdentityType": "current-osm-entity",
+            "sourceIds": ["wiki-en-the-actors-temple"],
+            "supportingSpan": "Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.",
+            "claimType": "biographical",
+            "claimText": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.\"",
+            "dateRange": {
+              "start": "1959-01-01",
+              "precise": false
+            },
+            "extractionMethod": "direct-source-text",
+            "productionSubjectId": "way/265322610"
+          },
+          "sourceCapabilitySnapshots": [
+            {
+              "sourceId": "wiki-en-the-actors-temple",
+              "title": "Wikipedia — The Actors' Temple",
+              "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
+              "sourceClass": "wikipedia-wikidata",
+              "capabilityForClaimType": {
+                "claimType": "biographical",
+                "strength": "medium",
+                "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+              }
+            }
+          ],
+          "checks": [
+            {
+              "checkId": "admissible-source-class",
+              "outcome": "pass",
+              "reason": "At least one cited source belongs to an approved source class."
+            },
+            {
+              "checkId": "synthesized-search-rejection",
+              "outcome": "pass",
+              "reason": "No cited source is a synthesized search output."
+            },
+            {
+              "checkId": "provenance-tracing",
+              "outcome": "pass",
+              "reason": "No cited source has a failed provenance-verification note."
+            },
+            {
+              "checkId": "temporal-consistency",
+              "outcome": "pass",
+              "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+            },
+            {
+              "checkId": "superlative-exclusivity-corroboration",
+              "outcome": "pass",
+              "reason": "Not a superlative/exclusivity claim."
+            },
+            {
+              "checkId": "epistemic-marker-preservation",
+              "outcome": "pass",
+              "reason": "No blocking epistemic marker present."
+            }
+          ],
+          "grounding": {
+            "tier": 5,
+            "confidence": "high",
+            "matchedIdentity": "339 West 47th Street",
+            "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+          },
+          "decision": {
+            "decision": "AUTO-ADMIT",
+            "factualTrust": "medium",
+            "identityConfidence": "high",
+            "editorialQuality": "high",
+            "reasons": [
+              "All checks passed; grounding and factual trust sufficient."
+            ]
+          }
+        },
+        {
+          "claimId": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding",
+          "subjectId": "way/265322610",
+          "claim": {
+            "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding",
+            "placeKey": "wiki-actors-temple",
+            "address": "339 West 47th Street",
+            "proposedIdentityType": "current-osm-entity",
+            "sourceIds": ["wiki-en-the-actors-temple"],
+            "supportingSpan": "The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.",
+            "claimType": "institutional-founding",
+            "claimText": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.\"",
+            "relatedEntities": ["in"],
+            "dateRange": {
+              "start": "1917-01-01",
+              "precise": true
+            },
+            "extractionMethod": "direct-source-text",
+            "productionSubjectId": "way/265322610"
+          },
+          "sourceCapabilitySnapshots": [
+            {
+              "sourceId": "wiki-en-the-actors-temple",
+              "title": "Wikipedia — The Actors' Temple",
+              "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
+              "sourceClass": "wikipedia-wikidata",
+              "capabilityForClaimType": {
+                "claimType": "institutional-founding",
+                "strength": "medium",
+                "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+              }
+            }
+          ],
+          "checks": [
+            {
+              "checkId": "admissible-source-class",
+              "outcome": "pass",
+              "reason": "At least one cited source belongs to an approved source class."
+            },
+            {
+              "checkId": "synthesized-search-rejection",
+              "outcome": "pass",
+              "reason": "No cited source is a synthesized search output."
+            },
+            {
+              "checkId": "provenance-tracing",
+              "outcome": "pass",
+              "reason": "No cited source has a failed provenance-verification note."
+            },
+            {
+              "checkId": "temporal-consistency",
+              "outcome": "pass",
+              "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+            },
+            {
+              "checkId": "superlative-exclusivity-corroboration",
+              "outcome": "pass",
+              "reason": "Not a superlative/exclusivity claim."
+            },
+            {
+              "checkId": "epistemic-marker-preservation",
+              "outcome": "pass",
+              "reason": "No blocking epistemic marker present."
+            }
+          ],
+          "grounding": {
+            "tier": 5,
+            "confidence": "high",
+            "matchedIdentity": "339 West 47th Street",
+            "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+          },
+          "decision": {
+            "decision": "AUTO-ADMIT",
+            "factualTrust": "medium",
+            "identityConfidence": "high",
+            "editorialQuality": "high",
+            "reasons": [
+              "All checks passed; grounding and factual trust sufficient."
+            ]
+          }
+        },
+        {
+          "claimId": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event",
+          "subjectId": "way/265322610",
+          "claim": {
+            "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event",
+            "placeKey": "wiki-actors-temple",
+            "address": "339 West 47th Street",
+            "proposedIdentityType": "current-osm-entity",
+            "sourceIds": ["wiki-en-the-actors-temple"],
+            "supportingSpan": "The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.",
+            "claimType": "event",
+            "claimText": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.\"",
+            "dateRange": {
+              "start": "1923-01-01",
+              "precise": true
+            },
+            "extractionMethod": "direct-source-text",
+            "productionSubjectId": "way/265322610"
+          },
+          "sourceCapabilitySnapshots": [
+            {
+              "sourceId": "wiki-en-the-actors-temple",
+              "title": "Wikipedia — The Actors' Temple",
+              "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
+              "sourceClass": "wikipedia-wikidata",
+              "capabilityForClaimType": {
+                "claimType": "event",
+                "strength": "medium",
+                "notes": "Wikipedia article plaintext extract (action=query&prop=extracts&explaintext=1) with no attached citation apparatus in this form, so capped at medium strength, same tier as the pipeline's other narrative sources."
+              }
+            }
+          ],
+          "checks": [
+            {
+              "checkId": "admissible-source-class",
+              "outcome": "pass",
+              "reason": "At least one cited source belongs to an approved source class."
+            },
+            {
+              "checkId": "synthesized-search-rejection",
+              "outcome": "pass",
+              "reason": "No cited source is a synthesized search output."
+            },
+            {
+              "checkId": "provenance-tracing",
+              "outcome": "pass",
+              "reason": "No cited source has a failed provenance-verification note."
+            },
+            {
+              "checkId": "temporal-consistency",
+              "outcome": "pass",
+              "reason": "No conflicting precise date found for the same underlying fact at this place/claim type."
+            },
+            {
+              "checkId": "superlative-exclusivity-corroboration",
+              "outcome": "pass",
+              "reason": "Not a superlative/exclusivity claim."
+            },
+            {
+              "checkId": "epistemic-marker-preservation",
+              "outcome": "pass",
+              "reason": "No blocking epistemic marker present."
+            }
+          ],
+          "grounding": {
+            "tier": 5,
+            "confidence": "high",
+            "matchedIdentity": "339 West 47th Street",
+            "reason": "Exact address/coordinate evidence matched to a current OSM entity."
+          },
+          "decision": {
+            "decision": "AUTO-ADMIT",
+            "factualTrust": "medium",
+            "identityConfidence": "high",
+            "editorialQuality": "high",
+            "reasons": [
+              "All checks passed; grounding and factual trust sufficient."
+            ]
+          }
+        }
+      ],
+      "summary": {
+        "totalClaims": 3,
+        "byDecision": {
+          "AUTO-ADMIT": 3,
+          "HOLD": 0,
+          "SUPPRESS": 0
+        },
+        "subjectCount": 1,
+        "integrityViolations": [],
+        "nonProjectableClaimIds": []
+      }
+    },
+    "projection": {
+      "version": 1,
+      "generatedAt": "2026-10-03T02:20:20.280Z",
+      "entries": {
+        "way/265322610": {
+          "source": {
+            "title": "Wikipedia — The Actors' Temple",
+            "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
+            "sourceType": "Wikipedia/Wikidata reference",
+            "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event), drawing on: Wikipedia — The Actors' Temple. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+          },
+          "evidence": {
+            "subjectId": "way/265322610",
+            "text": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.\"",
+            "claimScope": "Mechanically composed from 3 admitted claim(s) covering: biographical, institutional-founding, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event) for full per-claim provenance.",
+            "verificationStatus": "approved",
+            "verificationConfidence": "high",
+            "curatedTrust": "medium",
+            "lastVerifiedDate": "2026-10-03",
+            "admissionMethod": "automated"
+          }
+        }
+      },
+      "compositionMap": {
+        "way/265322610": [
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding",
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event"
+        ]
+      },
+      "nonProjectableClaimIds": []
+    },
+    "gated": {
+      "version": 1,
+      "generatedAt": "2026-10-03T02:20:20.280Z",
+      "entries": {
+        "way/265322610": {
+          "source": {
+            "title": "Wikipedia — The Actors' Temple",
+            "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
+            "sourceType": "Wikipedia/Wikidata reference",
+            "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event), drawing on: Wikipedia — The Actors' Temple. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+          },
+          "evidence": {
+            "subjectId": "way/265322610",
+            "text": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.\"",
+            "claimScope": "Mechanically composed from 3 admitted claim(s) covering: biographical, institutional-founding, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event) for full per-claim provenance.",
+            "verificationStatus": "approved",
+            "verificationConfidence": "high",
+            "curatedTrust": "medium",
+            "lastVerifiedDate": "2026-10-03",
+            "admissionMethod": "automated",
+            "hasStoryBearingClaim": true
+          }
+        }
+      },
+      "compositionMap": {
+        "way/265322610": [
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding",
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event"
+        ]
+      },
+      "nonProjectableClaimIds": [],
+      "worthinessBySubject": {
+        "way/265322610": {
+          "projectableForDiscovery": true,
+          "worthinessReasons": [
+            "Contains story-bearing claim type(s) — biographical, institutional-founding, event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+          ]
+        }
+      },
+      "rejectedForWorthiness": []
+    },
+    "worthiness": {
+      "projectableForDiscovery": true,
+      "worthinessReasons": [
+        "Contains story-bearing claim type(s) — biographical, institutional-founding, event — reflecting former use, change over time, an event, an institution, or a larger pattern, not mere identity/register metadata."
+      ]
+    }
+  }
+]

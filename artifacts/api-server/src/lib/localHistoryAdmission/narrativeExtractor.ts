@@ -892,9 +892,33 @@ function classifySentence(
     };
   }
 
+  // Relocation-to-current-site: "has been located at its current site since
+  // 1923" / "situated at its current location since 1904" states the same
+  // underlying fact as the "moved" trigger below (a discrete, dated
+  // relocation), just phrased as a since-date rather than a move verb.
+  // Anchored on "current site/building/location" so it does not generalize
+  // to any bare "since YYYY" sentence (e.g. "has operated as a hotel since
+  // 1980" is a use-history claim, not a relocation event) — see
+  // experiments/wikipedia-claim-extraction-v0/ bounded-inspection findings.
+  const relocationCurrentSiteRe =
+    /\b(?:located|situated)\s+at\s+(?:its|the)\s+current\s+(?:site|building|location)\s+since\b/i;
+  if (relocationCurrentSiteRe.test(sentence) && years.length > 0) {
+    return {
+      claimType: "event",
+      dateRange: { start: `${years[0]}-01-01`, precise: true },
+    };
+  }
+
+  // Legal dispute/agreement: "sued"/"lawsuit"/"reached an agreement" are a
+  // discrete, dated occurrence in the subject's history, the same semantic
+  // shape as sold/acquired/moved/opened/closed below — not a cooperative
+  // ownership/occupancy "relationship" and not a new claim type. Deliberately
+  // does NOT include bare "settlement" as a trigger (ambiguous with a
+  // founding/neighborhood "settlement") — see bounded-inspection findings
+  // above.
   const eventRe = ext.renovatedOccupiedKeyword
-    ? /\bsold\b|\bsell(?:ing)?\b|\bacquired\b|\bmoved\b|\bopened\b|\bclosed\b|\brenovated\b|\brenovation\b|\boccupied\b/i
-    : /\bsold\b|\bsell(?:ing)?\b|\bacquired\b|\bmoved\b|\bopened\b|\bclosed\b/i;
+    ? /\bsold\b|\bsell(?:ing)?\b|\bacquired\b|\bmoved\b|\bopened\b|\bclosed\b|\brenovated\b|\brenovation\b|\boccupied\b|\bsued\b|\blawsuit\b|\breached an agreement\b/i
+    : /\bsold\b|\bsell(?:ing)?\b|\bacquired\b|\bmoved\b|\bopened\b|\bclosed\b|\bsued\b|\blawsuit\b|\breached an agreement\b/i;
   if (eventRe.test(sentence) && years.length > 0) {
     return {
       claimType: "event",
