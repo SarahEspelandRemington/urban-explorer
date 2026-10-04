@@ -90,10 +90,76 @@ function splitIntoParagraphs(text: string): string[] {
     .filter((line) => line.length > 0);
 }
 
+/**
+ * Protects a "Firstname M. Lastname" personal-name middle initial (e.g.
+ * "Stephen B. Jacobs", "John F. Kennedy") from being misread by the
+ * sentence-boundary split below as a period ending a sentence. Requires a
+ * capitalized word immediately before the initial (the likely first name)
+ * AND a capitalized word immediately after (the likely surname) — a genuine
+ * single-letter sentence ending such as "...the letter A. The next
+ * chapter..." does not match (the preceding word "letter" is lowercase), so
+ * ordinary sentence boundaries still split normally. The following
+ * capitalized word is also checked against SENTENCE_STARTER_STOPWORDS below
+ * to catch the remaining ambiguous case where the preceding word IS
+ * capitalized but the period is still a genuine sentence end (e.g.
+ * "Students lived in Dorm B. The dormitory was razed in 1970.") — a real
+ * surname never collides with that stoplist. Confirmed live defect: Library
+ * Hotel's real Wikipedia sentence "...the hotel was designed by architect
+ * Stephen B. Jacobs." was previously split into "...Stephen B." plus an
+ * orphan "Jacobs." too short to pass the length filter below, so it was
+ * silently dropped — truncating the architect's name in the resulting
+ * supportingSpan/claimText.
+ */
+const SENTENCE_STARTER_STOPWORDS: ReadonlySet<string> = new Set([
+  "The",
+  "This",
+  "That",
+  "These",
+  "Those",
+  "It",
+  "They",
+  "He",
+  "She",
+  "We",
+  "You",
+  "I",
+  "There",
+  "In",
+  "On",
+  "At",
+  "After",
+  "Before",
+  "During",
+  "Each",
+  "Every",
+  "Both",
+  "Due",
+  "According",
+  "Following",
+  "However",
+  "Meanwhile",
+  "Today",
+  "Later",
+  "Eventually",
+  "Subsequently",
+]);
+const MIDDLE_INITIAL_RE = /\b([A-Z][a-z]+)\s([A-Z])\.\s(?=([A-Z][a-z]+)\b)/g;
+/** Placeholder swapped in for a protected middle-initial's period so the
+ *  split below does not treat it as sentence-ending punctuation; restored
+ *  to "." once splitting is complete. */
+const PROTECTED_PERIOD = "\u0000";
+
 function splitSentencesInParagraph(paragraph: string): string[] {
-  return paragraph
+  const protectedParagraph = paragraph.replace(
+    MIDDLE_INITIAL_RE,
+    (match, firstName: string, initial: string, nextWord: string) =>
+      SENTENCE_STARTER_STOPWORDS.has(nextWord)
+        ? match
+        : `${firstName} ${initial}${PROTECTED_PERIOD} `,
+  );
+  return protectedParagraph
     .split(/(?<=[.!?])\s+(?=[A-Z0-9])/)
-    .map((s) => s.trim())
+    .map((s) => s.replaceAll(PROTECTED_PERIOD, ".").trim())
     .filter((s) => s.length > 15);
 }
 

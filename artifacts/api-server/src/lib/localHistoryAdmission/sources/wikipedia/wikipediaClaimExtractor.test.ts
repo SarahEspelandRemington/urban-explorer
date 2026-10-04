@@ -77,6 +77,13 @@ describe("extractWikipediaClaims", () => {
       'Wikipedia\'s article "Library Hotel" states about 299 Madison Avenue:',
     );
     expect(architectClaim!.extractionMethod).toBe("direct-source-text");
+    // Regression: the shared sentence splitter previously mis-split this real
+    // Wikipedia sentence at the "Stephen B." middle initial, truncating the
+    // architect's name — see narrativeExtractor.ts's MIDDLE_INITIAL_RE.
+    expect(architectClaim!.supportingSpan).toBe(
+      "The hotel was designed by architect Stephen B. Jacobs.",
+    );
+    expect(architectClaim!.relatedEntities).toContain("Stephen B. Jacobs");
   });
 
   it("Library Hotel: the 2003 OCLC lawsuit sentence now produces an event claim (legal-dispute classifier addition), but the Dewey Decimal floor-theming sentences remain unclassified — a thematic/organizing-concept description is not an 'event', per the bounded-inspection findings", () => {

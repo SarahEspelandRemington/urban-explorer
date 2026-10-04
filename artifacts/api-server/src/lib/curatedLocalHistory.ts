@@ -881,17 +881,17 @@ export const GENERATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
     },
     evidence: {
       subjectId: "way/265875639",
-      text: 'Wikipedia\'s article "Library Hotel" states about 299 Madison Avenue: "The hotel was designed by architect Stephen B." Wikipedia\'s article "Library Hotel" states about 299 Madison Avenue: "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system)."',
+      text: 'Wikipedia\'s article "Library Hotel" states about 299 Madison Avenue: "The hotel was designed by architect Stephen B. Jacobs." Wikipedia\'s article "Library Hotel" states about 299 Madison Avenue: "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system)."',
       claimScope:
         "Mechanically composed from 2 admitted claim(s) covering: architect, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event) for full per-claim provenance.",
       verificationStatus: "approved",
       verificationConfidence: "high",
       curatedTrust: "medium",
-      lastVerifiedDate: "2026-10-03",
+      lastVerifiedDate: "2026-10-04",
       admissionMethod: "automated",
       hasStoryBearingClaim: true,
       wikipediaSupportingSpans: [
-        "The hotel was designed by architect Stephen B.",
+        "The hotel was designed by architect Stephen B. Jacobs.",
         "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).",
       ],
     },

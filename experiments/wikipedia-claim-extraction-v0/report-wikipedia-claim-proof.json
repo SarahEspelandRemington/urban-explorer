@@ -22,10 +22,10 @@
         "address": "299 Madison Avenue",
         "proposedIdentityType": "current-osm-entity",
         "sourceIds": ["wiki-en-library-hotel"],
-        "supportingSpan": "The hotel was designed by architect Stephen B.",
+        "supportingSpan": "The hotel was designed by architect Stephen B. Jacobs.",
         "claimType": "architect",
-        "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\"",
-        "relatedEntities": ["Stephen B", "architect Stephen B"],
+        "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B. Jacobs.\"",
+        "relatedEntities": ["Stephen B. Jacobs", "architect Stephen B. Jacobs"],
         "extractionMethod": "direct-source-text",
         "productionSubjectId": "way/265875639"
       },
@@ -66,7 +66,7 @@
     },
     "artifact": {
       "version": 1,
-      "generatedAt": "2026-10-03T02:20:20.134Z",
+      "generatedAt": "2026-10-04T22:42:50.562Z",
       "claims": [
         {
           "claimId": "wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect",
@@ -77,10 +77,13 @@
             "address": "299 Madison Avenue",
             "proposedIdentityType": "current-osm-entity",
             "sourceIds": ["wiki-en-library-hotel"],
-            "supportingSpan": "The hotel was designed by architect Stephen B.",
+            "supportingSpan": "The hotel was designed by architect Stephen B. Jacobs.",
             "claimType": "architect",
-            "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\"",
-            "relatedEntities": ["Stephen B", "architect Stephen B"],
+            "claimText": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B. Jacobs.\"",
+            "relatedEntities": [
+              "Stephen B. Jacobs",
+              "architect Stephen B. Jacobs"
+            ],
             "extractionMethod": "direct-source-text",
             "productionSubjectId": "way/265875639"
           },
@@ -240,7 +243,7 @@
     },
     "projection": {
       "version": 1,
-      "generatedAt": "2026-10-03T02:20:20.134Z",
+      "generatedAt": "2026-10-04T22:42:50.562Z",
       "entries": {
         "way/265875639": {
           "source": {
@@ -251,12 +254,16 @@
           },
           "evidence": {
             "subjectId": "way/265875639",
-            "text": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\" Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
+            "text": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B. Jacobs.\" Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
             "claimScope": "Mechanically composed from 2 admitted claim(s) covering: architect, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event) for full per-claim provenance.",
             "verificationStatus": "approved",
             "verificationConfidence": "high",
             "curatedTrust": "medium",
-            "lastVerifiedDate": "2026-10-03",
+            "lastVerifiedDate": "2026-10-04",
+            "wikipediaSupportingSpans": [
+              "The hotel was designed by architect Stephen B. Jacobs.",
+              "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system)."
+            ],
             "admissionMethod": "automated"
           }
         }
@@ -271,7 +278,7 @@
     },
     "gated": {
       "version": 1,
-      "generatedAt": "2026-10-03T02:20:20.134Z",
+      "generatedAt": "2026-10-04T22:42:50.562Z",
       "entries": {
         "way/265875639": {
           "source": {
@@ -282,12 +289,16 @@
           },
           "evidence": {
             "subjectId": "way/265875639",
-            "text": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B.\" Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
+            "text": "Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"The hotel was designed by architect Stephen B. Jacobs.\" Wikipedia's article \"Library Hotel\" states about 299 Madison Avenue: \"Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).\"",
             "claimScope": "Mechanically composed from 2 admitted claim(s) covering: architect, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event) for full per-claim provenance.",
             "verificationStatus": "approved",
             "verificationConfidence": "high",
             "curatedTrust": "medium",
-            "lastVerifiedDate": "2026-10-03",
+            "lastVerifiedDate": "2026-10-04",
+            "wikipediaSupportingSpans": [
+              "The hotel was designed by architect Stephen B. Jacobs.",
+              "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system)."
+            ],
             "admissionMethod": "automated",
             "hasStoryBearingClaim": true
           }
@@ -368,7 +379,7 @@
         "productionSubjectId": "way/265322610"
       },
       {
-        "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+        "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical",
         "placeKey": "wiki-actors-temple",
         "address": "339 West 47th Street",
         "proposedIdentityType": "current-osm-entity",
@@ -409,13 +420,13 @@
     },
     "artifact": {
       "version": 1,
-      "generatedAt": "2026-10-03T02:20:20.280Z",
+      "generatedAt": "2026-10-04T22:42:50.765Z",
       "claims": [
         {
-          "claimId": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+          "claimId": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical",
           "subjectId": "way/265322610",
           "claim": {
-            "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+            "id": "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical",
             "placeKey": "wiki-actors-temple",
             "address": "339 West 47th Street",
             "proposedIdentityType": "current-osm-entity",
@@ -667,30 +678,35 @@
     },
     "projection": {
       "version": 1,
-      "generatedAt": "2026-10-03T02:20:20.280Z",
+      "generatedAt": "2026-10-04T22:42:50.765Z",
       "entries": {
         "way/265322610": {
           "source": {
             "title": "Wikipedia — The Actors' Temple",
             "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
             "sourceType": "Wikipedia/Wikidata reference",
-            "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event), drawing on: Wikipedia — The Actors' Temple. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+            "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event), drawing on: Wikipedia — The Actors' Temple. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
           },
           "evidence": {
             "subjectId": "way/265322610",
             "text": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.\"",
-            "claimScope": "Mechanically composed from 3 admitted claim(s) covering: biographical, institutional-founding, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event) for full per-claim provenance.",
+            "claimScope": "Mechanically composed from 3 admitted claim(s) covering: biographical, institutional-founding, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event) for full per-claim provenance.",
             "verificationStatus": "approved",
             "verificationConfidence": "high",
             "curatedTrust": "medium",
-            "lastVerifiedDate": "2026-10-03",
+            "lastVerifiedDate": "2026-10-04",
+            "wikipediaSupportingSpans": [
+              "Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.",
+              "The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.",
+              "The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby."
+            ],
             "admissionMethod": "automated"
           }
         }
       },
       "compositionMap": {
         "way/265322610": [
-          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical",
           "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding",
           "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event"
         ]
@@ -699,23 +715,28 @@
     },
     "gated": {
       "version": 1,
-      "generatedAt": "2026-10-03T02:20:20.280Z",
+      "generatedAt": "2026-10-04T22:42:50.765Z",
       "entries": {
         "way/265322610": {
           "source": {
             "title": "Wikipedia — The Actors' Temple",
             "url": "https://en.wikipedia.org/wiki/The%20Actors'%20Temple",
             "sourceType": "Wikipedia/Wikidata reference",
-            "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event), drawing on: Wikipedia — The Actors' Temple. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
+            "usageNote": "Mechanically composed by the local-history admission pipeline from 3 independently AUTO-ADMIT claim(s) (wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event), drawing on: Wikipedia — The Actors' Temple. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks."
           },
           "evidence": {
             "subjectId": "way/265322610",
             "text": "Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.\" Wikipedia's article \"The Actors' Temple\" states about 339 West 47th Street: \"The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby.\"",
-            "claimScope": "Mechanically composed from 3 admitted claim(s) covering: biographical, institutional-founding, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event) for full per-claim provenance.",
+            "claimScope": "Mechanically composed from 3 admitted claim(s) covering: biographical, institutional-founding, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding, wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event) for full per-claim provenance.",
             "verificationStatus": "approved",
             "verificationConfidence": "high",
             "curatedTrust": "medium",
-            "lastVerifiedDate": "2026-10-03",
+            "lastVerifiedDate": "2026-10-04",
+            "wikipediaSupportingSpans": [
+              "Rabbi Bernard Birstein, an aspiring actor himself, was the synagogue's first rabbi; he died in 1959.",
+              "The congregation was founded in 1917 as the West Side Hebrew Relief Association, an Orthodox congregation for the shopkeepers in the area.",
+              "The synagogue has been located at its current site since 1923, being the synagogue of choice for Jews in the entertainment industry nearby."
+            ],
             "admissionMethod": "automated",
             "hasStoryBearingClaim": true
           }
@@ -723,7 +744,7 @@
       },
       "compositionMap": {
         "way/265322610": [
-          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s5-biographical",
+          "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s3-biographical",
           "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s0-institutional-founding",
           "wiki-en-the-actors-temple-wiki-actors-temple-wiki-actors-temple-p1s1-event"
         ]

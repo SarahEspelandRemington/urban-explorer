@@ -68,15 +68,16 @@ describe("applyAdmittedWikipediaSubtraction — Library Hotel (promoted, has wik
     );
   });
 
-  it("does not subtract the malformed/truncated architect span (Stephen B. case) — the full correctly-bounded sentence remains", () => {
+  it("now that the shared sentence-splitter's middle-initial bug is fixed, the complete architect sentence (no longer a truncated 'Stephen B.' fragment) is correctly subtracted too, same as the OCLC sentence", () => {
     const wikiMap = new Map<string, WikipediaSummary>([
       [LIBRARY_HOTEL_SUBJECT_ID, wikiSummary(LIBRARY_HOTEL_EXTRACT)],
     ]);
     applyAdmittedWikipediaSubtraction(wikiMap);
     const extract = wikiMap.get(LIBRARY_HOTEL_SUBJECT_ID)?.extract ?? "";
-    expect(extract).toContain(
+    expect(extract).not.toContain(
       "The hotel was designed by architect Stephen B. Jacobs.",
     );
+    expect(extract).not.toContain("Stephen B.");
   });
 
   it("the shared wikiMap entry both downstream consumers (plain fallback + A3 selector input) would read already reflects the subtraction", () => {

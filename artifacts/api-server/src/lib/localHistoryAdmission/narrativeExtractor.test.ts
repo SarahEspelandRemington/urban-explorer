@@ -83,6 +83,52 @@ describe("extractIdentityAnchors phrase-grouping — Jackson Heights Post Office
   });
 });
 
+describe("splitSentencesInParagraph — middle-initial sentence-boundary fix (Stephen B. Jacobs live defect)", () => {
+  it("keeps a 'Firstname M. Lastname' middle initial intact across the sentence split (John F. Kennedy)", () => {
+    const claims = extractNarrativeClaims(
+      "The Synthetic Lodge was renovated by architect John F. Kennedy in 1962. The firm relocated its offices shortly after.",
+      { streetName: "Main Street" },
+      {
+        placeKey: "synthetic-middle-initial-kennedy",
+        address: "",
+        title: "Synthetic Lodge",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "synthetic-middle-initial-kennedy",
+        claimIdPrefix: "synthetic-middle-initial-kennedy",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const architectClaim = claims.find((c) => c.claimType === "architect");
+    expect(architectClaim?.supportingSpan).toBe(
+      "The Synthetic Lodge was renovated by architect John F. Kennedy in 1962.",
+    );
+    expect(architectClaim?.relatedEntities).toContain("John F. Kennedy");
+  });
+
+  it("still splits a genuine sentence boundary that happens to follow a capitalized single-letter token (Dorm B. / The Dormitory)", () => {
+    const claims = extractNarrativeClaims(
+      "Students lived in Dorm B. The Dormitory was established in 1950.",
+      { streetName: "Main Street" },
+      {
+        placeKey: "synthetic-dorm-b-boundary",
+        address: "",
+        title: "Dormitory",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "synthetic-dorm-b-boundary",
+        claimIdPrefix: "synthetic-dorm-b-boundary",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const foundingClaim = claims.find(
+      (c) => c.claimType === "institutional-founding",
+    );
+    expect(foundingClaim?.supportingSpan).toBe(
+      "The Dormitory was established in 1950.",
+    );
+    expect(foundingClaim?.supportingSpan).not.toContain("Dorm B.");
+  });
+});
+
 describe("classifySentence — place-name-origin/naming-myth correction (legend-tradition reuse)", () => {
   it("classifies a naming-myth-correction sentence as legend-tradition", () => {
     const claims = extractNarrativeClaims(
