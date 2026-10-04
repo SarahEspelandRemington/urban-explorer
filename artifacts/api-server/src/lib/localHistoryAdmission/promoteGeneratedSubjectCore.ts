@@ -153,6 +153,10 @@ function serializeEvidence(evidence: CuratedEvidence): string {
     evidence.hasStoryBearingClaim !== undefined
       ? `hasStoryBearingClaim: ${evidence.hasStoryBearingClaim}`
       : undefined,
+    evidence.wikipediaSupportingSpans !== undefined &&
+    evidence.wikipediaSupportingSpans.length > 0
+      ? `wikipediaSupportingSpans: ${JSON.stringify(evidence.wikipediaSupportingSpans)}`
+      : undefined,
   ].filter((p): p is string => p !== undefined);
   return `{ ${parts.join(", ")} }`;
 }

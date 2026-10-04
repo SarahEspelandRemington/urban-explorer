@@ -331,6 +331,100 @@ describe("projectRuntimeCompat", () => {
     expect(Object.keys(projection.entries)).toEqual(["prod-p1"]);
   });
 
+  it("populates wikipediaSupportingSpans with the exact source sentence(s) for a Wikipedia-derived claim, deduplicated", () => {
+    const sources: Record<string, Source> = {
+      wiki: makeSource({
+        id: "wiki",
+        title: "Library Hotel (Wikipedia)",
+        sourceClass: "wikipedia-wikidata",
+        capabilities: [{ claimType: "use-history", strength: "high" }],
+      }),
+    };
+    const claims: Claim[] = [
+      makeClaim({
+        id: "c1",
+        placeKey: "p1",
+        sourceIds: ["wiki"],
+        claimType: "use-history",
+        supportingSpan:
+          "The Library Hotel is cataloged using the Dewey Decimal System.",
+      }),
+      makeClaim({
+        id: "c2",
+        placeKey: "p1",
+        sourceIds: ["wiki"],
+        claimType: "use-history",
+        supportingSpan:
+          "The Library Hotel is cataloged using the Dewey Decimal System.",
+      }),
+    ];
+    const artifact = generateArtifact(claims, sources, {
+      generatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    const projection = projectRuntimeCompat(artifact);
+    expect(
+      projection.entries["prod-p1"].evidence.wikipediaSupportingSpans,
+    ).toEqual([
+      "The Library Hotel is cataloged using the Dewey Decimal System.",
+    ]);
+  });
+
+  it("does not populate wikipediaSupportingSpans for non-Wikipedia claims", () => {
+    const sources: Record<string, Source> = {
+      s1: makeSource({
+        id: "s1",
+        capabilities: [{ claimType: "use-history", strength: "high" }],
+      }),
+    };
+    const claim = makeClaim({ id: "c1", placeKey: "p1", sourceIds: ["s1"] });
+    const artifact = generateArtifact([claim], sources, {
+      generatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    const projection = projectRuntimeCompat(artifact);
+    expect(
+      projection.entries["prod-p1"].evidence.wikipediaSupportingSpans,
+    ).toBeUndefined();
+  });
+
+  it("isolates Wikipedia-derived spans within a mixed-source subject — non-Wikipedia spans never leak in", () => {
+    const sources: Record<string, Source> = {
+      wiki: makeSource({
+        id: "wiki",
+        sourceClass: "wikipedia-wikidata",
+        capabilities: [{ claimType: "use-history", strength: "high" }],
+      }),
+      gov: makeSource({
+        id: "gov",
+        sourceClass: "government-preservation-record",
+        capabilities: [{ claimType: "construction-date", strength: "high" }],
+      }),
+    };
+    const claims: Claim[] = [
+      makeClaim({
+        id: "c1",
+        placeKey: "p1",
+        sourceIds: ["wiki"],
+        claimType: "use-history",
+        supportingSpan: "Exact Wikipedia sentence.",
+      }),
+      makeClaim({
+        id: "c2",
+        placeKey: "p1",
+        sourceIds: ["gov"],
+        claimType: "construction-date",
+        supportingSpan: "Exact PAB record sentence.",
+        dateRange: { start: "1890", precise: true },
+      }),
+    ];
+    const artifact = generateArtifact(claims, sources, {
+      generatedAt: "2026-01-01T00:00:00.000Z",
+    });
+    const projection = projectRuntimeCompat(artifact);
+    expect(
+      projection.entries["prod-p1"].evidence.wikipediaSupportingSpans,
+    ).toEqual(["Exact Wikipedia sentence."]);
+  });
+
   it("is deterministic across repeated runs on the same artifact", () => {
     const sources: Record<string, Source> = {
       s1: makeSource({

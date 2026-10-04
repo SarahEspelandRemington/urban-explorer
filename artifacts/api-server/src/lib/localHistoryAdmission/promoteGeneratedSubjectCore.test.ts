@@ -116,6 +116,39 @@ describe("serializeCuratedEntryToTs", () => {
     expect(text).not.toContain("publicationDate:");
     expect(text).not.toContain("admissionMethod:");
     expect(text).not.toContain("hasStoryBearingClaim:");
+    expect(text).not.toContain("wikipediaSupportingSpans:");
+  });
+
+  it("emits wikipediaSupportingSpans when present and non-empty", () => {
+    const withSpans: CuratedEntry = {
+      ...FIXTURE_ENTRY,
+      evidence: {
+        ...FIXTURE_ENTRY.evidence,
+        wikipediaSupportingSpans: [
+          "Exact Wikipedia sentence one.",
+          "Exact Wikipedia sentence two.",
+        ],
+      },
+    };
+    const text = serializeCuratedEntryToTs("way/999999999", withSpans);
+    expect(text).toContain(
+      'wikipediaSupportingSpans: ["Exact Wikipedia sentence one.","Exact Wikipedia sentence two."]',
+    );
+  });
+
+  it("omits wikipediaSupportingSpans when absent, and existing fixtures without it remain unaffected", () => {
+    const text = serializeCuratedEntryToTs("way/999999999", FIXTURE_ENTRY);
+    expect(text).not.toContain("wikipediaSupportingSpans:");
+    expect(text).toBe(EXPECTED_ENTRY_TEXT);
+  });
+
+  it("omits wikipediaSupportingSpans when present but empty", () => {
+    const emptySpans: CuratedEntry = {
+      ...FIXTURE_ENTRY,
+      evidence: { ...FIXTURE_ENTRY.evidence, wikipediaSupportingSpans: [] },
+    };
+    const text = serializeCuratedEntryToTs("way/999999999", emptySpans);
+    expect(text).not.toContain("wikipediaSupportingSpans:");
   });
 });
 

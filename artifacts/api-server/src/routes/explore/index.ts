@@ -63,6 +63,7 @@ import {
   isValidWikidataId,
   extractEnwikiSitelinkTitle,
 } from "../../lib/wikipediaEnrichment";
+import { subtractAdmittedWikipediaSpans } from "../../lib/localHistoryAdmission/sources/wikipedia/wikipediaContentSubtraction";
 
 const router = Router();
 
@@ -2210,6 +2211,37 @@ export async function mapWithConcurrency<T, R>(
 const WIKI_SUMMARY_PREFETCH_CONCURRENCY = 4;
 
 /**
+ * Deterministic Wikipedia-subtraction (one-subject production experiment,
+ * Library Hotel): for each wikiMap entry whose osmId has an approved curated
+ * entry carrying non-empty evidence.wikipediaSupportingSpans (exact source
+ * sentences behind claims already admitted into curatedContent), removes
+ * those exact sentences from that entry's extract — so neither the plain
+ * wikipediaContent fallback nor the A3 evidence selector (both downstream
+ * consumers of this same wikiMap) see a fact duplicated in both curated and
+ * raw form. Per-span safe no-op for a malformed/truncated span or one that
+ * isn't an exact substring — see subtractAdmittedWikipediaSpans. Mutates
+ * `wikiMap` (replaces affected entries) but never the fetched summary object
+ * itself — a shallow clone is written back, since the same object may be
+ * shared with the in-memory Wikipedia fetch cache used by other requests.
+ * Does not touch curatedContent or the separate Walk/JIT Wikipedia path.
+ */
+export function applyAdmittedWikipediaSubtraction(
+  wikiMap: Map<string, WikipediaSummary>,
+): void {
+  for (const [osmId, summary] of wikiMap.entries()) {
+    const wikipediaSupportingSpans =
+      getApprovedCuratedEntry(osmId)?.evidence.wikipediaSupportingSpans;
+    if (!wikipediaSupportingSpans || wikipediaSupportingSpans.length === 0)
+      continue;
+    const subtractedExtract = subtractAdmittedWikipediaSpans(
+      summary.extract,
+      wikipediaSupportingSpans.map((supportingSpan) => ({ supportingSpan })),
+    );
+    wikiMap.set(osmId, { ...summary, extract: subtractedExtract });
+  }
+}
+
+/**
  * Attempt to find a representative photo for a place name via the Wikipedia
  * REST summary API. Returns the thumbnail URL or null when none is available.
  *
@@ -3668,6 +3700,8 @@ router.post("/explore/discover", async (req, res) => {
             }
           }
         }
+
+        applyAdmittedWikipediaSubtraction(wikiMap);
 
         // Evidence-selector invocation (Option A, Walk Mode field test).
         // Walk Mode requests only, capped to the 3 closest Wikipedia-

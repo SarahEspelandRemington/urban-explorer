@@ -105,6 +105,23 @@ export interface CuratedEvidence {
    * rules — it never assigns Tier 1/2/3 itself.
    */
   hasStoryBearingClaim?: boolean;
+  /**
+   * Exact, unmodified source sentence(s) (Claim.supportingSpan) from the
+   * subset of this entry's composed AUTO-ADMIT claims whose cited source
+   * resolves to sourceClass "wikipedia-wikidata" — i.e. the Wikipedia-
+   * derived portion of this entry's evidence, isolated from `evidence.text`
+   * (which is a templated/composed string, not the raw source sentence).
+   * Populated automatically by projector.ts's projectRuntimeCompat, and
+   * carried forward unchanged by promoteGeneratedSubjectCore.ts's
+   * serialization. A flat, deduplicated array — no per-span claim id/type/
+   * date metadata, since the only known consumer (deterministic raw-
+   * Wikipedia-content subtraction) needs only the exact sentence text.
+   * Retention-only in this field: nothing yet reads it at request time.
+   * Omitted entirely (not an empty array) when no composed claim is
+   * Wikipedia-derived; hand-authored CURATED_LOCAL_HISTORY entries always
+   * omit it.
+   */
+  wikipediaSupportingSpans?: string[];
 }
 
 export interface CuratedEntry {
@@ -852,6 +869,31 @@ export const GENERATED_LOCAL_HISTORY: Record<string, CuratedEntry> = {
       // discovery-worthiness gate on that basis. See hasStoryBearingClaim's
       // doc comment above.
       hasStoryBearingClaim: true,
+    },
+  },
+  "way/265875639": {
+    source: {
+      title: "Wikipedia — Library Hotel",
+      url: "https://en.wikipedia.org/wiki/Library%20Hotel",
+      sourceType: "Wikipedia/Wikidata reference",
+      usageNote:
+        "Mechanically composed by the local-history admission pipeline from 2 independently AUTO-ADMIT claim(s) (wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event), drawing on: Wikipedia — Library Hotel. See the canonical generated-evidence artifact for full per-claim provenance, checks, and grounding. Not yet subject to any additional human editorial review beyond the automated admission checks.",
+    },
+    evidence: {
+      subjectId: "way/265875639",
+      text: 'Wikipedia\'s article "Library Hotel" states about 299 Madison Avenue: "The hotel was designed by architect Stephen B." Wikipedia\'s article "Library Hotel" states about 299 Madison Avenue: "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system)."',
+      claimScope:
+        "Mechanically composed from 2 admitted claim(s) covering: architect, event. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p0s2-architect, wiki-en-library-hotel-wiki-library-hotel-wiki-library-hotel-p2s0-event) for full per-claim provenance.",
+      verificationStatus: "approved",
+      verificationConfidence: "high",
+      curatedTrust: "medium",
+      lastVerifiedDate: "2026-10-03",
+      admissionMethod: "automated",
+      hasStoryBearingClaim: true,
+      wikipediaSupportingSpans: [
+        "The hotel was designed by architect Stephen B.",
+        "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).",
+      ],
     },
   },
 };

@@ -129,6 +129,24 @@ function buildCompositeSource(group: GeneratedClaimRecord[]): CuratedSource {
   };
 }
 
+function collectWikipediaSupportingSpans(
+  group: GeneratedClaimRecord[],
+): string[] | undefined {
+  const spans: string[] = [];
+  const seen = new Set<string>();
+  for (const record of group) {
+    const isWikipediaDerived = record.sourceCapabilitySnapshots.some(
+      (s) => s.sourceClass === "wikipedia-wikidata",
+    );
+    if (!isWikipediaDerived) continue;
+    const span = record.claim.supportingSpan;
+    if (!span || seen.has(span)) continue;
+    seen.add(span);
+    spans.push(span);
+  }
+  return spans.length > 0 ? spans : undefined;
+}
+
 function buildClaimScope(group: GeneratedClaimRecord[]): string {
   const distinctClaimTypes = [...new Set(group.map((r) => r.claim.claimType))];
   return `Mechanically composed from ${group.length} admitted claim(s) covering: ${distinctClaimTypes.join(", ")}. Each claim's own supportingSpan is the evidentiary basis for its portion of the text below — see the canonical generated-evidence artifact (claim ids: ${group.map((r) => r.claimId).join(", ")}) for full per-claim provenance.`;
@@ -185,6 +203,7 @@ export function projectRuntimeCompat(
           RANK_TO_TRUST_SIGNAL[verificationConfidenceRank],
         curatedTrust: RANK_TO_TRUST_SIGNAL[curatedTrustRank],
         lastVerifiedDate,
+        wikipediaSupportingSpans: collectWikipediaSupportingSpans(group),
         // explicitDiscoveryTier intentionally left unset — this is an editorial call
         // this mechanical pipeline does not make; falls through to the ordinary classifier.
         admissionMethod: "automated",
