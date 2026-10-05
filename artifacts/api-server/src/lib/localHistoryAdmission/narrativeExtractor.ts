@@ -681,6 +681,18 @@ function extractYears(
 
 const NAME_CAPTURE = "([A-Z][a-zA-Z.'&-]+(?:\\s+[A-Z][a-zA-Z.'&-]+){0,4})";
 
+/**
+ * Matches a lowercase (ordinary mid-sentence) trigger phrase OR the same
+ * phrase with only its first letter capitalized (sentence-initial case,
+ * e.g. "Designed by Frank Lloyd Wright..."), without an "i" flag — so it
+ * does not weaken the case-sensitivity of whatever pattern (e.g.
+ * NAME_CAPTURE) is concatenated after it. Does not handle ALL-CAPS or other
+ * casing variants; ordinary English sentence capitalization only.
+ */
+function sentenceInitialOrLower(phrase: string): string {
+  return `(?:${phrase}|${phrase[0].toUpperCase()}${phrase.slice(1)})`;
+}
+
 function extractNamesAfter(sentence: string, triggers: RegExp[]): string[] {
   const names: string[] = [];
   for (const trigger of triggers) {
@@ -885,9 +897,22 @@ function classifySentence(
     ? /\barchitect\b|\bdesigned by\b/i
     : /\barchitect\b/i;
   if (architectRe.test(sentence)) {
+    // sentenceInitialOrLower(...) (not an "i" flag) keeps the trigger word
+    // itself case-insensitive-ish (matches "architect" or "Designed by" at
+    // a sentence start) while leaving NAME_CAPTURE's [A-Z] requirement
+    // genuinely case-sensitive. An "i" flag on the whole regex would let
+    // [A-Z] match a lowercase letter too, so a bio aside like "Butts, an
+    // architect by trade, created..." (real Forgotten New York
+    // Scrabble-sign false positive) wrongly captured the lowercase word
+    // "by" as if it were a name ("by trade"), producing a false architect
+    // claim. With NAME_CAPTURE case-sensitive, that sentence correctly
+    // extracts zero names and falls through to no claim, while real
+    // "architect John Notman" / "designed by architect Stephen B. Jacobs" /
+    // sentence-initial "Designed by Frank Lloyd Wright..." phrasing is
+    // unaffected.
     const architects = extractNamesAfter(sentence, [
-      new RegExp(`architect\\s+${NAME_CAPTURE}`, "i"),
-      new RegExp(`designed by\\s+${NAME_CAPTURE}`, "i"),
+      new RegExp(`${sentenceInitialOrLower("architect")}\\s+${NAME_CAPTURE}`),
+      new RegExp(`${sentenceInitialOrLower("designed by")}\\s+${NAME_CAPTURE}`),
     ]);
     if (architects.length > 0) {
       return {

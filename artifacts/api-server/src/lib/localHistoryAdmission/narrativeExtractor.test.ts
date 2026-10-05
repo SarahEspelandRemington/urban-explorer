@@ -129,6 +129,89 @@ describe("splitSentencesInParagraph — middle-initial sentence-boundary fix (St
   });
 });
 
+describe("classifySentence — architect name-capture must stay case-sensitive (Forgotten New York Scrabble-sign false positive)", () => {
+  it("does not emit a false architect claim from a 'profession by trade' bio aside with no actual name after the keyword (real Scrabble street sign / Alfred Butts case)", () => {
+    const claims = extractNarrativeClaims(
+      "In the 1940s Butts, an architect by trade, created a new word game combining the features of anagrams and crossword puzzles, calling it \u201cCriss Cross Words,\u201d and shopped it around to game and toy manufacturers without success.",
+      { streetName: "35th Avenue" },
+      {
+        placeKey: "fny-scrabble-sign",
+        address: "",
+        title: "Scrabble street sign (Alfred Butts)",
+        proposedIdentityType: "unresolved",
+        sourceId: "107781-fny-scrabble-sign",
+        claimIdPrefix: "fny-107781-fny-scrabble-sign",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    // Root cause: the architect-name-capture regexes previously carried a
+    // case-insensitive "i" flag, which let NAME_CAPTURE's [A-Z] requirement
+    // match a lowercase letter too — so "architect by trade" wrongly
+    // captured the lowercase word "by" as if it were a capitalized name
+    // ("by trade"). No legitimate claim-bearing pattern applies to this
+    // sentence at all, so the fix should produce zero claims, not merely
+    // zero architect claims.
+    expect(claims).toEqual([]);
+  });
+
+  it("still extracts a real architect name when the keyword is immediately followed by one (no regression)", () => {
+    const claims = extractNarrativeClaims(
+      "The Synthetic Annex was designed by architect Maria Alvarez in 1948.",
+      { streetName: "Main Street" },
+      {
+        placeKey: "synthetic-annex-architect",
+        address: "",
+        title: "Synthetic Annex",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "synthetic-annex-architect",
+        claimIdPrefix: "synthetic-annex-architect",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const architectClaim = claims.find((c) => c.claimType === "architect");
+    expect(architectClaim?.relatedEntities).toContain("Maria Alvarez");
+  });
+
+  it("extracts the architect name when the trigger phrase itself is capitalized at the start of a sentence (no false negative from the case-sensitivity fix)", () => {
+    const claims = extractNarrativeClaims(
+      "Designed by Frank Lloyd Wright, 123 Main Street became a neighborhood landmark.",
+      {
+        streetName: "Main Street",
+        classifierExtensions: { designedKeyword: true },
+      },
+      {
+        placeKey: "synthetic-wright-sentence-start",
+        address: "123 Main Street",
+        title: "Wright Structure",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "synthetic-wright-sentence-start",
+        claimIdPrefix: "synthetic-wright-sentence-start",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const architectClaim = claims.find((c) => c.claimType === "architect");
+    expect(architectClaim?.relatedEntities).toContain("Frank Lloyd Wright");
+  });
+
+  it("extracts the architect name when 'Architect' (capitalized keyword) starts the sentence", () => {
+    const claims = extractNarrativeClaims(
+      "Architect Maria Alvarez designed the Alvarez Building.",
+      { streetName: "Main Street" },
+      {
+        placeKey: "synthetic-alvarez-sentence-start",
+        address: "",
+        title: "Alvarez Building",
+        proposedIdentityType: "current-osm-entity",
+        sourceId: "synthetic-alvarez-sentence-start",
+        claimIdPrefix: "synthetic-alvarez-sentence-start",
+        buildClaimText: (sentence) => sentence,
+      },
+    );
+    const architectClaim = claims.find((c) => c.claimType === "architect");
+    expect(architectClaim?.relatedEntities).toContain("Maria Alvarez");
+  });
+});
+
 describe("classifySentence — place-name-origin/naming-myth correction (legend-tradition reuse)", () => {
   it("classifies a naming-myth-correction sentence as legend-tradition", () => {
     const claims = extractNarrativeClaims(
