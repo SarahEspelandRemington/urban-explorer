@@ -12,7 +12,29 @@ vi.mock("@workspace/integrations-openai-ai-server/audio", () => ({
   textToSpeech: vi.fn(),
 }));
 
+// Override hook for the curated+Wikipedia bridge error test (test 3 below)
+// only — delegates to the real parseWikipediaOsmTag in every other test.
+// This is the one dependency attemptNarrationWikipediaBridge calls without
+// its own internal try/catch (fetchWikipediaSummary/selectEvidenceParagraphs/
+// selectPrimaryUnit each already swallow their own errors and return a
+// null/declined result instead of throwing), so it's the only available,
+// non-invasive way to exercise the bridge's own outer .catch() -> "wikipedia_error"
+// path in a black-box test.
+let parseWikipediaOsmTagOverride: ((tag: string) => unknown) | null = null;
+vi.mock("../lib/wikipediaEnrichment", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../lib/wikipediaEnrichment")>();
+  return {
+    ...actual,
+    parseWikipediaOsmTag: (tag: string) =>
+      parseWikipediaOsmTagOverride
+        ? parseWikipediaOsmTagOverride(tag)
+        : actual.parseWikipediaOsmTag(tag),
+  };
+});
+
 import {
+  computeNarrationLeadAndSupport,
   hasMinimumNarrationEvidence,
   resolveNarrationEvidence,
   runNarrationJitEvidence,
@@ -22,6 +44,15 @@ import {
 // reused here rather than a synthetic fixture so these tests exercise the
 // actual production registry lookup, not a stand-in.
 const GREEN_ROOM_SUBJECT_ID = "way/250863827";
+
+// Real approved curated entries for the 4 curated+Wikipedia bridge's known
+// live blast-radius subjects (curatedLocalHistory.ts) — reused directly
+// rather than synthetic fixtures, same convention as GREEN_ROOM_SUBJECT_ID
+// above.
+const FILM_CENTER_SUBJECT_ID = "way/265320243";
+const ACTORS_TEMPLE_SUBJECT_ID = "way/265322610";
+const ACTORS_STUDIO_SUBJECT_ID = "way/265319542";
+const LIBRARY_HOTEL_SUBJECT_ID = "way/265875639";
 
 function wikiFetchResponse(pageTitle: string, extract: string) {
   return {
@@ -34,7 +65,9 @@ function wikiFetchResponse(pageTitle: string, extract: string) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   createMock.mockReset();
+  parseWikipediaOsmTagOverride = null;
 });
 
 // ---------------------------------------------------------------------------
@@ -342,5 +375,308 @@ describe("Green Room / Enon / Bergdoll acceptance scenarios (resolveNarrationEvi
       narrationFacts: resolved.narrationFacts,
     });
     expect(passes).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task C — curated+Wikipedia narration bridge (2026-10-05)
+// Known live blast radius: Film Center Building (way/265320243), Actors'
+// Temple (way/265322610), The Actors Studio (way/265319542), Library Hotel
+// (way/265875639).
+// ---------------------------------------------------------------------------
+
+describe("resolveNarrationEvidence — curated+Wikipedia narration bridge", () => {
+  it("(1) curated-only subject with no wikipediaTag: unchanged curated-only behavior, no network/LLM call (Actors Studio)", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const result = await resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: ACTORS_STUDIO_SUBJECT_ID,
+      wikipediaTag: undefined,
+      placeName: "The Actors Studio",
+      address: "432 West 44th Street",
+      facts: [],
+    });
+    expect(result.jitOutcome).toBe("curatedSuccess");
+    expect(result.bridgeOutcome).toBe("curated_only");
+    expect(result.primaryStory).toBeNull();
+    expect(
+      result.narrationFacts?.some((f) => f.includes("Bricklayer Greek")),
+    ).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("(2) Wikipedia timeout during the bridge attempt still returns curated evidence unchanged (Film Center)", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise(() => {})), // never resolves
+    );
+    const resultPromise = resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: FILM_CENTER_SUBJECT_ID,
+      wikipediaTag: "en:Film_Center_Building_Bridge_Test_Timeout",
+      placeName: "Film Center Building",
+      address: "630 Ninth Avenue",
+      facts: [],
+    });
+    await vi.advanceTimersByTimeAsync(4_000);
+    const result = await resultPromise;
+    expect(result.jitOutcome).toBe("curatedSuccess");
+    expect(result.curatedEvidenceFoundBeforeJit).toBe(true);
+    expect(result.narrationFacts?.some((f) => f.includes("Jacques Kahn"))).toBe(
+      true,
+    );
+    expect(result.bridgeOutcome).toBe("wikipedia_timeout");
+    expect(result.primaryStory).toBeNull();
+  });
+
+  it("(3) Wikipedia error during the bridge attempt still returns curated evidence unchanged (Film Center)", async () => {
+    parseWikipediaOsmTagOverride = () => {
+      throw new Error("simulated bridge error");
+    };
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    const result = await resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: FILM_CENTER_SUBJECT_ID,
+      wikipediaTag: "en:Film_Center_Building_Bridge_Test_Error",
+      placeName: "Film Center Building",
+      address: "630 Ninth Avenue",
+      facts: [],
+    });
+    expect(result.jitOutcome).toBe("curatedSuccess");
+    expect(result.curatedEvidenceFoundBeforeJit).toBe(true);
+    expect(result.narrationFacts?.some((f) => f.includes("Jacques Kahn"))).toBe(
+      true,
+    );
+    expect(result.bridgeOutcome).toBe("wikipedia_error");
+    expect(result.primaryStory).toBeNull();
+  });
+
+  it("(4) a Wikipedia extract consisting only of already-admitted spans is suppressed as overlap, curated preserved (Library Hotel)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          wikiFetchResponse(
+            "Library Hotel",
+            "The hotel was designed by architect Stephen B. Jacobs. Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system).",
+          ),
+        ),
+    );
+    const result = await resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: LIBRARY_HOTEL_SUBJECT_ID,
+      wikipediaTag: "en:Library_Hotel_Bridge_Test_Overlap",
+      placeName: "Library Hotel",
+      address: "299 Madison Avenue",
+      facts: [],
+    });
+    expect(result.jitOutcome).toBe("curatedSuccess");
+    expect(
+      result.narrationFacts?.some((f) => f.includes("Stephen B. Jacobs")),
+    ).toBe(true);
+    expect(result.bridgeOutcome).toBe("wikipedia_suppressed_overlap");
+    expect(result.primaryStory).toBeNull();
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it("(5) a distinct, worthwhile Wikipedia unit becomes primaryStory while curated evidence remains supporting (Film Center)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          wikiFetchResponse(
+            "Film Center Building",
+            "The building later became associated with a brief industrial safety concern after a nitrate film fire broke out in a screening room during the 1930s, prompting the installation of new fireproofing standards throughout the Theater District.",
+          ),
+        ),
+    );
+    createMock
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: JSON.stringify({ selected_indices: [1] }) } },
+        ],
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: JSON.stringify({ selected_index: 1 }) } },
+        ],
+      });
+
+    const result = await resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: FILM_CENTER_SUBJECT_ID,
+      wikipediaTag: "en:Film_Center_Building_Bridge_Test_Distinct",
+      placeName: "Film Center Building",
+      address: "630 Ninth Avenue",
+      facts: [],
+    });
+    expect(result.jitOutcome).toBe("curatedSuccess");
+    expect(result.bridgeOutcome).toBe("wikipedia_primary_retained");
+    expect(result.primaryStory).toContain("nitrate film fire");
+    expect(result.narrationFacts?.some((f) => f.includes("Jacques Kahn"))).toBe(
+      true,
+    );
+  });
+
+  it("(6) weaker/generic Wikipedia content does not displace Actors' Temple's curated story", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          wikiFetchResponse(
+            "Actors' Temple",
+            "The building is a five-story structure located on West 47th Street in Manhattan.",
+          ),
+        ),
+    );
+    createMock.mockResolvedValueOnce({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              selected_indices: [],
+              insufficient: true,
+            }),
+          },
+        },
+      ],
+    });
+
+    const result = await resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: ACTORS_TEMPLE_SUBJECT_ID,
+      wikipediaTag: "en:Actors_Temple_Bridge_Test_Weak",
+      placeName: "Actors' Temple",
+      address: "339 West 47th Street",
+      facts: [],
+    });
+    expect(result.jitOutcome).toBe("curatedSuccess");
+    expect(
+      result.narrationFacts?.some((f) =>
+        f.includes("became known as the Actors' Temple"),
+      ),
+    ).toBe(true);
+    expect(result.bridgeOutcome).toBe("wikipedia_insufficient");
+    expect(result.primaryStory).toBeNull();
+  });
+
+  it("(7) already-admitted Wikipedia spans are subtracted before selection, so only genuinely new content can become primaryStory (Library Hotel)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          wikiFetchResponse(
+            "Library Hotel",
+            "The hotel was designed by architect Stephen B. Jacobs. Due to this classification scheme, the hotel owners were sued in 2003 by OCLC (owners of the Dewey Decimal Classification system). The hotel's lobby reading room displays donated volumes organized by the Dewey Decimal Classification system for guests to borrow.",
+          ),
+        ),
+    );
+    createMock
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: JSON.stringify({ selected_indices: [1] }) } },
+        ],
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: JSON.stringify({ selected_index: 1 }) } },
+        ],
+      });
+
+    const result = await resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: LIBRARY_HOTEL_SUBJECT_ID,
+      wikipediaTag: "en:Library_Hotel_Bridge_Test_Distinct",
+      placeName: "Library Hotel",
+      address: "299 Madison Avenue",
+      facts: [],
+    });
+    expect(result.bridgeOutcome).toBe("wikipedia_primary_retained");
+    expect(result.primaryStory).toContain("lobby reading room");
+    expect(result.primaryStory).not.toContain("Stephen B. Jacobs");
+    expect(result.primaryStory).not.toContain("sued in 2003");
+  });
+
+  it("(8) discover-time summary is demoted to supporting only when a Wikipedia primaryStory is retained", () => {
+    const withPrimary = computeNarrationLeadAndSupport(
+      "A theater building from the 1920s.",
+      ["Curated supporting fact."],
+      "A distinct Wikipedia primary story.",
+    );
+    expect(withPrimary.narrationLead).toBe(
+      "A distinct Wikipedia primary story.",
+    );
+    expect(withPrimary.supportingNotes).toEqual([
+      "A theater building from the 1920s.",
+      "Curated supporting fact.",
+    ]);
+
+    const withoutPrimary = computeNarrationLeadAndSupport(
+      "A theater building from the 1920s.",
+      ["Curated supporting fact."],
+      null,
+    );
+    expect(withoutPrimary.narrationLead).toBe(
+      "A theater building from the 1920s.",
+    );
+    expect(withoutPrimary.supportingNotes).toEqual([
+      "Curated supporting fact.",
+    ]);
+  });
+
+  it("(9) no behavior change for ordinary no-curated Wikipedia JIT candidates (bridge does not apply)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          wikiFetchResponse(
+            "Ordinary Place",
+            "The building was converted from a warehouse into loft apartments in the 1980s, part of a broader wave of adaptive reuse along the waterfront.",
+          ),
+        ),
+    );
+    createMock
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: JSON.stringify({ selected_indices: [1] }) } },
+        ],
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          { message: { content: JSON.stringify({ selected_index: 1 }) } },
+        ],
+      });
+
+    const result = await resolveNarrationEvidence({
+      evidenceRef: undefined,
+      candidateSource: "osm",
+      subjectId: "way/bridge-test-9-not-curated",
+      wikipediaTag: "en:Bridge_Test_9_Ordinary_Place",
+      placeName: "Ordinary Place",
+      address: undefined,
+      facts: [],
+    });
+    expect(result.jitOutcome).toBe("wikipediaSuccess");
+    expect(result.bridgeOutcome).toBeUndefined();
+    expect(result.primaryStory).toBeNull();
+    expect(
+      result.narrationFacts?.some((f) => f.includes("adaptive reuse")),
+    ).toBe(true);
   });
 });

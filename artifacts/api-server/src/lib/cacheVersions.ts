@@ -1,4 +1,4 @@
-// cache-versions:v14:
+// cache-versions:v15:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -89,6 +89,16 @@
  * equivalent fallback (osm-anchor wikiMap prefetch) lives outside this
  * route's marked region and outside any manifest-tracked span, so it did not
  * require a version bump.
+ *
+ * v14-v15: Curated+Wikipedia narration bridge — for an osm candidate with
+ * BOTH approved curated evidence and a usable wikipedia= tag, both narration
+ * routes now attempt a bounded Wikipedia JIT lookup and, if a distinct unit
+ * is retained, promote it to primaryStory and demote the discover-time
+ * summary to supporting context (see attemptNarrationWikipediaBridge/
+ * resolveNarrationEvidence/computeNarrationLeadAndSupport in
+ * routes/explore/index.ts). Shared narration cache-key literal bumped
+ * v22->v23 in lockstep across both routes, a real content/gating-input
+ * change for the same nominal key. v22 is retired.
  */
 
 /**
@@ -117,7 +127,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v22"], // walk narration (short)
+  ["narration", "v23"], // walk narration (short)
   ["deep-narration", "v14"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];
