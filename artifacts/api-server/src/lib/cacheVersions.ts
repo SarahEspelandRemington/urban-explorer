@@ -1,4 +1,4 @@
-// cache-versions:v15:
+// cache-versions:v16:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -99,6 +99,17 @@
  * routes/explore/index.ts). Shared narration cache-key literal bumped
  * v22->v23 in lockstep across both routes, a real content/gating-input
  * change for the same nominal key. v22 is retired.
+ *
+ * v15-v16: Narration-lead priming rule — when a curated+Wikipedia bridge
+ * primaryStory is present, both narration routes' system prompts now
+ * include a conditional bullet (primaryStoryRule) instructing the writer to
+ * build the narration around that one idea rather than enumerating it
+ * alongside supporting facts as equal-weight items (observed at Film Center:
+ * the lead idea was pushed to the end of a list behind architect/purpose
+ * metadata). No evidence-acquisition, bridge-mechanics, or ranking change —
+ * prompt text only. Shared narration cache-key literal bumped v23->v24 in
+ * lockstep across both routes, a real prompt-content change for the same
+ * nominal key. v23 is retired.
  */
 
 /**
@@ -127,7 +138,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v23"], // walk narration (short)
+  ["narration", "v24"], // walk narration (short)
   ["deep-narration", "v14"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];
