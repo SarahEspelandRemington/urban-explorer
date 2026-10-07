@@ -122,18 +122,90 @@ const SENTENCE_SPLIT_ABBREVIATIONS = new Set([
 ]);
 
 /**
+ * Protects a "Firstname M. Lastname" personal-name middle initial (e.g.
+ * "Stephen B. Jacobs", "Joe E. Lewis") from being misread by
+ * `Intl.Segmenter` as a sentence end. Requires a capitalized word
+ * immediately before the initial (the likely first name) AND a capitalized
+ * word immediately after (the likely surname) — a genuine single-letter
+ * sentence ending such as "...the letter A. The next chapter..." does not
+ * match (the preceding word "letter" is lowercase), so ordinary sentence
+ * boundaries still split normally. The following capitalized word is also
+ * checked against SENTENCE_STARTER_STOPWORDS below to catch the remaining
+ * ambiguous case where the preceding word IS capitalized but the period is
+ * still a genuine sentence end (e.g. "Students lived in Dorm B. The
+ * dormitory was razed in 1970.") — a real surname never collides with that
+ * stoplist. Ported from the identical, already-shipped fix in
+ * ../localHistoryAdmission/narrativeExtractor.ts's splitSentencesInParagraph
+ * (commit 6f6b00e) — same proven pattern; this file's Intl.Segmenter-based
+ * splitter has the same failure mode via an independent implementation.
+ */
+const SENTENCE_STARTER_STOPWORDS: ReadonlySet<string> = new Set([
+  "The",
+  "This",
+  "That",
+  "These",
+  "Those",
+  "It",
+  "They",
+  "He",
+  "She",
+  "We",
+  "You",
+  "I",
+  "There",
+  "In",
+  "On",
+  "At",
+  "After",
+  "Before",
+  "During",
+  "Each",
+  "Every",
+  "Both",
+  "Due",
+  "According",
+  "Following",
+  "However",
+  "Meanwhile",
+  "Today",
+  "Later",
+  "Eventually",
+  "Subsequently",
+]);
+const MIDDLE_INITIAL_RE = /\b([A-Z][a-z]+)\s([A-Z])\.\s(?=([A-Z][a-z]+)\b)/g;
+/** Placeholder swapped in for a protected middle-initial's period so
+ *  `Intl.Segmenter` does not treat it as sentence-ending punctuation;
+ *  restored to "." immediately after segmentation. */
+const PROTECTED_PERIOD = "\u0000";
+
+/**
  * Split a block of source text (e.g. an A3-selected Wikipedia paragraph) into
  * source-bounded sentence-level units, using the platform's built-in
  * `Intl.Segmenter` (no new NLP dependency). A rich source sentence containing
  * multiple facts is kept as one unit — this only splits on true sentence
- * boundaries (with an abbreviation-aware merge pass) and, secondarily, on
- * semicolons joining independent clauses. Fragments under 20 characters or
- * with no letters are dropped as noise.
+ * boundaries (with an abbreviation-aware merge pass and a middle-initial
+ * protection pass) and, secondarily, on semicolons joining independent
+ * clauses. A clause with no letters at all (standalone junk/residue) is
+ * always dropped as noise; a clause under 20 characters that DOES contain
+ * letters is reattached to the preceding clause within the same sentence
+ * rather than dropped, so a short-but-real mid-sentence fact (e.g. "...;
+ * graphic art studios; ...") is never silently lost. A short clause with no
+ * preceding clause to reattach to (e.g. an ordinary short sentence with no
+ * semicolons) is unchanged, pre-existing behavior: still dropped as noise.
  */
 export function splitIntoSentenceUnits(text: string): string[] {
   if (!text) return [];
+  const protectedText = text.replace(
+    MIDDLE_INITIAL_RE,
+    (match, firstName: string, initial: string, nextWord: string) =>
+      SENTENCE_STARTER_STOPWORDS.has(nextWord)
+        ? match
+        : `${firstName} ${initial}${PROTECTED_PERIOD} `,
+  );
   const seg = new Intl.Segmenter("en", { granularity: "sentence" });
-  const raw = [...seg.segment(text)].map((s) => s.segment);
+  const raw = [...seg.segment(protectedText)].map((s) =>
+    s.segment.replaceAll(PROTECTED_PERIOD, "."),
+  );
 
   const merged: string[] = [];
   for (const piece of raw) {
@@ -150,11 +222,22 @@ export function splitIntoSentenceUnits(text: string): string[] {
 
   const units: string[] = [];
   for (const sentence of merged) {
-    for (const part of sentence.split(/;\s+/)) {
-      const trimmed = part.trim().replace(/[;\s]+$/, "");
-      if (trimmed.length < 20) continue;
-      if (!/[A-Za-z]/.test(trimmed)) continue;
-      units.push(trimmed);
+    const parts: string[] = [];
+    for (const rawPart of sentence.split(/;\s+/)) {
+      const trimmed = rawPart.trim().replace(/[;\s]+$/, "");
+      if (!/[A-Za-z]/.test(trimmed)) continue; // standalone junk/residue: always dropped
+      if (trimmed.length < 20 && parts.length > 0) {
+        // Too short to stand alone, but this clause came from inside an
+        // otherwise valid multi-clause sentence — reattach it to the
+        // preceding clause instead of silently dropping it.
+        parts[parts.length - 1] += `; ${trimmed}`;
+        continue;
+      }
+      parts.push(trimmed);
+    }
+    for (const part of parts) {
+      if (part.length < 20) continue;
+      units.push(part);
     }
   }
   return units;

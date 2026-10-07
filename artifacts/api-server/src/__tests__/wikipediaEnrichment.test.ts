@@ -11,6 +11,7 @@ import {
   buildWikiPromptBlock,
   isValidWikidataId,
   extractEnwikiSitelinkTitle,
+  splitIntoSentenceUnits,
   type WikipediaSummary,
 } from "../lib/wikipediaEnrichment";
 import {
@@ -650,5 +651,91 @@ describe("mapWithConcurrency", () => {
     });
     expect(calls).toEqual([7, 8]);
     expect(results).toEqual([7, 8]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// splitIntoSentenceUnits — short-semicolon-clause and middle-initial fixes
+// ---------------------------------------------------------------------------
+
+describe("splitIntoSentenceUnits", () => {
+  it("reattaches a short-but-real middle semicolon clause instead of dropping it ('graphic art studios')", () => {
+    const units = splitIntoSentenceUnits(
+      "The building housed law firms and publishing houses; graphic art studios; and a photography studio in the 1930s.",
+    );
+    expect(units.some((u) => u.includes("graphic art studios"))).toBe(true);
+  });
+
+  it("reattaches a short-but-real trailing semicolon clause instead of dropping it ('he died in 1959.')", () => {
+    const units = splitIntoSentenceUnits(
+      "The architect designed several landmark buildings in the city; he died in 1959.",
+    );
+    expect(units.some((u) => u.includes("he died in 1959."))).toBe(true);
+  });
+
+  it("keeps a 'Firstname I. Lastname' middle initial intact (Joe E. Lewis)", () => {
+    const units = splitIntoSentenceUnits(
+      "The comedian Joe E. Lewis performed here regularly in the 1940s.",
+    );
+    expect(units).toEqual([
+      "The comedian Joe E. Lewis performed here regularly in the 1940s.",
+    ]);
+  });
+
+  it("keeps a 'Firstname I. Lastname' middle initial intact (Edward G. Robinson)", () => {
+    const units = splitIntoSentenceUnits(
+      "The actor Edward G. Robinson once lived in this building during the 1930s.",
+    );
+    expect(units).toEqual([
+      "The actor Edward G. Robinson once lived in this building during the 1930s.",
+    ]);
+  });
+
+  it("keeps a 'Firstname I. Lastname' middle initial intact (Stephen B. Jacobs — the confirmed live defect)", () => {
+    const units = splitIntoSentenceUnits(
+      "The hotel was designed by architect Stephen B. Jacobs. Due to this classification scheme, the hotel owners were sued in 2003 by OCLC.",
+    );
+    expect(units).toEqual([
+      "The hotel was designed by architect Stephen B. Jacobs.",
+      "Due to this classification scheme, the hotel owners were sued in 2003 by OCLC.",
+    ]);
+  });
+
+  it("still splits a genuine single-letter sentence ending that happens to follow a capitalized word (Dorm B.)", () => {
+    const units = splitIntoSentenceUnits(
+      "Students lived in Dorm B. The dormitory was razed in 1970.",
+    );
+    expect(units).toEqual([
+      "Students lived in Dorm B.",
+      "The dormitory was razed in 1970.",
+    ]);
+  });
+
+  it("leaves the pre-existing known-abbreviation merge behavior unchanged (Mr. T.)", () => {
+    const units = splitIntoSentenceUnits(
+      "He was known simply as Mr. T. The nickname stuck for decades.",
+    );
+    expect(units).toEqual([
+      "He was known simply as Mr. T.",
+      "The nickname stuck for decades.",
+    ]);
+  });
+
+  it("leaves an ordinary two-sentence paragraph with no semicolons or initials unchanged", () => {
+    const units = splitIntoSentenceUnits(
+      "The warehouse was converted into artist studios in the 1980s. It now houses a dozen small galleries.",
+    );
+    expect(units).toEqual([
+      "The warehouse was converted into artist studios in the 1980s.",
+      "It now houses a dozen small galleries.",
+    ]);
+  });
+
+  it("still drops a standalone no-letter semicolon fragment as noise/residue", () => {
+    const units = splitIntoSentenceUnits(
+      "The hall was built in 1920; 2009; and renovated extensively in 2015.",
+    );
+    expect(units.some((u) => u === "2009")).toBe(false);
+    expect(units.join(" ")).not.toContain("2009");
   });
 });
