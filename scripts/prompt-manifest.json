@@ -5,9 +5,9 @@
     "artifacts/api-server/src/lib/cacheVersions.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "f9859fe92988a4c31b1184bd30f78dc80b3eb4a7f974e1975d6f8386676364d5",
-      "versions": ["v16"],
-      "registered": "2026-10-06"
+      "sectionHash": "d77ca6c0fea439f051534b6a433a3960ae4e617fb2fc05b174e1f3b994cd62e2",
+      "versions": ["v17"],
+      "registered": "2026-10-07"
     },
     "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
@@ -36,6 +36,13 @@
       "sectionHash": "a9420656a71826773a7798d846c43573f09627f8a51099bacbafba09b391bd12",
       "versions": ["v4", "v5", "v8"],
       "registered": "2026-07-30"
+    },
+    "artifacts/api-server/src/routes/explore/index.ts::module:narration-angle-generator": {
+      "kind": "module",
+      "extraction": "marked",
+      "sectionHash": "5270ecc64d9288a5823168f6d46263fd47e9c7c78fd7ba254955f3caf9b61852",
+      "versions": ["v1"],
+      "registered": "2026-10-07"
     },
     "artifacts/api-server/src/routes/explore/index.ts::module:nbhd-label": {
       "kind": "module",
@@ -103,16 +110,16 @@
     "artifacts/api-server/src/routes/explore/index.ts::walk-narration": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "17ace4a45cede18126936de7237cad01965020ac4df01eccabc116f3fe384629",
-      "versions": ["v24"],
-      "registered": "2026-10-06"
+      "sectionHash": "031c596dc432e8ad6b62e28e878ff79d6f376eda8d76045d65b095ee5011c8ff",
+      "versions": ["v25"],
+      "registered": "2026-10-07"
     },
     "artifacts/api-server/src/routes/explore/index.ts::walk-narration-audio": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "a253d10b8ab8a06f098db6f71e1f53b9d5c82ad5bfccc96d68886763c881e17a",
-      "versions": ["v24"],
-      "registered": "2026-10-06"
+      "sectionHash": "e7955aa464d1aec84b30e17a4590d924f3d25affd688be48e9352ce522853be0",
+      "versions": ["v25"],
+      "registered": "2026-10-07"
     }
   }
 }

@@ -508,7 +508,19 @@ describe("resolveNarrationEvidence — curated+Wikipedia narration bridge", () =
       })
       .mockResolvedValueOnce({
         choices: [
-          { message: { content: JSON.stringify({ selected_index: 1 }) } },
+          {
+            message: {
+              content: JSON.stringify({
+                angle: {
+                  central_question:
+                    "What happened in a screening room during the 1930s that changed fireproofing standards throughout the Theater District?",
+                  perspective_shift:
+                    "A nitrate film fire broke out in a screening room during the 1930s, after which new fireproofing standards appeared across the Theater District.",
+                  source_unit_ids: ["u1"],
+                },
+              }),
+            },
+          },
         ],
       });
 
@@ -593,7 +605,19 @@ describe("resolveNarrationEvidence — curated+Wikipedia narration bridge", () =
       })
       .mockResolvedValueOnce({
         choices: [
-          { message: { content: JSON.stringify({ selected_index: 1 }) } },
+          {
+            message: {
+              content: JSON.stringify({
+                angle: {
+                  central_question:
+                    "What is the Dewey Decimal Classification system doing in the hotel's lobby reading room?",
+                  perspective_shift:
+                    "The hotel's lobby reading room displays donated volumes organized by the Dewey Decimal Classification system, inviting guests to browse and borrow at their own pace.",
+                  source_unit_ids: ["u1"],
+                },
+              }),
+            },
+          },
         ],
       });
 

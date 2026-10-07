@@ -46,6 +46,7 @@ import {
 import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { readFileSync } from "fs";
 import { resolve } from "path";
+import { createHash } from "crypto";
 import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
 import {
   getApprovedCuratedEntry,
@@ -2803,6 +2804,375 @@ async function selectPrimaryUnit(
     };
   } catch {
     return { outcome: "timeoutOrAbort", text: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// One-call angle generator (2026-10-06, bounded single-tester live
+// experiment). Scoped ONLY to attemptNarrationWikipediaBridge below: when a
+// narration candidate has both approved curated evidence and a usable
+// Wikipedia path, this replaces the one-sentence selectPrimaryUnit step
+// with a single model call that proposes one organizing angle (a central
+// question + a perspective-shift sentence) over bounded, stable-ID
+// sentence units. Does NOT touch runNarrationJitEvidence's plain
+// no-curated Wikipedia JIT path, which still uses selectPrimaryUnit
+// unchanged above.
+//
+// The sentence units given to the model are still provisional/unadmitted
+// Wikipedia evidence, not admitted claims. Output is never trusted
+// directly — validateNarrationAngle below must pass, and every failure
+// mode (decline, malformed JSON, invalid/too-many unit ids, grounding
+// failure, relational guardrail rejection, timeout, model error) must
+// leave the caller's existing curated-evidence fallback unaffected.
+// @prompt-region narration-angle-generator
+// narration-angle-generator:v1: manifest-protection token — bump when
+// NARRATION_ANGLE_SYSTEM_PROMPT, its model, or its call parameters change.
+const NARRATION_ANGLE_SYSTEM_PROMPT =
+  "You are proposing ONE organizing angle for a local-history app entry about a real place, built from numbered sentence-level units of Wikipedia evidence that have already been pre-approved as strong material -- your job is to find the single best way to frame them, not to judge overall quality.\n\n" +
+  "An angle has two parts:\n" +
+  '- "central_question": one specific question this evidence lets a curious walker ask about the place.\n' +
+  '- "perspective_shift": one sentence, grounded only in the cited units, that answers or reframes that question in a way that changes how someone understands the place.\n\n' +
+  "Strict rules:\n" +
+  '- Cite 3 to 5 of the numbered units as "source_unit_ids" -- only units you actually drew on, using their exact given IDs. Never invent an ID.\n' +
+  "- Do not produce a metadata résumé (a list of dates, roles, or attributes with no organizing idea).\n" +
+  "- Do not produce inventory-only output (a bare list of facts with no question or shift in understanding).\n" +
+  "- Do not state or imply a causal, intentional, or motive relationship (why something happened, what caused it, what someone intended) unless the cited units themselves state that relationship.\n" +
+  "- Do not state an unsupported absolute (only, first, largest, oldest, never) unless a cited unit itself states it.\n" +
+  "- If a cited unit hedges a claim (reportedly, allegedly, legend, said to), preserve that hedge in your own wording rather than stating the claim as settled fact.\n" +
+  "- Do not rewrite meanings beyond what the units support, or introduce any fact not present in the cited units.\n\n" +
+  "It is acceptable, and expected in some cases, to return no angle if nothing in the units clears this bar.\n\n" +
+  'Respond only with JSON in this exact shape: {"angle": {"central_question": string, "perspective_shift": string, "source_unit_ids": [string, ...]} | null}. Do not include any other text, explanation, or field.';
+const NARRATION_ANGLE_TIMEOUT_MS = 6_000;
+const NARRATION_ANGLE_MAX_TOKENS = 700;
+const NARRATION_ANGLE_GENERATOR_VARIANT = "angle-v1-single-call";
+const NARRATION_ANGLE_VALIDATOR_VERSION = "angle-validator-v1";
+// @end-prompt-region narration-angle-generator
+
+type NarrationAngle = {
+  centralQuestion: string;
+  perspectiveShift: string;
+  sourceUnitIds: string[];
+};
+
+type NarrationAngleOutcome =
+  | "accepted"
+  | "modelDeclinedNone"
+  | "noUnits"
+  | "malformed"
+  | "timeoutOrAbort"
+  | "rejectedValidator"
+  | "rejectedGuardrail";
+
+// Store-ready shape (2026-10-06): kept close to what a future precompute
+// path could persist (subjectId is added by the caller/logger, not here,
+// since this function has no subjectId of its own) — no persistence layer
+// is implemented now, this is diagnostic-only.
+type NarrationAngleDiagnostic = {
+  angleOutcome: NarrationAngleOutcome;
+  centralQuestion: string | null;
+  perspectiveShift: string | null;
+  sourceUnitIds: string[] | null;
+  validatorReason: string | null;
+  generatorVariant: string;
+  validatorVersion: string;
+  articleFingerprint: string | null;
+  angleCallMs: number;
+};
+
+type NarrationAngleResult = {
+  angle: NarrationAngle | null;
+  diagnostic: NarrationAngleDiagnostic;
+};
+
+// Rejection-only relational guardrails (brittleness acceptable — a false
+// rejection just loses yield for this candidate, never a worse outcome).
+// Literal, case-insensitive word/phrase matching only; no semantic
+// entailment, embeddings, or fuzzy reasoning.
+const NARRATION_ANGLE_CAUSAL_CONNECTORS = [
+  "because",
+  "due to",
+  "so that",
+  "in order to",
+  "led to",
+  "forced",
+  "prompted",
+  "intended",
+  "in response to",
+  "therefore",
+];
+const NARRATION_ANGLE_UNSUPPORTED_ABSOLUTES = [
+  "only",
+  "first",
+  "largest",
+  "oldest",
+  "never",
+];
+const NARRATION_ANGLE_HEDGE_MARKERS = [
+  "reportedly",
+  "allegedly",
+  "legend",
+  "said to",
+];
+
+function narrationAngleContainsPhrase(text: string, phrase: string): boolean {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(text);
+}
+
+function normalizeNarrationAngleGroundingToken(token: string): string {
+  return token
+    .trim()
+    .toLowerCase()
+    .replace(/^(the|a|an)\s+/, "")
+    .replace(/['’]s$/, "")
+    .replace(/['’]$/, "");
+}
+
+// Extracts number sequences and capitalized-word phrases that are NOT the
+// first word of the given text (sentence-initial capitalization is
+// ambiguous and excluded) as grounding candidates. Deliberately simple
+// regex/word-scan logic only — no NLP.
+function extractNarrationAngleGroundingTokens(text: string): string[] {
+  const tokens: string[] = [];
+  for (const m of text.matchAll(/\b\d[\d,.]*\b/g)) tokens.push(m[0]);
+  const words = text.split(/\s+/);
+  let i = 0;
+  while (i < words.length) {
+    const w = words[i]!.replace(/[^A-Za-z0-9'-]/g, "");
+    if (i > 0 && /^[A-Z][a-zA-Z'-]*$/.test(w)) {
+      const phraseWords: string[] = [];
+      let j = i;
+      while (j < words.length) {
+        const wj = words[j]!.replace(/[^A-Za-z0-9'-]/g, "");
+        if (/^[A-Z][a-zA-Z'-]*$/.test(wj)) {
+          phraseWords.push(wj);
+          j++;
+        } else break;
+      }
+      tokens.push(phraseWords.join(" "));
+      i = j;
+    } else {
+      i++;
+    }
+  }
+  return tokens;
+}
+
+function checkNarrationAngleGrounding(
+  text: string,
+  citedTextLower: string,
+): string | null {
+  for (const raw of extractNarrationAngleGroundingTokens(text)) {
+    const norm = normalizeNarrationAngleGroundingToken(raw);
+    if (!norm) continue;
+    if (!citedTextLower.includes(norm)) return raw;
+  }
+  return null;
+}
+
+// Mandatory validator — no generated angle may become primaryStory
+// without passing this. Closed-set unit-id check, max-5-units check,
+// required-non-empty-fields check, grounding check (safe normalization
+// only: case, leading article, possessive — never loosened further), and
+// the rejection-only relational guardrails above.
+function validateNarrationAngle(
+  parsedAngle: Record<string, unknown>,
+  unitsById: Map<string, string>,
+): { ok: true; angle: NarrationAngle } | { ok: false; reason: string } {
+  const centralQuestion = parsedAngle["central_question"];
+  const perspectiveShift = parsedAngle["perspective_shift"];
+  const sourceUnitIdsRaw = parsedAngle["source_unit_ids"];
+
+  if (
+    typeof centralQuestion !== "string" ||
+    centralQuestion.trim().length === 0
+  )
+    return { ok: false, reason: "missing_central_question" };
+  if (
+    typeof perspectiveShift !== "string" ||
+    perspectiveShift.trim().length === 0
+  )
+    return { ok: false, reason: "missing_perspective_shift" };
+  if (!Array.isArray(sourceUnitIdsRaw) || sourceUnitIdsRaw.length === 0)
+    return { ok: false, reason: "missing_source_unit_ids" };
+  if (sourceUnitIdsRaw.length > 5)
+    return { ok: false, reason: "too_many_source_unit_ids" };
+
+  const sourceUnitIds: string[] = [];
+  for (const id of sourceUnitIdsRaw) {
+    if (typeof id !== "string" || !unitsById.has(id))
+      return { ok: false, reason: `invalid_source_unit_id:${String(id)}` };
+    sourceUnitIds.push(id);
+  }
+
+  const citedText = sourceUnitIds.map((id) => unitsById.get(id)!).join(" ");
+  const citedTextLower = citedText.toLowerCase();
+
+  const groundingMiss =
+    checkNarrationAngleGrounding(centralQuestion, citedTextLower) ||
+    checkNarrationAngleGrounding(perspectiveShift, citedTextLower);
+  if (groundingMiss)
+    return { ok: false, reason: `ungrounded_token:${groundingMiss}` };
+
+  const combinedAngleText = `${centralQuestion} ${perspectiveShift}`;
+  for (const connector of NARRATION_ANGLE_CAUSAL_CONNECTORS) {
+    if (narrationAngleContainsPhrase(combinedAngleText, connector)) {
+      const presentInSource = NARRATION_ANGLE_CAUSAL_CONNECTORS.some((c) =>
+        narrationAngleContainsPhrase(citedText, c),
+      );
+      if (!presentInSource)
+        return {
+          ok: false,
+          reason: `unsupported_causal_connector:${connector}`,
+        };
+    }
+  }
+  for (const absolute of NARRATION_ANGLE_UNSUPPORTED_ABSOLUTES) {
+    if (
+      narrationAngleContainsPhrase(combinedAngleText, absolute) &&
+      !narrationAngleContainsPhrase(citedText, absolute)
+    )
+      return { ok: false, reason: `unsupported_absolute:${absolute}` };
+  }
+  for (const hedge of NARRATION_ANGLE_HEDGE_MARKERS) {
+    if (
+      narrationAngleContainsPhrase(citedText, hedge) &&
+      !narrationAngleContainsPhrase(combinedAngleText, hedge)
+    )
+      return { ok: false, reason: `hedge_not_preserved:${hedge}` };
+  }
+
+  return {
+    ok: true,
+    angle: {
+      centralQuestion: centralQuestion.trim(),
+      perspectiveShift: perspectiveShift.trim(),
+      sourceUnitIds,
+    },
+  };
+}
+
+// Single-call angle generator. Takes the A3-approved evidence text (already
+// selected by selectEvidenceParagraphs), splits it into bounded,
+// stable-ID sentence units via the existing splitIntoSentenceUnits, and
+// asks for one best acceptable angle or none. Returns angle: null on any
+// failure/decline/rejection — callers must fall back to their own existing
+// behavior, identical fallback semantics to selectPrimaryUnit.
+async function generateNarrationAngle(
+  approvedEvidenceText: string,
+  placeName: string,
+  address: string | undefined,
+): Promise<NarrationAngleResult> {
+  const units = splitIntoSentenceUnits(approvedEvidenceText);
+  const base: NarrationAngleDiagnostic = {
+    angleOutcome: "noUnits",
+    centralQuestion: null,
+    perspectiveShift: null,
+    sourceUnitIds: null,
+    validatorReason: null,
+    generatorVariant: NARRATION_ANGLE_GENERATOR_VARIANT,
+    validatorVersion: NARRATION_ANGLE_VALIDATOR_VERSION,
+    articleFingerprint: null,
+    angleCallMs: 0,
+  };
+  if (units.length === 0) return { angle: null, diagnostic: base };
+
+  const unitsById = new Map<string, string>();
+  units.forEach((u, i) => unitsById.set(`u${i + 1}`, u));
+  const lines = units.map((u, i) => `[u${i + 1}] ${u}`);
+  const userPrompt =
+    `Place: ${placeName}${address ? `\nAddress: ${address}` : ""}\n\n` +
+    `Units:\n\n${lines.join("\n\n")}`;
+
+  const angleAbort = new AbortController();
+  const timer = setTimeout(
+    () => angleAbort.abort(),
+    NARRATION_ANGLE_TIMEOUT_MS,
+  );
+  const callStart = Date.now();
+  try {
+    // @prompt-region narration-angle-generator
+    const res = await openai.chat.completions.create(
+      {
+        model: "gpt-4.1-mini",
+        max_completion_tokens: NARRATION_ANGLE_MAX_TOKENS,
+        messages: [
+          { role: "system", content: NARRATION_ANGLE_SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        response_format: { type: "json_object" },
+      },
+      { signal: angleAbort.signal },
+    );
+    // @end-prompt-region narration-angle-generator
+    const angleCallMs = Date.now() - callStart;
+    const raw = res.choices[0]?.message?.content ?? "";
+    let parsed: { angle?: unknown };
+    try {
+      parsed = JSON.parse(raw) as { angle?: unknown };
+    } catch {
+      return {
+        angle: null,
+        diagnostic: { ...base, angleOutcome: "malformed", angleCallMs },
+      };
+    }
+    if (parsed.angle === null || parsed.angle === undefined) {
+      return {
+        angle: null,
+        diagnostic: {
+          ...base,
+          angleOutcome: "modelDeclinedNone",
+          angleCallMs,
+        },
+      };
+    }
+    if (typeof parsed.angle !== "object") {
+      return {
+        angle: null,
+        diagnostic: { ...base, angleOutcome: "malformed", angleCallMs },
+      };
+    }
+    const validated = validateNarrationAngle(
+      parsed.angle as Record<string, unknown>,
+      unitsById,
+    );
+    if (!validated.ok) {
+      const isGuardrailReason =
+        validated.reason.startsWith("unsupported_") ||
+        validated.reason.startsWith("hedge_not_preserved");
+      return {
+        angle: null,
+        diagnostic: {
+          ...base,
+          angleOutcome: isGuardrailReason
+            ? "rejectedGuardrail"
+            : "rejectedValidator",
+          validatorReason: validated.reason,
+          angleCallMs,
+        },
+      };
+    }
+    return {
+      angle: validated.angle,
+      diagnostic: {
+        ...base,
+        angleOutcome: "accepted",
+        centralQuestion: validated.angle.centralQuestion,
+        perspectiveShift: validated.angle.perspectiveShift,
+        sourceUnitIds: validated.angle.sourceUnitIds,
+        angleCallMs,
+      },
+    };
+  } catch {
+    return {
+      angle: null,
+      diagnostic: {
+        ...base,
+        angleOutcome: "timeoutOrAbort",
+        angleCallMs: Date.now() - callStart,
+      },
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -5915,17 +6285,16 @@ router.post("/explore/walk-narration", async (req, res) => {
     .map((f) => f.slice(0, 80).toLowerCase())
     .sort()
     .join("|");
-  // v24 (2026-10-06): bumped in lockstep with /explore/walk-narration-audio's
+  // v25 (2026-10-06): bumped in lockstep with /explore/walk-narration-audio's
   // own narrationCacheKey below — the two routes share this exact literal so
   // a narration generated by either can satisfy the other's cache lookup for
-  // the same key. This route's system prompt now also includes the
-  // conditional primaryStoryRule bullet (narration-lead priming — see
-  // primaryStoryRule above) so the writer builds around a retained
-  // curated+Wikipedia bridge primaryStory instead of enumerating it as one
-  // fact among several. A real prompt-content change for the same nominal
-  // cache key that deserves a fresh cache slot. The version must stay
-  // identical across both routes for cache-sharing to keep working.
-  const narrationCacheKey = `narration:v24:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // the same key. This bump is for the bounded one-call angle-generator
+  // experiment (attemptNarrationWikipediaBridge now calls
+  // generateNarrationAngle instead of selectPrimaryUnit for curated+Wikipedia
+  // candidates) — a real evidence-selection change for the same nominal
+  // cache key that must evict stale pre-experiment narrations. The version
+  // must stay identical across both routes for cache-sharing to keep working.
+  const narrationCacheKey = `narration:v25:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   // @end-prompt-region walk-narration
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
@@ -5988,20 +6357,56 @@ router.post("/explore/walk-narration", async (req, res) => {
   // suppression. Deliberately placed outside the marked prompt-region
   // below: this decides WHAT goes into the facts list fed to the existing
   // narration prompt, it does not change the prompt itself.
-  const { narrationFacts, jitOutcome, jitMs, primaryStory, bridgeOutcome } =
-    await resolveNarrationEvidence({
-      evidenceRef,
-      candidateSource,
-      subjectId,
-      wikipediaTag,
-      placeName,
-      address,
-      facts,
-    });
+  const {
+    narrationFacts,
+    jitOutcome,
+    jitMs,
+    primaryStory,
+    bridgeOutcome,
+    angleDiagnostic,
+  } = await resolveNarrationEvidence({
+    evidenceRef,
+    candidateSource,
+    subjectId,
+    wikipediaTag,
+    placeName,
+    address,
+    facts,
+  });
   if (bridgeOutcome) {
     req.log.info(
       { reqId: req.id, route: "walk-narration", bridgeOutcome, jitMs },
       "[walk-narration] curated+Wikipedia bridge outcome",
+    );
+  }
+  // TEMP-ANGLE-EXPERIMENT (2026-10-06): bounded single-tester live
+  // experiment diagnostic for the curated+Wikipedia narration-angle
+  // generator (attemptNarrationWikipediaBridge -> generateNarrationAngle).
+  // Logs outcome/shape fields only — never raw Wikipedia text, full prompt
+  // text, or final narration text; cited source sentences are
+  // reconstructable from sourceUnitIds + articleFingerprint during review,
+  // not logged wholesale. Remove after the bounded single-tester review is
+  // complete, or after ~10 distinct accepted/rejected subject reviews if
+  // expansion ever becomes possible — whichever comes first.
+  if (angleDiagnostic) {
+    req.log.info(
+      {
+        reqId: req.id,
+        route: "walk-narration",
+        subjectId,
+        bridgeOutcome,
+        angleOutcome: angleDiagnostic.angleOutcome,
+        centralQuestion: angleDiagnostic.centralQuestion,
+        perspectiveShift: angleDiagnostic.perspectiveShift,
+        sourceUnitIds: angleDiagnostic.sourceUnitIds,
+        validatorReason: angleDiagnostic.validatorReason,
+        generatorVariant: angleDiagnostic.generatorVariant,
+        validatorVersion: angleDiagnostic.validatorVersion,
+        articleFingerprint: angleDiagnostic.articleFingerprint,
+        angleCallMs: angleDiagnostic.angleCallMs,
+        jitMs,
+      },
+      "[walk-narration] TEMP-ANGLE-EXPERIMENT narration-angle diagnostic",
     );
   }
   if (
@@ -6354,6 +6759,10 @@ type NarrationBridgeResult = {
     "curated_only" | "wikipedia_timeout"
   >;
   primaryStoryText: string | null;
+  // One-call angle generator (2026-10-06) diagnostic — null whenever the
+  // bridge returns before reaching the angle-generation step (e.g. no
+  // Wikipedia summary, suppressed overlap, empty extract).
+  angleDiagnostic: NarrationAngleDiagnostic | null;
 };
 
 /**
@@ -6392,11 +6801,29 @@ async function attemptNarrationWikipediaBridge(
 ): Promise<NarrationBridgeResult> {
   const parsedTag = parseWikipediaOsmTag(wikipediaTag);
   if (!parsedTag)
-    return { outcome: "wikipedia_insufficient", primaryStoryText: null };
+    return {
+      outcome: "wikipedia_insufficient",
+      primaryStoryText: null,
+      angleDiagnostic: null,
+    };
 
   const summary = await fetchWikipediaSummary(parsedTag.lang, parsedTag.title);
   if (!summary?.extract)
-    return { outcome: "wikipedia_insufficient", primaryStoryText: null };
+    return {
+      outcome: "wikipedia_insufficient",
+      primaryStoryText: null,
+      angleDiagnostic: null,
+    };
+
+  // Local, store-ready article fingerprint (2026-10-06) — the production
+  // WikipediaSummary type carries no revision id from the MediaWiki API, so
+  // this hashes the already-fetched extract instead of broadening the fetch
+  // contract. Computed on the pre-subtraction extract so it identifies the
+  // article content, not this request's admitted-span subtraction.
+  const articleFingerprint = createHash("sha256")
+    .update(summary.extract, "utf8")
+    .digest("hex")
+    .slice(0, 16);
 
   let extract = summary.extract;
   let subtractionApplied = false;
@@ -6414,7 +6841,11 @@ async function attemptNarrationWikipediaBridge(
     : "wikipedia_insufficient";
 
   if (extract.trim().length === 0)
-    return { outcome: insufficientOutcome, primaryStoryText: null };
+    return {
+      outcome: insufficientOutcome,
+      primaryStoryText: null,
+      angleDiagnostic: null,
+    };
 
   const paragraphResult = await selectEvidenceParagraphs(
     extract,
@@ -6422,19 +6853,37 @@ async function attemptNarrationWikipediaBridge(
     address,
   );
   if (!paragraphResult.text)
-    return { outcome: insufficientOutcome, primaryStoryText: null };
+    return {
+      outcome: insufficientOutcome,
+      primaryStoryText: null,
+      angleDiagnostic: null,
+    };
 
-  const unitResult = await selectPrimaryUnit(
+  // One-call angle generator (2026-10-06, bounded single-tester live
+  // experiment) — replaces the prior selectPrimaryUnit call in this branch
+  // only. See generateNarrationAngle above for the full contract/validator/
+  // guardrails; runNarrationJitEvidence's plain no-curated Wikipedia JIT
+  // path above still calls selectPrimaryUnit unchanged.
+  const angleResult = await generateNarrationAngle(
     paragraphResult.text,
     placeName,
     address,
   );
-  if (!unitResult.text)
-    return { outcome: insufficientOutcome, primaryStoryText: null };
+  const angleDiagnostic: NarrationAngleDiagnostic = {
+    ...angleResult.diagnostic,
+    articleFingerprint,
+  };
+  if (!angleResult.angle)
+    return {
+      outcome: insufficientOutcome,
+      primaryStoryText: null,
+      angleDiagnostic,
+    };
 
   return {
     outcome: "wikipedia_primary_retained",
-    primaryStoryText: unitResult.text,
+    primaryStoryText: angleResult.angle.perspectiveShift,
+    angleDiagnostic,
   };
 }
 
@@ -6471,6 +6920,7 @@ type NarrationEvidenceResolution = {
   curatedEvidenceFoundBeforeJit: boolean;
   primaryStory: string | null;
   bridgeOutcome: NarrationBridgeOutcome | undefined;
+  angleDiagnostic: NarrationAngleDiagnostic | null;
 };
 
 export async function resolveNarrationEvidence(params: {
@@ -6512,6 +6962,7 @@ export async function resolveNarrationEvidence(params: {
       type NarrationBridgeRaceResult = {
         outcome: Exclude<NarrationBridgeOutcome, "curated_only">;
         primaryStoryText: string | null;
+        angleDiagnostic: NarrationAngleDiagnostic | null;
       };
       const bridgeResult = await Promise.race<NarrationBridgeRaceResult>([
         attemptNarrationWikipediaBridge(
@@ -6523,6 +6974,7 @@ export async function resolveNarrationEvidence(params: {
           (): NarrationBridgeRaceResult => ({
             outcome: "wikipedia_error",
             primaryStoryText: null,
+            angleDiagnostic: null,
           }),
         ),
         new Promise<NarrationBridgeRaceResult>((resolve) =>
@@ -6531,6 +6983,7 @@ export async function resolveNarrationEvidence(params: {
               resolve({
                 outcome: "wikipedia_timeout",
                 primaryStoryText: null,
+                angleDiagnostic: null,
               }),
             NARRATION_JIT_TIMEOUT_MS,
           ),
@@ -6549,6 +7002,7 @@ export async function resolveNarrationEvidence(params: {
         curatedEvidenceFoundBeforeJit: true,
         primaryStory,
         bridgeOutcome,
+        angleDiagnostic: bridgeResult.angleDiagnostic,
       };
     }
     if (curatedEntry) {
@@ -6588,6 +7042,7 @@ export async function resolveNarrationEvidence(params: {
     curatedEvidenceFoundBeforeJit: jitOutcome === "curatedSuccess",
     primaryStory,
     bridgeOutcome,
+    angleDiagnostic: null,
   };
 }
 
@@ -6709,13 +7164,11 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
     .map((f) => f.slice(0, 80).toLowerCase())
     .sort()
     .join("|");
-  // v24 (2026-10-06): bumped in lockstep with /explore/walk-narration's own
-  // narrationCacheKey — see that route's comment for why (narration-lead
-  // priming rule). This route's own reason: the live-call branch below
-  // builds the same conditional primaryStoryRule bullet into its system
-  // prompt, a real content-input change for the same nominal cache key
-  // that deserves a fresh cache slot.
-  const narrationCacheKey = `narration:v24:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v25 (2026-10-06): bumped in lockstep with /explore/walk-narration's own
+  // narrationCacheKey — see that route's comment for why (bounded one-call
+  // angle-generator experiment). The version must stay identical across
+  // both routes for cache-sharing to keep working.
+  const narrationCacheKey = `narration:v25:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
   // @end-prompt-region walk-narration-audio
 
@@ -6785,16 +7238,22 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
       // prompt itself. On any skip/timeout/failure, narrationFacts falls
       // back to the unmodified request facts — identical to today's
       // behavior.
-      const { narrationFacts, jitOutcome, jitMs, primaryStory, bridgeOutcome } =
-        await resolveNarrationEvidence({
-          evidenceRef,
-          candidateSource,
-          subjectId,
-          wikipediaTag,
-          placeName,
-          address,
-          facts,
-        });
+      const {
+        narrationFacts,
+        jitOutcome,
+        jitMs,
+        primaryStory,
+        bridgeOutcome,
+        angleDiagnostic,
+      } = await resolveNarrationEvidence({
+        evidenceRef,
+        candidateSource,
+        subjectId,
+        wikipediaTag,
+        placeName,
+        address,
+        facts,
+      });
       if (bridgeOutcome) {
         req.log.info(
           {
@@ -6804,6 +7263,31 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
             jitMs,
           },
           "[walk-narration-audio] curated+Wikipedia bridge outcome",
+        );
+      }
+      // TEMP-ANGLE-EXPERIMENT (2026-10-06): see /walk-narration's identical
+      // diagnostic above for scope/removal condition. Logs outcome/shape
+      // fields only — never raw Wikipedia text, full prompt text, or final
+      // narration text.
+      if (angleDiagnostic) {
+        req.log.info(
+          {
+            reqId: req.id,
+            route: "walk-narration-audio",
+            subjectId,
+            bridgeOutcome,
+            angleOutcome: angleDiagnostic.angleOutcome,
+            centralQuestion: angleDiagnostic.centralQuestion,
+            perspectiveShift: angleDiagnostic.perspectiveShift,
+            sourceUnitIds: angleDiagnostic.sourceUnitIds,
+            validatorReason: angleDiagnostic.validatorReason,
+            generatorVariant: angleDiagnostic.generatorVariant,
+            validatorVersion: angleDiagnostic.validatorVersion,
+            articleFingerprint: angleDiagnostic.articleFingerprint,
+            angleCallMs: angleDiagnostic.angleCallMs,
+            jitMs,
+          },
+          "[walk-narration-audio] TEMP-ANGLE-EXPERIMENT narration-angle diagnostic",
         );
       }
       if (

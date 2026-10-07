@@ -1,4 +1,4 @@
-// cache-versions:v16:
+// cache-versions:v17:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -110,6 +110,18 @@
  * prompt text only. Shared narration cache-key literal bumped v23->v24 in
  * lockstep across both routes, a real prompt-content change for the same
  * nominal key. v23 is retired.
+ *
+ * v16-v17: Bounded one-call angle-generator experiment — for the curated+
+ * Wikipedia narration bridge only, attemptNarrationWikipediaBridge now
+ * replaces the one-sentence selectPrimaryUnit step with a single-call angle
+ * generator (generateNarrationAngle/validateNarrationAngle) over bounded
+ * sentence units, producing a centralQuestion/perspectiveShift/
+ * sourceUnitIds angle that becomes primaryStory when it passes a mandatory
+ * validator plus rejection-only relational guardrails. Single-tester live
+ * experiment; ordinary no-curated Wikipedia JIT (selectPrimaryUnit) is
+ * unchanged. Shared narration cache-key literal bumped v24->v25 in lockstep
+ * across both routes, a real evidence-selection change for the same nominal
+ * key. v24 is retired.
  */
 
 /**
@@ -138,7 +150,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v24"], // walk narration (short)
+  ["narration", "v25"], // walk narration (short)
   ["deep-narration", "v14"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];
