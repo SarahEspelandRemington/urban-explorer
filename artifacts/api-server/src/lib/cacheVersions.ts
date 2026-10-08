@@ -1,4 +1,4 @@
-// cache-versions:v18:
+// cache-versions:v19:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -144,6 +144,33 @@
  * narration cache-key literal bumped v25->v26 in lockstep across both
  * narration routes; deep-narration's own literal bumped v14->v15. v25 (short)
  * and v14 (deep) are retired.
+ *
+ * v26-v27 (narration): Angle validator subject-identity grounding exemption
+ * — the one-call angle generator's proper-noun grounding check
+ * (checkNarrationAngleGrounding/validateNarrationAngle in
+ * routes/explore/index.ts) previously had no concept of the subject's own
+ * trusted identity, so any angle that named the place itself (e.g. "Film
+ * Center Building") was rejected as an ungrounded proper noun unless the
+ * cited Wikipedia sentence units happened to restate that exact name — a
+ * false rejection, not a real grounding gap, since the name is already
+ * resolved/trusted via the request's own placeName. Fix adds
+ * maskNarrationAngleSubjectIdentity, which masks out only an exact,
+ * word-bounded occurrence of the complete canonical placeName (optional
+ * leading "the", optional trailing possessive, case-insensitive; matches
+ * the full name including any lowercase connector words already part of
+ * it, e.g. "of"/"the" in a name like "Church of the Good Shepherd") before
+ * the existing proper-noun token extraction runs — never a substring or
+ * partial-name match, so a fragment of the subject's own name (e.g. "Roman
+ * Catholic" out of "St. Malachy Roman Catholic Church") still requires
+ * citation like any other proper noun, and every unrelated proper noun
+ * (other landmarks, people, neighborhoods not supplied as anchor data)
+ * remains fully subject to today's grounding rule. No alias system, fuzzy
+ * matching, or substring authorization added. Deep-narration does not use
+ * this validator and is unaffected. Shared narration cache-key literal
+ * bumped v26->v27 in lockstep across both narration routes (walk-narration,
+ * walk-narration-audio) to evict stale narrations cached under the old
+ * false-rejection behavior; v26 (short) is retired. deep-narration's
+ * literal is untouched.
  */
 
 /**
@@ -172,7 +199,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v26"], // walk narration (short)
+  ["narration", "v27"], // walk narration (short)
   ["deep-narration", "v15"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];

@@ -2959,11 +2959,65 @@ function extractNarrationAngleGroundingTokens(text: string): string[] {
   return tokens;
 }
 
+function escapeNarrationAngleRegexLiteral(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// Builds the regex fragment for one word of the trusted canonical subject
+// name: a trailing period (e.g. "St.") becomes optional-literal, and any
+// apostrophe (straight or curly) becomes an alternation so "Actors'" /
+// "Actors’" both match. No other fuzziness.
+function buildNarrationAngleSubjectWordPattern(word: string): string {
+  const hadTrailingPeriod = /\.$/.test(word);
+  const core = hadTrailingPeriod ? word.slice(0, -1) : word;
+  const parts = core.split(/['’]/).map(escapeNarrationAngleRegexLiteral);
+  return parts.join("['’]") + (hadTrailingPeriod ? "\\.?" : "");
+}
+
+// Builds a word-bounded regex matching ONLY the exact, complete canonical
+// subject name (placeName) -- optionally preceded by "the"/"The" and
+// optionally followed by a possessive "'s"/"’s" -- case-insensitively.
+// Deliberately whole-name only: every word of placeName must appear in
+// order, including any lowercase connector words already part of the name
+// itself (e.g. "of", "the" in "Church of the Good Shepherd"), so such
+// names mask correctly even though those connector words would never
+// qualify as capitalized-run tokens on their own.
+function buildNarrationAngleSubjectMaskPattern(
+  placeName: string,
+): RegExp | null {
+  const trimmed = placeName.trim();
+  if (!trimmed) return null;
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+  const namePattern = words
+    .map(buildNarrationAngleSubjectWordPattern)
+    .join("\\s+");
+  return new RegExp(`\\b(?:the\\s+)?${namePattern}\\b(?:['’]s)?`, "gi");
+}
+
+// Masks every exact, word-bounded occurrence of the trusted canonical
+// subject name (and only that exact span -- never a partial/fragment
+// match) out of the generated angle text before proper-noun grounding
+// runs below. This is what lets the model repeat the place's own already-
+// resolved identity without needing it re-cited in the evidence units,
+// while leaving every other proper noun subject to the unchanged
+// grounding check.
+function maskNarrationAngleSubjectIdentity(
+  text: string,
+  placeName: string,
+): string {
+  const pattern = buildNarrationAngleSubjectMaskPattern(placeName);
+  if (!pattern) return text;
+  return text.replace(pattern, " ");
+}
+
 function checkNarrationAngleGrounding(
   text: string,
   citedTextLower: string,
+  placeName: string,
 ): string | null {
-  for (const raw of extractNarrationAngleGroundingTokens(text)) {
+  const masked = maskNarrationAngleSubjectIdentity(text, placeName);
+  for (const raw of extractNarrationAngleGroundingTokens(masked)) {
     const norm = normalizeNarrationAngleGroundingToken(raw);
     if (!norm) continue;
     if (!citedTextLower.includes(norm)) return raw;
@@ -2974,11 +3028,14 @@ function checkNarrationAngleGrounding(
 // Mandatory validator — no generated angle may become primaryStory
 // without passing this. Closed-set unit-id check, max-5-units check,
 // required-non-empty-fields check, grounding check (safe normalization
-// only: case, leading article, possessive — never loosened further), and
-// the rejection-only relational guardrails above.
-function validateNarrationAngle(
+// only: case, leading article, possessive — never loosened further; the
+// trusted subject's own canonical name is masked out before this check so
+// it never needs separate citation -- see maskNarrationAngleSubjectIdentity),
+// and the rejection-only relational guardrails above.
+export function validateNarrationAngle(
   parsedAngle: Record<string, unknown>,
   unitsById: Map<string, string>,
+  placeName: string,
 ): { ok: true; angle: NarrationAngle } | { ok: false; reason: string } {
   const centralQuestion = parsedAngle["central_question"];
   const perspectiveShift = parsedAngle["perspective_shift"];
@@ -3010,8 +3067,8 @@ function validateNarrationAngle(
   const citedTextLower = citedText.toLowerCase();
 
   const groundingMiss =
-    checkNarrationAngleGrounding(centralQuestion, citedTextLower) ||
-    checkNarrationAngleGrounding(perspectiveShift, citedTextLower);
+    checkNarrationAngleGrounding(centralQuestion, citedTextLower, placeName) ||
+    checkNarrationAngleGrounding(perspectiveShift, citedTextLower, placeName);
   if (groundingMiss)
     return { ok: false, reason: `ungrounded_token:${groundingMiss}` };
 
@@ -3136,6 +3193,7 @@ async function generateNarrationAngle(
     const validated = validateNarrationAngle(
       parsed.angle as Record<string, unknown>,
       unitsById,
+      placeName,
     );
     if (!validated.ok) {
       const isGuardrailReason =
@@ -6298,7 +6356,15 @@ router.post("/explore/walk-narration", async (req, res) => {
   // CONSTRAINT bullet below and cacheVersions.ts's changelog for full
   // rationale (ungated corner/across-from example phrases removed). Bumped
   // in lockstep with /explore/walk-narration-audio.
-  const narrationCacheKey = `narration:v26:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v27 (2026-10-08): angle validator's proper-noun grounding check now
+  // exempts the trusted subject's own canonical name (see
+  // maskNarrationAngleSubjectIdentity / validateNarrationAngle above and
+  // cacheVersions.ts's changelog) — a real evidence-acceptance change for
+  // the same nominal cache key (previously-rejected angles for subjects
+  // whose own name wasn't restated in cited units may now be accepted)
+  // that must evict stale pre-fix narrations. Bumped in lockstep with
+  // /explore/walk-narration-audio.
+  const narrationCacheKey = `narration:v27:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   // @end-prompt-region walk-narration
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
@@ -7176,7 +7242,10 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   // v26 (2026-10-07): spatial-relation guard — bumped in lockstep with
   // /explore/walk-narration. See that route's comment and cacheVersions.ts's
   // changelog for full rationale.
-  const narrationCacheKey = `narration:v26:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v27 (2026-10-08): angle validator subject-identity grounding exemption
+  // — bumped in lockstep with /explore/walk-narration. See that route's
+  // comment and cacheVersions.ts's changelog for full rationale.
+  const narrationCacheKey = `narration:v27:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
   // @end-prompt-region walk-narration-audio
 
