@@ -1,4 +1,4 @@
-// cache-versions:v17:
+// cache-versions:v18:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -122,6 +122,28 @@
  * unchanged. Shared narration cache-key literal bumped v24->v25 in lockstep
  * across both routes, a real evidence-selection change for the same nominal
  * key. v24 is retired.
+ *
+ * v25-v26 (narration) / v14-v15 (deep-narration): Spatial-relation guard —
+ * all three narration prompts (/walk-narration, /walk-narration-audio,
+ * /deep-narration) previously offered unconstrained example openers using
+ * "at the corner of," "across from," and "across the street from," with no
+ * verified data backing those relationships (orientation.ts's computed
+ * adjacency is discover-only and never reaches narration). Field failures:
+ * Film Center Building narrated as "across the street from Hell's Kitchen"
+ * (a neighborhood, not a point) and Saint Malachy's Church narrated as "at
+ * the corner of 49th and 8th" (actual source data: "between Broadway and
+ * Eighth Avenue," mid-block). Fix adds an identical SPATIAL-RELATION
+ * CONSTRAINT bullet to all three prompts banning corner/across-from/next-to/
+ * adjacent-to claims unless backed by verified anchor data, and removes the
+ * three ungated example phrases ("Across from the park —", "Right at this
+ * corner —", "corner of Fifth and Fifty-third") that licensed exactly this
+ * failure mode. Neighborhood-membership ("in Hell's Kitchen") and
+ * between/block framing ("between Broadway and Eighth Avenue") remain
+ * available — they are not promoted to point relations. No change to
+ * orientation.ts, geometry, discovery ranking, or evidence selection. Shared
+ * narration cache-key literal bumped v25->v26 in lockstep across both
+ * narration routes; deep-narration's own literal bumped v14->v15. v25 (short)
+ * and v14 (deep) are retired.
  */
 
 /**
@@ -150,8 +172,8 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v25"], // walk narration (short)
-  ["deep-narration", "v14"], // deep walk narration
+  ["narration", "v26"], // walk narration (short)
+  ["deep-narration", "v15"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];
 

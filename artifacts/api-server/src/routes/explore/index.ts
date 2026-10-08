@@ -6294,7 +6294,11 @@ router.post("/explore/walk-narration", async (req, res) => {
   // candidates) — a real evidence-selection change for the same nominal
   // cache key that must evict stale pre-experiment narrations. The version
   // must stay identical across both routes for cache-sharing to keep working.
-  const narrationCacheKey = `narration:v25:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v26 (2026-10-07): spatial-relation guard — see the SPATIAL-RELATION
+  // CONSTRAINT bullet below and cacheVersions.ts's changelog for full
+  // rationale (ungated corner/across-from example phrases removed). Bumped
+  // in lockstep with /explore/walk-narration-audio.
+  const narrationCacheKey = `narration:v26:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   // @end-prompt-region walk-narration
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
@@ -6482,9 +6486,10 @@ How to write for speech:
 - MANDATORY FIRST CLAUSE — every narration MUST begin with a spatial anchor that orients the listener in physical space. This is non-negotiable: a narration that omits the spatial opener is wrong. Choose the strongest signal you have, in this priority order:
   1. If a specific street-number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
   2. If a nearby cross-street or block context is provided (e.g. "W 49th St, Hell's Kitchen"), open with a phrase tied to it: "Here on West Forty-ninth —" or "Just off Eighth, in Hell's Kitchen —".
-  3. If only a broader area or landmark reference is provided, open with a directional phrase tied to it: "Just back from the piers —" or "Across from the park —".
-  4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
+  3. If only a broader area or landmark reference is provided, open with a phrase that names the area without claiming a point relationship to it: "Just back from the piers —" or "Here in Hell's Kitchen —".
+  4. If nothing is provided, open with a generic spatial phrase that makes no relational claim: "Right up ahead —", "Just ahead on your left —", "Here on this block —". Never skip the opener.
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
+  SPATIAL-RELATION CONSTRAINT: Do not say the subject is "at the corner of," "across from," "across the street from," "next to," or "adjacent to" anything unless that exact relationship is given to you above as verified anchor data. Never infer a corner, across-from, next-to, or adjacent-to relationship from an address alone, a neighborhood name, "between X and Y" phrasing, nearby-place context, or general knowledge of the area. A neighborhood name may only describe area membership — "in Hell's Kitchen," "here in Chelsea" — never a point relation to it, such as "across from Hell's Kitchen." A "between X and Y" fact may only describe a between or block relation — "on the block between Broadway and Eighth Avenue" — never a corner claim, such as "at the corner of Broadway and Eighth."
 - After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
 - Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no visible or experiential trace today (buried tracks, sealed tunnels, underground streams) — unless you can tie them to something the listener can actually perceive: a slope in the street, a sunken basement, a missing block, a remaining wall.
 - If the place is a ghost sign, faded painted wall advertisement, or similar fragile visual artifact, do NOT lead with the sign's appearance or ask the listener to find it. Lead instead with the building's or block's history. The app cannot currently give precise enough visual guidance for the listener to reliably locate a faded sign while walking. Anchor to the structure, not the fading paint.
@@ -7168,7 +7173,10 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   // narrationCacheKey — see that route's comment for why (bounded one-call
   // angle-generator experiment). The version must stay identical across
   // both routes for cache-sharing to keep working.
-  const narrationCacheKey = `narration:v25:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v26 (2026-10-07): spatial-relation guard — bumped in lockstep with
+  // /explore/walk-narration. See that route's comment and cacheVersions.ts's
+  // changelog for full rationale.
+  const narrationCacheKey = `narration:v26:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
   // @end-prompt-region walk-narration-audio
 
@@ -7355,9 +7363,10 @@ How to write for speech:
 - MANDATORY FIRST CLAUSE — every narration MUST begin with a spatial anchor that orients the listener in physical space. This is non-negotiable: a narration that omits the spatial opener is wrong. Choose the strongest signal you have, in this priority order:
   1. If a specific street-number address is provided (e.g. "610 8th Ave"), open with it: "That's six-ten Eighth Avenue —" or "Right at six-ten Eighth Avenue —".
   2. If a nearby cross-street or block context is provided (e.g. "W 49th St, Hell's Kitchen"), open with a phrase tied to it: "Here on West Forty-ninth —" or "Just off Eighth, in Hell's Kitchen —".
-  3. If only a broader area or landmark reference is provided, open with a directional phrase tied to it: "Just back from the piers —" or "Across from the park —".
-  4. If nothing is provided, open with a generic spatial phrase: "Right at this corner —", "Just ahead on your left —", "The building across the street —". Never skip the opener.
+  3. If only a broader area or landmark reference is provided, open with a phrase that names the area without claiming a point relationship to it: "Just back from the piers —" or "Here in Hell's Kitchen —".
+  4. If nothing is provided, open with a generic spatial phrase that makes no relational claim: "Right up ahead —", "Just ahead on your left —", "Here on this block —". Never skip the opener.
   Spell out all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave", "Northeast" not "NE", "forty-nine" not "49".
+  SPATIAL-RELATION CONSTRAINT: Do not say the subject is "at the corner of," "across from," "across the street from," "next to," or "adjacent to" anything unless that exact relationship is given to you above as verified anchor data. Never infer a corner, across-from, next-to, or adjacent-to relationship from an address alone, a neighborhood name, "between X and Y" phrasing, nearby-place context, or general knowledge of the area. A neighborhood name may only describe area membership — "in Hell's Kitchen," "here in Chelsea" — never a point relation to it, such as "across from Hell's Kitchen." A "between X and Y" fact may only describe a between or block relation — "on the block between Broadway and Eighth Avenue" — never a corner claim, such as "at the corner of Broadway and Eighth."
 - After the location opener, surface the most place-specific thing you have. Prefer details that change how the listener sees what's physically around them right now — a visible architectural feature, an odd street layout, a reused space, a building's earlier use, something that happened on this exact block, a human moment older residents still remember. Vary the angle so consecutive narrations don't all share the same shape.
 - Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no visible or experiential trace today (buried tracks, sealed tunnels, underground streams) — unless you can tie them to something the listener can actually perceive: a slope in the street, a sunken basement, a missing block, a remaining wall.
 - If the place is a ghost sign, faded painted wall advertisement, or similar fragile visual artifact, do NOT lead with the sign's appearance or ask the listener to find it. Lead instead with the building's or block's history. The app cannot currently give precise enough visual guidance for the listener to reliably locate a faded sign while walking. Anchor to the structure, not the fading paint.
@@ -7559,7 +7568,7 @@ router.post("/explore/deep-narration", async (req, res) => {
     .map((f) => f.slice(0, 80).toLowerCase())
     .sort()
     .join("|");
-  const deepCacheKey = `deep-narration:v14:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  const deepCacheKey = `deep-narration:v15:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${(yearBuilt || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const cachedDeep = getLLMCache<{ narration: string }>(deepCacheKey);
   if (cachedDeep) {
     clearTimeout(deepTimeout);
@@ -7585,7 +7594,8 @@ How to write for speech:
 - Spell out every number, year, decade, ordinal, and acronym as words: "eighteen ninety-two" not "1892", "the nineteenth century" not "the 19th century", "the eighteen eighties" not "the 1880s", "the seventies" not "the 70s", "World War Two" not "World War II", "New York City" not "NYC", "the United States" not "the US", "four stories" not "4-story". TTS engines mispronounce digits, ordinal suffixes, Roman numerals, and initialisms badly.
 - No abbreviations, acronyms, symbols, bullet points, headings, quotes, parentheses, or asterisks of any kind.
 - Use commas where you'd naturally pause for breath. Periods where you'd fully stop. No ellipses or dashes as structure.
-- If an address is provided, begin with a single natural spoken phrase naming the location — for example, "That's four twenty-three West Forty-eighth Street —" or "Right here at the corner of Fifth and Fifty-third —". Spell all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave". Then follow immediately with your hook.
+- If an address is provided, begin with a single natural spoken phrase naming the location — for example, "That's four twenty-three West Forty-eighth Street —" or "Right here on West Forty-eighth —". Spell all numbers, directions, and abbreviations as full words: "West" not "W", "Street" not "St", "Avenue" not "Ave". Then follow immediately with your hook.
+- SPATIAL-RELATION CONSTRAINT: Do not say the subject is "at the corner of," "across from," "across the street from," "next to," or "adjacent to" anything unless that exact relationship is given to you above as verified anchor data. Never infer a corner, across-from, next-to, or adjacent-to relationship from an address alone, a neighborhood name, "between X and Y" phrasing, nearby-place context, or general knowledge of the area. A neighborhood name may only describe area membership — "in Hell's Kitchen," "here in Chelsea" — never a point relation to it, such as "across from Hell's Kitchen." A "between X and Y" fact may only describe a between or block relation — "on the block between Broadway and Eighth Avenue" — never a corner claim, such as "at the corner of Broadway and Eighth."
 - Open with a hook: a vivid sensory detail, an unexpected fact, a specific person, or a question. Don't start with the place's name and date — that's the least interesting thing about it.
 - Weave in: when and why it was built, who used it, one or two specific human moments connected to it, what makes it distinctive, and how it sits in the neighborhood now. Prioritise details that recontextualise what the listener can see right now — visible features, street geometry, reused space, lingering traces of an earlier use.
 - Avoid generic trivia, celebrity-adjacent name-drops, and "hidden" facts with no perceptible trace today (buried tracks, sealed tunnels, underground streams) unless you tie them to something present and visible. Restrained sensory imagery is welcome when earned and specific — never flowery or atmospheric for its own sake.
