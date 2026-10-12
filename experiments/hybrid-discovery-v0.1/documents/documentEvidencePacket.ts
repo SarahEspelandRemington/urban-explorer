@@ -71,6 +71,24 @@ export interface DocumentResource {
   };
 }
 
+/**
+ * Added for the Philadelphia adapter (implementation step 3): records WHY an
+ * adapter assigned a block's scope/resourceRef/authorshipRole, so shared
+ * logic can distinguish a documented structural basis from an unsupported
+ * guess. One entry per assignment the adapter actually made (an adapter that
+ * fails closed on an assignment — e.g. authorshipRole left "unknown" for
+ * lack of any attribution cue — still records that fact here as its own
+ * basis, rather than leaving the omission unexplained).
+ */
+export interface AssignmentEvidenceBasis {
+  assigns: "scope" | "resourceRef" | "authorshipRole" | "statedStatus";
+  /** e.g. "numbered-section-heading", "no-heading-page-fallback", "checkbox-x-mark", "no-attribution-found". Adapter-defined, deterministic, never semantic/inferred. */
+  structuralCueType: string;
+  /** The verbatim heading/field-label/attribution/checkbox text the assignment was derived from, if any. */
+  verbatimText?: string;
+  page?: number;
+}
+
 export interface DocumentBlock {
   /** Stable within this packet only. */
   blockId: string;
@@ -86,14 +104,28 @@ export interface DocumentBlock {
   authorshipRole: AuthorshipRole;
   /** Heading/label as it appears in the source document, when available (e.g. "6. Description"). */
   sourceNativeHeading?: string;
-  /** Verbatim block text. */
+  /** Verbatim block text, reflowed from the source's hard-wrapped lines (see philadelphiaFormNominationAdapter.ts's frozen reflow rule). This is what gets handed to the shared extractor. */
   text: string;
+  /**
+   * The block's pre-reflow text exactly as extracted (original line breaks
+   * preserved, nothing joined or repaired) — present whenever an adapter
+   * performs a reflow step, so the reflow is auditable against the source.
+   * Added for the Philadelphia adapter (implementation step 3); optional so
+   * existing packets/tests that never reflow are unaffected.
+   */
+  rawText?: string;
   /** Block-local only — never a whole-document offset. */
   charRange?: [number, number];
   sentenceIndex?: number;
   acquisition: AcquisitionRecord;
   /** Free-text note when this block's scope/role/content is ambiguous — never silently dropped. */
   ambiguityNote?: string;
+  /**
+   * Auditable basis for each scope/resourceRef/authorshipRole assignment the
+   * adapter made for this block (see AssignmentEvidenceBasis doc above).
+   * Added for the Philadelphia adapter (implementation step 3).
+   */
+  assignmentEvidence?: AssignmentEvidenceBasis[];
 }
 
 /**
@@ -111,6 +143,24 @@ export interface DocumentReference {
   citationText: string;
 }
 
+/**
+ * Added for the Philadelphia adapter (implementation step 3): a document's
+ * own stated designation stage/status (e.g. an "X Designated" checkbox mark
+ * on a PHC nomination cover sheet), preserved verbatim with its structural
+ * basis — never inferred from the mere existence of a nomination document.
+ * `statedDate` is left undefined, not guessed, when the document does not
+ * unambiguously tie one single date to the status itself.
+ */
+export interface StatedStatus {
+  /** Verbatim stated status/stage text, e.g. "Designated". */
+  text: string;
+  /** The verbatim source line the status was derived from, for audit. */
+  rawLine?: string;
+  statedDate?: string;
+  page?: number;
+  structuralCueType: string;
+}
+
 export interface DocumentEvidencePacket {
   schemaVersion: 1;
   packetId: string;
@@ -121,6 +171,8 @@ export interface DocumentEvidencePacket {
   /** e.g. "Philadelphia Historical Commission". */
   jurisdiction: string;
   publicationDate?: string;
+  /** The document's own stated designation stage/status, when explicitly present (see StatedStatus doc above). */
+  statedStatus?: StatedStatus;
 
   cardinality: DocumentCardinality;
   /** Length 1 for a single-resource packet. */

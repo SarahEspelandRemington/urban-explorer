@@ -1,8 +1,12 @@
 /**
- * Tests the authorship-role capability mapping's structure and its
- * "unknown" fail-closed behavior only. Deliberately does NOT assert
- * specific staff/applicant/consultant-preparer strength values — those are
- * provisional placeholders pending Sarah's review before pilot execution.
+ * Tests the authorship-role capability mapping's structure, and the
+ * implementation-step-3A pre-registered pilot prior (see
+ * AUTHORSHIP_TRUST_PRIOR_FREEZE.md): "unknown" is no longer globally
+ * lowest — narrative claim types get the same "medium" posture as
+ * applicant/consultant-preparer narrative prose, while structured-
+ * designation/core-fact claim types remain fail-closed "low" for unknown
+ * authorship. Deliberately does NOT lock in commission-staff's specific
+ * values, which remain provisional pending Sarah's separate review.
  *
  * NOTE ON TEST-RUNNER SCOPE: see packetProjection.test.ts.
  */
@@ -11,6 +15,20 @@ import {
   ALL_CLAIM_TYPES,
   capabilitiesForAuthorshipRole,
 } from "./authorshipCapability";
+
+/** Claim types NOT covered by the medium narrative posture — structured
+ * designation ("register-status") and core-fact types ("construction-date",
+ * "architect", "identity") — which must remain fail-closed for unknown
+ * authorship. */
+const NON_NARRATIVE_CLAIM_TYPES = [
+  "register-status",
+  "construction-date",
+  "architect",
+  "identity",
+] as const;
+const NARRATIVE_CLAIM_TYPES = ALL_CLAIM_TYPES.filter(
+  (t) => !NON_NARRATIVE_CLAIM_TYPES.includes(t as never),
+);
 
 describe("capabilitiesForAuthorshipRole", () => {
   it("returns exactly one capability entry per claim type", () => {
@@ -27,12 +45,25 @@ describe("capabilitiesForAuthorshipRole", () => {
     expect(first).toEqual(second);
   });
 
-  it("unknown authorship fails closed: every claim type gets the lowest permitted strength", () => {
-    const result = capabilitiesForAuthorshipRole("unknown");
+  it("unknown authorship is no longer globally lowest: narrative claim types get the same medium posture as applicant/consultant-preparer narrative prose", () => {
+    const result = capabilitiesForAuthorshipRole("unknown", [
+      ...NARRATIVE_CLAIM_TYPES,
+    ]);
+    expect(result.every((c) => c.strength === "medium")).toBe(true);
+  });
+
+  it("unknown authorship remains fail-closed low for claim types deliberately not covered by the medium narrative posture", () => {
+    const result = capabilitiesForAuthorshipRole("unknown", [
+      ...NON_NARRATIVE_CLAIM_TYPES,
+    ]);
     expect(result.every((c) => c.strength === "low")).toBe(true);
-    expect(
-      result.some((c) => c.strength === "high" || c.strength === "medium"),
-    ).toBe(false);
+  });
+
+  it("applicant narrative claims receive the same medium capability as the pre-registered pilot prior", () => {
+    const result = capabilitiesForAuthorshipRole("applicant", [
+      ...NARRATIVE_CLAIM_TYPES,
+    ]);
+    expect(result.every((c) => c.strength === "medium")).toBe(true);
   });
 
   it("accepts a narrowed claim-type list rather than always requiring the full set", () => {
