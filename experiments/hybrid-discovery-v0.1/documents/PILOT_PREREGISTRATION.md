@@ -245,14 +245,25 @@ Property Assessment address)"` — confirmed present verbatim in the real
   2301 Fairmount Avenue extraction (`philadelphiaFormNominationAdapter.test.ts`'s
   `REAL_FORM_PAGE_EXCERPT`). `INDIVIDUAL_FORM_IDENTITY_MARKER` in
   `enumeratePhiladelphiaFrame.ts`.
-- **District-package-stratum marker: NOT YET FROZEN.** No district-package
-  nomination document has been acquired or inspected in this pilot, so no
-  literal marker string can honestly be confirmed yet
-  (`DISTRICT_PACKAGE_FORM_IDENTITY_MARKER` is `undefined`). This is an
-  explicit, logged blocker: the real marker text must be observed and
-  confirmed against the first real district-package candidate document the
-  next task acquires, logged as its own entry, BEFORE it is applied as a
-  pass/fail test to any other district candidate.
+- **District-package-stratum marker (frozen 2026-10-12, CONFIRMED — see
+  section 10, Step 5 district calibration).** Two distinct real structural
+  dialects were observed and are frozen, applied any-of (a candidate
+  document need only match one):
+  - `narrative-block-inventory`: repeating section heading
+    `/^[A-Z0-9.'\u2019\s]+[-\u2013]\s*(?:\d+|Unit)\s+Block$/` — confirmed 108
+    occurrences in the real Old City Historic District nomination
+    extraction, zero false positives.
+  - `per-parcel-field-survey`: repeating per-page field-label line
+    `/^Address\s{2,}\S/` — confirmed 574 occurrences in the real Southeast
+    Spruce Hill Historic District nomination extraction, exactly matching
+    574 "Registry Number" fields, zero false positives.
+
+  `DISTRICT_PACKAGE_FORM_IDENTITY_MARKER` in `enumeratePhiladelphiaFrame.ts`
+  is the any-of array of both markers. Generalizing `FormIdentityMarker`
+  into a discriminated union + any-of-array match (rather than a
+  one-document special case) was itself the one structural dry-run fix
+  permitted by section 9.
+
 - Mismatch → structural skip `wrong-document-type-adapter-inapplicable`.
   (`checkFormIdentityMarker` in `enumeratePhiladelphiaFrame.ts`.)
 
@@ -338,23 +349,49 @@ adapter freeze is committed and before the six's extraction begins.
 3. Unlabeled administrative content folds under the nearest preceding
    heading.
 
-## 10. District calibration (frozen plan, NOT executed in this step)
+## 10. District calibration (executed — Step 5, 2026-10-12)
 
-Before the final six are drawn, one district-package calibration document
-(outside the six) will be selected using the same deterministic/seeded
-structural rule already frozen for the district stratum in this document —
-applied to the district-package candidate pool, same seed, same stable
-address-sort ordering, walking forward and applying the SAME structural
-gates as section 7A (Gates 1-3, then the exact district-entry check, §4),
-taking the first candidate in that shuffled order that actually passes
-them — never simply "the first candidate in shuffled order" without the
-gates. That selection, the structural-check evidence that qualified it, and
-only that (not its narrative content), will be recorded as a calibration
-exclusion before the final six are drawn. **Not selected or read in this
-task** — selecting it now would require either running the real
-candidate-check walk early (out of scope) or hand-picking a subject outside
-the frozen procedure (not allowed). This is logged as the one remaining
-prerequisite before the final six can be drawn.
+One district-package calibration document (outside the six) was selected
+using the same deterministic/seeded structural rule frozen for the district
+stratum in this document — same seed, same stable address-sort ordering,
+walking forward through the district-package candidate pool and applying
+the same structural gates as section 7A (Gates 1-3, then the exact
+district-entry check, §4).
+
+**Candidates checked, in frozen seeded order** (2 of `CANDIDATE_CHECK_CAP =
+10` consumed; full log: `districtCalibrationCandidateLog.ts`/`.json`):
+
+1. `144 BREAD ST` (Old City Historic District package): Gate 3 applicable
+   (`narrative-block-inventory` dialect, 108 confirmed occurrences) → Gate 4
+   structural skip `district-entry-not-found`. The document spells
+   street-type suffixes in full ("144 BREAD STREET"); the frozen exact-match
+   rule (section 7A/§4 — trim/uppercase/collapse-whitespace only, never
+   fuzzy) does not normalize `ST` ↔ `STREET`, so this is a genuine,
+   non-workaroundable mismatch, not a bug. **No change to this exact-match
+   rule is permitted during the six-subject pilot** — this candidate
+   remains correctly skipped, not a reason to loosen section 7A/§4.
+2. `4004 SPRUCE ST` (Southeast Spruce Hill Historic District package): Gate
+   3 applicable (`per-parcel-field-survey` dialect, 574 confirmed
+   occurrences) → Gate 4 match (exact address match, Registry Number
+   `020S110070`). **Accepted as the district calibration subject.**
+
+**Accepted calibration subject**: `4004 SPRUCE ST`, package "Southeast
+Spruce Hill" (real nomination document:
+https://www.phila.gov/media/20241023081326/Historic-District-Southeast-Spruce-Hill.pdf).
+Added to `PILOT_EXCLUSIONS.ts` with `reasonCode:
+"district-calibration-subject"` — it must remain outside the final
+six-subject pilot, same as 2301 Fairmount Ave.
+
+**Structural-only validation performed** (`philadelphiaDistrictPackageAdapter.ts`,
+run through the unmodified shared `packetProjection.ts`): the real
+multi-resource `DocumentEvidencePacket` structure (`cardinality:
+"multi-resource"`, stable packet-local resource IDs), explicit `resourceRef`
+assignment on resource-entry blocks only (never on district-narrative
+blocks), correct district-vs-resource scope assignment, and
+district-narrative exclusion as context (not loss) under the shared
+projection module. No story extraction, admission, worthiness evaluation,
+or angle formation was performed — structural calibration only, per this
+section's original scope.
 
 ## 11. Grounding rules (frozen)
 

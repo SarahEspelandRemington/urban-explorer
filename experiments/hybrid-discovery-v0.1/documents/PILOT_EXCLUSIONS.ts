@@ -16,7 +16,10 @@
 
 export interface ExclusionEntry {
   address: string;
-  reasonCode: "calibration-subject" | "already-curated-production";
+  reasonCode:
+    | "calibration-subject"
+    | "already-curated-production"
+    | "district-calibration-subject";
   reasonDetail: string;
   sourceOfReason: string;
 }
@@ -107,5 +110,13 @@ export const PILOT_EXCLUSIONS: ExclusionEntry[] = [
       'District-only resource (district "Spring Garden", designated 10/11/2000, historic name "Polonia Federal Savings Bank", construction date 1875, no individual designation date). Already curated in production as an AUTO-ADMIT subject (Polonia Federal Savings Bank), with the PRHP register entry cited as the authoritative source for the 1875 construction date.',
     sourceOfReason:
       "artifacts/api-server/src/lib/curatedLocalHistory.ts (lines ~239-241)",
+  },
+  {
+    address: "4004 SPRUCE ST",
+    reasonCode: "district-calibration-subject",
+    reasonDetail:
+      'Used as the Step 5 district-package calibration subject (structural-only validation: district-package form identity, source-native resource-entry detection, resourceRef, multi-resource packet structure, district-vs-resource scope assignment, district prose exclusion — never story extraction, admission, worthiness, or angle formation). District "Southeast Spruce Hill", Registry Number 020S110070, real nomination document at https://www.phila.gov/media/20241023081326/Historic-District-Southeast-Spruce-Hill.pdf. Must remain outside the final six-subject pilot, same as 2301 Fairmount Ave.',
+    sourceOfReason:
+      "districtCalibrationCandidateLog.ts / districtCalibrationCandidateLog.json, philadelphiaDistrictPackageAdapter.ts (this experiment)",
   },
 ];

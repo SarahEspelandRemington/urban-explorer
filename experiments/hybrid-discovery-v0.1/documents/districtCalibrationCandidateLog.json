@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-10-12T00:00:00.000Z",
+  "task": "Step 5 \u2014 district calibration selection + structural validation only",
+  "baselineCommit": "f41e6881368f1220d984410ea84789e3ec1fb023",
+  "pilotSeed": "18bba6ebc1042323109b7dc312f6066497702753",
+  "candidateCheckCap": 10,
+  "candidatesChecked": 2,
+  "acceptedCalibrationSubject": "4004 SPRUCE ST",
+  "entries": [
+    {
+      "seededOrderPosition": 1,
+      "candidateAddress": "144 BREAD ST",
+      "districtName": "Old City",
+      "packageDocumentTitle": "Old City Historic District nomination (Philadelphia Historical Commission)",
+      "packageDocumentUrl": "https://www.phila.gov/media/20241023081326/Historic-District-Old-City.pdf",
+      "retrievalOutcome": "fetched",
+      "textLayerStatus": "has-text-layer",
+      "gate3Outcome": "applicable",
+      "gate3MatchedDialectLabel": "narrative-block-inventory",
+      "gate4Outcome": "skip",
+      "skipReason": "district-entry-not-found",
+      "structuralEvidence": "Gate 3: repeating \"<STREET NAME> \u2013 <NUMBER|Unit> Block\" section heading confirmed 108 occurrences in the real extraction, zero false positives. Gate 4: the document spells street-type suffixes in full (e.g. \"144 BREAD STREET\"), while the PRHP register abbreviates them (e.g. \"144 BREAD ST\") \u2014 no exact match under the frozen no-fuzzy-matching rule; a genuine, non-workaroundable mismatch, not a bug.",
+      "accepted": false
+    },
+    {
+      "seededOrderPosition": 2,
+      "candidateAddress": "4004 SPRUCE ST",
+      "districtName": "Southeast Spruce Hill",
+      "packageDocumentTitle": "Southeast Spruce Hill Historic District nomination (Philadelphia Historical Commission)",
+      "packageDocumentUrl": "https://www.phila.gov/media/20241023081326/Historic-District-Southeast-Spruce-Hill.pdf",
+      "retrievalOutcome": "fetched",
+      "textLayerStatus": "has-text-layer",
+      "gate3Outcome": "applicable",
+      "gate3MatchedDialectLabel": "per-parcel-field-survey",
+      "gate4Outcome": "match",
+      "structuralEvidence": "Gate 3: repeating \"Address            <ADDRESS>\" per-parcel field-label line confirmed 574 occurrences in the real extraction, exactly matching 574 \"Registry Number\" fields, zero false positives. Gate 4: exact normalized-address match \u2014 the document's own \"Address\" field for Registry Number 020S110070 reads \"4004 SPRUCE ST\", identical in abbreviation format to the PRHP register's printed form.",
+      "accepted": true
+    }
+  ]
+}

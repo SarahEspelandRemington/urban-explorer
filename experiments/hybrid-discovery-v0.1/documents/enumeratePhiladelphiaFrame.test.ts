@@ -15,6 +15,8 @@ import {
   checkFormIdentityMarker,
   checkPackageAlreadyRepresented,
   classifyTextLayer,
+  CANDIDATE_CHECK_CAP,
+  DISTRICT_PACKAGE_FORM_IDENTITY_MARKER,
   INDIVIDUAL_FORM_IDENTITY_MARKER,
   parseInventoryText,
   PILOT_SEED,
@@ -23,6 +25,8 @@ import {
   type AcceptedPackageRecord,
   type InventoryRecord,
 } from "./enumeratePhiladelphiaFrame";
+import { PILOT_EXCLUSIONS } from "./PILOT_EXCLUSIONS";
+import { DISTRICT_CALIBRATION_CANDIDATE_LOG } from "./districtCalibrationCandidateLog";
 
 function page(
   headerSpacing: {
@@ -341,6 +345,95 @@ describe("structural-check gates (design verification only — never run against
     ).toEqual({ outcome: "applicable" });
   });
 
+  it("Gate 3 (Step 5 — district calibration): recognizes the narrative-block-inventory dialect via its repeating section-heading pattern (synthetic fixture, ≥10 occurrences, mirroring the real Old City nomination's confirmed structure)", () => {
+    const headingLines = [
+      "N. AMERICAN STREET – Unit Block",
+      "N. AMERICAN STREET – 300 Block",
+      "APPLETREE STREET - Unit Block",
+      "ARCH STREET - 100 Block",
+      "ARCH STREET - 200 Block",
+      "BREAD STREET – Unit Block",
+      "CHERRY STREET - Unit Block",
+      "CHURCH STREET - Unit Block",
+      "ELFRETH'S ALLEY - Unit Block",
+      "FRONT STREET - 100 Block",
+      "FRONT STREET - 200 Block",
+    ];
+    const fixture = headingLines
+      .map((h) => `${h}\nSome synthetic entry text.`)
+      .join("\n");
+    expect(
+      checkFormIdentityMarker(fixture, DISTRICT_PACKAGE_FORM_IDENTITY_MARKER),
+    ).toEqual({
+      outcome: "applicable",
+      matchedDialectLabel: "narrative-block-inventory",
+    });
+  });
+
+  it("Gate 3 (Step 5 — district calibration): recognizes the per-parcel-field-survey dialect via its repeating Address field-label line (synthetic fixture, ≥10 occurrences, mirroring the real Southeast Spruce Hill nomination's confirmed structure)", () => {
+    const addressLines = Array.from(
+      { length: 11 },
+      (_, i) => `Address            ${100 + i} TEST ST`,
+    );
+    const fixture = addressLines
+      .map(
+        (a) =>
+          `${a}\nRegistry Number       TEST-${100 + addressLines.indexOf(a)}`,
+      )
+      .join("\n");
+    expect(
+      checkFormIdentityMarker(fixture, DISTRICT_PACKAGE_FORM_IDENTITY_MARKER),
+    ).toEqual({
+      outcome: "applicable",
+      matchedDialectLabel: "per-parcel-field-survey",
+    });
+  });
+
+  it("Gate 3 (Step 5 — district calibration): a document matching neither confirmed district dialect is skipped as wrong-document-type-adapter-inapplicable", () => {
+    const unrelatedText =
+      "Some Other City's Permit Application Form\nField: value";
+    expect(
+      checkFormIdentityMarker(
+        unrelatedText,
+        DISTRICT_PACKAGE_FORM_IDENTITY_MARKER,
+      ),
+    ).toEqual({
+      outcome: "skip",
+      reason: "wrong-document-type-adapter-inapplicable",
+    });
+  });
+
+  it("Gate 3 (Step 5 — district calibration): a sparse/incidental match below minOccurrences is NOT treated as format confirmation", () => {
+    const sparseFixture =
+      "Address            100 TEST ST\nRegistry Number TEST-1\n\nSome unrelated narrative document with just one incidental Address-looking line.";
+    expect(
+      checkFormIdentityMarker(
+        sparseFixture,
+        DISTRICT_PACKAGE_FORM_IDENTITY_MARKER,
+      ),
+    ).toEqual({
+      outcome: "skip",
+      reason: "wrong-document-type-adapter-inapplicable",
+    });
+  });
+
+  it("Gate 3 (Step 5 — district calibration): the individual-form marker still matches its own real document and still rejects both district dialects (no cross-family regression)", () => {
+    const realExcerpt =
+      "1. ADDRESS OF HISTORIC RESOURCE (must comply with an Office of Property Assessment address)\n       Street address:__________";
+    expect(
+      checkFormIdentityMarker(realExcerpt, INDIVIDUAL_FORM_IDENTITY_MARKER),
+    ).toEqual({ outcome: "applicable" });
+    expect(
+      checkFormIdentityMarker(
+        realExcerpt,
+        DISTRICT_PACKAGE_FORM_IDENTITY_MARKER,
+      ),
+    ).toEqual({
+      outcome: "skip",
+      reason: "wrong-document-type-adapter-inapplicable",
+    });
+  });
+
   it("district-entry check: matches on exact (normalized) address", () => {
     const packageResources: DocumentResource[] = [
       {
@@ -487,5 +580,45 @@ describe("seededShuffleOrder", () => {
     const copy = items.slice();
     seededShuffleOrder(items, PILOT_SEED);
     expect(items).toEqual(copy);
+  });
+});
+
+describe("Step 5 — district calibration candidate-check log", () => {
+  it("records every checked candidate in frozen seeded order, within the candidate-check cap", () => {
+    expect(DISTRICT_CALIBRATION_CANDIDATE_LOG).toHaveLength(2);
+    expect(DISTRICT_CALIBRATION_CANDIDATE_LOG.length).toBeLessThanOrEqual(
+      CANDIDATE_CHECK_CAP,
+    );
+    expect(
+      DISTRICT_CALIBRATION_CANDIDATE_LOG.map((e) => e.seededOrderPosition),
+    ).toEqual([1, 2]);
+  });
+
+  it("records the first candidate (144 BREAD ST) as checked and correctly not accepted", () => {
+    const entry = DISTRICT_CALIBRATION_CANDIDATE_LOG[0]!;
+    expect(entry.candidateAddress).toBe("144 BREAD ST");
+    expect(entry.gate3Outcome).toBe("applicable");
+    expect(entry.gate4Outcome).toBe("skip");
+    expect(entry.skipReason).toBe("district-entry-not-found");
+    expect(entry.accepted).toBe(false);
+  });
+
+  it("records the second candidate (4004 SPRUCE ST) as the sole accepted calibration subject", () => {
+    const entry = DISTRICT_CALIBRATION_CANDIDATE_LOG[1]!;
+    expect(entry.candidateAddress).toBe("4004 SPRUCE ST");
+    expect(entry.gate3Outcome).toBe("applicable");
+    expect(entry.gate4Outcome).toBe("match");
+    expect(entry.accepted).toBe(true);
+    expect(
+      DISTRICT_CALIBRATION_CANDIDATE_LOG.filter((e) => e.accepted),
+    ).toHaveLength(1);
+  });
+});
+
+describe("Step 5 — district calibration exclusion-list entry", () => {
+  it("excludes the accepted district calibration subject (4004 SPRUCE ST) from the eventual final six-subject draw", () => {
+    const entry = PILOT_EXCLUSIONS.find((e) => e.address === "4004 SPRUCE ST");
+    expect(entry).toBeDefined();
+    expect(entry?.reasonCode).toBe("district-calibration-subject");
   });
 });

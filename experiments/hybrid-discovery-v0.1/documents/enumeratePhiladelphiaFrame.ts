@@ -420,21 +420,53 @@ export function classifyTextLayer(
 
 /**
  * Gate 3 — adapter-form applicability. A frozen, mechanical, source-native
- * form-identity marker: one exact verbatim line this form family is known
- * to contain, confirmed by direct inspection of a real document of that
- * family (never a guess). `confirmed: false` means the marker's literal
- * text has NOT yet been observed in any real document of that family and
- * must not be used as a pass/fail test until it is confirmed against a
- * real acquired document and the confirmation is logged.
+ * form-identity marker, confirmed by direct inspection of a real document
+ * of that family (never a guess). `confirmed: false` means the marker has
+ * NOT yet been observed in any real document of that family and must not
+ * be used as a pass/fail test until it is confirmed against a real
+ * acquired document and the confirmation is logged.
+ *
+ * Two structural-cue types are supported (extended Step 5 — district
+ * calibration — to accommodate a real, generic finding, not a
+ * one-document special case: the real-world "district-package nomination"
+ * family turned out to have more than one genuinely distinct structural
+ * dialect, each independently confirmed against its own real acquired
+ * document. See `DISTRICT_PACKAGE_FORM_IDENTITY_MARKER` below):
+ * - "exact-line-match": one exact verbatim line this form family is known
+ *   to contain (unchanged from Step 4 — used by
+ *   `INDIVIDUAL_FORM_IDENTITY_MARKER`, which has exactly one confirmed
+ *   dialect).
+ * - "repeating-pattern-match": a regex this form family is known to match
+ *   REPEATEDLY (at least `minOccurrences` times) among the document's
+ *   trimmed lines — for a form family whose structural signature is a
+ *   repeating element (e.g. a per-entry heading or per-page field label)
+ *   rather than one single fixed line. `minOccurrences` must be set well
+ *   below the real confirmed occurrence count observed for that dialect
+ *   (never set to exactly the observed count), so the check still reads
+ *   as "this structural pattern repeats," not "this exact real document."
  */
-export interface FormIdentityMarker {
-  formFamily:
-    | "philadelphia-individual-resource-nomination"
-    | "philadelphia-district-package-nomination";
-  structuralCueType: "exact-line-match";
-  verbatimMarkerText: string;
-  confirmed: boolean;
-}
+export type FormIdentityMarker =
+  | {
+      formFamily:
+        | "philadelphia-individual-resource-nomination"
+        | "philadelphia-district-package-nomination";
+      structuralCueType: "exact-line-match";
+      verbatimMarkerText: string;
+      confirmed: boolean;
+      /** Which real structural variant of `formFamily` this marker was confirmed against, when the family has more than one. */
+      dialectLabel?: string;
+    }
+  | {
+      formFamily:
+        | "philadelphia-individual-resource-nomination"
+        | "philadelphia-district-package-nomination";
+      structuralCueType: "repeating-pattern-match";
+      pattern: RegExp;
+      minOccurrences: number;
+      patternDescription: string;
+      confirmed: boolean;
+      dialectLabel?: string;
+    };
 
 /**
  * Frozen individual-stratum form-identity marker. CONFIRMED: this exact
@@ -453,37 +485,104 @@ export const INDIVIDUAL_FORM_IDENTITY_MARKER: FormIdentityMarker = {
 };
 
 /**
- * District-package form-identity marker — NOT YET FROZEN. No
- * district-package nomination document has been acquired or inspected in
- * this pilot, so no literal marker string can honestly be confirmed yet.
- * This is an explicit, logged blocker (see `PILOT_PREREGISTRATION.md`
- * section "Structural-check order"): the real marker text must be
- * observed and confirmed against the first real district-package
- * candidate document the next task acquires, BEFORE it is applied as a
- * pass/fail test to any other district candidate.
+ * District-package form-identity markers — FROZEN Step 5 (district
+ * calibration). Two genuinely distinct real structural dialects were
+ * observed while walking the frozen seeded candidate order, each
+ * independently confirmed against its own real acquired document (see the
+ * Step 5 candidate-check log for exact counts):
+ *
+ * - "narrative-block-inventory" dialect (candidate #1, Old City nomination,
+ *   https://www.phila.gov/media/20241023081326/Historic-District-Old-City.pdf):
+ *   a repeating section-heading pattern "<STREET NAME> – <NUMBER|Unit>
+ *   Block" — confirmed 108 occurrences in the real extraction, zero
+ *   false-positive matches against the Southeast Spruce Hill extraction.
+ *   This candidate was structurally applicable (Gate 3 "applicable") but
+ *   was skipped downstream at the district-entry gate
+ *   ("district-entry-not-found": the document spells street-type suffixes
+ *   in full, e.g. "BREAD STREET", while the PRHP register abbreviates
+ *   them, e.g. "BREAD ST" — a genuine, non-workaroundable mismatch under
+ *   the frozen no-fuzzy-matching rule).
+ * - "per-parcel-field-survey" dialect (candidate #2, Southeast Spruce Hill
+ *   nomination,
+ *   https://www.phila.gov/media/20241023081326/Historic-District-Southeast-Spruce-Hill.pdf):
+ *   a repeating per-page field-label line "Address            <ADDRESS>"
+ *   — confirmed 574 occurrences in the real extraction (exactly matching
+ *   574 "Registry Number" per-parcel fields), zero false-positive matches
+ *   against the Old City extraction. This is the Step 5 accepted district
+ *   calibration subject.
+ *
+ * A candidate is Gate-3-applicable if EITHER confirmed dialect marker
+ * matches (see `checkFormIdentityMarker`'s any-of-markers behavior) — this
+ * reflects that the "district-package nomination" family itself genuinely
+ * has multiple real structural dialects, not that any one specific
+ * document gets special-cased.
  */
-export const DISTRICT_PACKAGE_FORM_IDENTITY_MARKER:
-  | FormIdentityMarker
-  | undefined = undefined;
+export const OLD_CITY_NARRATIVE_BLOCK_INVENTORY_DISTRICT_MARKER: FormIdentityMarker =
+  {
+    formFamily: "philadelphia-district-package-nomination",
+    structuralCueType: "repeating-pattern-match",
+    pattern: /^[A-Z0-9.'\u2019\s]+[-\u2013]\s*(?:\d+|Unit)\s+Block$/,
+    minOccurrences: 10,
+    patternDescription:
+      'Street-name + dash + block-number/Unit + "Block" repeating section heading.',
+    confirmed: true,
+    dialectLabel: "narrative-block-inventory",
+  };
+
+export const SPRUCE_HILL_PER_PARCEL_FIELD_SURVEY_DISTRICT_MARKER: FormIdentityMarker =
+  {
+    formFamily: "philadelphia-district-package-nomination",
+    structuralCueType: "repeating-pattern-match",
+    pattern: /^Address\s{2,}\S/,
+    minOccurrences: 10,
+    patternDescription:
+      'Per-parcel "Address" field-label line beginning each resource-entry page.',
+    confirmed: true,
+    dialectLabel: "per-parcel-field-survey",
+  };
+
+export const DISTRICT_PACKAGE_FORM_IDENTITY_MARKER: readonly FormIdentityMarker[] =
+  [
+    OLD_CITY_NARRATIVE_BLOCK_INVENTORY_DISTRICT_MARKER,
+    SPRUCE_HILL_PER_PARCEL_FIELD_SURVEY_DISTRICT_MARKER,
+  ];
 
 export type Gate3Result =
-  | { outcome: "applicable" }
+  | { outcome: "applicable"; matchedDialectLabel?: string }
   | { outcome: "skip"; reason: "wrong-document-type-adapter-inapplicable" };
 
 /**
  * Gate 3: runs only for documents with machine-readable text (i.e. only
- * after Gate 2 classifies `"has-text-layer"`). Checks for the frozen
- * marker's exact verbatim line, trimmed, among the extracted text's lines
- * — an exact structural match, never a "did parsing work" proxy.
+ * after Gate 2 classifies `"has-text-layer"`). Accepts either a single
+ * frozen marker or an array of alternative frozen markers for the same
+ * form family (any-of match — applicable iff at least one marker's own
+ * structural cue matches), reflecting that a form family may have more
+ * than one confirmed real structural dialect. Never a "did parsing work"
+ * proxy.
  */
 export function checkFormIdentityMarker(
   extractedText: string,
-  marker: FormIdentityMarker,
+  marker: FormIdentityMarker | readonly FormIdentityMarker[],
 ): Gate3Result {
+  const markers = Array.isArray(marker) ? marker : [marker];
   const lines = extractedText.split("\n").map((l) => l.trim());
-  return lines.includes(marker.verbatimMarkerText.trim())
-    ? { outcome: "applicable" }
-    : { outcome: "skip", reason: "wrong-document-type-adapter-inapplicable" };
+
+  for (const m of markers) {
+    if (m.structuralCueType === "exact-line-match") {
+      if (lines.includes(m.verbatimMarkerText.trim())) {
+        return { outcome: "applicable", matchedDialectLabel: m.dialectLabel };
+      }
+    } else {
+      const occurrences = lines.filter((l) => m.pattern.test(l)).length;
+      if (occurrences >= m.minOccurrences) {
+        return { outcome: "applicable", matchedDialectLabel: m.dialectLabel };
+      }
+    }
+  }
+  return {
+    outcome: "skip",
+    reason: "wrong-document-type-adapter-inapplicable",
+  };
 }
 
 /**
