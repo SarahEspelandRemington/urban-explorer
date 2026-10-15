@@ -1,0 +1,247 @@
+{
+  "preregistration": {
+    "file": "experiments/hybrid-discovery-v0.1/documents/STEP_6D_PREREGISTRATION.md",
+    "commit": "ac0af0f6b544fdc7f3bfad6df62cc2440776ccf1",
+    "modifiedDuringExecution": false
+  },
+  "preconditions": {
+    "headMatchedPreregistrationCommit": true,
+    "trackedTreeClean": true,
+    "preregistrationDiffFromHead": "empty",
+    "onlyKnownUnrelatedUntrackedArtifactsPresent": true,
+    "allPassed": true
+  },
+  "productionRuntimeIdentity": {
+    "renderService": "srv-d95t19rtqb8s73f926s0",
+    "deployId": "dep-db425gmq1p3s73eo7ctg",
+    "deployStatus": "live",
+    "commit": "f467483c76d4714fd8d0d8d3924a521a81ac7330",
+    "baseUrl": "https://urban-explorer-ihsy.onrender.com"
+  },
+  "requestParameterAdaptation": {
+    "reason": "Preregistration framed frozen areas as bboxes; production /explore/discover is a point+radius API with server-side radius clamp max 1000m.",
+    "method": "bbox centroid + server max radius (1000m) + osmAnchor:true + mode:full",
+    "frozenRulesAffected": "none (thin predicate, bridge order, classification precedence all unchanged)"
+  },
+  "discoverCalls": [
+    {
+      "area": "Fairmount/Spring Garden, Philadelphia",
+      "bbox": {
+        "latMin": 39.955,
+        "latMax": 39.975,
+        "lonMin": -75.185,
+        "lonMax": -75.15
+      },
+      "centroid": { "latitude": 39.965, "longitude": -75.1675 },
+      "requestBody": {
+        "latitude": 39.965,
+        "longitude": -75.1675,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true
+      },
+      "httpStatus": 200,
+      "responseBytes": 19059,
+      "sha256": "1a2b8b6072c5a1291913248f5094740e3998ab9b72d151f5bd82701f93c96e4a",
+      "rawFile": "step6d-artifacts/discover_fairmount.json",
+      "placesReturned": 20,
+      "osmCandidateCount": { "r150": 7, "r300": 21, "r500": 56 },
+      "tierDistribution": { "none": 14, "tier1": 6, "tier4": 0 }
+    },
+    {
+      "area": "Midtown Manhattan, New York City",
+      "bbox": {
+        "latMin": 40.7515,
+        "latMax": 40.7675,
+        "lonMin": -74.003,
+        "lonMax": -73.988
+      },
+      "centroid": { "latitude": 40.7595, "longitude": -73.9955 },
+      "requestBody": {
+        "latitude": 40.7595,
+        "longitude": -73.9955,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true
+      },
+      "httpStatus": 200,
+      "responseBytes": 8305,
+      "sha256": "6bee92520ad6695bd82c784e57167dd3d216d83a5698c8a669dc75746a58f248",
+      "rawFile": "step6d-artifacts/discover_midtown.json",
+      "placesReturned": 10,
+      "osmCandidateCount": { "r150": 8, "r300": 24, "r500": 66 },
+      "tierDistribution": { "none": 8, "tier1": 2, "tier4": 0 }
+    },
+    {
+      "area": "Bethlehem, PA",
+      "bbox": {
+        "latMin": 40.615,
+        "latMax": 40.635,
+        "lonMin": -75.395,
+        "lonMax": -75.365
+      },
+      "centroid": { "latitude": 40.625, "longitude": -75.38 },
+      "requestBody": {
+        "latitude": 40.625,
+        "longitude": -75.38,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true
+      },
+      "httpStatus": 200,
+      "responseBytes": 3899,
+      "sha256": "374a0070956d1357ceeb689967b145feab8924b5d1e02614934a10bb441d3028",
+      "rawFile": "step6d-artifacts/discover_bethlehem.json",
+      "placesReturned": 4,
+      "osmCandidateCount": { "r150": 0, "r300": 18, "r500": 57 },
+      "tierDistribution": { "none": 3, "tier1": 1, "tier4": 0 }
+    },
+    {
+      "area": "Jim Thorpe, PA",
+      "bbox": {
+        "latMin": 40.865,
+        "latMax": 40.885,
+        "lonMin": -75.745,
+        "lonMax": -75.715
+      },
+      "centroid": { "latitude": 40.875, "longitude": -75.73 },
+      "requestBody": {
+        "latitude": 40.875,
+        "longitude": -75.73,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true
+      },
+      "httpStatus": 200,
+      "responseBytes": 218,
+      "sha256": "a26870a29cdf5cc14b4e4ece72367447d3d4d276c618b867c522f80331b9b93d",
+      "rawFile": "step6d-artifacts/discover_jimthorpe.json",
+      "placesReturned": 0,
+      "emptyReason": "filtered_for_quality",
+      "osmCandidateCount": { "r150": 1, "r300": 5, "r500": 8 },
+      "tierDistribution": { "none": 0, "tier1": 0, "tier4": 0 }
+    }
+  ],
+  "metricsByArea": {
+    "fairmount": {
+      "totalDiscoverCandidates": 20,
+      "thinCandidateCount": 0,
+      "bridgeableCount": 0,
+      "joinability": null,
+      "individualNrhpShareAmongAllThin": null,
+      "individualNrhpShareAmongBridgeableThin": null,
+      "classSplit": null,
+      "joinMethodSplit": null,
+      "wikipediaBaselineOfBridgedIndividualListings": null,
+      "shareOfBridgedIndividualListingsBaselineC": null,
+      "shareOfAllOsmCandidatesWithRefNrhp": "not_observable",
+      "shareOfThinOsmCandidatesWithRefNrhp": null
+    },
+    "midtown": {
+      "totalDiscoverCandidates": 10,
+      "thinCandidateCount": 0,
+      "bridgeableCount": 0,
+      "joinability": null,
+      "individualNrhpShareAmongAllThin": null,
+      "individualNrhpShareAmongBridgeableThin": null,
+      "classSplit": null,
+      "joinMethodSplit": null,
+      "wikipediaBaselineOfBridgedIndividualListings": null,
+      "shareOfBridgedIndividualListingsBaselineC": null,
+      "shareOfAllOsmCandidatesWithRefNrhp": "not_observable",
+      "shareOfThinOsmCandidatesWithRefNrhp": null
+    },
+    "bethlehem": {
+      "totalDiscoverCandidates": 4,
+      "thinCandidateCount": 0,
+      "bridgeableCount": 0,
+      "joinability": null,
+      "individualNrhpShareAmongAllThin": null,
+      "individualNrhpShareAmongBridgeableThin": null,
+      "classSplit": null,
+      "joinMethodSplit": null,
+      "wikipediaBaselineOfBridgedIndividualListings": null,
+      "shareOfBridgedIndividualListingsBaselineC": null,
+      "shareOfAllOsmCandidatesWithRefNrhp": "not_observable",
+      "shareOfThinOsmCandidatesWithRefNrhp": null
+    },
+    "jimThorpe": {
+      "totalDiscoverCandidates": 0,
+      "thinCandidateCount": 0,
+      "bridgeableCount": 0,
+      "joinability": null,
+      "individualNrhpShareAmongAllThin": null,
+      "individualNrhpShareAmongBridgeableThin": null,
+      "classSplit": null,
+      "joinMethodSplit": null,
+      "wikipediaBaselineOfBridgedIndividualListings": null,
+      "shareOfBridgedIndividualListingsBaselineC": null,
+      "shareOfAllOsmCandidatesWithRefNrhp": "not_observable",
+      "shareOfThinOsmCandidatesWithRefNrhp": null
+    }
+  },
+  "metricsOverall": {
+    "totalDiscoverCandidates": 34,
+    "thinCandidateCount": 0,
+    "bridgeableCount": 0,
+    "joinability": null,
+    "individualNrhpShareAmongAllThin": null,
+    "individualNrhpShareAmongAllThinIsLowerBound": true,
+    "individualNrhpShareAmongBridgeableThin": null,
+    "classSplit": null,
+    "joinMethodSplit": null,
+    "wikipediaBaselineOfBridgedIndividualListings": null,
+    "shareOfBridgedIndividualListingsBaselineC": null,
+    "shareOfAllOsmCandidatesWithRefNrhp": "not_observable",
+    "shareOfThinOsmCandidatesWithRefNrhp": null
+  },
+  "osmCandidateFunnelDiagnostic": {
+    "note": "Supplementary, not a frozen metric.",
+    "fairmount": { "r150": 7, "r300": 21, "r500": 56, "emittedPlaces": 20 },
+    "midtown": { "r150": 8, "r300": 24, "r500": 66, "emittedPlaces": 10 },
+    "bethlehem": { "r150": 0, "r300": 18, "r500": 57, "emittedPlaces": 4 },
+    "jimThorpe": { "r150": 1, "r300": 5, "r500": 8, "emittedPlaces": 0 }
+  },
+  "bridgeMechanismGaps": {
+    "gap1OsmRefNrhpUnobservable": {
+      "description": "HINT_TAGS (12-key OSM tag allowlist feeding the osmTags response field) excludes ref:nrhp; no alternate raw/full/debug tag field exists in the production HTTP response. Reading ref:nrhp requires either widening HINT_TAGS (forbidden) or an independent Overpass query (not a frozen mechanism).",
+      "mootForThisRun": true,
+      "reason": "zero thin candidates existed to bridge"
+    },
+    "gap2WikipediaBcdRequiresClaimExtraction": {
+      "description": "Distinguishing Wikipedia baseline B/C/D requires inspecting article content quality, which is claim extraction (out of scope per preregistration Section 12). Only A vs resolved is deterministically computable without extraction.",
+      "mootForThisRun": true,
+      "reason": "zero bridged individual listings existed to classify"
+    }
+  },
+  "interpretation": {
+    "frozenTableApplies": false,
+    "reason": "Joinability is 0/0 (undefined), a degenerate zero-candidate-pool case distinct from a 'low joinability' bucket where bridging was attempted and failed. No go/no-go/inconclusive/report-only decision is produced.",
+    "decision": "not_applicable_zero_candidate_pool"
+  },
+  "textLayerProbeGate": {
+    "reached": false,
+    "reason": "No 'proceed' interpretation result was produced.",
+    "pdfsFetched": 0
+  },
+  "requestCounts": {
+    "discoverCalls": 4,
+    "wikidataRequestsUsed": 0,
+    "wikidataRequestCap": 20
+  },
+  "artifacts": [
+    "experiments/hybrid-discovery-v0.1/documents/step6d-artifacts/discover_fairmount.json",
+    "experiments/hybrid-discovery-v0.1/documents/step6d-artifacts/discover_midtown.json",
+    "experiments/hybrid-discovery-v0.1/documents/step6d-artifacts/discover_bethlehem.json",
+    "experiments/hybrid-discovery-v0.1/documents/step6d-artifacts/discover_jimthorpe.json",
+    "experiments/hybrid-discovery-v0.1/documents/step6d-artifacts/hashes.txt",
+    "experiments/hybrid-discovery-v0.1/documents/STEP_6D_RESULTS.md",
+    "experiments/hybrid-discovery-v0.1/documents/step6dResultLog.json"
+  ],
+  "confirmations": {
+    "preregistrationUnmodified": true,
+    "productionCodeUnchanged": true,
+    "committed": false,
+    "pushed": false
+  }
+}

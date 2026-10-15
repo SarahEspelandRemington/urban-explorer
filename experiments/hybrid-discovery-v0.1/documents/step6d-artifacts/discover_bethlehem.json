@@ -1,0 +1,118 @@
+{
+  "places": [
+    {
+      "id": "way-148902764",
+      "name": "One East Broad",
+      "category": "building",
+      "latitude": 40.6226859,
+      "longitude": -75.3781111,
+      "address": "1 East Broad Street",
+      "coordSource": "osm",
+      "osmId": "way/148902764",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "start_date": "2007", "building:levels": "5" },
+      "distanceMeters": 303,
+      "summary": "One East Broad is a five-story building constructed in 2007 at 1 East Broad Street, marking modern development within downtown Bethlehem.",
+      "facts": [
+        "Built in 2007 with five levels.",
+        "Its presence illustrates recent urban growth on East Broad Street."
+      ],
+      "tags": ["modern building", "urban development", "office building"],
+      "yearBuilt": "2007",
+      "confidence": "high",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-204564730",
+      "name": "The Sun Inn",
+      "category": "building",
+      "latitude": 40.6219245,
+      "longitude": -75.3817321,
+      "address": "564 Main Street",
+      "coordSource": "osm",
+      "osmId": "way/204564730",
+      "candidateSource": "osm",
+      "trustLevel": "osm_enriched",
+      "osmTags": { "historic": "yes", "start_date": "1758" },
+      "distanceMeters": 372,
+      "summary": "The Sun Inn is a historic building constructed in 1758 on Main Street and played a significant role as a social and diplomatic hub in Bethlehem's colonial era.",
+      "facts": [
+        "Built in 1758, making it one of the oldest buildings in the area.",
+        "Known historically for hosting prominent figures and events during colonial America."
+      ],
+      "tags": ["historic inn", "colonial era", "social hub"],
+      "yearBuilt": "1758",
+      "confidence": "high",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "relation-14975139",
+      "name": "Historic Bethlehem",
+      "category": "district",
+      "latitude": 40.6188374,
+      "longitude": -75.3784242,
+      "coordSource": "osm",
+      "osmId": "relation/14975139",
+      "candidateSource": "osm",
+      "trustLevel": "osm_enriched",
+      "osmTags": {
+        "historic": "district",
+        "wikidata": "Q22072987",
+        "wikipedia": "en:Historic Moravian Bethlehem District",
+        "alt_name": "Central Bethlehem Historic District"
+      },
+      "distanceMeters": 698,
+      "summary": "The Historic Bethlehem district is a National Historic Landmark complex featuring some of the oldest surviving Moravian buildings in the U.S., recognized worldwide for its communal religious heritage and recently designated a UNESCO World Heritage Site.",
+      "facts": [
+        "Encompasses a 14.7-acre area containing early Moravian buildings.",
+        "Designated as a National Historic Landmark District in 2012.",
+        "Named a UNESCO World Heritage Site in 2024 alongside other Moravian settlements globally."
+      ],
+      "tags": [
+        "historic district",
+        "Moravian heritage",
+        "UNESCO World Heritage Site",
+        "18th century architecture"
+      ],
+      "confidence": "high",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-615999480",
+      "name": "Moravian University",
+      "category": "university",
+      "latitude": 40.6309131,
+      "longitude": -75.3839373,
+      "coordSource": "osm",
+      "osmId": "way/615999480",
+      "candidateSource": "osm",
+      "trustLevel": "osm_enriched",
+      "osmTags": { "wikidata": "Q4571902" },
+      "distanceMeters": 737,
+      "summary": "Moravian University traces its origins to the 1742 Moravian girls' school and evolved through merging with boys' schools, becoming a university in 2021 that reflects a heritage dating back to early religious educational efforts in Bethlehem.",
+      "facts": [
+        "Founded originally as girls' and boys' schools by Moravians in the 1740s.",
+        "Combined into Moravian College in 1954 and became a university in 2021.",
+        "Its roots connect directly to Moravian educational and religious traditions."
+      ],
+      "tags": ["university", "Moravian heritage", "historic education"],
+      "confidence": "high",
+      "discoveryClass": "VERIFIED_PLACE",
+      "discoveryTier": 1,
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    }
+  ],
+  "location": "Central Bethlehem, Bethlehem",
+  "locationSrc": "nominatim",
+  "effectiveAddressHintSrc": "nominatim",
+  "osmCandidateCount": { "r150": 0, "r300": 18, "r500": 57 },
+  "noVerifiedPlacesNearby": false
+}

@@ -1,0 +1,9 @@
+{
+  "places": [],
+  "location": "Jim Thorpe",
+  "locationSrc": "nominatim",
+  "effectiveAddressHintSrc": "nominatim",
+  "osmCandidateCount": { "r150": 1, "r300": 5, "r500": 8 },
+  "noVerifiedPlacesNearby": false,
+  "emptyReason": "filtered_for_quality"
+}

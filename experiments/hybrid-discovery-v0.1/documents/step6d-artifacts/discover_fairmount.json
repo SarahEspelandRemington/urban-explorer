@@ -1,0 +1,591 @@
+{
+  "places": [
+    {
+      "id": "node-10978033939",
+      "name": "Thomas Eakins",
+      "category": "memorial",
+      "latitude": 39.9652626,
+      "longitude": -75.1670053,
+      "coordSource": "osm",
+      "osmId": "node/10978033939",
+      "candidateSource": "osm",
+      "trustLevel": "osm_enriched",
+      "osmTags": { "historic": "memorial" },
+      "distanceMeters": 51,
+      "summary": "The Thomas Eakins Memorial honors one of Philadelphia’s most influential American artists of the late 19th century.",
+      "facts": [
+        "It is located near landmarks associated with Thomas Eakins, who lived from 1844 to 1916.",
+        "The memorial officially commemorates the artist's contributions to American art."
+      ],
+      "tags": ["memorial", "artist tribute", "historic monument"],
+      "confidence": "high",
+      "orientation": {
+        "type": "landmark_adjacent",
+        "target": {
+          "name": "Thomas Eakins House",
+          "lat": 39.9654044,
+          "lng": -75.1669544
+        },
+        "distanceMeters": 16,
+        "bearingDegrees": 15,
+        "phrase": "Beside Thomas Eakins House"
+      },
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-706543048",
+      "name": "Thomas Eakins House",
+      "category": "house",
+      "latitude": 39.9654044,
+      "longitude": -75.1669544,
+      "address": "1729 Mount Vernon Street",
+      "coordSource": "osm",
+      "osmId": "way/706543048",
+      "candidateSource": "osm",
+      "trustLevel": "osm_enriched",
+      "osmTags": { "historic": "house", "wikipedia": "en:Thomas Eakins House" },
+      "distanceMeters": 65,
+      "summary": "The Thomas Eakins House at 1729 Mount Vernon Street served as the lifelong home of the notable American artist Thomas Eakins and is a designated National Historic Landmark today housing an artist cooperative.",
+      "facts": [
+        "Built circa 1854 for Benjamin Eakins, father of Thomas Eakins.",
+        "The rowhouse retains a four-story structure with three brick stories and a wood-frame fourth floor added by Benjamin Eakins.",
+        "Designated a National Historic Landmark in 1965."
+      ],
+      "tags": [
+        "historic house",
+        "artist residence",
+        "19th century architecture",
+        "National Historic Landmark"
+      ],
+      "yearBuilt": "1850s",
+      "confidence": "high",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-250863838",
+      "name": "Enon Baptist Church",
+      "category": "place_of_worship",
+      "latitude": 39.9650105,
+      "longitude": -75.1687725,
+      "address": "1831 Green Street",
+      "coordSource": "osm",
+      "osmId": "way/250863838",
+      "candidateSource": "osm",
+      "trustLevel": "osm_enriched",
+      "osmTags": { "wikidata": "Q131732054" },
+      "distanceMeters": 108,
+      "summary": "Enon Baptist Church is a historic place of worship located at 1831 Green Street serving a faith community within Spring Garden.",
+      "facts": [
+        "It is listed on historic registers, indicating long-standing significance in the neighborhood."
+      ],
+      "tags": ["historic church", "place of worship", "baptist congregation"],
+      "confidence": "high",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-250836800",
+      "name": "Highway Mission Tabernacle",
+      "category": "place_of_worship",
+      "latitude": 39.9636917,
+      "longitude": -75.1679626,
+      "address": "1801 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/250836800",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "denomination": "pentecostal" },
+      "distanceMeters": 151,
+      "summary": "Highway Mission Tabernacle at 1801 Spring Garden Street is a Pentecostal church with a history dating to the early 1860s featuring architectural contributions from several noted architects and recognized on historic registers.",
+      "facts": [
+        "Constructed between 1861-1863 under architect Alfred Biles.",
+        "Underwent multiple alterations including in 1884 by Isaac Pursell and 1924 by Horace Trumbauer.",
+        "Rebuilt after a 1986 fire and listed on a historic register in 2000."
+      ],
+      "tags": [
+        "pentecostal church",
+        "historic church",
+        "19th-century architecture",
+        "historic register"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-1313740189",
+      "name": "1733 Spring Garden Street",
+      "category": "building",
+      "latitude": 39.9635487,
+      "longitude": -75.1676193,
+      "address": "1733 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/1313740189",
+      "candidateSource": "osm",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 162,
+      "summary": "The building at 1733 Spring Garden Street is historically known as the Hoopes Mansion and is listed on historic registers for its architectural and community significance.",
+      "facts": [
+        "Listed on historic registers since 2000.",
+        "Hoopes sold the house in 1879 before moving nearby.",
+        "The building included a carriage house and substantial residential features."
+      ],
+      "tags": [
+        "historic mansion",
+        "registered historic place",
+        "residential building"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-1314394043",
+      "name": "1809 Spring Garden Street",
+      "category": "building",
+      "latitude": 39.9637607,
+      "longitude": -75.1685531,
+      "address": "1809 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/1314394043",
+      "candidateSource": "osm",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 164,
+      "summary": "1809 Spring Garden Street, once home to the Pennsylvania State College of Optometry and later a satellite clinic, now houses the Metropolitan Regional Council of Carpenters and is listed on historic registers.",
+      "facts": [
+        "The building conferred the first Doctor of Optometry degrees in 1923.",
+        "It was sold to Community College of Philadelphia in 1978, then to the Carpenters Council in 2007.",
+        "The building retains historic significance with a 1975 historic-register listing."
+      ],
+      "tags": ["historic building", "optometry education", "union offices"],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-1314394031",
+      "name": "Carpenters Regional Countil",
+      "category": "building",
+      "latitude": 39.9636061,
+      "longitude": -75.1682821,
+      "address": "1803 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/1314394031",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "operator": "United Brotherhood of Carpenters" },
+      "distanceMeters": 169,
+      "summary": "The Carpenters Regional Council operates at 1803 Spring Garden Street as a union building serving the local carpenters' community.",
+      "facts": ["Operated by the United Brotherhood of Carpenters."],
+      "tags": ["union office", "labor organization", "carpenters guild"],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-250706036",
+      "name": "1719 Spring Garden Street",
+      "category": "office",
+      "latitude": 39.9634932,
+      "longitude": -75.1671534,
+      "address": "1719 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/250706036",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "operator": "IBEW Local 98" },
+      "distanceMeters": 170,
+      "summary": "1719 Spring Garden Street hosts offices operated by IBEW Local 98 and holds a historic-register listing acknowledging its architectural and community roles.",
+      "facts": [
+        "Originally built in 1875 with marble cladding and multiple alterations over time.",
+        "Home for Radium Institute and later Philadelphia College of Osteopathic Medicine at different periods.",
+        "Purchased and redeveloped by IBEW Local 98 in the early 1970s."
+      ],
+      "tags": [
+        "historic office building",
+        "union headquarters",
+        "medical institute history"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "discoveryTier": 1,
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-1314394030",
+      "name": "Carpenter's Benefit Fund",
+      "category": "building",
+      "latitude": 39.9637702,
+      "longitude": -75.1687663,
+      "address": "1811 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/1314394030",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "operator": "United Brotherhood of Carpenters" },
+      "distanceMeters": 174,
+      "summary": "The Carpenter's Benefit Fund is located at 1811 Spring Garden Street and is managed by the United Brotherhood of Carpenters.",
+      "facts": ["Serves as a union-managed benefit fund office."],
+      "tags": ["union office", "benefit fund", "carpenters guild"],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "streetlit-1717-spring-garden-stetson-house",
+      "name": "John B. Stetson House",
+      "category": "building",
+      "latitude": 39.9634535,
+      "longitude": -75.1669028,
+      "coordSource": "streetlit",
+      "streetlitId": "streetlit/1717-spring-garden-stetson-house",
+      "candidateSource": "streetlit",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 179,
+      "summary": "The John B. Stetson House at 1717 Spring Garden Street served as the early Philadelphia residence of the famed hat manufacturer for about a decade starting in 1878 and today features preserved mansion-era architectural details in its residential condominiums.",
+      "facts": [
+        "Stetson lived here from 1878 until 1888 before moving to Elkins Park.",
+        "Later converted from single-family home to law offices, then residential lofts.",
+        "Retains original features like mosaic tile, stained glass, and ornate fireplaces."
+      ],
+      "tags": [
+        "historic residence",
+        "former mansion",
+        "architectural details",
+        "residential condos"
+      ],
+      "confidence": "medium",
+      "orientation": {
+        "type": "landmark_adjacent",
+        "target": {
+          "name": "1701 Spring Garden Street",
+          "lat": 39.9634131,
+          "lng": -75.166342
+        },
+        "distanceMeters": 48,
+        "bearingDegrees": 95,
+        "phrase": "Near 1701 Spring Garden Street"
+      },
+      "discoveryClass": "VERIFIED_PLACE",
+      "discoveryTier": 1,
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-250706035",
+      "name": "1701 Spring Garden Street",
+      "category": "place_of_worship",
+      "latitude": 39.9634131,
+      "longitude": -75.166342,
+      "address": "1701 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/250706035",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "operator": "IBEW Local 98" },
+      "distanceMeters": 202,
+      "summary": "1701 Spring Garden Street is a place of worship operated by IBEW Local 98, built in 1939 with later alterations, and recognized in historic registers.",
+      "facts": [
+        "Construction dated to 1939 with a significant alteration in 1961.",
+        "Listed on historic registers since 2000."
+      ],
+      "tags": [
+        "historic church",
+        "union-operated",
+        "20th-century architecture"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-337636390",
+      "name": "St. Andrew's Lithuanian Catholic Church",
+      "category": "place_of_worship",
+      "latitude": 39.9664687,
+      "longitude": -75.1689942,
+      "address": "1913 Wallace Street",
+      "coordSource": "osm",
+      "osmId": "way/337636390",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "denomination": "catholic" },
+      "distanceMeters": 207,
+      "summary": "St. Andrew's Lithuanian Catholic Church at 1913 Wallace Street serves the local Catholic community with a Lithuanian heritage.",
+      "facts": ["Operates within the Catholic denomination."],
+      "tags": ["place of worship", "catholic church", "Lithuanian heritage"],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-1314403623",
+      "name": "1901 Spring Garden Street",
+      "category": "building",
+      "latitude": 39.9637363,
+      "longitude": -75.1694811,
+      "address": "1901 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/1314403623",
+      "candidateSource": "osm",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 220,
+      "summary": "1901 Spring Garden Street, historically known as the Heisher Residence, is a registered historic building that has housed important local societies and organizations over the decades.",
+      "facts": [
+        "Listed on historic registers since 1975.",
+        "Served as meeting place for the George Society between 1924 and 1949.",
+        "The residence was sold by Penrose Fleisher to Mastbaum & Fleisher in 1911."
+      ],
+      "tags": [
+        "historic residence",
+        "registered historic place",
+        "society meeting venue"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "streetlit-1903-spring-garden-la-milagrosa",
+      "name": "La Milagrosa Chapel (former Spanish Catholic chapel)",
+      "category": "building",
+      "latitude": 39.963738,
+      "longitude": -75.1696196,
+      "coordSource": "streetlit",
+      "streetlitId": "streetlit/1903-spring-garden-la-milagrosa",
+      "candidateSource": "streetlit",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 229,
+      "summary": "La Milagrosa Chapel at 1903 Spring Garden Street was founded in 1912 with support from Mother Katharine Drexel and was the first site in the Archdiocese of Philadelphia to hold exclusively Spanish-language Masses, serving diverse Spanish-speaking communities until its closure in 2013.",
+      "facts": [
+        "Founded April 26, 1912, with a donation from Katharine Drexel including a condition against racial exclusion.",
+        "Served Mexican, Colombian, Puerto Rican, Paraguayan, and Cuban Catholic communities.",
+        "Final Mass held June 23, 2013 before closure and residential conversion."
+      ],
+      "tags": [
+        "former catholic chapel",
+        "spanish-language mass",
+        "immigrant heritage",
+        "historic religious site"
+      ],
+      "confidence": "high",
+      "orientation": {
+        "type": "landmark_adjacent",
+        "target": {
+          "name": "Carpenters Museum",
+          "lat": 39.9635605,
+          "lng": -75.1685976
+        },
+        "distanceMeters": 89,
+        "bearingDegrees": 103,
+        "phrase": "Near Carpenters Museum"
+      },
+      "discoveryClass": "VERIFIED_PLACE",
+      "discoveryTier": 1,
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-250707537",
+      "name": "West Building",
+      "category": "college",
+      "latitude": 39.9627117,
+      "longitude": -75.1668069,
+      "address": "1700 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/250707537",
+      "candidateSource": "osm",
+      "trustLevel": "osm_standard",
+      "osmTags": { "operator": "Community College of Philadelphia" },
+      "distanceMeters": 261,
+      "summary": "The West Building at 1700 Spring Garden Street is part of the Community College of Philadelphia campus serving local higher education needs.",
+      "facts": ["Operated by the Community College of Philadelphia."],
+      "tags": [
+        "college building",
+        "educational institution",
+        "community college"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "streetlit-1700-spring-garden-carnegie-library",
+      "name": "Spring Garden Carnegie Library (former site)",
+      "category": "former_site",
+      "latitude": 39.9628,
+      "longitude": -75.1664,
+      "coordSource": "streetlit",
+      "streetlitId": "streetlit/1700-spring-garden-carnegie-library",
+      "candidateSource": "streetlit",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 262,
+      "summary": "The former Spring Garden Carnegie Library, opened in 1907 at 17th and Spring Garden Streets, was the seventh Carnegie-funded Free Library branch in Philadelphia and was designed in the Gothic Revival style before closing and being demolished to make way for the Community College of Philadelphia campus.",
+      "facts": [
+        "Opened November 18, 1907, designed by Field & Medary in Gothic Revival.",
+        "Closed c. 1955 then reused as Library for the Blind around 1957.",
+        "Demolished reportedly in 1975; no trace remains today."
+      ],
+      "tags": [
+        "former library",
+        "Carnegie library",
+        "Gothic Revival architecture",
+        "demolished building"
+      ],
+      "confidence": "medium",
+      "orientation": {
+        "type": "landmark_adjacent",
+        "target": {
+          "name": "Community College of Philadelphia Main Campus Library",
+          "lat": 39.9624214,
+          "lng": -75.1660853
+        },
+        "distanceMeters": 50,
+        "bearingDegrees": 147,
+        "phrase": "Near Community College of Philadelphia Main Campus Library"
+      },
+      "discoveryClass": "APPROXIMATE_SITE",
+      "discoveryTier": 1,
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-1314403618",
+      "name": "1923 Spring Garden Street",
+      "category": "building",
+      "latitude": 39.9638218,
+      "longitude": -75.1701627,
+      "address": "1923 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/1314403618",
+      "candidateSource": "osm",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 262,
+      "summary": "1923 Spring Garden Street is a registered historic residence once owned by the Dinan family, who operated there from 1905 until selling in 1941.",
+      "facts": [
+        "Listed on historic registers since 1975.",
+        "Owned and operated by the Dinan family for much of the early 20th century."
+      ],
+      "tags": [
+        "historic residence",
+        "registered historic place",
+        "family home"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "streetlit-1818-spring-garden-reyburn-mansion",
+      "name": "Reyburn Mansion — First PCOM Campus (former site)",
+      "category": "former_site",
+      "latitude": 39.9629506,
+      "longitude": -75.1690731,
+      "coordSource": "streetlit",
+      "streetlitId": "streetlit/1818-spring-garden-reyburn-mansion",
+      "candidateSource": "streetlit",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 264,
+      "summary": "The Reyburn Mansion near 19th and Spring Garden Streets, once home to Philadelphia Mayor John Edgar Reyburn, served as the first campus of the Philadelphia College of Osteopathy from 1917 to 1929 before the mansion was demolished.",
+      "facts": [
+        "John Edgar Reyburn was mayor of Philadelphia from 1907 to 1911.",
+        "The mansion was converted by architects DeArmond, Ashmead & Bickley for college use.",
+        "PCOM used the site as campus for about 12 years before relocating."
+      ],
+      "tags": [
+        "former mansion",
+        "historic college campus",
+        "mayoral residence"
+      ],
+      "confidence": "medium",
+      "orientation": {
+        "type": "landmark_adjacent",
+        "target": {
+          "name": "Carpenters Museum",
+          "lat": 39.9635605,
+          "lng": -75.1685976
+        },
+        "distanceMeters": 79,
+        "bearingDegrees": 31,
+        "phrase": "Near Carpenters Museum"
+      },
+      "discoveryClass": "APPROXIMATE_SITE",
+      "discoveryTier": 1,
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-250863827",
+      "name": "Green Room",
+      "category": "pub",
+      "latitude": 39.9647602,
+      "longitude": -75.1706016,
+      "address": "1940 Green Street",
+      "coordSource": "osm",
+      "osmId": "way/250863827",
+      "candidateSource": "osm",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 266,
+      "summary": "The corner at 1940 Green Street, now the Green Room pub, was historically home to grocer Pop Plumer, known during the Depression for feeding neighbors who couldn’t pay and extending grocery credit, making it a community support hub.",
+      "facts": [
+        "Operated during the Depression by Pop Plumer who supported local neighbors.",
+        "Later became the Cadillac Delicatessen."
+      ],
+      "tags": ["local grocery", "community support", "neighborhood deli"],
+      "confidence": "high",
+      "discoveryClass": "VERIFIED_PLACE",
+      "discoveryTier": 1,
+      "photoUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/d1/Teatro_Real_%28Madrid%29_05.jpg/330px-Teatro_Real_%28Madrid%29_05.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    },
+    {
+      "id": "way-1353406192",
+      "name": "1914 Spring Garden Street",
+      "category": "building",
+      "latitude": 39.9632489,
+      "longitude": -75.1701925,
+      "address": "1914 Spring Garden Street",
+      "coordSource": "osm",
+      "osmId": "way/1353406192",
+      "candidateSource": "osm",
+      "trustLevel": "osm_bare",
+      "distanceMeters": 301,
+      "summary": "The building at 1914 Spring Garden Street is a registered historic residence featuring architectural alterations by Charles E. Oelschlager in 1906.",
+      "facts": [
+        "Listed on historic registers since 1971.",
+        "Received additions in 1906 by architect Charles E. Oelschlager."
+      ],
+      "tags": [
+        "historic residence",
+        "architectural modifications",
+        "registered historic place"
+      ],
+      "confidence": "medium",
+      "discoveryClass": "VERIFIED_PLACE",
+      "netScore": 0,
+      "communityRating": { "up": 0, "down": 0, "netScore": 0 }
+    }
+  ],
+  "location": "Spring Garden, Philadelphia",
+  "locationSrc": "nominatim",
+  "effectiveAddressHintSrc": "nominatim",
+  "osmCandidateCount": { "r150": 7, "r300": 21, "r500": 56 },
+  "noVerifiedPlacesNearby": false
+}
