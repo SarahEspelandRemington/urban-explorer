@@ -1,0 +1,534 @@
+{
+  "preregistrationReference": "experiments/hybrid-discovery-v0.1/documents/STEP_6C_PREREGISTRATION.md",
+  "baselinePreregistrationCommit": "55598bc5e200663f9e6c03d3beedc1a76bdba7b8",
+  "runTimestamp": "2026-10-15",
+  "maxSystemsAllowed": 9,
+  "systemsIdentified": 9,
+  "systemsFullyDetermined": 6,
+  "systemsUndetermined": 3,
+  "sessionRequestCap": 40,
+  "sessionRequestsUsed": 40,
+  "sessionCapExceeded": false,
+  "rateLimitViolations": 0,
+  "systems": [
+    {
+      "jurisdiction": "New York City",
+      "level": "local",
+      "systemName": "NYC Landmarks Preservation Commission (LPC)",
+      "declaredOfficialSurfaces": [
+        {
+          "surface": "NYC Open Data Socrata dataset ncre-qhxs (\"Designated and Calendared Buildings and Sites\")",
+          "attributionConfirmed": "Landmarks Preservation Commission (LPC)",
+          "evidenceLabel": "Documented"
+        },
+        {
+          "surface": "s-media.nyc.gov/agencies/lpc/lp/{number}.pdf (deterministic designation-report PDF host)",
+          "evidenceLabel": "Observed"
+        }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "exact-ID lookup",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "s-media.nyc.gov, worked example LP-01710"
+        },
+        "matchEvidence": {
+          "value": "native/source ID (lp_number)",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "ncre-qhxs dataset + s-media.nyc.gov"
+        },
+        "coverage": {
+          "value": "complete",
+          "evidenceLabel": "Documented",
+          "supportingSurface": "ncre-qhxs dataset description"
+        },
+        "extraSteps": {
+          "value": "deterministic only",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "numeric-suffix URL construction from lp_number"
+        },
+        "documentForm": {
+          "value": "PDF (scan vs. born-digital not verified; out of scope to open/read content)",
+          "evidenceLabel": "Observed (format only)",
+          "supportingSurface": "s-media.nyc.gov HEAD response, content-type application/pdf"
+        },
+        "documentGranularity": {
+          "value": "one resource",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "worked example lm_type=Individual Landmark"
+        }
+      },
+      "workedAcquisitionRecord": {
+        "inventoryIdentity": "lp_number=LP-01710, lm_name=\"Midtown Theater (now Metro Theater)\", bbl=1018710022, desig_addr=\"2624 BROADWAY\"",
+        "discoverySurface": "NYC Open Data ncre-qhxs",
+        "candidateIdentity": "https://s-media.nyc.gov/agencies/lpc/lp/1710.pdf",
+        "matchEvidence": "native/source ID (lp_number -> numeric suffix)",
+        "outcomeProvenance": "HTTP 200, content-type application/pdf, content-length 6605426, last-modified 2015-05-15"
+      },
+      "contractResult": "fit",
+      "contractFailureCriterion": null,
+      "costClassification": "one deterministic lookup",
+      "requestsUsed": 8
+    },
+    {
+      "jurisdiction": "New York City",
+      "level": "state",
+      "systemName": "New York State Historic Preservation Office (SHPO) / Cultural Resource Information System (CRIS)",
+      "declaredOfficialSurfaces": [
+        {
+          "surface": "parks.ny.gov/preservation/resources/cris",
+          "evidenceLabel": "Documented"
+        },
+        { "surface": "cris.parks.ny.gov", "evidenceLabel": "Observed" }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "other documented mechanism - account-gated self-service GIS/search (SSO sign-in required beyond legal disclaimer click-through); not reached further per frozen anti-access-bypass rule",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "cris.parks.ny.gov root page, directSignIn() / login.ny.gov SSO flow"
+        },
+        "matchEvidence": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "coverage": {
+          "value": "Documented as vast/complete (\"vast historic and cultural resource databases\"); Unknown in practice (access-gated)",
+          "evidenceLabel": "Documented (scope claim) / Unknown (practice)",
+          "supportingSurface": "parks.ny.gov/preservation/resources/cris body text"
+        },
+        "extraSteps": {
+          "value": "manual/request workflow (account creation + SSO sign-in)",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "cris.parks.ny.gov login modal"
+        },
+        "documentForm": {
+          "value": "scan",
+          "evidenceLabel": "Documented",
+          "supportingSurface": "parks.ny.gov/preservation/resources/cris: \"More than 1.5 million pages of scanned paper records\""
+        },
+        "documentGranularity": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        }
+      },
+      "workedAcquisitionRecord": {
+        "inventoryIdentity": "not reached - reconnaissance stopped at login gate per Section 9",
+        "discoverySurface": "cris.parks.ny.gov",
+        "candidateIdentity": "not reached",
+        "matchEvidence": "not reached",
+        "outcomeProvenance": "reconnaissance stopped at SSO sign-in gate; recorded non-self-service, not pursued further"
+      },
+      "contractResult": "fit",
+      "contractFailureCriterion": null,
+      "contractFitNote": "Request-only/login-gated access explicitly counts as contract fit per Section 7, not a failure.",
+      "costClassification": "manual/request-only",
+      "requestsUsed": 7
+    },
+    {
+      "jurisdiction": "Chicago",
+      "level": "local",
+      "systemName": "City of Chicago Individual Landmarks (Dept. of Planning and Development, Landmarks Division)",
+      "declaredOfficialSurfaces": [
+        {
+          "surface": "Chicago Data Portal Socrata dataset uct4-hrvh (\"Individual Landmarks\")",
+          "attributionConfirmed": "City of Chicago",
+          "evidenceLabel": "Documented"
+        },
+        {
+          "surface": "webapps1.chicago.gov/landmarksweb (Chicago Landmarks search webapp)",
+          "evidenceLabel": "Observed"
+        }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "deterministic cross-surface matching",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "uct4-hrvh id-space (L-120) differs from landmarksweb lanId-space (11380); matched via exact name + exact date"
+        },
+        "matchEvidence": {
+          "value": "exact name + direct asserted linkage (exact designation date also matched)",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "cross-check of \"Indian Boundary Park Fieldhouse\" / 2005-05-11 across both surfaces"
+        },
+        "coverage": {
+          "value": "complete",
+          "evidenceLabel": "Documented",
+          "supportingSurface": "uct4-hrvh dataset description"
+        },
+        "extraSteps": {
+          "value": "deterministic only",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "exact string/date match, no fuzzy logic needed"
+        },
+        "documentForm": {
+          "value": "HTML page (narrative embedded directly in the webapp detail page, not a separate downloadable document)",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "landmarkdetails.htm?lanId=11380"
+        },
+        "documentGranularity": {
+          "value": "one resource",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "worked example is a single fieldhouse building"
+        }
+      },
+      "workedAcquisitionRecord": {
+        "inventoryIdentity": "id=L-120, name=\"Indian Boundary Park Fieldhouse\", address=\"2500 W Lunt Av\", landmark date=2005-05-11 (Socrata uct4-hrvh)",
+        "discoverySurface": "webapps1.chicago.gov/landmarksweb",
+        "candidateIdentity": "https://webapps1.chicago.gov/landmarksweb/web/landmarkdetails.htm?lanId=11380",
+        "matchEvidence": "exact name match (\"Indian Boundary Park Fieldhouse\") + exact date match (\"Date Designated a Chicago Landmark: May 11, 2005\" vs. landmark=2005-05-11)",
+        "outcomeProvenance": "HTTP 200, narrative text present directly in page body"
+      },
+      "contractResult": "fit",
+      "contractFailureCriterion": null,
+      "costClassification": "multi-surface deterministic",
+      "requestsUsed": 9
+    },
+    {
+      "jurisdiction": "Chicago",
+      "level": "state",
+      "systemName": "Illinois Historic Preservation Division (IHPD, Dept. of Natural Resources) - National Register Listings in Illinois",
+      "declaredOfficialSurfaces": [
+        {
+          "surface": "dnrhistoric.illinois.gov/preserve/places.html -> linked \"National Register Listings in Illinois\" XLSX roster",
+          "evidenceLabel": "Documented"
+        },
+        {
+          "surface": "HARGIS (maps.dnr.illinois.gov ArcGIS Web App Viewer) - identified, not deep-probed due to request budget",
+          "evidenceLabel": "Documented (exists) / Unknown (in-depth attributes)"
+        }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "deterministic cross-surface matching (state roster supplies the federal NRIS reference number; document itself is retrieved via the NPS system)",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "roster row Reference Number 66000314 -> confirmed retrievable via npgallery.nps.gov/GetAsset/NRHP/66000314_text"
+        },
+        "matchEvidence": {
+          "value": "native/source ID (NRIS reference number)",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "roster column A = Reference Number"
+        },
+        "coverage": {
+          "value": "complete",
+          "evidenceLabel": "Documented",
+          "supportingSurface": "roster explicitly titled as a full current statewide listing"
+        },
+        "extraSteps": {
+          "value": "deterministic only",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "direct reference-number lookup, no fuzzy/human step"
+        },
+        "documentForm": {
+          "value": "scan",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "same document confirmed via NPS GetAsset test (era 1966 PDF)"
+        },
+        "documentGranularity": {
+          "value": "one resource",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "worked example is a single-site NRHP listing"
+        }
+      },
+      "workedAcquisitionRecord": {
+        "inventoryIdentity": "Reference Number=66000314, Resource Name=\"First Self-Sustaining Nuclear Reaction, Site of\", Address=\"S. Ellis Ave. between E. 56th and 57th Sts.\", County=Cook, City=Chicago, Primary Certdate=1966-10-15",
+        "discoverySurface": "dnrhistoric.illinois.gov published XLSX roster",
+        "candidateIdentity": "https://npgallery.nps.gov/GetAsset/NRHP/66000314_text (resolved via shared federal NPS system)",
+        "matchEvidence": "native/source ID (NRIS reference number, identical across state roster and federal system)",
+        "outcomeProvenance": "HTTP 200, real PDF retrieved (confirmed under the NPS system test using the same reference number)"
+      },
+      "contractResult": "fit",
+      "contractFailureCriterion": null,
+      "contractFitNote": "The state system's own surface does not host the narrative document; it supplies a federal native ID that resolves deterministically via the separate NPS system. Flagged as a genuine administrative-mirror overlap with the federal NRHP system, not a defect.",
+      "costClassification": "multi-surface deterministic",
+      "requestsUsed": 4
+    },
+    {
+      "jurisdiction": "Omaha / Nebraska",
+      "level": "local",
+      "systemName": "City of Omaha (Landmarks Heritage Preservation Commission) - identity not confirmed",
+      "declaredOfficialSurfaces": [],
+      "attributes": {
+        "linkMechanism": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "matchEvidence": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "coverage": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "extraSteps": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "documentForm": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "documentGranularity": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        }
+      },
+      "workedAcquisitionRecord": null,
+      "contractResult": "undetermined",
+      "contractFailureCriterion": null,
+      "undeterminedReason": "Both attempted official-domain surfaces (planning.cityofomaha.org/landmarks-heritage-preservation, www.cityofomaha.org root) returned HTTP 403 Access Denied. No anti-bot/access-control bypass attempted, per Section 9. Recorded as ambiguous/unknown and stopped, not broadened.",
+      "costClassification": "not determined",
+      "requestsUsed": 2
+    },
+    {
+      "jurisdiction": "Omaha / Nebraska",
+      "level": "state",
+      "systemName": "History Nebraska (Nebraska State Historic Preservation Office) - identity confirmed, content not reached",
+      "declaredOfficialSurfaces": [
+        {
+          "surface": "history.nebraska.gov (confirmed as the agency's current domain; blocked at the perimeter)",
+          "evidenceLabel": "Observed"
+        }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "matchEvidence": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "coverage": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "extraSteps": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "documentForm": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "documentGranularity": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        }
+      },
+      "workedAcquisitionRecord": null,
+      "contractResult": "undetermined",
+      "contractFailureCriterion": null,
+      "undeterminedReason": "history.nebraska.gov returned a Cloudflare anti-bot challenge page (\"Just a moment...\", HTTP 403) on two attempts (default and browser-like user agent). The legacy mirror nebraskahistory.org returned a bare JS-redirect stub pointing back at the same blocked domain. No anti-bot bypass attempted, per Section 9. Recorded as ambiguous/unknown and stopped.",
+      "costClassification": "not determined",
+      "requestsUsed": 3
+    },
+    {
+      "jurisdiction": "Las Vegas / Nevada",
+      "level": "local",
+      "systemName": "City of Las Vegas Historic Preservation Commission - identity not confirmed",
+      "declaredOfficialSurfaces": [
+        {
+          "surface": "www.lasvegasnevada.gov (confirmed as the real city domain; one unverified lead link /Residents/History found)",
+          "evidenceLabel": "Observed"
+        }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "matchEvidence": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "coverage": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "extraSteps": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "documentForm": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        },
+        "documentGranularity": {
+          "value": "Unknown",
+          "evidenceLabel": "Unknown",
+          "supportingSurface": null
+        }
+      },
+      "workedAcquisitionRecord": null,
+      "contractResult": "undetermined",
+      "contractFailureCriterion": null,
+      "undeterminedReason": "The 40-request session cap was reached before the lead link (/Residents/History) could be inspected. Per Section 2A, recorded as ambiguous/unknown and stopped rather than broadened past the cap.",
+      "costClassification": "not determined",
+      "requestsUsed": 2
+    },
+    {
+      "jurisdiction": "Las Vegas / Nevada",
+      "level": "state",
+      "systemName": "Nevada State Historic Preservation Office (SHPO) - State and National Registers",
+      "declaredOfficialSurfaces": [
+        {
+          "surface": "shpo.nv.gov/state-and-national-registers",
+          "evidenceLabel": "Documented"
+        }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "record-directly-links-document",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "shpo.nv.gov page links directly to individual nomination PDFs, no intermediate lookup step"
+        },
+        "matchEvidence": {
+          "value": "direct asserted linkage + native/source ID present in filename",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "filename \"78003379_NV_Clark_County_Las_Vegas_Mormon_Fort_-_reduced2.pdf\""
+        },
+        "coverage": {
+          "value": "bounded (current listings page; a separate complete current-roster PDF is also linked alongside individual nominations)",
+          "evidenceLabel": "Documented",
+          "supportingSurface": "\"NRHP_Listed_Properties_in_Nevada_Current.pdf\" linked on same page"
+        },
+        "extraSteps": {
+          "value": "deterministic only",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "direct link, no lookup or matching step required"
+        },
+        "documentForm": {
+          "value": "scan (inferred from filename convention \"-reduced2\" and 22MB file size; not opened/read for content)",
+          "evidenceLabel": "Observed (format=PDF only; scan status inferred, not content-verified)",
+          "supportingSurface": "HEAD response, content-type application/pdf, content-length 22149296"
+        },
+        "documentGranularity": {
+          "value": "one resource",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "Old Las Vegas Mormon Fort is a single-site nomination"
+        }
+      },
+      "workedAcquisitionRecord": {
+        "inventoryIdentity": "Reference Number=78003379 (embedded in filename), County=Clark, City=Las Vegas, Resource=\"Las Vegas Mormon Fort\"",
+        "discoverySurface": "shpo.nv.gov/state-and-national-registers",
+        "candidateIdentity": "https://shpo.nv.gov/uploads/documents/78003379_NV_Clark_County_Las_Vegas_Mormon_Fort_-_reduced2.pdf",
+        "matchEvidence": "direct asserted linkage (agency's own page links the exact document) + native/source ID in filename",
+        "outcomeProvenance": "HTTP 200, content-type application/pdf, content-length 22149296, last-modified 2026-09-11"
+      },
+      "contractResult": "fit",
+      "contractFailureCriterion": null,
+      "costClassification": "direct",
+      "requestsUsed": 3
+    },
+    {
+      "jurisdiction": "shared federal (all jurisdictions)",
+      "level": "federal",
+      "systemName": "NPS National Register of Historic Places (NRHP) / National Register Information System (NRIS) via NPGallery",
+      "declaredOfficialSurfaces": [
+        { "surface": "npgallery.nps.gov", "evidenceLabel": "Observed" }
+      ],
+      "attributes": {
+        "linkMechanism": {
+          "value": "exact-ID lookup",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "GetAsset/NRHP/{reference_number}_text pattern, confirmed with 66000314"
+        },
+        "matchEvidence": {
+          "value": "native/source ID (NRIS reference number)",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "same worked example"
+        },
+        "coverage": {
+          "value": "complete",
+          "evidenceLabel": "Documented",
+          "supportingSurface": "NPS National Register is the authoritative federal register of record"
+        },
+        "extraSteps": {
+          "value": "deterministic only",
+          "evidenceLabel": "Observed",
+          "supportingSurface": "numeric reference-number URL construction"
+        },
+        "documentForm": {
+          "value": "PDF (scan likely given era; not content-verified)",
+          "evidenceLabel": "Observed (format only)",
+          "supportingSurface": "GET response began with %PDF-1.4 header"
+        },
+        "documentGranularity": {
+          "value": "one resource (as tested; NPS also hosts multi-property/district nominations under the same general pattern, not tested here)",
+          "evidenceLabel": "Observed (this example only)",
+          "supportingSurface": "66000314 is a single-site NHL nomination"
+        }
+      },
+      "workedAcquisitionRecord": {
+        "inventoryIdentity": "NRIS Reference Number=66000314",
+        "discoverySurface": "npgallery.nps.gov",
+        "candidateIdentity": "https://npgallery.nps.gov/GetAsset/NRHP/66000314_text",
+        "matchEvidence": "native/source ID (reference number)",
+        "outcomeProvenance": "HTTP 200 on GET (note: HEAD request to the same URL returned 404 with a JSON error body - GET is required), real PDF content returned"
+      },
+      "contractResult": "fit",
+      "contractFailureCriterion": null,
+      "costClassification": "one deterministic lookup",
+      "requestsUsed": 2
+    }
+  ],
+  "recurringPairAnalysis": {
+    "matchingPairsFound": [
+      {
+        "systems": ["NYC local (LPC)", "NPS NRHP (federal)"],
+        "sharedProfile": {
+          "linkMechanism": "exact-ID lookup",
+          "matchEvidence": "native/source ID"
+        },
+        "involvesNrhp": true
+      }
+    ],
+    "nonNrhpSecondPairFound": false,
+    "note": "Illinois State and Chicago local both use a 'deterministic cross-surface matching' link mechanism, but their match-evidence profiles differ (native ID vs. exact-name/asserted-linkage), so they do not count as a matching pair under the frozen same-link-mechanism-AND-same-match-evidence rule. Nevada State's 'record-directly-links-document' + 'direct asserted linkage' profile is unique among inspected systems. No second, non-NRHP-involving matching pair was found among the 6 fully-determined systems."
+  },
+  "trueContractFailures": {
+    "count": 0,
+    "systems": []
+  },
+  "undeterminedSystems": {
+    "count": 3,
+    "systems": ["Omaha local", "Nebraska State", "Las Vegas local"],
+    "reasonSummary": "Two were blocked by access controls (HTTP 403 WAF block for Omaha; Cloudflare anti-bot challenge for Nebraska) under the frozen no-bypass rule. One (Las Vegas local) was stopped by the session request cap before a lead link could be inspected."
+  },
+  "decisionMappingResult": {
+    "literalFrozenRuleResultOnDeterminedSystems": "Philadelphia-specific acquisition",
+    "basis": "Among the 6 fully-determined systems (NYC local, NY State, Chicago local, Illinois State, Nevada State, NPS), only one matching pair was found (NYC local + NPS), and that pair involves NRHP, which per Section 12 cannot alone satisfy 'a few recurring adapter patterns.' Fewer than two qualifying recurring pairs exist, so the 'Philadelphia-specific acquisition' condition is met on the determined-system subset.",
+    "caveats": [
+      "This result covers only 6 of the 9 maximum systems; 3 remain genuinely undetermined due to real access barriers (anti-bot/WAF blocks and session-cap exhaustion), not due to any contract failure.",
+      "Zero true Section-8 contract failures occurred among any determined system - every reachable system was representable under the existing five-part contract, including the one request-only/login-gated system (NY State), which counts as fit per Section 7.",
+      "The access barriers encountered (Cloudflare challenge, WAF 403) are themselves a notable, reportable finding about real-world reconnaissance friction, separate from and not reducible to any of the three frozen decision-mapping buckets.",
+      "Per Section 13's guardrail, this result establishes observed shapes/gaps only, not national prevalence."
+    ]
+  },
+  "requestLedger": {
+    "sessionCap": 40,
+    "totalUsed": 40,
+    "perHostRateLimitRespected": true,
+    "logPath": "/tmp/step6c/request_log.csv (ephemeral, not committed to the repository)"
+  }
+}
