@@ -59,6 +59,25 @@
  * Tier-4 result is cancelled and the place falls through to "unclassified"
  * — never promoted to Tier 1/2/3 by this signal. Positive tiers remain the
  * exclusive responsibility of the classifier's own rules above.
+ *
+ * Cap-exclusion placeholder carve-out: the placeholder-fallback shape
+ * normally blocks BOTH overrides above, because it is indistinguishable
+ * from a genuine copy-generation failure for this specific place. But the
+ * discover route's `copyGenSelected` flag (set on the merged place object;
+ * see routes/explore/index.ts) lets this function tell apart two different
+ * placeholder causes: `copyGenSelected === false` means the place was never
+ * sent to the copy-generation LLM at all — excluded purely by
+ * `COPY_GEN_CANDIDATE_CAP` distance-rank truncation, not by any failure of
+ * its own — while `copyGenSelected === true` means it WAS in the batch and
+ * still has no real copy (a genuine per-request generation failure).
+ * `copyGenSelected === undefined` (legacy/pre-change cached entries) is
+ * treated the same as `true` — conservative suppression is preserved. Only
+ * when the placeholder is cap-exclusion-caused (`copyGenSelected === false`)
+ * do both overrides above additionally apply to a `placeholderFallback`
+ * result; a curated place with no story-bearing/explicit-tier evidence is
+ * still unaffected (overrides only ever relax suppression, never invent a
+ * tier). The underlying `classifyDiscoveryTier()` is left completely
+ * unchanged.
  */
 
 import { getApprovedCuratedEntry } from "./curatedLocalHistory";
@@ -385,16 +404,29 @@ export function applyDiscoveryTier(places: any[]): void {
   for (const p of places) {
     const result = classifyDiscoveryTier(p);
 
+    // Cap-exclusion placeholder carve-out — see module doc comment above.
+    // `copyGenSelected === false` means this place was never sent to the
+    // copy-generation LLM at all (excluded by COPY_GEN_CANDIDATE_CAP
+    // distance-rank truncation), as opposed to a genuine per-request
+    // generation failure for a place that WAS in the batch
+    // (`copyGenSelected === true` or absent/undefined for legacy entries,
+    // both treated conservatively — suppression preserved).
+    const isCapExcludedPlaceholder =
+      result.rejectionReason === "placeholderFallback" &&
+      p.copyGenSelected === false;
+
     // Curated-entry override — see module doc comment above. Only applies
     // when the place is NOT the exact placeholder-fallback shape, so a
     // genuine copy-generation failure for this specific request still
-    // suppresses to Tier 4 exactly as it would for any other candidate.
+    // suppresses to Tier 4 exactly as it would for any other candidate —
+    // UNLESS the placeholder is itself cap-exclusion-caused.
     const subjectId: string | undefined = p.osmId ?? p.streetlitId;
     const curated = subjectId ? getApprovedCuratedEntry(subjectId) : undefined;
     const explicitTier = curated?.evidence.explicitDiscoveryTier;
     if (
       explicitTier !== undefined &&
-      result.rejectionReason !== "placeholderFallback"
+      (result.rejectionReason !== "placeholderFallback" ||
+        isCapExcludedPlaceholder)
     ) {
       p.discoveryTier = explicitTier;
       delete p.discoveryRejectionReason;
@@ -402,12 +434,17 @@ export function applyDiscoveryTier(places: any[]): void {
     }
 
     // Story-bearing-claim override — see module doc comment above. Narrowly
-    // scoped: only cancels T4-A/T4-C, never assigns a positive tier.
+    // scoped: only cancels T4-A/T4-C, plus a cap-exclusion-caused
+    // placeholder — never assigns a positive tier, and never modifies
+    // isRescuableTier4 itself (checked as a separate, additional condition).
     const isRescuableTier4 =
       result.tier === 4 &&
       (result.rejectionReason === "metadataOnly" ||
         result.rejectionReason === "noHistoricalDepth");
-    if (curated?.evidence.hasStoryBearingClaim === true && isRescuableTier4) {
+    if (
+      curated?.evidence.hasStoryBearingClaim === true &&
+      (isRescuableTier4 || isCapExcludedPlaceholder)
+    ) {
       delete p.discoveryTier;
       delete p.discoveryRejectionReason;
       continue;

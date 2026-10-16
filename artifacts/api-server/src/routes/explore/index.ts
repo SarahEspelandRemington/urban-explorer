@@ -4057,6 +4057,15 @@ router.post("/explore/discover", async (req, res) => {
             : copyGenCandidates;
         const excludedCapCount =
           copyGenCandidates.length - cappedCandidates.length;
+        // Membership index over cappedCandidates (already computed above for
+        // the copy-gen call itself) so the merge step below can record, per
+        // place, whether it was actually included in the batch sent to the
+        // LLM — distinct from whether that batch later produced usable copy
+        // for it. See copyGenSelected on the merged place object and its
+        // consumer in applyDiscoveryTier (discoveryTier.ts).
+        const cappedCandidateIds = new Set(
+          cappedCandidates.map((c) => c.osmId),
+        );
 
         // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
         // wikipedia= tag, or — when that tag is absent — resolve one via the
@@ -4516,6 +4525,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             tags: sanitizeDisplayTags(copy?.tags),
             yearBuilt: copy?.yearBuilt,
             confidence: copy?.confidence ?? "low",
+            copyGenSelected: cappedCandidateIds.has(p.osmId),
             orientation: computeOrientation(
               {
                 osmId: p.osmId,
