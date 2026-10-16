@@ -1,0 +1,439 @@
+{
+  "baselineCommit": "188620b4a27d2de9ee43977b48b95edb49d0d2b5",
+  "preregistration": "experiments/hybrid-discovery-v0.1/documents/STEP_6D_PREREGISTRATION.md",
+  "amendment": "experiments/hybrid-discovery-v0.1/documents/STEP_6D2_AMENDMENT.md",
+  "auditedCorrection2026_10_16": {
+    "appliedTo": [
+      "STEP_6D2_RESULTS.md",
+      "step6d2ResultLog.json",
+      "step6d2-artifacts/classified_thin_candidates.json"
+    ],
+    "noNewExternalRequestsIssued": true,
+    "preregistrationAmendmentUnchanged": true,
+    "summary": "way/1356166516 reclassified from ad-hoc bridge-check-incomplete to checked-no-NRHP-claim (its Wikidata P649 route was actually checked and confirmed absent, independent of the Bethlehem Overpass 502 failure). bridge-check-incomplete removed as a candidate class; remaining 53 Bethlehem/Jim Thorpe candidates carry a separate indeterminateBridgeCompleteness flag (bridge-completeness/execution metadata, not a class). Robustness-check denominator updated 106 -> 107, ~0.94% -> ~0.9346%. Preserved unchanged: bridgeableCount=1, overall joinability=1/160≈0.625%, individual-listing share=0/160 lower bound, frozen low-joinability interpretation, text-layer-probe-gate-not-reached."
+  },
+  "originalInvalidRun": {
+    "resultsFile": "experiments/hybrid-discovery-v0.1/documents/STEP_6D_RESULTS.md",
+    "resultLogFile": "experiments/hybrid-discovery-v0.1/documents/step6dResultLog.json",
+    "status": "observation-surface-invalid / not evaluable",
+    "modifiedByThisReplay": false
+  },
+  "preconditions": {
+    "headMatchedBaselineCommit": true,
+    "trackedTreeClean": true,
+    "preregistrationUnchanged": true,
+    "amendmentUnchanged": true,
+    "allPassed": true
+  },
+  "productionRuntimeIdentity": {
+    "renderService": "srv-d95t19rtqb8s73f926s0",
+    "deployId": "dep-db425gmq1p3s73eo7ctg",
+    "deployStatus": "live",
+    "commit": "f467483c76d4714fd8d0d8d3924a521a81ac7330",
+    "sameAsOriginalStep6DRun": true
+  },
+  "discoverCalls": [
+    {
+      "area": "Fairmount/Spring Garden, Philadelphia",
+      "centroid": { "latitude": 39.965, "longitude": -75.1675 },
+      "requestBody": {
+        "latitude": 39.965,
+        "longitude": -75.1675,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true,
+        "walkMode": true
+      },
+      "timestampUtc": "2026-10-15T23:14:15Z",
+      "httpStatus": 200,
+      "responseBytes": 46780,
+      "sha256": "a8eed5ba60e7c6ed00cc408346cc13dcf8a7211c777fcc2175f391544db3dfb2",
+      "rawFile": "step6d2-artifacts/discover_fairmount_walkmode.json",
+      "placesReturned": 68,
+      "tierDistribution": { "none": 14, "tier1": 6, "tier4": 48 },
+      "thinCount": 48,
+      "emptyReason": null
+    },
+    {
+      "area": "Midtown Manhattan, New York City",
+      "centroid": { "latitude": 40.7595, "longitude": -73.9955 },
+      "requestBody": {
+        "latitude": 40.7595,
+        "longitude": -73.9955,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true,
+        "walkMode": true
+      },
+      "timestampUtc": "2026-10-15T23:14:29Z",
+      "httpStatus": 200,
+      "responseBytes": 42527,
+      "sha256": "5712e3962e7ee07e2d3df81c7cdc5d495d98432174c060114a9d38a44665d44d",
+      "rawFile": "step6d2-artifacts/discover_midtown_walkmode.json",
+      "placesReturned": 68,
+      "tierDistribution": { "none": 8, "tier1": 2, "tier4": 58 },
+      "thinCount": 58,
+      "emptyReason": null
+    },
+    {
+      "area": "Bethlehem, PA",
+      "centroid": { "latitude": 40.625, "longitude": -75.38 },
+      "requestBody": {
+        "latitude": 40.625,
+        "longitude": -75.38,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true,
+        "walkMode": true
+      },
+      "timestampUtc": "2026-10-15T23:14:48Z",
+      "httpStatus": 200,
+      "responseBytes": 31989,
+      "sha256": "b0829e978eda0a123ac0200ca2b5bbc3bb92a006d25e510cea6e0e32224bf9f9",
+      "rawFile": "step6d2-artifacts/discover_bethlehem_walkmode.json",
+      "placesReturned": 51,
+      "tierDistribution": { "none": 3, "tier1": 1, "tier4": 47 },
+      "thinCount": 47,
+      "emptyReason": null
+    },
+    {
+      "area": "Jim Thorpe, PA",
+      "centroid": { "latitude": 40.875, "longitude": -75.73 },
+      "requestBody": {
+        "latitude": 40.875,
+        "longitude": -75.73,
+        "radius": 1000,
+        "mode": "full",
+        "osmAnchor": true,
+        "walkMode": true
+      },
+      "timestampUtc": "2026-10-15T23:15:03Z",
+      "httpStatus": 200,
+      "responseBytes": 4282,
+      "sha256": "9c0ede2f010d3ee1130a6a58c3603db0de690a28bc468e24a2dedf671fc571cd",
+      "rawFile": "step6d2-artifacts/discover_jimthorpe_walkmode.json",
+      "placesReturned": 7,
+      "tierDistribution": { "none": 0, "tier1": 0, "tier4": 7 },
+      "thinCount": 7,
+      "emptyReason": null
+    }
+  ],
+  "overpassCalls": [
+    {
+      "area": "fairmount",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "timestampUtc": "2026-10-15T23:17:01Z",
+      "httpStatus": 200,
+      "responseBytes": 21239,
+      "sha256": "153335dc1a6754a801086d7367bbb06a920c52efadc730f6db269c20ca8854f1",
+      "rawFile": "step6d2-artifacts/overpass_fairmount.json",
+      "elementsReturned": 61,
+      "refNrhpFound": 0
+    },
+    {
+      "area": "midtown",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "timestampUtc": "2026-10-15T23:17:39Z",
+      "httpStatus": 200,
+      "responseBytes": 29704,
+      "sha256": "4ee76b8367f594872037a8d03539aab1f0f4c98bd055df2935314c757e60d138",
+      "rawFile": "step6d2-artifacts/overpass_midtown.json",
+      "elementsReturned": 66,
+      "refNrhpFound": 0
+    },
+    {
+      "area": "bethlehem",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "timestampUtc": "2026-10-15T23:18:20Z",
+      "httpStatus": 502,
+      "responseBytes": 534,
+      "sha256": "8084e21e11df846a2e41bb93ddaf66961aa2ef71e9a9fc1f46debc960b303042",
+      "rawFile": "step6d2-artifacts/overpass_bethlehem.txt",
+      "elementsReturned": 0,
+      "retried": false,
+      "failureReason": "502 Gateway Timeout — Overpass API server at capacity"
+    },
+    {
+      "area": "jimthorpe",
+      "endpoint": "https://overpass-api.de/api/interpreter",
+      "timestampUtc": "2026-10-15T23:18:22Z",
+      "httpStatus": 502,
+      "responseBytes": 534,
+      "sha256": "8084e21e11df846a2e41bb93ddaf66961aa2ef71e9a9fc1f46debc960b303042",
+      "rawFile": "step6d2-artifacts/overpass_jimthorpe.txt",
+      "elementsReturned": 0,
+      "retried": false,
+      "failureReason": "502 Gateway Timeout — Overpass API server at capacity"
+    }
+  ],
+  "driftCheck": {
+    "fairmount": { "elementsCompared": 2, "mismatches": 0 },
+    "midtown": { "elementsCompared": 13, "mismatches": 0 },
+    "bethlehem": {
+      "status": "not_performed",
+      "reason": "no Overpass data (502 failure, not retried)"
+    },
+    "jimthorpe": {
+      "status": "not_performed",
+      "reason": "no Overpass data (502 failure, not retried)"
+    }
+  },
+  "wikidataCall": {
+    "endpoint": "https://www.wikidata.org/w/api.php?action=wbgetentities",
+    "timestampUtc": "2026-10-15T23:20:48Z",
+    "httpStatus": 200,
+    "responseBytes": 194674,
+    "sha256": "db5a75d4d1c8d52717d24e6aab9277b1cd61a2b1e371848b6e7f88f732cdd65c",
+    "rawFile": "step6d2-artifacts/wikidata_batch1.json",
+    "qidsRequested": 10,
+    "requestsUsedOfCap": 1,
+    "requestCap": 20
+  },
+  "wikidataResults": {
+    "Q2989707": {
+      "name": "Community College of Philadelphia",
+      "area": "fairmount",
+      "currentP649": false
+    },
+    "Q6749290": {
+      "name": "Manhattan Plaza",
+      "area": "midtown",
+      "currentP649": false
+    },
+    "Q164980": {
+      "name": "Playwrights Horizons",
+      "area": "midtown",
+      "currentP649": false
+    },
+    "Q7777417": {
+      "name": "Theatre Row",
+      "area": "midtown",
+      "currentP649": false
+    },
+    "Q5489525": {
+      "name": "Upright Citizens Brigade Theatre",
+      "area": "midtown",
+      "currentP649": false
+    },
+    "Q45101703": {
+      "name": "Producers Club Theaters and Bar",
+      "area": "midtown",
+      "currentP649": false
+    },
+    "Q6825053": {
+      "name": "Metropolitan Community Church",
+      "area": "midtown",
+      "currentP649": false
+    },
+    "Q564793": {
+      "name": "Jacob K. Javits Convention Center",
+      "area": "midtown",
+      "currentP649": false
+    },
+    "Q7712319": {
+      "name": "Congregation Ezrath Israel (The Actors' Temple)",
+      "area": "midtown",
+      "osmId": "way/265322610",
+      "currentP649": true,
+      "p649Value": "05000445"
+    },
+    "Q132068776": {
+      "name": "The Korean United Methodist Church",
+      "area": "bethlehem",
+      "currentP649": false
+    }
+  },
+  "classification": {
+    "byArea": {
+      "fairmount": {
+        "ambiguous": 0,
+        "individualListingBridged": 0,
+        "districtAssociatedBridged": 0,
+        "unlabeledBridged": 0,
+        "checkedNoNrhpClaim": 1,
+        "noBridge": 47,
+        "indeterminateBridgeCompleteness": 0
+      },
+      "midtown": {
+        "ambiguous": 0,
+        "individualListingBridged": 0,
+        "districtAssociatedBridged": 0,
+        "unlabeledBridged": 1,
+        "checkedNoNrhpClaim": 7,
+        "noBridge": 50,
+        "indeterminateBridgeCompleteness": 0
+      },
+      "bethlehem": {
+        "ambiguous": 0,
+        "individualListingBridged": 0,
+        "districtAssociatedBridged": 0,
+        "unlabeledBridged": 0,
+        "checkedNoNrhpClaim": 1,
+        "noBridge": 0,
+        "indeterminateBridgeCompleteness": 46
+      },
+      "jimthorpe": {
+        "ambiguous": 0,
+        "individualListingBridged": 0,
+        "districtAssociatedBridged": 0,
+        "unlabeledBridged": 0,
+        "checkedNoNrhpClaim": 0,
+        "noBridge": 0,
+        "indeterminateBridgeCompleteness": 7
+      }
+    },
+    "overall": {
+      "ambiguous": 0,
+      "individualListingBridged": 0,
+      "districtAssociatedBridged": 0,
+      "unlabeledBridged": 1,
+      "checkedNoNrhpClaim": 9,
+      "noBridge": 97,
+      "indeterminateBridgeCompleteness": 53
+    },
+    "oneBridgeFound": {
+      "osmId": "way/265322610",
+      "name": "Congregation Ezrath Israel",
+      "altName": "The Actors Temple",
+      "area": "midtown",
+      "class": "unlabeled-bridged",
+      "bridgeMethod": "wikidata_only",
+      "p649": "05000445",
+      "resourceTypeExplicitStatementFound": false,
+      "note": "P31=Q34627 (building/institution type, not listing-type), P1435=Q19558910 (generic heritage designation, no individual/district qualifier), no P361 'part of' claim present — no explicit individual-vs-district statement found, so class 4 (unlabeled-bridged) applies, not class 2."
+    },
+    "auditedCorrection2026_10_16": {
+      "reclassified": {
+        "osmId": "way/1356166516",
+        "name": "The Korean United Methodist Church",
+        "area": "bethlehem",
+        "from": "bridge-check-incomplete (ad-hoc, non-frozen class)",
+        "to": "checked-no-NRHP-claim",
+        "reason": "Wikidata QID Q132068776 P649 was actually fetched and confirmed absent (wikidata_results.json), independent of the Bethlehem Overpass 502 failure which only left the OSM-side ref:nrhp status unconfirmed."
+      },
+      "bridgeCheckIncompleteRemovedAsClass": true,
+      "indeterminateBridgeCompletenessFlagCount": 53,
+      "note": "This flag is bridge-completeness/execution metadata (Overpass 502, not retried, and no Wikidata QID present), not one of the six frozen candidate classes.",
+      "noNewRequestsIssued": true
+    }
+  },
+  "metrics": {
+    "fairmount": {
+      "thinCandidateCount": 48,
+      "bridgeableCount": 0,
+      "joinability": 0.0,
+      "individualShareAmongAllThin": 0.0,
+      "individualShareAmongBridgeable": null,
+      "joinMethodSplit": { "osmOnly": 0, "wikidataOnly": 0, "both": 0 },
+      "driftCount": 0,
+      "shareOfAllOsmCandidatesWithRefNrhp": 0.0,
+      "shareOfThinOsmCandidatesWithRefNrhp": 0.0
+    },
+    "midtown": {
+      "thinCandidateCount": 58,
+      "bridgeableCount": 1,
+      "joinability": 0.01724,
+      "individualShareAmongAllThin": 0.0,
+      "individualShareAmongBridgeable": 0.0,
+      "joinMethodSplit": { "osmOnly": 0, "wikidataOnly": 1, "both": 0 },
+      "driftCount": 0,
+      "shareOfAllOsmCandidatesWithRefNrhp": 0.0,
+      "shareOfThinOsmCandidatesWithRefNrhp": 0.0
+    },
+    "bethlehem": {
+      "thinCandidateCount": 47,
+      "confirmedCheckedNoNrhpClaimCount": 1,
+      "indeterminateBridgeCompletenessCount": 46,
+      "bridgeableCount": 0,
+      "joinability": 0.0,
+      "individualShareAmongAllThin": 0.0,
+      "individualShareAmongBridgeable": null,
+      "joinMethodSplit": { "osmOnly": 0, "wikidataOnly": 0, "both": 0 },
+      "driftCount": "not_checked",
+      "shareOfAllOsmCandidatesWithRefNrhp": "unconfirmed",
+      "shareOfThinOsmCandidatesWithRefNrhp": "unconfirmed",
+      "note": "bridgeableCount/joinability reflect only the 1 candidate whose bridge-check completed (confirmed no current P649); the remaining 46 carry the indeterminate bridge-completeness flag, not a confirmed no-bridge result."
+    },
+    "jimthorpe": {
+      "thinCandidateCount": 7,
+      "confirmedCheckedNoNrhpClaimCount": 0,
+      "indeterminateBridgeCompletenessCount": 7,
+      "bridgeableCount": 0,
+      "joinability": 0.0,
+      "individualShareAmongAllThin": 0.0,
+      "individualShareAmongBridgeable": null,
+      "joinMethodSplit": { "osmOnly": 0, "wikidataOnly": 0, "both": 0 },
+      "driftCount": "not_checked",
+      "shareOfAllOsmCandidatesWithRefNrhp": "unconfirmed",
+      "shareOfThinOsmCandidatesWithRefNrhp": "unconfirmed",
+      "note": "All 7 carry the indeterminate bridge-completeness flag (Overpass 502, no Wikidata QID present for any of them); none confirmed bridgeable or confirmed no-bridge."
+    },
+    "overall": {
+      "thinCandidateCount": 160,
+      "bridgeableCount": 1,
+      "joinability": 0.00625,
+      "joinabilityExcludingIndeterminateDenominator": 0.009346,
+      "joinabilityExcludingIndeterminateDenominatorValue": 107,
+      "individualShareAmongAllThin": 0.0,
+      "individualShareAmongBridgeable": 0.0,
+      "joinMethodSplit": { "osmOnly": 0, "wikidataOnly": 1, "both": 0 },
+      "driftCount": 0,
+      "driftUnchecked": "bethlehem, jimthorpe",
+      "shareOfAllOsmCandidatesWithRefNrhp_confirmed": 0.0,
+      "shareOfAllOsmCandidatesWithRefNrhp_confirmedDenominator": 127,
+      "shareOfAllOsmCandidatesWithRefNrhp_unconfirmedCount": 58,
+      "shareOfThinOsmCandidatesWithRefNrhp_confirmed": 0.0,
+      "shareOfThinOsmCandidatesWithRefNrhp_confirmedDenominator": 106,
+      "shareOfThinOsmCandidatesWithRefNrhp_unconfirmedCount": 54,
+      "individualShareAmongAllThinIsLowerBound": true
+    }
+  },
+  "interpretation": {
+    "joinabilityBucket": "low (<20%)",
+    "joinabilityValue": 0.00625,
+    "decision": "inconclusive_about_nrhp_prevalence_insufficient_identifier_linkage",
+    "decisionText": "Low joinability (<20%) -> inconclusive about NRHP prevalence, because identifier linkage is insufficient. Interpreted as an identity-linkage limitation, not a no-go on the NRHP source family itself.",
+    "robustnessCheckExcludingIndeterminate": {
+      "joinability": 0.009346,
+      "denominator": 107,
+      "bucket": "low (<20%)",
+      "changesOutcome": false
+    },
+    "thresholdsReinterpretedAfterResult": false,
+    "notANoGoOnNrhpSourceFamily": true,
+    "doesNotJustifyNpsIndividualListingAdapterAsNextStep": true,
+    "unaffectedByAuditedClassificationCorrection2026_10_16": true
+  },
+  "textLayerProbeGate": {
+    "reached": false,
+    "reason": "Frozen result is 'inconclusive', not 'proceed'."
+  },
+  "requestCounts": {
+    "discoverCalls": 4,
+    "overpassCalls": 4,
+    "overpassSuccesses": 2,
+    "overpassFailures502": 2,
+    "overpassRetries": 0,
+    "wikidataRequestsUsed": 1,
+    "wikidataRequestCap": 20
+  },
+  "volatilityFinding": {
+    "osmId": "way/265322610",
+    "note": "This candidate was previously promoted into GENERATED_LOCAL_HISTORY with a hasStoryBearingClaim override specifically to prevent Tier-4 classification, but classified Tier-4/placeholderFallback in this run because applyDiscoveryTier skips the curated-tier override when the classifier's exact-placeholder-shape condition fires (this request's LLM copy generation produced no usable copy). Tier-4/thin status is not a stable per-place property across runs."
+  },
+  "artifacts": {
+    "resultsFile": "experiments/hybrid-discovery-v0.1/documents/STEP_6D2_RESULTS.md",
+    "resultLogFile": "experiments/hybrid-discovery-v0.1/documents/step6d2ResultLog.json",
+    "rawArtifactsDir": "experiments/hybrid-discovery-v0.1/documents/step6d2-artifacts/"
+  },
+  "confirmations": {
+    "originalStep6DArtifactsUnchanged": true,
+    "preregistrationUnchanged": true,
+    "amendmentUnchanged": true,
+    "productionCodeUnchanged": true,
+    "hintTagsNotWidened": true,
+    "npsPdfsFetched": 0,
+    "committed": false,
+    "pushed": false
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "fairmount": [
+    {
+      "osmId": "way/772508893",
+      "name": "Community College of Philadelphia",
+      "wikidata": "Q2989707"
+    }
+  ],
+  "midtown": [
+    {
+      "osmId": "node/368055556",
+      "name": "Manhattan Plaza",
+      "wikidata": "Q6749290"
+    },
+    {
+      "osmId": "node/6233982618",
+      "name": "Playwrights Horizons",
+      "wikidata": "Q164980"
+    },
+    {
+      "osmId": "node/6233982200",
+      "name": "Theatre Row",
+      "wikidata": "Q7777417"
+    },
+    {
+      "osmId": "node/2483139540",
+      "name": "Upright Citizens Brigade Theatre",
+      "wikidata": "Q5489525"
+    },
+    {
+      "osmId": "node/2716231205",
+      "name": "Producers Club Theaters and Bar",
+      "wikidata": "Q45101703"
+    },
+    {
+      "osmId": "way/265273001",
+      "name": "Metropolitan Community Church",
+      "wikidata": "Q6825053"
+    },
+    {
+      "osmId": "way/278353371",
+      "name": "Jacob K. Javits Convention Center",
+      "wikidata": "Q564793"
+    },
+    {
+      "osmId": "way/265322610",
+      "name": "Congregation Ezrath Israel",
+      "wikidata": "Q7712319"
+    }
+  ],
+  "bethlehem": [
+    {
+      "osmId": "way/1356166516",
+      "name": "The Korean United Methodist Church",
+      "wikidata": "Q132068776"
+    }
+  ],
+  "jimthorpe": []
+}

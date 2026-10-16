@@ -1,0 +1,77 @@
+{
+  "Q2989707": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": "Community College of Philadelphia",
+    "redirects": false
+  },
+  "Q6749290": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": "Manhattan Plaza",
+    "redirects": false
+  },
+  "Q164980": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": "Playwrights Horizons",
+    "redirects": false
+  },
+  "Q7777417": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": "Theatre Row (New York City)",
+    "redirects": false
+  },
+  "Q5489525": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": "Upright Citizens Brigade Theatre",
+    "redirects": false
+  },
+  "Q45101703": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": null,
+    "redirects": false
+  },
+  "Q6825053": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": "Metropolitan Community Church of New York",
+    "redirects": false
+  },
+  "Q564793": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": "Javits Center",
+    "redirects": false
+  },
+  "Q7712319": {
+    "missing": false,
+    "current_p649": [
+      {
+        "value": "05000445",
+        "rank": "normal"
+      }
+    ],
+    "total_p649_claims": 1,
+    "enwiki_title": "The Actors' Temple",
+    "redirects": false
+  },
+  "Q132068776": {
+    "missing": false,
+    "current_p649": [],
+    "total_p649_claims": 0,
+    "enwiki_title": null,
+    "redirects": false
+  }
+}

@@ -1,0 +1,1191 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-15T23:16:56Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {
+      "type": "node",
+      "id": 357610871,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "472",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "West 44th Street",
+        "amenity": "place_of_worship",
+        "denomination": "presbyterian",
+        "ele": "9",
+        "fixme": "correct position",
+        "gnis:feature_id": "2072131",
+        "name": "Seventh Associate Presbyterian Church",
+        "religion": "christian"
+      }
+    },
+    {
+      "type": "node",
+      "id": 368055556,
+      "tags": {
+        "addr:state": "NY",
+        "building": "yes",
+        "ele": "9",
+        "gnis:feature_id": "2083191",
+        "name": "Manhattan Plaza",
+        "source": "USGS Geonames",
+        "wikidata": "Q6749290"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1873813892,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "626",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "11th Avenue",
+        "amenity": "pub",
+        "cocktails": "yes",
+        "cuisine": "pub;irish;american",
+        "drink:beer": "draught",
+        "drink:liquor": "yes",
+        "drink:wine": "yes",
+        "name": "Landmark Tavern",
+        "opening_hours": "Mo-Su 11:30-04:00",
+        "opening_hours:kitchen": "Mo-Su 11:30-23:00",
+        "phone": "+1 212 247 2562",
+        "website": "http://www.thelandmarktavern.org/",
+        "wheelchair": "limited"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2483139540,
+      "tags": {
+        "addr:housenumber": "555",
+        "addr:postcode": "10036",
+        "addr:street": "West 42nd Street",
+        "amenity": "theatre",
+        "branch": "Hell's Kitchen",
+        "name": "Upright Citizens Brigade Theatre",
+        "phone": "+1-212-366-9176",
+        "theatre:genre": "comedy",
+        "website": "https://hellskitchen.ucbtheatre.com",
+        "wikidata": "Q5489525"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2702475724,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "532",
+        "addr:postcode": "10018",
+        "addr:street": "9th Avenue",
+        "amenity": "bar",
+        "name": "Holland Bar",
+        "opening_hours": "Mo-Sa 08:00-04:00; Su 12:00-04:00",
+        "phone": "+1 212 502 4609"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2709860764,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "667",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "10th Avenue",
+        "amenity": "bar",
+        "name": "DBL"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2709878693,
+      "tags": {
+        "addr:housenumber": "424",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "West 44th Street",
+        "amenity": "theatre",
+        "ele": "10",
+        "gnis:feature_id": "2083193",
+        "name": "New Dramatists Theater",
+        "source": "USGS Geonames"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2716231205,
+      "tags": {
+        "addr:housenumber": "358",
+        "addr:postcode": "10036",
+        "addr:street": "West 44th Street",
+        "amenity": "cinema",
+        "name": "Producers Club Theaters and Bar",
+        "website": "https://producersclub.com/",
+        "wikidata": "Q45101703"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2920101574,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "407",
+        "addr:postcode": "10036",
+        "addr:street": "West 43rd Street",
+        "amenity": "theatre",
+        "name": "Westside Theatre",
+        "start_date": "1976",
+        "website": "https://www.westsidetheatre.com/",
+        "wikidata": "Q7989720",
+        "wikipedia": "en:Westside Theatre"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3246839597,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "328",
+        "addr:state": "NY",
+        "addr:street": "West 45th Street",
+        "amenity": "bar",
+        "craft_beer": "yes",
+        "food": "yes",
+        "name": "Beer Culture",
+        "opening_hours": "Su-Th 15:00-24:00; Fr-Sa 13:00-02:00"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3450858389,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "323",
+        "addr:street": "West 39th Street",
+        "amenity": "arts_centre",
+        "name": "The Elizabeth Foundation for the Arts",
+        "website": "https://www.efanyc.org/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3450858390,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "323",
+        "addr:street": "West 39th Street",
+        "amenity": "arts_centre",
+        "name": "The Robert Blackburn Printmaking Workshop (RBPMW)",
+        "website": "https://www.rbpmw-efanyc.org/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3573482095,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "315",
+        "addr:state": "NY",
+        "addr:street": "West 44th Street",
+        "air_conditioning": "yes",
+        "amenity": "bar",
+        "cuisine": "american;caribbean",
+        "internet_access": "wlan",
+        "name": "Birdland Jazz Club",
+        "opening_hours": "Mo-Su 17:00-01:00",
+        "phone": "+1-212-581-3080",
+        "website": "https://www.birdlandjazz.com/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3574404393,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "332",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "West 44th Street",
+        "amenity": "car_rental",
+        "brand": "Alamo",
+        "brand:wikidata": "Q1429287",
+        "building": "yes",
+        "name": "Alamo",
+        "operator": "Alamo",
+        "phone": "+1-888-826-6893",
+        "website": "https://www.alamo.com/en_US/car-rental/locations/location-details/US/NYCC71-manhattan-w-44th-st.html"
+      }
+    },
+    {
+      "type": "node",
+      "id": 4327582289,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "519",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "9th Avenue",
+        "amenity": "marketplace",
+        "name": "Hell's Kitchen Flea Market",
+        "name:es": "Mercado de las pulgas",
+        "opening_hours": "Sa-Su 09:00-17:00"
+      }
+    },
+    {
+      "type": "node",
+      "id": 4708892892,
+      "tags": {
+        "amenity": "bar",
+        "name": "Dianne & Elisabeth",
+        "name:en": "Dianne & Elisabeth"
+      }
+    },
+    {
+      "type": "node",
+      "id": 4922094244,
+      "tags": {
+        "addr:housenumber": "330",
+        "addr:street": "West 42nd Street",
+        "amenity": "community_centre",
+        "name": "Community Board 4"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5009311521,
+      "tags": {
+        "addr:housenumber": "637",
+        "addr:postcode": "10036",
+        "addr:street": "10th Avenue",
+        "amenity": "bar",
+        "cocktails": "yes",
+        "contact:facebook": "https://www.facebook.com/hellcatannies",
+        "contact:instagram": "http://instagram.com/hellcatannies",
+        "contact:twitter": "https://www.twitter.com/hellcatannies",
+        "drink:beer": "yes",
+        "drink:wine": "yes",
+        "email": "hellcatannies@gmail.com",
+        "happy_hours": "Mo-Fr 15:00-18:00",
+        "name": "Hellcat Annie's taproom",
+        "opening_hours": "12:00-04:00",
+        "phone": "+1 212-586-2707",
+        "website": "https://hellcatannies.com"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5057079090,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "627",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "9th Avenue",
+        "amenity": "bar",
+        "drink:beer": "draught",
+        "drink:liquor": "yes",
+        "drink:wine": "yes",
+        "name": "Rudy's Bar & Grill",
+        "phone": "+1-646-707-0890",
+        "website": "https://rudysbarnyc.com"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5429181224,
+      "tags": {
+        "amenity": "bar",
+        "check_date": "2025-11-04",
+        "name": "Ritz Bar Lounge"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5519546126,
+      "tags": {
+        "addr:housenumber": "659",
+        "addr:street": "9th Avenue",
+        "amenity": "bar",
+        "cocktails": "yes",
+        "contact:email": "info@mercurybarnyc.com",
+        "drink:beer": "draught",
+        "happy_hours": "Mo-Fr 12:00-20:00",
+        "indoor_seating": "yes",
+        "level": "0",
+        "name": "Mercury Bar",
+        "opening_hours": "Mo-Th 11:00-01:00; Fr 11:00-02:00; Sa 10:00-02:00; Su 10:00-01:00",
+        "opening_hours:kitchen": "Mo-Th 11:00-24:00; Fr 11:00-01:00; Sa 10:00-02:00; Su 10:00-24:00",
+        "outdoor_seating": "yes",
+        "phone": "+1 212-262-7755",
+        "reservation": "yes",
+        "toilets": "yes",
+        "website": "https://mercurybarnyc.com/",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5754840578,
+      "tags": {
+        "addr:housenumber": "611",
+        "addr:street": "9th Avenue",
+        "amenity": "bar",
+        "check_date": "2024-10-11",
+        "name": "Dalton's",
+        "outdoor_seating": "yes",
+        "toilets:wheelchair": "yes",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5818417227,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "315",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 39th Street",
+        "amenity": "pub",
+        "branch": "Times Square",
+        "cocktails": "yes",
+        "drink:beer": "yes",
+        "drink:wine": "yes",
+        "name": "Joyce Public House",
+        "opening_hours": "Mo-Su 11:30-24:00",
+        "phone": "+1-212-760-0072",
+        "theme": "irish",
+        "website": "https://www.thejoycepublichouse.com/",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5819364580,
+      "tags": {
+        "addr:housenumber": "508",
+        "addr:street": "9th Avenue",
+        "amenity": "pub",
+        "cuisine": "fish_and_chips;american",
+        "drink:beer": "yes",
+        "email": "ScallywagsNYC@gmail.com",
+        "name": "Scallywag's Irish Pub",
+        "opening_hours": "Mo-Su 10:00-04:00",
+        "phone": "+1-646-490-4803",
+        "reservation": "yes",
+        "toilets": "yes",
+        "website": "https://scallywagsnyc.com/",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 5984435987,
+      "tags": {
+        "addr:housenumber": "357",
+        "addr:street": "West 44th Street",
+        "amenity": "bar",
+        "name": "Friki Tiki",
+        "opening_hours": "Tu-Th 17:00-01:00; Fr-Sa 17:00-02:00",
+        "website": "https://thefrikitiki.com/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6233982200,
+      "tags": {
+        "addr:housenumber": "410",
+        "addr:street": "West 42nd Street",
+        "amenity": "theatre",
+        "name": "Theatre Row",
+        "toilets:wheelchair": "yes",
+        "wheelchair": "yes",
+        "wikidata": "Q7777417"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6233982618,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "416",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "West 42nd Street",
+        "amenity": "theatre",
+        "check_date": "2026-04-11",
+        "description": "Playwrights Horizons is a non-profit writer's theater dedicated to the development of contemporary American playwrights, and to the production of innovative new work.",
+        "name": "Playwrights Horizons",
+        "phone": "+1-212-564-1235",
+        "website": "https://www.playwrightshorizons.org",
+        "wheelchair": "designated",
+        "wikidata": "Q164980"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6288552808,
+      "tags": {
+        "addr:housenumber": "420",
+        "addr:street": "West 42nd Street",
+        "amenity": "theatre",
+        "name": "Fiddler on The Roof",
+        "website": "https://fiddlernyc.com/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6374886586,
+      "tags": {
+        "addr:housenumber": "450",
+        "addr:postcode": "10018",
+        "addr:street": "West 37th Street",
+        "amenity": "arts_centre",
+        "check_date": "2024-06-06",
+        "email": "info@bacnyc.org",
+        "facebook": "BACNYC",
+        "instagram": "baryshnikovartscenter",
+        "name": "BAC",
+        "official_name": "Baryshnikov Arts Center",
+        "opening_hours": "Mo-Sa 10:00-17:00",
+        "phone": "+1 646-731-3200",
+        "twitter": "BACNYC",
+        "website": "https://www.bacnyc.org/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6564024415,
+      "tags": {
+        "amenity": "pub",
+        "name": "Irish Bar"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6917406686,
+      "tags": {
+        "amenity": "bar",
+        "name": "Sky Room"
+      }
+    },
+    {
+      "type": "node",
+      "id": 7048165985,
+      "tags": {
+        "addr:housenumber": "400",
+        "addr:street": "West 42nd Street",
+        "amenity": "bar",
+        "name": "The Polynesian"
+      }
+    },
+    {
+      "type": "node",
+      "id": 9119778983,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "570",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "10th Avenue",
+        "amenity": "theatre",
+        "name": "The Green Room 42",
+        "website": "https://thegreenroom42.venuetix.com"
+      }
+    },
+    {
+      "type": "node",
+      "id": 10731651159,
+      "tags": {
+        "amenity": "pub",
+        "cocktails": "yes",
+        "drink:beer": "draught",
+        "drink:liquor": "yes",
+        "drink:wine": "yes",
+        "happy_hours": "Mo-Fr 15:00-19:00",
+        "name": "Nobody's Perfect",
+        "phone": "+1-646-448-4067"
+      }
+    },
+    {
+      "type": "node",
+      "id": 11817061866,
+      "tags": {
+        "addr:housenumber": "480",
+        "addr:postcode": "10036",
+        "addr:street": "West 42nd Street",
+        "alt_name": "The Pershing Square Signature Center",
+        "amenity": "theatre",
+        "check_date": "2024-10-07",
+        "name": "Signature Theatre",
+        "phone": "+1-212-967-1913",
+        "website": "https://signaturetheatre.org",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 11992808706,
+      "tags": {
+        "amenity": "bar",
+        "name": "Blue Ruin"
+      }
+    },
+    {
+      "type": "node",
+      "id": 12998414902,
+      "tags": {
+        "addr:housenumber": "314",
+        "addr:street": "West 40th Street",
+        "amenity": "bar",
+        "level": "40",
+        "name": "Dear Irving on Hudson",
+        "opening_hours": "Mo 17:00-00:00; Tu-Th 17:00-01:00; Fr-Sa 16:00-02:00; Su 16:00-00:00",
+        "phone": "+1-917-261-6908",
+        "website": "https://www.dearirving.com/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 13082354786,
+      "tags": {
+        "artist_name": "George Segal",
+        "artwork_type": "sculpture",
+        "material": "bronze",
+        "name": "The Commuters",
+        "start_date": "1980",
+        "tourism": "artwork"
+      }
+    },
+    {
+      "type": "node",
+      "id": 13530551350,
+      "tags": {
+        "addr:housenumber": "548",
+        "addr:street": "9th Avenue",
+        "amenity": "bar",
+        "name": "Blue Ruin Bar",
+        "sport": "billiards"
+      }
+    },
+    {
+      "type": "node",
+      "id": 13740286725,
+      "tags": {
+        "amenity": "post_office",
+        "brand": "FedEx",
+        "brand:wikidata": "Q459477",
+        "name": "FedEx Ship Center",
+        "source": "survey"
+      }
+    },
+    {
+      "type": "node",
+      "id": 14040614336,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "500",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 41st Street",
+        "amenity": "school",
+        "brand": "Success Academy",
+        "brand:wikidata": "Q14707388",
+        "education": "school",
+        "name": "Success Academy - Hudson Yards Elementary & Middle School",
+        "website": "https://www.successacademies.org/"
+      }
+    },
+    {
+      "type": "node",
+      "id": 14208204401,
+      "tags": {
+        "addr:housenumber": "425",
+        "addr:postcode": "10036",
+        "addr:street": "West 47th Street",
+        "amenity": "community_centre",
+        "check_date": "2026-09-22",
+        "check_date:opening_hours": "2026-09-22",
+        "contact:facebook": "fountainhouseamerica",
+        "contact:instagram": "fountainhouse",
+        "contact:twitter": "fountainhouse",
+        "email": "fhinfo@fountainhouse.org",
+        "name": "Fountain House",
+        "opening_hours": "Mo-Tu, Fr 09:00-17:00; We-Th 09:00-21:00; Sa 15:00-20:00, Su 12:00-17:00",
+        "phone": "+12125820340",
+        "website": "https://fountainhouse.org/"
+      }
+    },
+    {
+      "type": "way",
+      "id": 158854338,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "350",
+        "addr:state": "NY",
+        "addr:street": "West 42nd Street",
+        "building": "apartments",
+        "building:part": "no",
+        "name": "The Orion",
+        "nycdoitt:bin": "1087264",
+        "start_date": "2006",
+        "wikidata": "Q2285176",
+        "wikipedia": "en:The Orion"
+      }
+    },
+    {
+      "type": "way",
+      "id": 243088863,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "460",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "West 42nd Street",
+        "building": "yes",
+        "name": "One MiMA Tower",
+        "nycdoitt:bin": "1088437",
+        "start_date": "2011",
+        "wikidata": "Q234368"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265272997,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "442",
+        "addr:postcode": "10018",
+        "addr:street": "West 36th Street",
+        "brand": "Quality Inn",
+        "brand:wikidata": "Q113152195",
+        "building": "hotel",
+        "building:colour": "#BBBBB0",
+        "building:levels": "14",
+        "building:material": "brick",
+        "height": "40.8",
+        "name": "Quality Inn",
+        "nycdoitt:bin": "1088183",
+        "roof:material": "concrete",
+        "roof:shape": "flat",
+        "tourism": "hotel"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265273001,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "446",
+        "addr:postcode": "10018",
+        "addr:street": "West 36th Street",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "building:colour": "#A58876",
+        "building:levels": "3",
+        "building:material": "brick",
+        "height": "9.3",
+        "name": "Metropolitan Community Church",
+        "nycdoitt:bin": "1012876",
+        "religion": "christian",
+        "roof:material": "concrete",
+        "roof:shape": "flat",
+        "website": "https://mccny.org/",
+        "wikidata": "Q6825053",
+        "wikipedia": "en:Metropolitan Community Church of New York"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265282480,
+      "tags": {
+        "addr:housenumber": "330",
+        "addr:postcode": "10018",
+        "addr:street": "West 38th Street",
+        "building": "yes",
+        "height": "63.1",
+        "name": "Shift Midtown",
+        "nycdoitt:bin": "1013627"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265282509,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "440",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 38th Street",
+        "amenity": "fire_station",
+        "building": "fire_station",
+        "building:levels": "2",
+        "ele": "12",
+        "gnis:feature_id": "2084057",
+        "height": "15.3",
+        "name": "FDNY Engine 34/Ladder 21",
+        "nycdoitt:bin": "1012982",
+        "operator": "New York City Fire Department",
+        "operator:wikidata": "Q283207",
+        "operator:wikipedia": "en:New York City Fire Department"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265282570,
+      "tags": {
+        "addr:housenumber": "508",
+        "addr:postcode": "10018",
+        "addr:street": "West 37th Street",
+        "amenity": "arts_centre",
+        "building": "yes",
+        "height": "9.1",
+        "name": "SIR Stage37",
+        "nycdoitt:bin": "1080350"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296137,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "311",
+        "addr:postcode": "10018",
+        "addr:street": "West 39th Street",
+        "brand": "Element",
+        "brand:wikidata": "Q91948072",
+        "breakfast": "yes",
+        "building": "yes",
+        "building:levels": "39",
+        "contact:facebook": "ElementTimesSquare",
+        "contact:instagram": "elementtimessquare",
+        "dog": "fee",
+        "fax": "+1 212-643-0880",
+        "fitness_centre": "yes",
+        "height": "135",
+        "internet_access": "wlan",
+        "name": "Element",
+        "nycdoitt:bin": "1088523",
+        "official_name": "Element New York Times Square West",
+        "operator": "Marriot",
+        "phone": "+1 212-643-0770",
+        "smoking": "no",
+        "start_date": "2010",
+        "tourism": "hotel",
+        "website": "https://www.marriott.com/en-us/hotels/nycel-element-new-york-times-square-west/overview",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296142,
+      "tags": {
+        "addr:housenumber": "318",
+        "addr:postcode": "10018",
+        "addr:street": "West 39th Street",
+        "architect": "Crow, Lewis & Wickenhoefer",
+        "building": "commercial",
+        "building:levels": "12",
+        "height": "67.7",
+        "name": "Finck Building",
+        "nycdoitt:bin": "1013650",
+        "start_date": "1916"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296151,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "333",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 38th Street",
+        "branch": "Times Square South",
+        "brand": "La Quinta Inn & Suites",
+        "brand:wikidata": "Q6464734",
+        "building": "yes",
+        "building:levels": "22",
+        "height": "62.5",
+        "internet_access": "wlan",
+        "internet_access:fee": "customers",
+        "name": "La Quinta Inn & Suites",
+        "nycdoitt:bin": "1013640",
+        "official_name": "La Quinta Inn & Suites by Wyndham",
+        "phone": "+1 718-690-3294",
+        "ref": "53800",
+        "tourism": "hotel",
+        "website": "https://www.wyndhamhotels.com/laquinta/new-york-city-new-york/la-quinta-by-wyndham-manhattan-midtown/overview"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296155,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "340",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 40th Street",
+        "branch": "Times Square",
+        "brand": "Delta Hotels",
+        "brand:wikidata": "Q5254663",
+        "building": "hotel",
+        "fax": "+1 212 757 9001",
+        "fitness_centre": "yes",
+        "internet_access": "wlan",
+        "internet_access:fee": "no",
+        "name": "Delta Hotels by Marriott",
+        "nycdoitt:bin": "1013693",
+        "official_name": "Delta Hotels by Marriott",
+        "operator": "Delta Hotels",
+        "phone": "+1 212-757-9000",
+        "rooms": "310",
+        "smoking": "no",
+        "start_date": "2010",
+        "tourism": "hotel",
+        "website": "https://www.marriott.com/en-us/hotels/nycde-delta-hotels-new-york-times-square/overview/"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296161,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "342",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 40th Street",
+        "building": "hotel",
+        "building:levels": "32",
+        "email": "hello@distrikthotel.com",
+        "facebook": "https://www.facebook.com/DistriktHotelNYC",
+        "instagram": "https://instagram.com/distrikthotel",
+        "internet_access": "wlan",
+        "internet_access:fee": "no",
+        "name": "Distrikt Hotel",
+        "nycdoitt:bin": "1088524",
+        "phone": "+1 212-706-6100",
+        "rooms": "155",
+        "start_date": "2010",
+        "toilets:wheelchair": "yes",
+        "tourism": "hotel",
+        "twitter": "https://twitter.com/distrikthotel",
+        "website": "https://www.distrikthoteltimessquare.com/",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296163,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "350",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 40th Street",
+        "branch": "Hotel New York Times Square West",
+        "brand": "DoubleTree",
+        "brand:wikidata": "Q2504643",
+        "building": "yes",
+        "fax": "+1 646-609-1188",
+        "height": "100",
+        "name": "DoubleTree by Hilton Hotel",
+        "nycdoitt:bin": "1013695",
+        "official_name": "DoubleTree by Hilton",
+        "phone": "+1 212-607-8888",
+        "ref": "NYCSWDT",
+        "short_name": "DoubleTree",
+        "start_date": "2017",
+        "toilets:wheelchair": "yes",
+        "tourism": "hotel",
+        "website": "https://doubletree3.hilton.com/en/hotels/new-york/doubletree-by-hilton-hotel-new-york-times-square-west-NYCSWDT/index.html",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296211,
+      "tags": {
+        "addr:housenumber": "508",
+        "addr:postcode": "10018",
+        "addr:street": "9th Avenue",
+        "building": "yes",
+        "height": "21.4",
+        "name": "Oregon",
+        "nycdoitt:bin": "1013634"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296217,
+      "tags": {
+        "addr:housenumber": "510",
+        "addr:postcode": "10018",
+        "addr:street": "9th Avenue",
+        "building": "yes",
+        "height": "21.4",
+        "name": "Maine",
+        "nycdoitt:bin": "1013635"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296263,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "337",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 39th Street",
+        "alt_name": "Hampton Inn",
+        "branch": "Manhattan/Times Square South",
+        "brand": "Hampton",
+        "brand:wikidata": "Q5646230",
+        "breakfast": "yes",
+        "building": "hotel",
+        "dog": "no",
+        "fitness_centre": "yes",
+        "height": "92.9",
+        "internet_access": "wlan",
+        "internet_access:fee": "no",
+        "name": "Hampton Inn",
+        "nycdoitt:bin": "1087499",
+        "official_name": "Hampton by Hilton",
+        "payment:american_express": "yes",
+        "payment:carte_blanche": "yes",
+        "payment:diners_club": "yes",
+        "payment:discover_card": "yes",
+        "payment:mastercard": "yes",
+        "payment:unionpay": "yes",
+        "payment:visa": "yes",
+        "phone": "+1 212-967-2344",
+        "ref": "NYCMAHX",
+        "smoking": "no",
+        "start_date": "2008",
+        "tourism": "hotel",
+        "website": "https://www.hilton.com/en/hotels/nycmahx-hampton-manhattan-times-square-south/",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296268,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "343",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 39th Street",
+        "branch": "New York City Times Square",
+        "brand": "Holiday Inn Express",
+        "brand:wikidata": "Q5880423",
+        "breakfast": "06:30-09:30",
+        "building": "hotel",
+        "dog": "no",
+        "email": "hietimessquarefd@hhmlp.com",
+        "fitness_centre": "no",
+        "height": "104.2",
+        "internet_access": "wlan",
+        "internet_access:fee": "yes",
+        "name": "Holiday Inn Express New York City Times Square",
+        "nycdoitt:bin": "1087498",
+        "operator": "IHG",
+        "phone": "+1-212-2391222",
+        "ref": "NYCWS",
+        "rooms": "210",
+        "start_date": "2008",
+        "swimming_pool": "no",
+        "tourism": "hotel",
+        "website": "https://www.ihg.com/holidayinnexpress/hotels/us/en/new-york/nycws/hoteldetail/",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265296275,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "339",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "West 39th Street",
+        "branch": "Times Square",
+        "brand": "Candlewood Suites",
+        "brand:wikidata": "Q5032010",
+        "building": "yes",
+        "building:levels": "32",
+        "dog": "yes",
+        "email": "waheeda.ashraf@hhmlp.com",
+        "fitness_centre": "yes",
+        "height": "93.0",
+        "internet_access": "yes",
+        "internet_access:fee": "no",
+        "name": "Candlewood Suites",
+        "nycdoitt:bin": "1087500",
+        "operator": "IHG",
+        "payment:american_express": "yes",
+        "payment:carte_blanche": "yes",
+        "payment:diners_club": "yes",
+        "payment:discover_card": "yes",
+        "payment:jcb": "yes",
+        "payment:mastercard": "yes",
+        "payment:visa": "yes",
+        "phone": "+1 212-967-2254",
+        "rooms": "188",
+        "smoking": "no",
+        "start_date": "2008",
+        "tourism": "hotel",
+        "website": "https://www.ihg.com/candlewood/hotels/us/en/new-york/nyccw/hoteldetail",
+        "wheelchair": "yes",
+        "wheelchair:rooms": "10"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265319542,
+      "tags": {
+        "addr:city": "New York",
+        "addr:country": "US",
+        "addr:housenumber": "432",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "West 44th Street",
+        "amenity": "school",
+        "building": "yes",
+        "ele": "9",
+        "fax": "+1 212 757 7638",
+        "gnis:feature_id": "2083192",
+        "height": "12.9",
+        "name": "The Actors Studio",
+        "nycdoitt:bin": "1026377",
+        "phone": "+1 212 757 0870",
+        "roof:shape": "gabled",
+        "website": "https://theactorsstudio.org/",
+        "wikidata": "Q216458"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265320243,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "630",
+        "addr:postcode": "10036",
+        "addr:state": "NY",
+        "addr:street": "9th Avenue",
+        "building": "office",
+        "building:colour": "#978B7B",
+        "building:levels": "13",
+        "building:material": "brick",
+        "building:part": "yes",
+        "height": "57.6",
+        "name": "Film Center Building",
+        "nycdoitt:bin": "1024982",
+        "roof:material": "concrete",
+        "roof:shape": "flat",
+        "start_date": "1929",
+        "wikidata": "Q5448921",
+        "wikipedia": "en:Film Center Building"
+      }
+    },
+    {
+      "type": "way",
+      "id": 265322610,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "339",
+        "addr:postcode": "10036",
+        "addr:street": "West 47th Street",
+        "alt_name": "The Actors Temple",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "ele": "14",
+        "gnis:feature_id": "2100912",
+        "height": "12.3",
+        "name": "Congregation Ezrath Israel",
+        "nycdoitt:bin": "1025091",
+        "religion": "jewish",
+        "website": "https://www.theactorstemple.org/",
+        "wheelchair": "limited",
+        "wikidata": "Q7712319",
+        "wikipedia": "en:The Actors' Temple"
+      }
+    },
+    {
+      "type": "way",
+      "id": 278353371,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "429",
+        "addr:postcode": "10001",
+        "addr:state": "NY",
+        "addr:street": "11th Avenue",
+        "air_conditioning": "yes",
+        "amenity": "exhibition_centre",
+        "building": "yes",
+        "building:colour": "black",
+        "building:material": "glass",
+        "ele": "5",
+        "gnis:feature_id": "2083174",
+        "height": "53.6",
+        "layer": "1",
+        "name": "Jacob K. Javits Convention Center",
+        "nycdoitt:bin": "1067973",
+        "roof:material": "grass",
+        "roof:shape": "flat",
+        "start_date": "1986",
+        "website": "https://www.javitscenter.com/",
+        "wikidata": "Q564793",
+        "wikipedia": "en:Javits Center"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1021569486,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "450",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "11th Avenue",
+        "building": "hotel",
+        "building:levels": "51",
+        "closed": "yes",
+        "height": "195.7",
+        "name": "Hotel Meta"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1021760896,
+      "tags": {
+        "addr:city": "New York",
+        "addr:housenumber": "455",
+        "addr:postcode": "10018",
+        "addr:state": "NY",
+        "addr:street": "10th Avenue",
+        "building": "yes",
+        "building:levels": "45",
+        "construction": "residential",
+        "height": "178.9",
+        "name": "The Set",
+        "nycdoitt:bin": "1091604"
+      }
+    }
+  ]
+}

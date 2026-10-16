@@ -1,0 +1,905 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-10-15T23:15:51Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+    {
+      "type": "node",
+      "id": 2453577957,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1822",
+        "addr:postcode": "19130",
+        "addr:street": "Spring Garden Street",
+        "name": "Philadelphia Bikesmith",
+        "opening_hours": "Mo-Fr 10:00-19:00; Sa 12:00-19:00; Su 12:00-17:00",
+        "shop": "bicycle"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2571727569,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1549",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "amenity": "pub",
+        "check_date": "2025-09-04",
+        "contact:facebook": "https://www.facebook.com/kellianns",
+        "contact:instagram": "https://www.instagram.com/kelliannsbarandgrill",
+        "name": "Kelliann's Bar & Grill",
+        "opening_hours:bar": "11:00-26:00",
+        "opening_hours:kitchen": "11:00-22:00",
+        "phone": "+1 215-563-6990",
+        "website": "https://www.kellianns.com"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2571727575,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1543",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "check_date": "2023-10-10",
+        "cuisine": "chinese",
+        "disused:amenity": "restaurant",
+        "name": "Long River Chinese Food"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2572265673,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "601",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "North 21st Street",
+        "amenity": "pub",
+        "contact:facebook": "https://www.facebook.com/theFairviewPhilly/",
+        "name": "The Fairview Philly",
+        "opening_hours": "Mo-Th 16:00-24:00, Fr 16:00-26:00, Sa,Su 11:00-24:00",
+        "phone": "+1-215-796-7900"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2573865973,
+      "tags": {
+        "brand": "Saladworks",
+        "brand:wikidata": "Q7403411",
+        "check_date": "2023-10-11",
+        "cuisine": "salad",
+        "disused:amenity": "fast_food",
+        "name": "Saladworks",
+        "takeaway": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 2770602550,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1702",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Fairmount Avenue",
+        "amenity": "social_facility",
+        "contact:phone": "+1 215-763-2338",
+        "name": "Holy Temple Church",
+        "opening_hours": "Su 13:30-14:30, Sa 10:00-11:00",
+        "social_facility": "food_bank"
+      }
+    },
+    {
+      "type": "node",
+      "id": 3499206770,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1500",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "amenity": "library",
+        "name": "Library of Accessible Media for Pennsylvanians",
+        "opening_hours": "Mo-Fr 09:00-17:00; Sa,Su,PH off",
+        "operator": "Free Library of Philadelphia",
+        "operator:wikidata": "Q3087288",
+        "phone": "+1-215-683-3213",
+        "ref:isil": "US-PPDPH",
+        "short_name": "LAMP",
+        "website": "https://mylamp.org",
+        "wheelchair": "yes"
+      }
+    },
+    {
+      "type": "node",
+      "id": 6462657580,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1939",
+        "addr:postcode": "19130-9997",
+        "addr:state": "PA",
+        "addr:street": "Fairmount Avenue",
+        "amenity": "post_office",
+        "brand": "United States Post Office",
+        "brand:wikidata": "Q668687",
+        "name": "United States Post Office",
+        "opening_hours": "Mo-Fr 08:00-17:00; Sa 08:00-14:00",
+        "operator": "United States Postal Service",
+        "operator:short": "USPS",
+        "operator:type": "public",
+        "operator:website": "https://www.usps.com",
+        "operator:wikidata": "Q668687",
+        "operator:wikipedia": "en:United States Postal Service",
+        "phone": "+1 215-236-5176",
+        "short_name": "USPS",
+        "website": "https://tools.usps.com/locations/details/1363021"
+      }
+    },
+    {
+      "type": "node",
+      "id": 8113834457,
+      "tags": {
+        "amenity": "place_of_worship",
+        "name": "Trinity Independent Church",
+        "religion": "christian"
+      }
+    },
+    {
+      "type": "node",
+      "id": 8113834458,
+      "tags": {
+        "amenity": "place_of_worship",
+        "denomination": "baptist",
+        "name": "Calvary Baptist Church",
+        "religion": "christian"
+      }
+    },
+    {
+      "type": "node",
+      "id": 8119283803,
+      "tags": {
+        "amenity": "library",
+        "name": "Community College of Philadelphia Main Campus Library",
+        "operator": "Community College of Philadelphia"
+      }
+    },
+    {
+      "type": "node",
+      "id": 10760531984,
+      "tags": {
+        "check_date": "2025-09-04",
+        "disused:amenity": "veterinary",
+        "name": "Thrive Pet Healthcare"
+      }
+    },
+    {
+      "type": "node",
+      "id": 10978033938,
+      "tags": {
+        "flickr": "https://www.flickr.com/photos/139570911@N08/52975469344/",
+        "historic": "memorial",
+        "memorial": "plaque",
+        "name": "Robert Purvis",
+        "openplaques:id": "29589"
+      }
+    },
+    {
+      "type": "node",
+      "id": 10978033939,
+      "tags": {
+        "flickr": "https://www.flickr.com/photos/139570911@N08/52975694605/",
+        "historic": "memorial",
+        "memorial": "plaque",
+        "name": "Thomas Eakins",
+        "openplaques:id": "29618"
+      }
+    },
+    {
+      "type": "node",
+      "id": 13125217417,
+      "tags": {
+        "check_date": "2025-09-04",
+        "name": "Carpenters Museum",
+        "tourism": "museum"
+      }
+    },
+    {
+      "type": "node",
+      "id": 13300300797,
+      "tags": {
+        "historic": "memorial",
+        "memorial": "plaque",
+        "name": "Baldwin Locomotive Works"
+      }
+    },
+    {
+      "type": "node",
+      "id": 14219755101,
+      "tags": {
+        "addr:housenumber": "1482",
+        "addr:postcode": "19130",
+        "addr:street": "Green Street",
+        "amenity": "school",
+        "name": "Science Leadership Academy",
+        "website": "http://scienceleadership.org"
+      }
+    },
+    {
+      "type": "way",
+      "id": 28313313,
+      "tags": {
+        "created_by": "Potlatch 0.10f",
+        "leisure": "garden",
+        "name": "Spring Garden Community Garden",
+        "source": "local knowledge"
+      }
+    },
+    {
+      "type": "way",
+      "id": 28533992,
+      "tags": {
+        "leisure": "park",
+        "name": "Matthias Baldwin Park"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250700251,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1701",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Green Street",
+        "amenity": "pub",
+        "building": "yes",
+        "height": "14.63",
+        "name": "St. Stephen's Green",
+        "source": "City of Philadelphia",
+        "source:name": "local knowledge"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250706035,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1701",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "addr:unit": "7",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "check_date": "2025-09-04",
+        "height": "14.32",
+        "operator": "IBEW Local 98",
+        "religion": "christian"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250706036,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1719",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "addr:unit": "29",
+        "building": "office",
+        "height": "12.1",
+        "operator": "IBEW Local 98"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250707534,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1700",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "college",
+        "name": "Athletics Center",
+        "operator": "Community College of Philadelphia",
+        "source:name": "local knowledge"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250707535,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1700",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "college",
+        "name": "Bonnell Building",
+        "operator": "Community College of Philadelphia",
+        "source:name": "local knowledge"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250707536,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "440",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "North 16th Street",
+        "amenity": "social_facility",
+        "building": "yes",
+        "name": "Child Development Center",
+        "operator": "Community College of Philadelphia",
+        "social_facility:for": "child"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250707537,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1700",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "college",
+        "name": "West Building",
+        "operator": "Community College of Philadelphia",
+        "source:name": "local knowledge"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250707538,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1700",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "college",
+        "name": "Winnet Student Life Building",
+        "operator": "Community College of Philadelphia",
+        "source:name": "local knowledge"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250806789,
+      "tags": {
+        "amenity": "school",
+        "building": "yes",
+        "education": "school",
+        "ele": "21",
+        "gnis:feature_id": "1183537",
+        "name": "Franklin Learning Center High School"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250836800,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1801",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "check_date": "2025-09-04",
+        "denomination": "pentecostal",
+        "height": "46.93",
+        "name": "Highway Mission Tabernacle",
+        "phone": "+1 215-563-9192",
+        "religion": "christian",
+        "website": "https://highwaytabernacle.org/"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250863821,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1801",
+        "addr:state": "PA",
+        "addr:street": "Green Street",
+        "addr:unit": "17",
+        "building": "school",
+        "height": "14.02",
+        "name": "Laura W. Waring School",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250863827,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1940",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Green Street",
+        "amenity": "pub",
+        "building": "yes",
+        "check_date": "2025-01-25",
+        "height": "13.7",
+        "name": "Green Room",
+        "opening_hours": "Mo-Fr 15:00-26:00, Sa,Su 12:00-26:00",
+        "payment:cash": "only",
+        "phone": "+1 215-241-6776",
+        "source": "City of Philadelphia",
+        "website": "https://www.greenroomphiladelphia.com/"
+      }
+    },
+    {
+      "type": "way",
+      "id": 250863838,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1831",
+        "addr:state": "PA",
+        "addr:street": "Green Street",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "check_date": "2025-01-25",
+        "height": "23.16",
+        "name": "Enon Baptist Church",
+        "religion": "christian",
+        "source": "City of Philadelphia",
+        "wikidata": "Q131732054"
+      }
+    },
+    {
+      "type": "way",
+      "id": 251098217,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:postcode": "19103",
+        "amenity": "parking",
+        "building": "yes",
+        "building:levels": "6",
+        "fee": "yes",
+        "name": "Cityview Condos Parking Garage",
+        "park_ride": "no",
+        "parking": "multi-storey"
+      }
+    },
+    {
+      "type": "way",
+      "id": 251274977,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "626",
+        "addr:state": "PA",
+        "addr:street": "North 21st Street",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "height": "13.7",
+        "name": "United for Christ Ministries",
+        "religion": "christian",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 251417983,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "2013",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "yes",
+        "height": "16.45",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 251417989,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "560",
+        "addr:state": "PA",
+        "addr:street": "North 20th Street",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "height": "11.88",
+        "name": "Russian Orthodox Church of Our Lady",
+        "religion": "christian",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 251417990,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "2001",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "height": "29.26",
+        "name": "Greater Canaan Church of God in Christ",
+        "religion": "christian",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 252074841,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:postcode": "19103",
+        "building": "yes",
+        "building:levels": "4",
+        "name": "Center for Business and Industry"
+      }
+    },
+    {
+      "type": "way",
+      "id": 259758491,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1900",
+        "addr:postcode": "19103",
+        "addr:street": "Hamilton Street",
+        "building": "yes",
+        "building:levels": "10",
+        "height": "38.8",
+        "name": "The Tivoli"
+      }
+    },
+    {
+      "type": "way",
+      "id": 335049510,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "434",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "North 17th Street",
+        "amenity": "parking",
+        "building": "yes",
+        "building:levels": "5",
+        "capacity": "631",
+        "fee": "yes",
+        "name": "Community College of Philadelphia Main Garage",
+        "operator": "Park-It Corporation",
+        "park_ride": "no",
+        "parking": "multi-storey",
+        "phone": "+1 215 972 6211",
+        "supervised": "yes"
+      }
+    },
+    {
+      "type": "way",
+      "id": 337636386,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "627",
+        "addr:state": "PA",
+        "addr:street": "North 18th Street",
+        "addr:unit": "37",
+        "building": "yes",
+        "height": "19.5",
+        "name": "Carriage House Condos",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 337636390,
+      "tags": {
+        "addr:housenumber": "1913",
+        "addr:street": "Wallace Street",
+        "amenity": "place_of_worship",
+        "building": "yes",
+        "check_date": "2024-05-18",
+        "denomination": "catholic",
+        "internet_access": "no",
+        "name": "St. Andrew's Lithuanian Catholic Church",
+        "religion": "christian",
+        "wheelchair": "no"
+      }
+    },
+    {
+      "type": "way",
+      "id": 338306649,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1123",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "addr:unit": "33",
+        "building": "church",
+        "disused:amenity": "place_of_worship",
+        "height": "46.63",
+        "name": "Assumption of the Blessed Virgin Mary",
+        "religion": "christian"
+      }
+    },
+    {
+      "type": "way",
+      "id": 349397298,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1924",
+        "addr:postcode": "19103",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "yes",
+        "height": "8.53",
+        "name": "SEIU",
+        "office": "union"
+      }
+    },
+    {
+      "type": "way",
+      "id": 373914374,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1700",
+        "addr:postcode": "19130-2812",
+        "addr:state": "PA",
+        "addr:street": "Fairmount Avenue",
+        "amenity": "bar",
+        "building": "yes",
+        "check_date": "2025-05-30",
+        "height": "11.27",
+        "name": "The Fairmount Tavern",
+        "nonsquare": "yes",
+        "phone": "+1-267-924-4667",
+        "source": "City of Philadelphia",
+        "website": "https://thefairmounttavern.com/"
+      }
+    },
+    {
+      "type": "way",
+      "id": 706527889,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:postcode": "19130",
+        "addr:street": "Spring Garden Street",
+        "amenity": "school",
+        "education": "school",
+        "name": "Julia R. Masterman Middle and High School"
+      }
+    },
+    {
+      "type": "way",
+      "id": 706527898,
+      "tags": {
+        "leisure": "park",
+        "name": "Clemente Park & Playground"
+      }
+    },
+    {
+      "type": "way",
+      "id": 706527903,
+      "tags": {
+        "alt_name": "Waring School",
+        "amenity": "school",
+        "check_date": "2025-01-25",
+        "education": "school",
+        "ele": "25",
+        "gnis:feature_id": "1190592",
+        "grades": "K-8",
+        "name": "Laura Wheeler Waring Public School"
+      }
+    },
+    {
+      "type": "way",
+      "id": 706543044,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1520",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Green Street",
+        "building": "yes",
+        "height": "24.3",
+        "name": "The Chapel Lofts",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 706543048,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1729",
+        "addr:state": "PA",
+        "addr:street": "Mount Vernon Street",
+        "building": "yes",
+        "height": "16.7",
+        "historic": "house",
+        "name": "Thomas Eakins House",
+        "source": "City of Philadelphia",
+        "wikipedia": "en:Thomas Eakins House"
+      }
+    },
+    {
+      "type": "way",
+      "id": 772508893,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1700",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "amenity": "college",
+        "education": "college",
+        "name": "Community College of Philadelphia",
+        "wikidata": "Q2989707",
+        "wikipedia": "en:Community College of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 795435410,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:postcode": "19103",
+        "building": "yes",
+        "building:levels": "10",
+        "name": "The Granary Apartments"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1300293779,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "2004",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Fairmount Avenue",
+        "amenity": "ice_cream",
+        "building": "yes",
+        "email": "fairmountflavors@gmail.com",
+        "height": "10.05",
+        "indoor_seating": "no",
+        "name": "Fairmount Flavors",
+        "opening_hours": "Mo-Su 11:00-23:00",
+        "phone": "+1 215-420-4312",
+        "source": "City of Philadelphia",
+        "takeaway": "only",
+        "website": "https://fairmountflavors.com"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1313740189,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1733",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "yes",
+        "height": "19.2"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1314394030,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1811",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "addr:unit": "17",
+        "building": "yes",
+        "height": "15.54",
+        "name": "Carpenter's Benefit Fund",
+        "operator": "United Brotherhood of Carpenters",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1314394031,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1803",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "addr:unit": "5",
+        "building": "yes",
+        "height": "16.45",
+        "name": "Carpenters Regional Countil",
+        "operator": "United Brotherhood of Carpenters",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1314394043,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1809",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "yes",
+        "height": "15.54",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1314403618,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1923",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "yes",
+        "height": "15.54",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1314403623,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1901",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "yes",
+        "height": "15.54",
+        "source": "City of Philadelphia"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1314520583,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "2112",
+        "addr:postcode": "19130",
+        "addr:state": "PA",
+        "addr:street": "Fairmount Avenue",
+        "addr:unit": "16",
+        "building": "yes",
+        "height": "14.93",
+        "leisure": "fitness_centre",
+        "name": "City Fitness",
+        "opening_hours": "Mo-Th 05:00-24:00; Fr 05:00-21:00; Sa-Su 06:00-21:00",
+        "phone": "+1 267-534-3435",
+        "source": "City of Philadelphia",
+        "website": "https://cityfitness.com/fairmount-club/"
+      }
+    },
+    {
+      "type": "way",
+      "id": 1353406192,
+      "tags": {
+        "addr:city": "Philadelphia",
+        "addr:housenumber": "1914",
+        "addr:state": "PA",
+        "addr:street": "Spring Garden Street",
+        "building": "yes",
+        "height": "19.8"
+      }
+    }
+  ]
+}

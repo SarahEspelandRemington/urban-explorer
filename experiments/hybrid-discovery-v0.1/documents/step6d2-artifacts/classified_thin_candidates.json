@@ -1,0 +1,1149 @@
+{
+  "fairmount": [
+    {
+      "osmId": "way/250863821",
+      "name": "Laura W. Waring School",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/706527903",
+      "name": "Laura Wheeler Waring Public School",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/706527898",
+      "name": "Clemente Park & Playground",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/250700251",
+      "name": "St. Stephen's Green",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/28313313",
+      "name": "Spring Garden Community Garden",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/13125217417",
+      "name": "Carpenters Museum",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/337636386",
+      "name": "Carriage House Condos",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/10760531984",
+      "name": "Thrive Pet Healthcare",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/706527889",
+      "name": "Julia R. Masterman Middle and High School",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/10978033938",
+      "name": "Robert Purvis",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2770602550",
+      "name": "Holy Temple Church",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/373914374",
+      "name": "The Fairmount Tavern",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2453577957",
+      "name": "Philadelphia Bikesmith",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/8119283803",
+      "name": "Community College of Philadelphia Main Campus Library",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/251417989",
+      "name": "Russian Orthodox Church of Our Lady",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/250707534",
+      "name": "Athletics Center",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/251417990",
+      "name": "Greater Canaan Church of God in Christ",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/349397298",
+      "name": "SEIU",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2571727569",
+      "name": "Kelliann's Bar & Grill",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/706543044",
+      "name": "The Chapel Lofts",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/6462657580",
+      "name": "United States Post Office",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/1300293779",
+      "name": "Fairmount Flavors",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2571727575",
+      "name": "Long River Chinese Food",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/251417983",
+      "name": "2013 Spring Garden Street",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/250707538",
+      "name": "Winnet Student Life Building",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/8113834458",
+      "name": "Calvary Baptist Church",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/250806789",
+      "name": "Franklin Learning Center High School",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/250707535",
+      "name": "Bonnell Building",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/13300300797",
+      "name": "Baldwin Locomotive Works",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/772508893",
+      "name": "Community College of Philadelphia",
+      "wikidata_tag": "Q2989707",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "way/28533992",
+      "name": "Matthias Baldwin Park",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/335049510",
+      "name": "Community College of Philadelphia Main Garage",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/259758491",
+      "name": "The Tivoli",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2572265673",
+      "name": "The Fairview Philly",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/3499206770",
+      "name": "Library of Accessible Media for Pennsylvanians",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/251098217",
+      "name": "Cityview Condos Parking Garage",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": null,
+      "name": "2101 Mount Vernon Street",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/14219755101",
+      "name": "Science Leadership Academy",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2573865973",
+      "name": "Saladworks",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/8113834457",
+      "name": "Trinity Independent Church",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/251274977",
+      "name": "United for Christ Ministries",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/252074841",
+      "name": "Center for Business and Industry",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/250707536",
+      "name": "Child Development Center",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/1314520583",
+      "name": "City Fitness",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/795435410",
+      "name": "The Granary Apartments",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": null,
+      "name": "Polonia Federal Savings Bank",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": null,
+      "name": "Rothacker-Orth Brewery and Lager Beer Saloon",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/338306649",
+      "name": "Assumption of the Blessed Virgin Mary",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    }
+  ],
+  "midtown": [
+    {
+      "osmId": "node/11817061866",
+      "name": "Signature Theatre",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/10731651159",
+      "name": "Nobody's Perfect",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/368055556",
+      "name": "Manhattan Plaza",
+      "wikidata_tag": "Q6749290",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "node/9119778983",
+      "name": "The Green Room 42",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/14040614336",
+      "name": "Success Academy - Hudson Yards Elementary & Middle School",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/357610871",
+      "name": "Seventh Associate Presbyterian Church",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/6288552808",
+      "name": "Fiddler on The Roof",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/6233982618",
+      "name": "Playwrights Horizons",
+      "wikidata_tag": "Q164980",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "node/6233982200",
+      "name": "Theatre Row",
+      "wikidata_tag": "Q7777417",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "node/2483139540",
+      "name": "Upright Citizens Brigade Theatre",
+      "wikidata_tag": "Q5489525",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "node/2709878693",
+      "name": "New Dramatists Theater",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/7048165985",
+      "name": "The Polynesian",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/13740286725",
+      "name": "FedEx Ship Center",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/5009311521",
+      "name": "Hellcat Annie's taproom",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/4708892892",
+      "name": "Dianne & Elisabeth",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/5754840578",
+      "name": "Dalton's",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/6564024415",
+      "name": "Irish Bar",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/5057079090",
+      "name": "Rudy's Bar & Grill",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/11992808706",
+      "name": "Blue Ruin",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/13530551350",
+      "name": "Blue Ruin Bar",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265282509",
+      "name": "FDNY Engine 34/Ladder 21",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2702475724",
+      "name": "Holland Bar",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/4327582289",
+      "name": "Hell's Kitchen Flea Market",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2716231205",
+      "name": "Producers Club Theaters and Bar",
+      "wikidata_tag": "Q45101703",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "node/5984435987",
+      "name": "Friki Tiki",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/5819364580",
+      "name": "Scallywag's Irish Pub",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265296217",
+      "name": "Maine",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/4922094244",
+      "name": "Community Board 4",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/5519546126",
+      "name": "Mercury Bar",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265296211",
+      "name": "Oregon",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/2709860764",
+      "name": "DBL",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/6374886586",
+      "name": "BAC",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/6917406686",
+      "name": "Sky Room",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/1873813892",
+      "name": "Landmark Tavern",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265282570",
+      "name": "SIR Stage37",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/3574404393",
+      "name": "Alamo",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265296263",
+      "name": "Hampton Inn",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": null,
+      "name": "Hill Publishing Building",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/13082354786",
+      "name": "The Commuters",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/14208204401",
+      "name": "Fountain House",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/5429181224",
+      "name": "Ritz Bar Lounge",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/3450858390",
+      "name": "The Robert Blackburn Printmaking Workshop (RBPMW)",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/3450858389",
+      "name": "The Elizabeth Foundation for the Arts",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/1021569486",
+      "name": "Hotel Meta",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/12998414902",
+      "name": "Dear Irving on Hudson",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265296151",
+      "name": "La Quinta Inn & Suites",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/3246839597",
+      "name": "Beer Culture",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "node/3573482095",
+      "name": "Birdland Jazz Club",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265273001",
+      "name": "Metropolitan Community Church",
+      "wikidata_tag": "Q6825053",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "node/5818417227",
+      "name": "Joyce Public House",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265272997",
+      "name": "Quality Inn",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265282480",
+      "name": "Shift Midtown",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265296142",
+      "name": "Finck Building",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/265296137",
+      "name": "Element",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/1021760896",
+      "name": "The Set",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    },
+    {
+      "osmId": "way/278353371",
+      "name": "Jacob K. Javits Convention Center",
+      "wikidata_tag": "Q564793",
+      "wikidata_current_p649": [],
+      "class": "checked-no-NRHP-claim"
+    },
+    {
+      "osmId": "way/265322610",
+      "name": "Congregation Ezrath Israel",
+      "wikidata_tag": "Q7712319",
+      "wikidata_current_p649": [
+        {
+          "value": "05000445",
+          "rank": "normal"
+        }
+      ],
+      "bridge_method": "wikidata_only",
+      "class": "unlabeled-bridged",
+      "note": "P649 current claim present; P31/P1435 inspected, no explicit individual-vs-district resource-type statement confirmed"
+    },
+    {
+      "osmId": null,
+      "name": "557 Eighth Avenue",
+      "wikidata_tag": null,
+      "class": "no-bridge"
+    }
+  ],
+  "bethlehem": [
+    {
+      "osmId": "way/1430047599",
+      "name": "Steel Pixel Studios",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/357304003",
+      "name": "Pilgrim Church",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13114219432",
+      "name": "William L. Henry Chapel",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1356166516",
+      "name": "The Korean United Methodist Church",
+      "wikidata_tag": "Q132068776",
+      "wikidata_current_p649": [],
+      "bridge_method": "wikidata_only",
+      "class": "checked-no-NRHP-claim",
+      "osmSideStatus": "unconfirmed (Overpass 502 for Bethlehem, not retried) \u2014 does not affect classification; the Wikidata P649 route was independently checked and confirmed absent",
+      "auditCorrection": "Reclassified from ad-hoc bridge-check-incomplete state (2026-10-16 audited correction): Wikidata P649 route was actually checked for this candidate and confirmed absent, independent of the Overpass/OSM-side failure."
+    },
+    {
+      "osmId": "node/12686068086",
+      "name": "Bethlehem Police - Center City Substation",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/12686068087",
+      "name": "Bethlehem Police - Training Center",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1299668272",
+      "name": "Dream Boyd Theatre",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/69429876",
+      "name": "Monocacy Tower",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13114267889",
+      "name": "ESU - Lehigh Valley Campus",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/553867189",
+      "name": "Old Brewery Tavern",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/69429886",
+      "name": "Liberty Center",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "relation/5201998",
+      "name": "The Farr's Building",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/831649306",
+      "name": "Joe's Tavern",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/831649276",
+      "name": "Ripper's Pub",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/677337154",
+      "name": "940 Medical Building",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13114219463",
+      "name": "Yaralov Gallery",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/204564716",
+      "name": "D. Villani Commons",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/82291002",
+      "name": "Bethlehem Plaza Mall",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/831824228",
+      "name": "New Covenant",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1287238226",
+      "name": "Johnston Park",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13027820560",
+      "name": "Covenant Christian Academy",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/831649309",
+      "name": "Rosanna's Restaurant",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13114267892",
+      "name": "Mixology Masters",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/6342229946",
+      "name": "William Penn Elementary School",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/69429900",
+      "name": "One Bethlehem Plaza",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13183347483",
+      "name": "Steelgaarden",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/831824219",
+      "name": "Paranormal Pizza",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/6339790942",
+      "name": "Emmanuel Evangelical Congregational Church",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1355674743",
+      "name": "Sun Inn Courtyard",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1366732536",
+      "name": "Sun Inn Stage",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/6327357701",
+      "name": "CSF Buxmont Academy - Bethlehem Campus",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/204564722",
+      "name": "Woolworth Building",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/4885851951",
+      "name": "McCarthy's Red Stag Pub",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/204564687",
+      "name": "Dodson Building",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1412767030",
+      "name": "Horsfield House",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13114355674",
+      "name": "CSF Buxmont Academy - Administrative Center",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/13114355679",
+      "name": "Valley Youth House",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/204564674",
+      "name": "Tiger Hall",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/4200596789",
+      "name": "College Hill Moravian Church",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/204564741",
+      "name": "Grace Deliverance Baptist Church",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/4886221860",
+      "name": "515 Main",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/12959502279",
+      "name": "Bethlehem\u2019s Second Store",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1066451367",
+      "name": "Field House",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1430023984",
+      "name": "Moravian Academy",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/516270036",
+      "name": "Sally Breidegam Miksiewicz Center for Health Science",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/82291003",
+      "name": "God's Acre",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/554002052",
+      "name": "Colonial Industrial Quarter",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    }
+  ],
+  "jimthorpe": [
+    {
+      "osmId": "way/622153511",
+      "name": "Bott Building",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/1333258273",
+      "name": "Saint Joseph Catholic Church",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/5877114645",
+      "name": "St. John Lutheran Church",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/5877114642",
+      "name": "Terpstra's Tavern",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/5877114651",
+      "name": "Fairview Hose",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "way/489331715",
+      "name": "Jim Thorpe Memorial Park",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    },
+    {
+      "osmId": "node/5877114659",
+      "name": "Jim Thorpe Municipal Building",
+      "wikidata_tag": null,
+      "class": null,
+      "bridgeCompletenessFlag": "indeterminate",
+      "osmSideStatus": "unconfirmed (Overpass 502, not retried)",
+      "wikidataRoute": "no wikidata tag present \u2014 no Wikidata route available"
+    }
+  ]
+}
