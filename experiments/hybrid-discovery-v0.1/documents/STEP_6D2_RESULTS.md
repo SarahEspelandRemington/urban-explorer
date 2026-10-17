@@ -21,6 +21,55 @@ other reported results (bridgeable count = 1, overall joinability ≈ 0.625%,
 individual-listing share = 0/160 lower bound, frozen low-joinability
 interpretation, and text-layer-probe-gate-not-reached) are unchanged.
 
+**Documentation correction (2026-10-17, read-only audit, no new calls)**:
+Section 4 below previously stated "All 160 thin candidates carry an `osmId`
+(none are `streetlit`-owned)." This is **false**. A re-derivation of the full
+160-candidate population directly from `thin_candidates_full.json` found
+**5 of 160** candidates with `osmId: null`:
+
+| subjectId (`streetlitId`)                     | Name                                         | Area      |
+| --------------------------------------------- | -------------------------------------------- | --------- |
+| `streetlit/2101-mount-vernon-st`              | 2101 Mount Vernon Street                     | Fairmount |
+| `streetlit/2133-spring-garden-polonia`        | Polonia Federal Savings Bank                 | Fairmount |
+| `streetlit/2301-fairmount-ave-rothacker-orth` | Rothacker-Orth Brewery and Lager Beer Saloon | Fairmount |
+| `streetlit/475-10th-ave-hill-publishing`      | Hill Publishing Building                     | Midtown   |
+| `streetlit/557-8th-ave`                       | 557 Eighth Avenue                            | Midtown   |
+
+All 5 are `candidateSource: "streetlit"` — legitimate Streetlit-owned
+exact-point registry entries, not OSM nodes/ways. They carry a `streetlitId`
+in place of an `osmId` by design (see `curatedLocalHistory.ts`'s doc comment
+on this join-key convention); this is not an extraction error. All 5 are
+**known-answer/already-curated controls**: each subjectId is present in
+`CURATED_LOCAL_HISTORY` (the hand-maintained, highest-priority registry) with
+`verificationStatus: "approved"` and `curatedTrust: "high"`.
+
+**No Step 6D2 count, class, or interpretation changes.**
+`classified_thin_candidates.json` already independently classified all 5 as
+`no-bridge` at the time of the original run — the correct class for any
+candidate with no confirmed OSM `ref:nrhp` route, trivially true for a
+candidate with no `osmId` to bridge from in the first place. Section 8's
+class table, Section 9's metrics, and Section 10's frozen interpretation are
+therefore all **unaffected** by this correction.
+
+For the separate, in-progress Step 6E LPC linkability census, these 5 fall
+under `insufficient Streetlit identity`, sub-labeled `Streetlit-owned, no OSM
+ID` — distinct from the 56 Midtown osmId-bearing candidates' Overpass-
+infrastructure-blocked status reported there.
+
+**Related observational note**: all 5 of these curated entries independently
+exhibit the same cap-exclusion mechanism already documented in Section 12
+below for the Actors' Temple case, and fixed (after this run) by commit
+`84a5ba7` ("Rescue curated placeholders excluded by the copy-gen distance
+cap", 2026-10-16T18:43 — ~23 hours **after** this run's 2026-10-15 requests
+and this run's `188620b` baseline). Each area here has 47-68 eligible
+copy-gen candidates against a `COPY_GEN_CANDIDATE_CAP` of 22, so these 5
+distance-truncated, curated, high-trust entries received no LLM copy at all
+(the exact placeholder shape) and — because the baseline commit predates
+`84a5ba7`'s cap-exclusion carve-out — their `explicitDiscoveryTier` overrides
+(set to 1 or 2 for 4 of the 5) were not applied, so all 5 surfaced as Tier
+4/`placeholderFallback` despite being approved registry entries. This is
+observational only; no fix was made as part of this correction.
+
 ## 0. Preconditions
 
 - HEAD was exactly `188620b4a27d2de9ee43977b48b95edb49d0d2b5`.
@@ -87,7 +136,11 @@ unconditionally regardless of `walkMode`. `walkMode:true` only bypasses
 | Jim Thorpe, PA          | 7          | 6                     | 1              |
 | **Total**               | **160**    | **136**               | **24**         |
 
-All 160 thin candidates carry an `osmId` (none are `streetlit`-owned).
+**Correction (2026-10-17, see amendment above)**: 155 of 160 thin candidates
+carry an `osmId`; **5 are `streetlit`-owned registry entries with `osmId:
+null`** (see the dated documentation correction above this section for exact
+identities — this does not change any count, class, or interpretation in
+this file).
 
 ## 5. OSM `ref:nrhp` bridge (Overpass) — partial completion, honestly reported
 
