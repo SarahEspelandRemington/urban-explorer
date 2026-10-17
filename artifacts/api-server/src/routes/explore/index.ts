@@ -61,6 +61,8 @@ import {
   parseWikipediaOsmTag,
   buildWikiPromptBlock,
   splitIntoSentenceUnits,
+  buildContiguousEvidenceWindow,
+  locateSelectorParagraph,
   isValidWikidataId,
   extractEnwikiSitelinkTitle,
 } from "../../lib/wikipediaEnrichment";
@@ -2534,6 +2536,18 @@ const EVIDENCE_SELECTOR_OUTPUT_CAP = 2_500;
 const EVIDENCE_SELECTOR_TIMEOUT_MS = 6_000;
 // @end-prompt-region wiki-evidence-selector
 
+// Shared discover-time Wikipedia grounding envelope (Bergdoll-selector-fix,
+// RC ruling, 2026-10-16). Governs both: (1) formatForCopy's ordinary
+// first-N-chars truncation fallback for candidates with no evidence-selector
+// output, and (2) the evidence-selector path's single-paragraph grounding
+// below. One shared constant so the two envelopes can never drift apart.
+// Distinct from EVIDENCE_SELECTOR_OUTPUT_CAP above, which is Stage 1's own
+// internal multi-paragraph packing budget, not a copy-gen grounding limit.
+// Declared outside every wiki-evidence-selector marker span: it is a
+// copy-gen input-size limit, not LLM-facing prompt text, so prompt-manifest
+// should not track it as such.
+const WIKIPEDIA_GROUNDING_ENVELOPE_CHARS = 1_000;
+
 const NON_PROSE_SECTION_DENYLIST = new Set([
   "references",
   "external links",
@@ -3281,7 +3295,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v82:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v84:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -3928,13 +3942,17 @@ router.post("/explore/discover", async (req, res) => {
             obj.wikipediaContent = enhancedWikipediaContent;
             if (isPrimaryUnit) obj.wikipediaUnitOnly = true;
           } else if (wikiSummary?.extract) {
-            // Inject the first 1,000 chars of the Wikipedia extract when available.
-            // The copy LLM uses this as factual grounding (rule 11 in the system
-            // prompt). 1,000 chars is enough to capture full named sections (e.g.
-            // "History and architecture") that carry story-bearing content such as
-            // family history, notable events, or contextual narrative — content the
+            // Inject the first WIKIPEDIA_GROUNDING_ENVELOPE_CHARS chars of the
+            // Wikipedia extract when available. The copy LLM uses this as
+            // factual grounding (rule 11 in the system prompt). 1,000 chars is
+            // enough to capture full named sections (e.g. "History and
+            // architecture") that carry story-bearing content such as family
+            // history, notable events, or contextual narrative — content the
             // REST /page/summary/ lead-paragraph never included.
-            obj.wikipediaContent = wikiSummary.extract.slice(0, 1_000);
+            obj.wikipediaContent = wikiSummary.extract.slice(
+              0,
+              WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+            );
           }
           // TEMP-PILOT-A: curated local-history evidence, sibling to
           // wikipediaContent — never merged into it. Human-selected text,
@@ -4194,25 +4212,53 @@ router.post("/explore/discover", async (req, res) => {
                   candidate.name,
                   buildOsmAddr(candidate.tags) || undefined,
                 );
-                if (selected.text)
-                  selectorEnhancedWikiContent.set(osmId, selected.text);
 
-                // One-primary-unit narrowing: only attempted when the
-                // paragraph selector above succeeded. On success, this
-                // REPLACES the paragraph-level text with a single unit; on
-                // any failure/decline, selectorEnhancedWikiContent for this
-                // osmId is left as the paragraph-level text from above —
-                // the existing, unchanged fallback.
+                // Single-paragraph grounding envelope (Bergdoll-selector-fix,
+                // RC ruling, 2026-10-16): selected.text can be more than one
+                // Stage-1 paragraph, joined by a literal "\n\n" (Stage 1's
+                // own EVIDENCE_SELECTOR_OUTPUT_CAP budget governs how many
+                // paragraphs it retains — that is a selection-breadth limit,
+                // not a copy-gen grounding limit). To ground copy generation,
+                // resolve the single Stage-1 paragraph containing the chosen
+                // primary sentence (never the full multi-paragraph
+                // concatenation), then apply the shared
+                // WIKIPEDIA_GROUNDING_ENVELOPE_CHARS cap to that paragraph
+                // alone: pass it through unchanged if it already fits, or
+                // window it via buildContiguousEvidenceWindow — which never
+                // crosses a paragraph boundary — if it doesn't. If
+                // selectPrimaryUnit declines/fails or the chosen sentence
+                // can't be matched back to one of the retained paragraphs,
+                // fall back to a bounded prefix of selected.text rather than
+                // the unbounded full concatenation. This never sets
+                // selectorSingleUnitOsmIds — the delivered content is always
+                // a whole paragraph or a multi-sentence window, never the
+                // single-verbatim-unit case rule 11a exists for.
+                // attemptNarrationWikipediaBridge and runNarrationJitEvidence
+                // are separate call sites with their own independent
+                // selectPrimaryUnit calls and are unaffected by this branch.
                 if (selected.text) {
                   const unitResult = await selectPrimaryUnit(
                     selected.text,
                     candidate.name,
                     buildOsmAddr(candidate.tags) || undefined,
                   );
-                  if (unitResult.text) {
-                    selectorEnhancedWikiContent.set(osmId, unitResult.text);
-                    selectorSingleUnitOsmIds.add(osmId);
-                  }
+                  const chosenParagraph = unitResult.text
+                    ? locateSelectorParagraph(selected.text, unitResult.text)
+                    : undefined;
+                  const grounding = chosenParagraph
+                    ? chosenParagraph.length <=
+                      WIKIPEDIA_GROUNDING_ENVELOPE_CHARS
+                      ? chosenParagraph
+                      : buildContiguousEvidenceWindow(
+                          chosenParagraph,
+                          unitResult.text!,
+                          WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+                        )
+                    : selected.text.slice(
+                        0,
+                        WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+                      );
+                  selectorEnhancedWikiContent.set(osmId, grounding);
                 }
               },
             ),

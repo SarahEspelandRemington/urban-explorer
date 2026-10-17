@@ -1,4 +1,4 @@
-// cache-versions:v19:
+// cache-versions:v21:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -171,6 +171,36 @@
  * walk-narration-audio) to evict stale narrations cached under the old
  * false-rejection behavior; v26 (short) is retired. deep-narration's
  * literal is untouched.
+ *
+ * v19-v21: Bergdoll selector fix — the discover-time evidence-selector
+ * invocation (Walk Mode, up to the 3 closest Wikipedia-enriched candidates)
+ * previously always ran selectPrimaryUnit to narrow selectEvidenceParagraphs's
+ * whole, possibly multi-paragraph output down to a single sentence-level
+ * unit before it reached copy generation, discarding adjacent sentences in
+ * the same already-selected paragraph (found via a real case: Bergdoll-
+ * Kemble Mansion's draft-dodger/1920-arrest sentences sat in the same
+ * paragraph as the one sentence that survived, but were silently dropped).
+ * Fix (RC ruling): still runs selectPrimaryUnit, but only to locate which
+ * single Stage-1 paragraph contains the chosen sentence (via the new
+ * exported locateSelectorParagraph in wikipediaEnrichment.ts) — never the
+ * full multi-paragraph concatenation, and never crossing a paragraph
+ * boundary. That one paragraph passes to copy generation whole if it is
+ * within the new discover-time grounding envelope
+ * (WIKIPEDIA_GROUNDING_ENVELOPE_CHARS, 1,000 chars — the same envelope the
+ * ordinary non-selector Wikipedia truncation fallback now shares via that
+ * one constant), or windowed down to that envelope via
+ * buildContiguousEvidenceWindow (wikipediaEnrichment.ts) if it exceeds it.
+ * No prompt text, selector criteria, candidate-window size, or ranking
+ * changed; attemptNarrationWikipediaBridge's and runNarrationJitEvidence's
+ * own independent selectPrimaryUnit calls are untouched. osm-anchor discover
+ * cache-key literal bumped v82->v83->v84: v83 for the real content-length
+ * change to the Wikipedia grounding reaching copy generation for a fixed
+ * cache key; v84 for formatForCopy's fallback literal becoming a reference
+ * to the new shared WIKIPEDIA_GROUNDING_ENVELOPE_CHARS constant inside the
+ * same marked discover span (no behavior change, but the hash-guard is
+ * span-text-based with no such exception). v82 and v83 are both retired.
+ * This file's own self-tag bumped v19->v20->v21 in lockstep (prompt-manifest
+ * bookkeeping only, not a cache-behavior change).
  */
 
 /**
@@ -189,8 +219,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string | ReadonlyArray<string>]
 > = [
-  ["quick", ["v63", "v82"]], // discover — quick mode (legacy v63, osm-anchor v82)
-  ["full", ["v63", "v82"]], // discover — full mode (legacy v63, osm-anchor v82)
+  ["quick", ["v63", "v84"]], // discover — quick mode (legacy v63, osm-anchor v84)
+  ["full", ["v63", "v84"]], // discover — full mode (legacy v63, osm-anchor v84)
   ["suggest", "v12"], // location suggestions
   ["geocode", "v4"], // geocode
   ["revgeo", "v12"], // reverse geocode

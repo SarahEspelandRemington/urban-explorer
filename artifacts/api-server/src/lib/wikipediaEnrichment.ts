@@ -244,6 +244,75 @@ export function splitIntoSentenceUnits(text: string): string[] {
 }
 
 /**
+ * Deterministic contiguous sentence-unit window around a chosen unit.
+ * Bergdoll-selector-fix (RC ruling, 2026-10-16): invoked by
+ * routes/explore/index.ts's evidence-selector call site on a single
+ * Stage-1-selected Wikipedia paragraph (never the full, possibly
+ * multi-paragraph Stage-1 concatenation) whenever that one paragraph
+ * exceeds the discover-time grounding envelope
+ * (WIKIPEDIA_GROUNDING_ENVELOPE_CHARS, currently 1,000 chars) -- a real,
+ * reachable case for any paragraph between that envelope and Stage 1's own,
+ * larger EVIDENCE_SELECTOR_OUTPUT_CAP (2,500 chars) packing budget. Never
+ * crosses a paragraph boundary: paragraphText must already be the single
+ * paragraph to window within, not multiple concatenated paragraphs.
+ *
+ * Starts at the chosen unit, extends forward through subsequent units up
+ * to the cap, then extends backward through preceding units with any
+ * remaining budget, and returns the units in their original (forward)
+ * article order -- never reordered, never a model-chosen multi-sentence
+ * cluster. Falls back to the chosen unit alone if it cannot be located
+ * verbatim among paragraphText's own units.
+ */
+export function buildContiguousEvidenceWindow(
+  paragraphText: string,
+  chosenUnitText: string,
+  cap: number,
+): string {
+  const units = splitIntoSentenceUnits(paragraphText);
+  const chosenIdx = units.indexOf(chosenUnitText);
+  if (chosenIdx === -1) return chosenUnitText;
+
+  let startIdx = chosenIdx;
+  let endIdx = chosenIdx;
+  let total = units[chosenIdx]!.length;
+
+  while (endIdx + 1 < units.length) {
+    const next = units[endIdx + 1]!;
+    if (total + 1 + next.length > cap) break;
+    endIdx++;
+    total += 1 + next.length;
+  }
+  while (startIdx - 1 >= 0) {
+    const prev = units[startIdx - 1]!;
+    if (total + 1 + prev.length > cap) break;
+    startIdx--;
+    total += 1 + prev.length;
+  }
+
+  return units.slice(startIdx, endIdx + 1).join(" ");
+}
+
+/**
+ * Locate which single Stage-1-retained paragraph contains a chosen primary
+ * sentence. Bergdoll-selector-fix (RC ruling, 2026-10-16): selectEvidence-
+ * Paragraphs in routes/explore/index.ts can retain more than one paragraph,
+ * joined by a literal "\n\n" separator; this never operates on or returns
+ * more than one of those paragraphs at a time, so a caller windowing the
+ * result (via buildContiguousEvidenceWindow) can never cross a paragraph
+ * boundary. Returns undefined if selectorText has no paragraph containing
+ * chosenUnitText verbatim (e.g. selectPrimaryUnit declined or returned text
+ * that doesn't match any retained paragraph).
+ */
+export function locateSelectorParagraph(
+  selectorText: string,
+  chosenUnitText: string,
+): string | undefined {
+  return selectorText
+    .split("\n\n")
+    .find((paragraph) => paragraph.includes(chosenUnitText));
+}
+
+/**
  * Build the prompt block injected into `buildDetailUserTurn` when a
  * Wikipedia summary has been successfully fetched.
  *

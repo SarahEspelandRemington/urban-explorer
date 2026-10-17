@@ -12,6 +12,8 @@ import {
   isValidWikidataId,
   extractEnwikiSitelinkTitle,
   splitIntoSentenceUnits,
+  buildContiguousEvidenceWindow,
+  locateSelectorParagraph,
   type WikipediaSummary,
 } from "../lib/wikipediaEnrichment";
 import {
@@ -737,5 +739,203 @@ describe("splitIntoSentenceUnits", () => {
     );
     expect(units.some((u) => u === "2009")).toBe(false);
     expect(units.join(" ")).not.toContain("2009");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildContiguousEvidenceWindow / locateSelectorParagraph —
+// Bergdoll-selector-fix (RC ruling, 2026-10-16)
+//
+// SYNTHETIC: constructed paragraphs/caps, not real selector output, so these
+// prove the required window/isolation properties deterministically rather
+// than against a real production case. See Bergdoll-selector-fix notes in
+// routes/explore/index.ts and cacheVersions.ts (v19-v20).
+// ---------------------------------------------------------------------------
+
+describe("buildContiguousEvidenceWindow (synthetic over-cap case)", () => {
+  const paragraph = [
+    "Sentence one sets the scene for this place in general terms.",
+    "Sentence two adds early background detail about its origins.",
+    "Sentence three is the chosen anchor unit with the key fact.",
+    "Sentence four follows immediately after the chosen anchor unit.",
+    "Sentence five adds further unrelated trailing detail here.",
+    "Sentence six is the final sentence of this synthetic paragraph.",
+  ].join(" ");
+  const units = splitIntoSentenceUnits(paragraph);
+  const chosen = units[2]!; // "Sentence three is the chosen anchor unit..."
+
+  it("starts the window at the chosen unit when the cap allows no neighbors", () => {
+    const window = buildContiguousEvidenceWindow(
+      paragraph,
+      chosen,
+      chosen.length,
+    );
+    expect(window).toBe(chosen);
+  });
+
+  it("extends forward first when budget allows only one more unit", () => {
+    const cap = chosen.length + 1 + units[3]!.length; // room for exactly one neighbor
+    const window = buildContiguousEvidenceWindow(paragraph, chosen, cap);
+    expect(window).toBe(`${chosen} ${units[3]}`);
+  });
+
+  it("uses remaining budget backward only after forward is exhausted", () => {
+    // Enough budget for the chosen unit, both remaining forward units, and
+    // exactly one backward unit (unit[1]) — not two.
+    const cap =
+      chosen.length +
+      1 +
+      units[3]!.length +
+      1 +
+      units[4]!.length +
+      1 +
+      units[1]!.length;
+    const window = buildContiguousEvidenceWindow(paragraph, chosen, cap);
+    expect(window).toBe(`${units[1]} ${chosen} ${units[3]} ${units[4]}`);
+  });
+
+  it("stays within the cap", () => {
+    const cap = 120;
+    const window = buildContiguousEvidenceWindow(paragraph, chosen, cap);
+    expect(window.length).toBeLessThanOrEqual(cap);
+  });
+
+  it("preserves article order and never reorders units", () => {
+    const window = buildContiguousEvidenceWindow(paragraph, chosen, 10_000);
+    expect(window).toBe(units.join(" "));
+  });
+
+  it("falls back to the chosen unit alone if it cannot be located in paragraphText", () => {
+    const window = buildContiguousEvidenceWindow(
+      paragraph,
+      "This sentence does not appear in the paragraph at all.",
+      10_000,
+    );
+    expect(window).toBe(
+      "This sentence does not appear in the paragraph at all.",
+    );
+  });
+});
+
+describe("locateSelectorParagraph (Bergdoll-selector-fix paragraph isolation)", () => {
+  const paragraphA =
+    "Paragraph A sentence one introduces an unrelated earlier subject. " +
+    "Paragraph A sentence two adds unrelated earlier detail here.";
+  const paragraphB =
+    "Paragraph B sentence one is the chosen anchor unit with the key fact. " +
+    "Paragraph B sentence two follows immediately after the chosen anchor unit.";
+  const paragraphC =
+    "Paragraph C sentence one introduces an unrelated later subject. " +
+    "Paragraph C sentence two adds unrelated later detail here.";
+  const selectorText = [paragraphA, paragraphB, paragraphC].join("\n\n");
+  const chosen =
+    "Paragraph B sentence one is the chosen anchor unit with the key fact.";
+
+  it("locates the paragraph containing the chosen sentence when it is a later paragraph", () => {
+    expect(locateSelectorParagraph(selectorText, chosen)).toBe(paragraphB);
+  });
+
+  it("returns undefined when the chosen sentence appears in no retained paragraph", () => {
+    expect(
+      locateSelectorParagraph(
+        selectorText,
+        "This sentence does not appear anywhere in selectorText.",
+      ),
+    ).toBeUndefined();
+  });
+});
+
+describe("Bergdoll-selector-fix single-paragraph grounding pipeline (locateSelectorParagraph + buildContiguousEvidenceWindow)", () => {
+  // Mirrors routes/explore/index.ts's selector-invocation loop: isolate the
+  // one Stage-1 paragraph containing the chosen sentence, then apply the
+  // shared grounding envelope to that paragraph alone.
+  const GROUNDING_ENVELOPE_CHARS = 1_000; // mirrors WIKIPEDIA_GROUNDING_ENVELOPE_CHARS
+
+  const earlierParagraph =
+    "Earlier paragraph sentence one covers an unrelated prior topic in full. " +
+    "Earlier paragraph sentence two adds further unrelated prior detail.";
+  const laterParagraph =
+    "Later paragraph sentence one covers an unrelated following topic in full. " +
+    "Later paragraph sentence two adds further unrelated following detail.";
+
+  it("passes a whole paragraph through unchanged when it is <= the envelope, never including an adjacent paragraph", () => {
+    const chosenParagraphSentences = [
+      "Chosen paragraph sentence one sets the scene for this place in general terms.",
+      "Chosen paragraph sentence two is the chosen anchor unit with the key fact.",
+      "Chosen paragraph sentence three is the final sentence of this paragraph.",
+    ];
+    const chosenParagraph = chosenParagraphSentences.join(" ");
+    expect(chosenParagraph.length).toBeLessThanOrEqual(
+      GROUNDING_ENVELOPE_CHARS,
+    );
+    const chosen = chosenParagraphSentences[1]!;
+    const selectorText = [
+      earlierParagraph,
+      chosenParagraph,
+      laterParagraph,
+    ].join("\n\n");
+
+    const located = locateSelectorParagraph(selectorText, chosen);
+    expect(located).toBe(chosenParagraph);
+
+    const grounding =
+      located!.length <= GROUNDING_ENVELOPE_CHARS
+        ? located!
+        : buildContiguousEvidenceWindow(
+            located!,
+            chosen,
+            GROUNDING_ENVELOPE_CHARS,
+          );
+    expect(grounding).toBe(chosenParagraph);
+    expect(grounding).not.toContain("Earlier paragraph");
+    expect(grounding).not.toContain("Later paragraph");
+  });
+
+  it("windows only the chosen paragraph when it exceeds the envelope, never crossing into an adjacent paragraph, and never exceeds the envelope", () => {
+    const chosenSentence =
+      "Chosen paragraph anchor sentence carries the key fact for this test case.";
+    // Build a chosen paragraph whose total length exceeds the 1,000-char
+    // envelope, with the anchor sentence placed in the middle so both
+    // forward and backward extension are exercised.
+    const paddingSentences = Array.from(
+      { length: 20 },
+      (_, i) => `Padding sentence number ${i} repeats filler text for length.`,
+    );
+    const chosenParagraph = [
+      ...paddingSentences.slice(0, 10),
+      chosenSentence,
+      ...paddingSentences.slice(10),
+    ].join(" ");
+    expect(chosenParagraph.length).toBeGreaterThan(GROUNDING_ENVELOPE_CHARS);
+
+    const selectorText = [
+      earlierParagraph,
+      chosenParagraph,
+      laterParagraph,
+    ].join("\n\n");
+
+    const located = locateSelectorParagraph(selectorText, chosenSentence);
+    expect(located).toBe(chosenParagraph);
+
+    const grounding =
+      located!.length <= GROUNDING_ENVELOPE_CHARS
+        ? located!
+        : buildContiguousEvidenceWindow(
+            located!,
+            chosenSentence,
+            GROUNDING_ENVELOPE_CHARS,
+          );
+
+    expect(grounding.length).toBeLessThanOrEqual(GROUNDING_ENVELOPE_CHARS);
+    expect(grounding).toContain(chosenSentence);
+    expect(grounding).not.toContain("Earlier paragraph");
+    expect(grounding).not.toContain("Later paragraph");
+
+    // Article order preserved within the window: units appear in the same
+    // relative order as in chosenParagraph.
+    const windowUnits = splitIntoSentenceUnits(grounding);
+    const paragraphUnits = splitIntoSentenceUnits(chosenParagraph);
+    const indices = windowUnits.map((u) => paragraphUnits.indexOf(u));
+    expect(indices).toEqual([...indices].sort((a, b) => a - b));
   });
 });
