@@ -1,5 +1,11 @@
 [
   {
+    "slug": "20261019-af62297",
+    "sha": "af62297",
+    "date": "20261019",
+    "runUrl": "https://github.com/SarahEspelandRemington/urban-explorer/actions/runs/39179094948"
+  },
+  {
     "slug": "20261017-c3f6a89",
     "sha": "c3f6a89",
     "date": "20261017",
@@ -172,11 +178,5 @@
     "sha": "85faf2a",
     "date": "20260919",
     "runUrl": "https://github.com/SarahEspelandRemington/urban-explorer/actions/runs/35467147842"
-  },
-  {
-    "slug": "20260919-3b44e9f",
-    "sha": "3b44e9f",
-    "date": "20260919",
-    "runUrl": "https://github.com/SarahEspelandRemington/urban-explorer/actions/runs/35463283919"
   }
 ]
