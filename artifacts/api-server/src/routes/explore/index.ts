@@ -4146,6 +4146,18 @@ router.post("/explore/discover", async (req, res) => {
         // fails, the candidate silently falls through to the thin-copy path
         // unchanged.
         const wikiMap = new Map<string, WikipediaSummary>();
+        // Walk-reserved-slot-shadow diagnostic support only (see the
+        // [walk-reserved-slot-shadow] log site below): records, per
+        // cappedCandidates osmId, why that candidate does or doesn't end up
+        // in wikiMap. osmId + enum only — no extract text, no coordinates,
+        // no new network calls. An osmId that never entered cappedCandidates
+        // at all (e.g. a shadow-promoted candidate, since real promotion
+        // isn't enabled) has no entry here; the log site falls back to
+        // "notFetchedShadowOnly" for those.
+        const wikiFetchOutcomeByOsmId = new Map<
+          string,
+          "enriched" | "noWikiTarget" | "fetchFailed"
+        >();
         {
           type WikiJob = {
             osmId: string;
@@ -4153,15 +4165,28 @@ router.post("/explore/discover", async (req, res) => {
             title: string;
             resolvedVia: "osmTag" | "wikidataSitelink";
           };
-          const resolvedTargets = await Promise.all(
-            cappedCandidates.map(async (c): Promise<WikiJob | null> => {
+          // Bounded concurrency (not Promise.all) — same reasoning as the
+          // extract-fetch stage below: a dense cluster of candidates that
+          // all carry a wikidata tag otherwise fires every Wikidata
+          // entity-data lookup at www.wikidata.org in the same instant,
+          // which risks a self-inflicted 429 burst there too. Reuses the
+          // same WIKI_SUMMARY_PREFETCH_CONCURRENCY cap as the extract
+          // stage below — this is the same per-request fan-out, just one
+          // step earlier.
+          const resolvedTargets = await mapWithConcurrency(
+            cappedCandidates,
+            WIKI_SUMMARY_PREFETCH_CONCURRENCY,
+            async (c): Promise<WikiJob | null> => {
               const target = await resolveWikipediaArticleTarget(
                 c.tags,
                 copyAbort.signal,
               );
-              if (!target) return null;
+              if (!target) {
+                wikiFetchOutcomeByOsmId.set(c.osmId, "noWikiTarget");
+                return null;
+              }
               return { osmId: c.osmId, ...target };
-            }),
+            },
           );
           const jobs: WikiJob[] = resolvedTargets.filter(
             (x): x is WikiJob => x !== null,
@@ -4192,7 +4217,12 @@ router.post("/explore/discover", async (req, res) => {
                 ),
             );
             for (const { osmId, summary } of settled) {
-              if (summary) wikiMap.set(osmId, summary);
+              if (summary) {
+                wikiMap.set(osmId, summary);
+                wikiFetchOutcomeByOsmId.set(osmId, "enriched");
+              } else {
+                wikiFetchOutcomeByOsmId.set(osmId, "fetchFailed");
+              }
             }
             if (wikiMap.size > 0) {
               req.log.info(
@@ -4687,7 +4717,12 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
                 walkMode: true,
                 reservedSlotsUsed: walkReservedSlotShadow.reservedSlotsUsed,
                 eligibleBelowCutoff: walkReservedSlotShadow.eligibleBelowCutoff,
-                promoted: walkReservedSlotShadow.promoted,
+                promoted: walkReservedSlotShadow.promoted.map((p) => ({
+                  ...p,
+                  wikiFetchOutcome:
+                    wikiFetchOutcomeByOsmId.get(p.osmId) ??
+                    "notFetchedShadowOnly",
+                })),
                 displaced: walkReservedSlotShadow.displaced.map((d) => ({
                   ...d,
                   finalDiscoveryTier: finalById.get(d.osmId)?.discoveryTier,
