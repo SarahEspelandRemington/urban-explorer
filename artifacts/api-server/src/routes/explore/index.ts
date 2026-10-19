@@ -49,6 +49,11 @@ import { resolve } from "path";
 import { createHash } from "crypto";
 import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
 import {
+  computeWalkReservedSlotShadow,
+  WALK_RESERVED_SLOT_COUNT,
+  type ReservedSlotShadowResult,
+} from "../../lib/walkReservedSlotShadow";
+import {
   getApprovedCuratedEntry,
   getApprovedOsmSubjectIds,
   CURATED_COPY_RULES,
@@ -294,6 +299,12 @@ type FreshFunnelDiagnostics = {
     candidatesSent: number;
     excludedBareCount: number;
     excludedCapCount: number;
+    // Walk-only SHADOW counts (lib/walkReservedSlotShadow.ts) — what a
+    // reserved-slot rule WOULD have done. Never affects candidatesSent.
+    walkReservedSlotShadow?: {
+      reservedSlotsUsed: number;
+      eligibleBelowCutoff: number;
+    };
   };
   overlayFlagged?: {
     cumulative: {
@@ -4084,6 +4095,42 @@ router.post("/explore/discover", async (req, res) => {
         const cappedCandidateIds = new Set(
           cappedCandidates.map((c) => c.osmId),
         );
+        // Walk-only SHADOW measurement (diagnostic only): what a rule
+        // reserving up to WALK_RESERVED_SLOT_COUNT of the 22 copy-gen slots
+        // for below-cutoff candidates with an exact wikipedia/wikidata tag
+        // WOULD have selected. Pure — reads copyGenCandidates, never touches
+        // cappedCandidates/cappedCandidateIds or anything sent to copy-gen.
+        // Any failure is logged and swallowed. See walkReservedSlotShadow.ts.
+        let walkReservedSlotShadow: ReservedSlotShadowResult | undefined;
+        if (walkMode && copyGenCandidates.length > COPY_GEN_CANDIDATE_CAP) {
+          try {
+            walkReservedSlotShadow = computeWalkReservedSlotShadow(
+              copyGenCandidates.map((p) => ({
+                osmId: p.osmId,
+                name: p.name,
+                tags: p.tags,
+                candidateOrigin: p.candidateOrigin,
+                isCuratedBareException:
+                  computeOsmTrustLevel(p.tags) === "osm_bare" &&
+                  getApprovedCuratedEntry(p.osmId) !== undefined,
+                distanceMeters: haversineDistance(
+                  latitude,
+                  longitude,
+                  p.lat,
+                  p.lon,
+                ),
+              })),
+              COPY_GEN_CANDIDATE_CAP,
+              WALK_RESERVED_SLOT_COUNT,
+            );
+          } catch (err) {
+            walkReservedSlotShadow = undefined;
+            req.log.warn(
+              { reqId: req.id, err },
+              "[walk-reserved-slot-shadow] shadow computation failed (no effect on discover)",
+            );
+          }
+        }
 
         // 5a. Pre-fetch Wikipedia summaries for OSM candidates that carry a
         // wikipedia= tag, or — when that tag is absent — resolve one via the
@@ -4622,6 +4669,38 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             p.discoveryRejectionReason = rejectionReason;
           }
         }
+        // Walk-only SHADOW diagnostic (see walkReservedSlotShadow above):
+        // logs the would-be promoted/displaced candidates, plus the final
+        // tier/rejection reason the displaced ones actually received this
+        // request. OSM ids/names/ranks only — no user coordinates. Read-only;
+        // any failure is swallowed.
+        if (walkReservedSlotShadow?.capApplies) {
+          try {
+            const finalById = new Map<string, any>();
+            for (const p of mergedPlaces) {
+              if (p.osmId) finalById.set(p.osmId, p);
+            }
+            req.log.info(
+              {
+                reqId: req.id,
+                branch: "osm-anchor",
+                walkMode: true,
+                reservedSlotsUsed: walkReservedSlotShadow.reservedSlotsUsed,
+                eligibleBelowCutoff: walkReservedSlotShadow.eligibleBelowCutoff,
+                promoted: walkReservedSlotShadow.promoted,
+                displaced: walkReservedSlotShadow.displaced.map((d) => ({
+                  ...d,
+                  finalDiscoveryTier: finalById.get(d.osmId)?.discoveryTier,
+                  finalRejectionReason: finalById.get(d.osmId)
+                    ?.discoveryRejectionReason,
+                })),
+              },
+              "[walk-reserved-slot-shadow] diagnostic",
+            );
+          } catch {
+            // Shadow logging must never affect discover.
+          }
+        }
         // Diagnostic-only, read-only: cross-tab of trustLevel (OSM tag
         // richness, known pre-copy) x discoveryTier (regex-classified from
         // generated prose, known only post-copy). Investigates whether
@@ -4708,6 +4787,15 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             candidatesSent: cappedCandidates.length,
             excludedBareCount,
             excludedCapCount,
+            ...(walkReservedSlotShadow?.capApplies
+              ? {
+                  walkReservedSlotShadow: {
+                    reservedSlotsUsed: walkReservedSlotShadow.reservedSlotsUsed,
+                    eligibleBelowCutoff:
+                      walkReservedSlotShadow.eligibleBelowCutoff,
+                  },
+                }
+              : {}),
           },
           counts: {
             rawOsmCandidates,
