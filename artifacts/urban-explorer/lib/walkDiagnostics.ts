@@ -63,6 +63,14 @@ export interface DiagRejection {
    * Populated from `EligibilityResult.evaluations[n].discoveryRejectionReason`.
    */
   discoveryRejectionReason?: string;
+  /**
+   * The server reqId of the discover response that most recently
+   * supplied/classified this candidate (see WalkPlace.discoverReqId).
+   * Diagnostic correlation only — lets a field-observed rejection be traced
+   * back to the exact server log entry that produced the candidate's
+   * current classification, even across in-memory pool retention.
+   */
+  discoverReqId?: string;
 }
 
 export interface DiagDiscoverResult {
@@ -105,6 +113,9 @@ export interface DiagNarrationFetch {
    * narration — see the server's own request-timing logs for that.
    */
   durationMs?: number;
+  /** See DiagRejection.discoverReqId — same diagnostic correlation token,
+   *  carried from the candidate that was narrated/attempted. */
+  discoverReqId?: string;
 }
 
 /**

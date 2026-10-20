@@ -277,3 +277,84 @@ describe("applyDiscoveryTier — idempotent across repeated (cache-hit / coalesc
     expect(places[0].discoveryTier).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// batchIntegrityRejected — distinguishes a whole-batch validateCopyResultIds
+// rejection from an ordinary per-candidate placeholderFallback. Set at merge
+// time in routes/explore/index.ts (copyOutcome === "integrity_rejected" &&
+// cappedCandidateIds.has(p.osmId)); applyDiscoveryTier only reads the
+// persistent flag here, it never derives it.
+// ---------------------------------------------------------------------------
+
+describe("applyDiscoveryTier — batchIntegrityRejected relabeling", () => {
+  it("batchIntegrityRejected + placeholder shape → relabeled from placeholderFallback to batchIntegrityRejected", () => {
+    mockedGetApprovedCuratedEntry.mockReturnValue(undefined);
+    const places: any[] = [
+      placeholderPlace({ copyGenSelected: true, batchIntegrityRejected: true }),
+    ];
+    applyDiscoveryTier(places);
+    expect(places[0].discoveryTier).toBe(4);
+    expect(places[0].discoveryRejectionReason).toBe("batchIntegrityRejected");
+  });
+
+  it("preserves Tier 4 / non-narratable eligibility exactly as ordinary placeholderFallback (trust/eligibility unchanged)", () => {
+    mockedGetApprovedCuratedEntry.mockReturnValue(undefined);
+    const relabeled: any[] = [
+      placeholderPlace({ copyGenSelected: true, batchIntegrityRejected: true }),
+    ];
+    const ordinary: any[] = [placeholderPlace({ copyGenSelected: true })];
+    applyDiscoveryTier(relabeled);
+    applyDiscoveryTier(ordinary);
+    expect(relabeled[0].discoveryTier).toBe(ordinary[0].discoveryTier);
+  });
+
+  it("cap-excluded candidate (copyGenSelected: false, no batchIntegrityRejected flag) is unaffected — ordinary cap-exclusion placeholderFallback unchanged", () => {
+    mockedGetApprovedCuratedEntry.mockReturnValue(undefined);
+    const places: any[] = [placeholderPlace({ copyGenSelected: false })];
+    applyDiscoveryTier(places);
+    // The route only ever sets batchIntegrityRejected for candidates that
+    // were actually in the integrity-rejected batch (cappedCandidateIds.has
+    // (p.osmId), the same condition as copyGenSelected: true) — so a
+    // cap-excluded candidate never carries the flag in practice, and this
+    // case is indistinguishable from today's ordinary cap-exclusion
+    // placeholderFallback behavior.
+    expect(places[0].discoveryTier).toBe(4);
+    expect(places[0].discoveryRejectionReason).toBe("placeholderFallback");
+  });
+
+  it("genuine per-candidate copy-gen failure (no batchIntegrityRejected flag) → unchanged placeholderFallback", () => {
+    mockedGetApprovedCuratedEntry.mockReturnValue(undefined);
+    const places: any[] = [placeholderPlace({ copyGenSelected: true })];
+    applyDiscoveryTier(places);
+    expect(places[0].discoveryTier).toBe(4);
+    expect(places[0].discoveryRejectionReason).toBe("placeholderFallback");
+  });
+
+  it("curated explicitDiscoveryTier override does not apply to a non-cap-excluded placeholder (matches existing placeholderFallback behavior) — batchIntegrityRejected relabeling still applies on top", () => {
+    mockedGetApprovedCuratedEntry.mockReturnValue(
+      curatedEntry({ explicitDiscoveryTier: 2 }),
+    );
+    const places: any[] = [
+      placeholderPlace({ copyGenSelected: true, batchIntegrityRejected: true }),
+    ];
+    applyDiscoveryTier(places);
+    // Same as the existing "curated + placeholder + copyGenSelected: true"
+    // carve-out test above: the explicitTier override only fires for
+    // cap-excluded placeholders, so this one falls through to the ordinary
+    // Tier 4 path — then gets relabeled exactly like the non-curated case.
+    expect(places[0].discoveryTier).toBe(4);
+    expect(places[0].discoveryRejectionReason).toBe("batchIntegrityRejected");
+  });
+
+  it("idempotent across repeated (cache-hit / coalesced-waiter) invocations — re-running does not double-relabel or revert", () => {
+    mockedGetApprovedCuratedEntry.mockReturnValue(undefined);
+    const places: any[] = [
+      placeholderPlace({ copyGenSelected: true, batchIntegrityRejected: true }),
+    ];
+    applyDiscoveryTier(places); // "fresh generation" run
+    expect(places[0].discoveryRejectionReason).toBe("batchIntegrityRejected");
+    applyDiscoveryTier(places); // simulated cache-hit / coalesced-waiter re-run
+    expect(places[0].discoveryRejectionReason).toBe("batchIntegrityRejected");
+    expect(places[0].discoveryTier).toBe(4);
+  });
+});

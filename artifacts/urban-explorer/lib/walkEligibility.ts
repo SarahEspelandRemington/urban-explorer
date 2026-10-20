@@ -65,6 +65,10 @@ export interface EligibilityCandidate {
    *  "noHistoricalDepth", "genericBusinessDescription"). Display-only — never
    *  read by eligibility logic beyond the presence of `discoveryTier === 4`. */
   discoveryRejectionReason?: string;
+  /** The server reqId of the discover response that most recently
+   *  supplied/classified this candidate. Display-only — never read by
+   *  eligibility logic. See WalkPlace.discoverReqId. */
+  discoverReqId?: string;
 }
 
 export interface EligibilityState {
@@ -110,6 +114,9 @@ export interface EligibilityResult {
      *  `EligibilityCandidate.discoveryRejectionReason` so callers
      *  (debug overlay, diagnostics) don't need to re-look up the place. */
     discoveryRejectionReason?: string;
+    /** Mirrors `EligibilityCandidate.discoverReqId`, unconditionally (pure
+     *  provenance metadata, not reason-specific). See WalkPlace.discoverReqId. */
+    discoverReqId?: string;
   }>;
 }
 
@@ -317,6 +324,7 @@ export function evaluateEligibility(
       reason,
       discoveryRejectionReason:
         reason === "lowQuality" ? p.discoveryRejectionReason : undefined,
+      discoverReqId: p.discoverReqId,
     });
     if (reason === "ok") eligibleIds.push(p.id);
   }

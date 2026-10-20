@@ -224,6 +224,13 @@ export interface WalkPlace {
     bearingDegrees: number;
     phrase: string;
   };
+  /** Diagnostic-only: the server reqId of the discover response that most
+   *  recently supplied/classified this candidate. Not a stable identifier —
+   *  overwritten whenever a fresh discover response re-merges this place.
+   *  Lets field diagnostics (Recent rejections / Narration fetches) trace a
+   *  candidate's current classification back to the exact server log entry
+   *  that produced it. Never sent anywhere; display/correlation only. */
+  discoverReqId?: string;
 }
 
 export type WalkDensity = "sparse" | "dense";
@@ -1239,6 +1246,20 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             // Nominatim) can enter the Walk pool — the server already cleared
             // autoNarrationBlocked on them and kept the ordinal mismatch check.
             const isOverpassFallback = (data as any).overpassFallback === true;
+            // Diagnostic-only: stamp this response's discoverReqId onto every
+            // incoming place so field diagnostics can trace a candidate's
+            // current classification back to the exact discover response that
+            // produced it — survives pool retention since it mutates
+            // data.places in place before the cache write below. Read from
+            // the response header (not the JSON body) so the response body
+            // schema is unchanged.
+            const responseDiscoverReqId =
+              res.headers.get("x-request-id") ?? undefined;
+            if (responseDiscoverReqId) {
+              for (const p of data.places as WalkPlace[]) {
+                (p as WalkPlace).discoverReqId = responseDiscoverReqId;
+              }
+            }
             // Merge with existing — dedupe by id, then evict anything farther
             // than memoryRadius from the user's current location. Without the
             // eviction the queue grows unbounded over a long walk, slowing
@@ -1589,6 +1610,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           reason: "interpretiveOverlay",
           distance: null,
           bearingDiff: null,
+          discoverReqId: freshPlace.discoverReqId,
         });
         return false;
       }
@@ -1612,6 +1634,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           reason: "addressMismatch",
           distance: null,
           bearingDiff: null,
+          discoverReqId: freshPlace.discoverReqId,
         });
         return false;
       }
@@ -1639,6 +1662,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           reason: "stale",
           distance: dist,
           bearingDiff: null,
+          discoverReqId: freshPlace.discoverReqId,
         });
         return false;
       }
@@ -1675,6 +1699,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
             reason: "behind90",
             distance: dist,
             bearingDiff: angDiff,
+            discoverReqId: freshPlace.discoverReqId,
           });
           return false;
         }
@@ -1733,6 +1758,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           source: "cache",
           outcome: "success",
           payloadKind: lookup.entry.payload.kind,
+          discoverReqId: place.discoverReqId,
         });
         failedFetchRef.current.delete(place.id);
         // Only the "staleReplay" path is a genuine replay (a place that was
@@ -1789,6 +1815,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           source: "live",
           outcome: timeoutInfo.timedOut ? "timeout" : "failure",
           durationMs: Date.now() - fetchStartedAt,
+          discoverReqId: place.discoverReqId,
         });
         // A failed fetch never played anything, so don't burn this candidate
         // for the rest of the session — un-mark it. Record a failure
@@ -1836,6 +1863,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           outcome: "cancelled",
           payloadKind: payload.kind,
           durationMs: Date.now() - fetchStartedAt,
+          discoverReqId: place.discoverReqId,
         });
         if (payload.kind === "audio") {
           try {
@@ -1852,6 +1880,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         outcome: "success",
         payloadKind: payload.kind,
         durationMs: Date.now() - fetchStartedAt,
+        discoverReqId: place.discoverReqId,
       });
       failedFetchRef.current.delete(place.id);
       // First-time narration: ensure any stale "Replay" badge from the previous
@@ -2044,6 +2073,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           bearingDiff: ev.bearingDiff,
           spatialNote,
           discoveryRejectionReason: ev.discoveryRejectionReason,
+          discoverReqId: ev.discoverReqId,
         });
       }
       const blockedBy90Deg =
@@ -2090,6 +2120,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
                 p.longitude,
               ),
               bearingDiff: null,
+              discoverReqId: p.discoverReqId,
             });
           }
         }

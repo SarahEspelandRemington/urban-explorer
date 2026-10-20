@@ -460,5 +460,22 @@ export function applyDiscoveryTier(places: any[]): void {
     } else {
       delete p.discoveryRejectionReason;
     }
+
+    // Batch-wide copy-integrity override — see batchIntegrityRejected's
+    // set-site (routes/explore/index.ts merge block) for when this persistent
+    // flag is stamped. Relabels the otherwise-indistinguishable
+    // "placeholderFallback" string so diagnostics can tell a whole-batch
+    // validateCopyResultIds rejection apart from a genuine per-candidate
+    // copy-gen failure or a COPY_GEN_CANDIDATE_CAP exclusion. Does not change
+    // tier, trust, or eligibility — the place is still Tier 4 / non-narratable
+    // exactly as before. Reading the persistent `p.batchIntegrityRejected`
+    // flag (not an ephemeral per-request variable) keeps this correct across
+    // every cache-hit/coalesced-waiter re-run of applyDiscoveryTier.
+    if (
+      p.batchIntegrityRejected === true &&
+      p.discoveryRejectionReason === "placeholderFallback"
+    ) {
+      p.discoveryRejectionReason = "batchIntegrityRejected";
+    }
   }
 }

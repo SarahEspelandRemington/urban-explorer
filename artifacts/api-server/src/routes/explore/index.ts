@@ -3457,6 +3457,11 @@ router.post("/explore/discover", async (req, res) => {
           "[osm-anchor] discover funnel",
         );
       }
+      // Diagnostic-only correlation header for client-side candidate
+      // provenance (see WalkPlace.discoverReqId) — not a stable place
+      // identifier, just this response's req.id. Kept as a header (not a
+      // JSON field) so the response body schema is unchanged.
+      res.setHeader("X-Request-Id", String(req.id));
       res.json({
         ...entry,
         places: refreshedPlaces,
@@ -4649,6 +4654,16 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             yearBuilt: copy?.yearBuilt,
             confidence: copy?.confidence ?? "low",
             copyGenSelected: cappedCandidateIds.has(p.osmId),
+            // Diagnostic-only, persistent (not re-derived per request) so it
+            // survives every cache-hit/coalesced-waiter re-run of
+            // applyDiscoveryTier — see discoveryTier.ts's relabeling check.
+            // Only ever set when this candidate was actually in the batch
+            // that validateCopyResultIds rejected wholesale; cap-excluded
+            // candidates (copyGenSelected === false) never get this flag.
+            ...(copyOutcome === "integrity_rejected" &&
+            cappedCandidateIds.has(p.osmId)
+              ? { batchIntegrityRejected: true }
+              : {}),
             orientation: computeOrientation(
               {
                 osmId: p.osmId,
@@ -4976,6 +4991,11 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
         "[osm-anchor] discover funnel",
       );
     }
+    // Diagnostic-only correlation header for client-side candidate
+    // provenance (see WalkPlace.discoverReqId) — not a stable place
+    // identifier, just this response's req.id. Kept as a header (not a
+    // JSON field) so the response body schema is unchanged.
+    res.setHeader("X-Request-Id", String(req.id));
     res.json({
       ...anchorResp,
       places: anchorResponsePlaces,
@@ -6554,6 +6574,7 @@ router.post("/explore/walk-narration", async (req, res) => {
         outcome: "success",
         cacheHit: true,
         durationMs: Date.now() - requestStartTime,
+        subjectId,
       },
       "[walk-narration] served from cache",
     );
@@ -6573,6 +6594,7 @@ router.post("/explore/walk-narration", async (req, res) => {
           outcome: "success",
           cacheHit: false,
           durationMs: Date.now() - requestStartTime,
+          subjectId,
         },
         "[walk-narration] coalesced onto in-flight LLM call — success",
       );
@@ -6585,6 +6607,7 @@ router.post("/explore/walk-narration", async (req, res) => {
           outcome: "failure",
           cacheHit: false,
           durationMs: Date.now() - requestStartTime,
+          subjectId,
         },
         "[walk-narration] coalesced onto in-flight LLM call — failure",
       );
@@ -6624,7 +6647,13 @@ router.post("/explore/walk-narration", async (req, res) => {
   });
   if (bridgeOutcome) {
     req.log.info(
-      { reqId: req.id, route: "walk-narration", bridgeOutcome, jitMs },
+      {
+        reqId: req.id,
+        route: "walk-narration",
+        bridgeOutcome,
+        jitMs,
+        subjectId,
+      },
       "[walk-narration] curated+Wikipedia bridge outcome",
     );
   }
@@ -6774,6 +6803,7 @@ How to write for speech:
         cacheHit: false,
         durationMs: Date.now() - requestStartTime,
         errStatus: err?.status,
+        subjectId,
       },
       "[walk-narration] live LLM call failed",
     );
@@ -6797,6 +6827,7 @@ How to write for speech:
       outcome: "success",
       cacheHit: false,
       durationMs: Date.now() - requestStartTime,
+      subjectId,
     },
     "[walk-narration] live LLM call succeeded",
   );
@@ -7437,6 +7468,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
         outcome: "success",
         cacheHit: true,
         durationMs: Date.now() - requestStartTime,
+        subjectId,
       },
       "[walk-narration-audio] served from audio cache",
     );
@@ -7469,6 +7501,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
             outcome: abortController.signal.aborted ? "cancelled" : "failure",
             cacheHit: false,
             durationMs: Date.now() - requestStartTime,
+            subjectId,
           },
           "[walk-narration-audio] coalesced narration text call failed",
         );
@@ -7517,6 +7550,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
             route: "walk-narration-audio",
             bridgeOutcome,
             jitMs,
+            subjectId,
           },
           "[walk-narration-audio] curated+Wikipedia bridge outcome",
         );
@@ -7655,6 +7689,7 @@ How to write for speech:
             cacheHit: false,
             durationMs: Date.now() - requestStartTime,
             errStatus: err?.status,
+            subjectId,
           },
           "[walk-narration-audio] live narration text call failed",
         );
@@ -7704,6 +7739,7 @@ How to write for speech:
           cacheHit: false,
           durationMs: Date.now() - requestStartTime,
           chatMs: chatDoneAt - requestStartTime,
+          subjectId,
         },
         "[walk-narration-audio] coalesced TTS call failed",
       );
@@ -7741,6 +7777,7 @@ How to write for speech:
           cacheHit: false,
           durationMs: Date.now() - requestStartTime,
           chatMs: chatDoneAt - requestStartTime,
+          subjectId,
         },
         "[walk-narration-audio] live TTS call failed",
       );
@@ -7765,6 +7802,7 @@ How to write for speech:
           cacheHit: false,
           durationMs: Date.now() - requestStartTime,
           chatMs: chatDoneAt - requestStartTime,
+          subjectId,
         },
         "[walk-narration-audio] TTS returned empty audio",
       );
@@ -7784,6 +7822,7 @@ How to write for speech:
       durationMs: Date.now() - requestStartTime,
       chatMs: chatDoneAt - requestStartTime,
       ttsMs: Date.now() - chatDoneAt,
+      subjectId,
     },
     "[walk-narration-audio] request completed",
   );
