@@ -1,0 +1,17 @@
+{
+  "name": "example-curated",
+  "locationHint": "Hell's Kitchen, Manhattan",
+  "candidates": [
+    {
+      "osmId": "way/250863827",
+      "name": "The Green Room",
+      "type": "building",
+      "tags": {
+        "building": "yes"
+      }
+    }
+  ],
+  "wiki": {},
+  "selectorEnhancedWikiContent": {},
+  "selectorSingleUnitOsmIds": []
+}

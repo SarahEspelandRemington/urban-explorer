@@ -67,3 +67,6 @@ attached_assets/Pasted-*.txt
 
 # Local database backups (never commit)
 /backups/
+
+# prompt-eval harness output (tools/prompt-eval/runEval.ts) — never commit
+/tools/prompt-eval/results/

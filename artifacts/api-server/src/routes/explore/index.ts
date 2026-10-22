@@ -47,7 +47,7 @@ import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 import { createHash } from "crypto";
-import { computeOsmTrustLevel, OSM_COPY_RULES } from "../../lib/osmTrustLevel";
+import { computeOsmTrustLevel } from "../../lib/osmTrustLevel";
 import {
   computeWalkReservedSlotShadow,
   WALK_RESERVED_SLOT_COUNT,
@@ -56,8 +56,17 @@ import {
 import {
   getApprovedCuratedEntry,
   getApprovedOsmSubjectIds,
-  CURATED_COPY_RULES,
 } from "../../lib/curatedLocalHistory";
+import {
+  WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+  HINT_TAGS,
+  buildOsmAddr,
+  sanitizeOSMText,
+  type CopyResult,
+  buildCopyGenRequest,
+  COPY_GEN_MAX_COMPLETION_TOKENS,
+  parseCopyGenResponseContent,
+} from "../../lib/copyGenRequestBuilder";
 import { STREETLIT_PLACES, STALE_OSM_IDS } from "../../lib/streetlitPlaces";
 import { sanitizeDisplayTags } from "../../lib/sanitizeDisplayTags";
 import { haversineDistance } from "../../lib/geo";
@@ -704,14 +713,6 @@ out center body qt ${maxResults};
   }
 }
 
-function buildOsmAddr(tags: Record<string, string>): string {
-  const num = tags["addr:housenumber"] ?? "";
-  const street = tags["addr:street"] ?? "";
-  if (num && street) return `${num} ${street}`.trim();
-  if (street) return street;
-  return "";
-}
-
 // Cache for the approved-subject rescue lookup (see getApprovedOsmSubjectIds
 // in curatedLocalHistory.ts). Keyed by the exact, sorted id list so it only
 // refetches when the approved-subject set itself changes (i.e. on deploy),
@@ -801,17 +802,6 @@ async function fetchApprovedOsmSubjects(
 
   approvedOsmSubjectCache = { key, data: result, timestamp: Date.now() };
   return result;
-}
-
-function sanitizeOSMText(raw: string, maxLen = 80): string {
-  return raw
-    .replace(/[\n\r\t]/g, " ")
-    .replace(
-      /[^\x20-\x7E\u00C0-\u024F\u0400-\u04FF\u4E00-\u9FFF\u3040-\u30FF]/g,
-      "",
-    )
-    .trim()
-    .slice(0, maxLen);
 }
 
 function formatOSMContext(
@@ -2548,16 +2538,15 @@ const EVIDENCE_SELECTOR_TIMEOUT_MS = 6_000;
 // @end-prompt-region wiki-evidence-selector
 
 // Shared discover-time Wikipedia grounding envelope (Bergdoll-selector-fix,
-// RC ruling, 2026-10-16). Governs both: (1) formatForCopy's ordinary
-// first-N-chars truncation fallback for candidates with no evidence-selector
-// output, and (2) the evidence-selector path's single-paragraph grounding
-// below. One shared constant so the two envelopes can never drift apart.
-// Distinct from EVIDENCE_SELECTOR_OUTPUT_CAP above, which is Stage 1's own
-// internal multi-paragraph packing budget, not a copy-gen grounding limit.
-// Declared outside every wiki-evidence-selector marker span: it is a
-// copy-gen input-size limit, not LLM-facing prompt text, so prompt-manifest
-// should not track it as such.
-const WIKIPEDIA_GROUNDING_ENVELOPE_CHARS = 1_000;
+// RC ruling, 2026-10-16). Governs both: (1) formatCandidateForCopyGen's
+// ordinary first-N-chars truncation fallback for candidates with no
+// evidence-selector output, and (2) the evidence-selector path's
+// single-paragraph grounding below. One shared constant so the two
+// envelopes can never drift apart. Distinct from EVIDENCE_SELECTOR_OUTPUT_CAP
+// above, which is Stage 1's own internal multi-paragraph packing budget, not
+// a copy-gen grounding limit. Defined in lib/copyGenRequestBuilder.ts
+// (imported above) rather than here: it is a copy-gen input-size limit, not
+// LLM-facing prompt text, so prompt-manifest should not track it as such.
 
 const NON_PROSE_SECTION_DENYLIST = new Set([
   "references",
@@ -3306,7 +3295,7 @@ router.post("/explore/discover", async (req, res) => {
     userIncludes.size > 0 ? `:inc=${[...userIncludes].sort().join(",")}` : "";
   // @prompt-region discover
   const discoverCacheKey = osmAnchor
-    ? `${modeKey}:v84:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
+    ? `${modeKey}:v85:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}:osm`
     : `${modeKey}:v63:${searchRadius}:${snapGrid(latitude)},${snapGrid(longitude)}${includesSuffix}`;
   // @end-prompt-region discover
 
@@ -3908,21 +3897,6 @@ router.post("/explore/discover", async (req, res) => {
         // value — this filter is the only thing that produces it.
         const afterRadiusFilter = candidates.length;
 
-        const HINT_TAGS = [
-          "historic",
-          "description",
-          "heritage:description",
-          "start_date",
-          "wikidata",
-          "wikipedia",
-          "operator",
-          "denomination",
-          "alt_name",
-          "architect",
-          "building:material",
-          "building:levels",
-        ] as const;
-
         // Evidence-selector functions (selectEvidenceParagraphs,
         // selectPrimaryUnit) and their supporting types/constants were
         // hoisted to module scope on 2026-09-03 (see the marked
@@ -3931,68 +3905,14 @@ router.post("/explore/discover", async (req, res) => {
         // implementation. This route's call sites below are unchanged and
         // resolve to the hoisted module-level definitions via normal JS
         // scoping.
-        // @prompt-region discover
-        const formatForCopy = (
-          p: OSMPlace,
-          wikiSummary?: WikipediaSummary | null,
-          enhancedWikipediaContent?: string,
-          isPrimaryUnit?: boolean,
-        ): Record<string, unknown> => {
-          const obj: Record<string, unknown> = {
-            id: p.osmId,
-            name: p.name,
-            type: p.type,
-            trustLevel: computeOsmTrustLevel(p.tags),
-          };
-          const addr = buildOsmAddr(p.tags);
-          if (addr) obj.address = addr;
-          for (const key of HINT_TAGS) {
-            const val = p.tags[key];
-            if (val) obj[key] = sanitizeOSMText(val, 120);
-          }
-          // Evidence-selector output (Option A, Walk Mode field test) takes
-          // priority when present for this candidate — verbatim, selected
-          // paragraphs rather than a blind truncation. Falls through to the
-          // original first-1,000-char behavior otherwise, unchanged.
-          if (enhancedWikipediaContent) {
-            obj.wikipediaContent = enhancedWikipediaContent;
-            if (isPrimaryUnit) obj.wikipediaUnitOnly = true;
-          } else if (wikiSummary?.extract) {
-            // Inject the first WIKIPEDIA_GROUNDING_ENVELOPE_CHARS chars of the
-            // Wikipedia extract when available. The copy LLM uses this as
-            // factual grounding (rule 11 in the system prompt). 1,000 chars is
-            // enough to capture full named sections (e.g. "History and
-            // architecture") that carry story-bearing content such as family
-            // history, notable events, or contextual narrative — content the
-            // REST /page/summary/ lead-paragraph never included.
-            obj.wikipediaContent = wikiSummary.extract.slice(
-              0,
-              WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
-            );
-          }
-          // TEMP-PILOT-A: curated local-history evidence, sibling to
-          // wikipediaContent — never merged into it. Human-selected text,
-          // bypasses the A3 selector entirely (rule 12 in the system
-          // prompt governs how the two fields interact).
-          const curatedEntry = getApprovedCuratedEntry(p.osmId);
-          if (curatedEntry) {
-            obj.curatedContent = curatedEntry.evidence.text;
-            obj.curatedClaimScope = curatedEntry.evidence.claimScope;
-            obj.curatedTrust = curatedEntry.evidence.curatedTrust;
-          }
-          return obj;
-        };
-        // @end-prompt-region discover
+        //
+        // HINT_TAGS, formatCandidateForCopyGen (formerly formatForCopy), and
+        // the CopyResult type are defined in lib/copyGenRequestBuilder.ts
+        // (Task M extraction, imported above) — byte-identical behavior,
+        // relocated out of this route so they can be reused by the
+        // prompt-eval harness without importing any route/runtime code.
 
         // 5. Call LLM for copy-only (summary, facts, tags, yearBuilt, confidence)
-        type CopyResult = {
-          id: string;
-          summary: string;
-          facts: string[];
-          tags?: string[];
-          yearBuilt?: string;
-          confidence?: string;
-        };
         let copyResults: CopyResult[] = [];
         // Diagnostic-only classification of how this call's result ended up
         // in its final state — does not affect fallback behavior, only what
@@ -4054,9 +3974,9 @@ router.post("/explore/discover", async (req, res) => {
         // carries an approved curated-local-history entry (Pilot A, Green
         // Room). This does not change trustLevel, computeOsmTrustLevel, or
         // OSM_COPY_RULES — the candidate still reports osm_bare downstream
-        // (see formatForCopy) and still gets bare-tier copy rules; it is
-        // only exempted from the exclusion filter itself. Every other
-        // osm_bare candidate remains excluded exactly as before.
+        // (see formatCandidateForCopyGen) and still gets bare-tier copy
+        // rules; it is only exempted from the exclusion filter itself.
+        // Every other osm_bare candidate remains excluded exactly as before.
         const copyGenCandidates = candidates.filter((p) => {
           if (computeOsmTrustLevel(p.tags) !== "osm_bare") return true;
           return getApprovedCuratedEntry(p.osmId) !== undefined;
@@ -4243,16 +4163,18 @@ router.post("/explore/discover", async (req, res) => {
         // Evidence-selector invocation (Option A, Walk Mode field test).
         // Walk Mode requests only, capped to the 3 closest Wikipedia-
         // enriched candidates by straight-line distance — see the design
-        // note above formatForCopy for why this is a distance proxy, not a
-        // pickNext replica. Runs after wikiMap (needs its entries) and
-        // before the copy-gen call below (its output feeds formatForCopy).
-        // Any per-candidate failure leaves that osmId absent from this map,
-        // which formatForCopy already treats identically to "no enhanced
-        // content" — the original truncation path, unchanged.
+        // note above formatCandidateForCopyGen for why this is a distance
+        // proxy, not a pickNext replica. Runs after wikiMap (needs its
+        // entries) and before the copy-gen call below (its output feeds
+        // formatCandidateForCopyGen). Any per-candidate failure leaves that
+        // osmId absent from this map, which formatCandidateForCopyGen
+        // already treats identically to "no enhanced content" — the
+        // original truncation path, unchanged.
         const selectorEnhancedWikiContent = new Map<string, string>();
         // osmIds whose selectorEnhancedWikiContent entry is a single
         // primary-unit selection (not a multi-paragraph A3 selection) —
-        // formatForCopy uses this to flag wikipediaUnitOnly for the writer.
+        // formatCandidateForCopyGen uses this to flag wikipediaUnitOnly for
+        // the writer.
         const selectorSingleUnitOsmIds = new Set<string>();
         // Per-candidate slot token for the up-to-3 candidates that receive
         // A3 evidence selection, exposed on the discover response as
@@ -4348,9 +4270,10 @@ router.post("/explore/discover", async (req, res) => {
         }
 
         const locationHint = nbhdLabel.label || `${latitude}, ${longitude}`;
-        // @prompt-region discover
-        const copyMaxCompletionTokens = 3000;
-        // @end-prompt-region discover
+        // Value defined in lib/copyGenRequestBuilder.ts (Task M extraction,
+        // imported above) — kept under this local name since it's also used
+        // by the diagnostic logging below.
+        const copyMaxCompletionTokens = COPY_GEN_MAX_COMPLETION_TOKENS;
         // Diagnostic-only fields populated as soon as the raw response is
         // available (before JSON.parse), so they're still captured in the catch
         // block below even when parsing itself throws (e.g. the "Unterminated
@@ -4394,52 +4317,14 @@ router.post("/explore/discover", async (req, res) => {
           );
         } else {
           try {
-            // @prompt-region discover
             const copyResponse = await openai.chat.completions.create(
-              {
-                model: "gpt-4.1-mini",
-                max_completion_tokens: copyMaxCompletionTokens,
-                messages: [
-                  {
-                    role: "system",
-                    content: `You are a hyper-local urban historian writing brief copy for real places sourced from OpenStreetMap.
-
-MANDATORY RULES:
-1. Return exactly the same number of results as candidates provided.
-2. The "id" in each result MUST exactly match the "id" in the corresponding candidate. Do NOT change, reorder, add, or remove any place.
-3. Do NOT modify the name, latitude, longitude, or address of any place.
-4. Do NOT invent a place that was not in the candidates list.
-5–8. COPY RULES — apply based on the "trustLevel" field on each candidate:
-
-${OSM_COPY_RULES.osm_enriched}
-
-${OSM_COPY_RULES.osm_standard}
-
-${OSM_COPY_RULES.osm_bare}
-
-Flag any claim not directly supported by the candidate's tags with "Reportedly" or "According to local accounts."
-9. NEVER write raw GPS coordinates in any text field.
-10. DISPLAY TAGS — the "tags" array must contain only short, human-readable descriptor phrases a general audience would understand (e.g. "historic mansion", "place of worship", "Victorian building", "art deco", "immigrant heritage"). NEVER put raw database identifiers, Wikidata IDs (e.g. Q4891444), Wikipedia slugs, OSM field names (wikidata, wikipedia, building:levels, denomination, operator), key:value pairs, or any technical metadata in tags. Tags are user-visible copy, not metadata echo.
-11. WIKIPEDIA CONTENT — when a candidate includes a "wikipediaContent" field, use it as factual grounding for the summary and facts. Write from it directly: you may quote or paraphrase. Do not invent claims beyond what it states. Do not mention Wikipedia or the article by name in the copy — just write good historical prose informed by the content. Standalone attribution facts — "designed by architect X", "built in year Y", "listed on the National Register", "in a Beaux Arts style" — are NOT sufficient on their own for a discovery-worthy summary. Only use them to anchor a broader story: explain why the architect matters, what else they built, who commissioned the building and why, or what notable events occurred here. If the Wikipedia content contains only architectural metadata with no narrative context (no notable people, no events, no transformation over time), reflect that in a lower-confidence summary rather than dressing up dry facts as a compelling discovery.
-11a. SINGLE-UNIT WIKIPEDIA CONTENT — when a candidate's "wikipediaContent" is accompanied by "wikipediaUnitOnly": true, that field contains exactly one complete, already-selected source unit, not an excerpt of a larger passage. Write the summary and facts using ONLY what that unit states. Do not import facts from outside it, add causes, motives, or consequences it doesn't state, or infer a relationship to other information about the place. Do not construct a narrative arc beyond what the unit itself supports. Facts may restate or lightly rephrase the unit, but must not introduce anything beyond it — an empty facts array is acceptable rather than padding with unrelated OSM tag data.
-12. CURATED LOCAL-HISTORY CONTENT — when a candidate includes a "curatedContent" field, curatedContent contains human-vetted evidence whose permitted claim strength is governed by "curatedTrust" and limited to the scope declared in "curatedClaimScope", independently of the candidate's OSM "trustLevel". Apply the rule below matching the candidate's curatedTrust value:
-
-${CURATED_COPY_RULES.high}
-${CURATED_COPY_RULES.medium}
-${CURATED_COPY_RULES.low}
-
-This rule 12 permission is independent of, and takes precedence over, the trustLevel-based restrictions in rules 5-8 (including the osm_bare restriction against dates, founding claims, and former-use claims) for claims that fall inside curatedClaimScope specifically. Rules 5-8 continue to govern any claim NOT grounded in curatedContent, including for osm_bare candidates — they do not forbid the specific claims inside curatedClaimScope that curatedContent supports. Outside the declared curatedClaimScope, "wikipediaContent" (if present) may still supplement with additional grounded, non-conflicting context. If "wikipediaContent" directly conflicts with a claim inside curatedClaimScope, follow curatedContent and omit the conflicting Wikipedia detail entirely — do not blend the two versions, average them, or present both as equally valid. As with rule 11, do not mention "curated," "verified," Wikipedia, or any source by name — write unified historical prose.
-
-Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...","..."],"tags":["3-5 relevant tags"],"yearBuilt":"1920s or omit","confidence":"high|medium|low"}]}`,
-                  },
-                  {
-                    role: "user",
-                    content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(cappedCandidates.map((c) => formatForCopy(c, wikiMap.get(c.osmId), selectorEnhancedWikiContent.get(c.osmId), selectorSingleUnitOsmIds.has(c.osmId))))}`,
-                  },
-                ],
-                response_format: { type: "json_object" },
-              },
-              // @end-prompt-region discover
+              buildCopyGenRequest({
+                candidates: cappedCandidates,
+                wikiMap,
+                selectorEnhancedWikiContent,
+                selectorSingleUnitOsmIds,
+                locationHint,
+              }),
               { signal: copyAbort.signal },
             );
             clearTimeout(copyTimer);
@@ -4447,14 +4332,7 @@ Respond in JSON: {"results":[{"id":"...","summary":"One sentence.","facts":["...
             copyResponseLength = copyContent?.length;
             copyFinishReason = copyResponse.choices[0]?.finish_reason;
             copyCompletionTokens = copyResponse.usage?.completion_tokens;
-            if (copyContent) {
-              const copyData = JSON.parse(copyContent) as {
-                results?: unknown[];
-              };
-              if (Array.isArray(copyData?.results)) {
-                copyResults = copyData.results as CopyResult[];
-              }
-            }
+            copyResults = parseCopyGenResponseContent(copyContent);
             // Diagnostic-only: reaching this line means the try block did not
             // throw. copyOutcome may still be overwritten to "integrity_rejected"
             // below if the bijection check fails.

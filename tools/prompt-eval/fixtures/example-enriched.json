@@ -1,0 +1,29 @@
+{
+  "name": "example-enriched",
+  "locationHint": "Hell's Kitchen, Manhattan",
+  "candidates": [
+    {
+      "osmId": "way/265875648",
+      "name": "One Vanderbilt",
+      "type": "building",
+      "tags": {
+        "building:levels": "58",
+        "start_date": "2020",
+        "architect": "Kohn Pedersen Fox",
+        "wikidata": "Q65066641",
+        "wikipedia": "en:One Vanderbilt",
+        "addr:housenumber": "1",
+        "addr:street": "Vanderbilt Avenue"
+      }
+    }
+  ],
+  "wiki": {
+    "way/265875648": {
+      "title": "One Vanderbilt",
+      "extract": "One Vanderbilt is a 1,401-foot supertall skyscraper in Midtown Manhattan, New York City, completed in 2020. Designed by Kohn Pedersen Fox, it stands adjacent to Grand Central Terminal and was built as part of an upzoning deal that funded transit improvements to the subway station below.",
+      "lang": "en"
+    }
+  },
+  "selectorEnhancedWikiContent": {},
+  "selectorSingleUnitOsmIds": []
+}

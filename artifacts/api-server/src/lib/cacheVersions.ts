@@ -1,4 +1,4 @@
-// cache-versions:v21:
+// cache-versions:v22:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -201,6 +201,21 @@
  * span-text-based with no such exception). v82 and v83 are both retired.
  * This file's own self-tag bumped v19->v20->v21 in lockstep (prompt-manifest
  * bookkeeping only, not a cache-behavior change).
+ *
+ * v21-v22: Task M pure-module extraction — system-prompt assembly, per-
+ * candidate payload shaping (formatForCopy -> formatCandidateForCopyGen),
+ * request parameters, response parsing, and result-integrity validation were
+ * mechanically relocated out of the @prompt-region discover marked span in
+ * routes/explore/index.ts into a new pure module, lib/copyGenRequestBuilder.ts
+ * (no prompt wording, payload shape, request parameters, or parsing/
+ * validation logic changed; verified via fixture-based byte-equivalence
+ * parity tests against the original inline logic). The marked span's text
+ * itself changed (the relocated code is gone from the span, replaced by an
+ * import + function call), so the span-text-based hash-guard requires a
+ * bump despite no behavior change — same precedent as v83->v84 above.
+ * osm-anchor discover cache-key literal bumped v84->v85. v84 is retired.
+ * This file's own self-tag bumped v21->v22 in lockstep (prompt-manifest
+ * bookkeeping only, not a cache-behavior change).
  */
 
 /**
@@ -219,8 +234,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string | ReadonlyArray<string>]
 > = [
-  ["quick", ["v63", "v84"]], // discover — quick mode (legacy v63, osm-anchor v84)
-  ["full", ["v63", "v84"]], // discover — full mode (legacy v63, osm-anchor v84)
+  ["quick", ["v63", "v85"]], // discover — quick mode (legacy v63, osm-anchor v85)
+  ["full", ["v63", "v85"]], // discover — full mode (legacy v63, osm-anchor v85)
   ["suggest", "v12"], // location suggestions
   ["geocode", "v4"], // geocode
   ["revgeo", "v12"], // reverse geocode
