@@ -1,4 +1,4 @@
-// cache-versions:v23:
+// cache-versions:v24:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -231,6 +231,27 @@
  * v27 (short) is retired. deep-narration and the discover-time evidence
  * selector/copy-gen models are untouched. This file's own self-tag
  * bumped v22->v23 in lockstep (prompt-manifest bookkeeping only).
+ *
+ * v28-v29 (narration): `gpt-6-luna` proved incompatible with the writer's
+ * existing 256-token contract — it is a reasoning model whose hidden
+ * reasoning tokens count against max_completion_tokens, and against the
+ * real production system prompt it consistently spent all 256 tokens on
+ * reasoning and returned empty content (confirmed 3/3 live attempts, then
+ * reproduced 3/3 directly against OpenAI with the exact unabridged prompt
+ * — finish_reason "length", reasoning_tokens: 256, content ""). Both
+ * narration writer call sites now use `gpt-4.1-mini` instead — verified
+ * non-reasoning (reasoning_tokens: 0) and producing non-empty content
+ * comfortably within the existing 256-token budget against the exact real
+ * prompt (3/3). No prompt, token-limit, schema, or selection/acceptance-
+ * logic change. Shared narration cache-key literal bumped v28->v29 in
+ * lockstep across both narration routes; v28 never had any successfully
+ * cached entries (every call under it failed with empty content, so
+ * nothing was ever written to the cache under that version), but the
+ * version is still bumped because the marked prompt-region's content
+ * changed — this file's prompt-manifest convention requires a new version
+ * token for any such change, independent of whether the prior version was
+ * ever actually cached. This file's own self-tag bumped v23->v24 in
+ * lockstep (prompt-manifest bookkeeping only).
  */
 
 /**
@@ -259,7 +280,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v28"], // walk narration (short)
+  ["narration", "v29"], // walk narration (short)
   ["deep-narration", "v15"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];

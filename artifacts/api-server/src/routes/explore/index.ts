@@ -6447,7 +6447,21 @@ router.post("/explore/walk-narration", async (req, res) => {
   // beforehand. No prompt, token-limit, or logic change. Bumped in lockstep
   // with /explore/walk-narration-audio to evict stale narrations cached
   // under the old model so a consistent model generates all new narrations.
-  const narrationCacheKey = `narration:v28:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v29 (2026-10-26): `gpt-6-luna` proved incompatible with this writer's
+  // existing 256-token contract — it is a reasoning model whose hidden
+  // reasoning tokens count against max_completion_tokens, and against the
+  // full production system prompt it consistently spent all 256 tokens on
+  // reasoning and returned empty content (confirmed 3/3 with the real
+  // prompt). Replaced with `gpt-4.1-mini`, verified non-reasoning
+  // (reasoning_tokens: 0) and producing non-empty content comfortably
+  // within the existing 256-token budget against the real prompt (3/3). No
+  // prompt, token-limit, or logic change. Bumped in lockstep with
+  // /explore/walk-narration-audio; v28 never had any successfully cached
+  // entries (every call under it failed), but the cache-key version is
+  // still bumped per this repo's mechanical prompt-manifest convention —
+  // any change to a marked region's content requires a new version token,
+  // independent of whether the prior version was ever actually cached.
+  const narrationCacheKey = `narration:v29:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   // @end-prompt-region walk-narration
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
@@ -6623,7 +6637,7 @@ router.post("/explore/walk-narration", async (req, res) => {
 
   const narrationPromise = openai.chat.completions
     .create({
-      model: "gpt-6-luna",
+      model: "gpt-4.1-mini",
       max_completion_tokens: 256,
       messages: [
         {
@@ -7343,7 +7357,11 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   // OpenAI, writer model replaced with `gpt-6-luna` — bumped in lockstep
   // with /explore/walk-narration. See that route's comment and
   // cacheVersions.ts's changelog for full rationale.
-  const narrationCacheKey = `narration:v28:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v29 (2026-10-26): `gpt-6-luna` proved incompatible with the existing
+  // 256-token writer contract, replaced with `gpt-4.1-mini` — bumped in
+  // lockstep with /explore/walk-narration. See that route's comment and
+  // cacheVersions.ts's changelog for full rationale.
+  const narrationCacheKey = `narration:v29:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
   // @end-prompt-region walk-narration-audio
 
@@ -7512,7 +7530,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
       const audioNarrationPromise = openai.chat.completions
         .create(
           {
-            model: "gpt-6-luna",
+            model: "gpt-4.1-mini",
             max_completion_tokens: 256,
             messages: [
               {

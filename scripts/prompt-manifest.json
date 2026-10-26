@@ -5,8 +5,8 @@
     "artifacts/api-server/src/lib/cacheVersions.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "5ff44b84a6a959b1c11f943a453ecc5b14ba00699fc0fbff3b0f5a9fe99bb07b",
-      "versions": ["v23"],
+      "sectionHash": "2e8192a81ff4f6d22dbacaf0ba27c826a2ab0e8c95fac3903a4aa6016ace3639",
+      "versions": ["v24"],
       "registered": "2026-10-26"
     },
     "artifacts/api-server/src/lib/copyGenRequestBuilder.ts": {
@@ -117,15 +117,15 @@
     "artifacts/api-server/src/routes/explore/index.ts::walk-narration": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "8adca44bef2f17ef1b9a21a771cbc304e07bbdbe2182e7f4dcf12d5d12dc9f11",
-      "versions": ["v28"],
+      "sectionHash": "dbcaa8caea5fcdd8a9b0b81c75119e54112ef7f30bb8542610836a996375f6a3",
+      "versions": ["v29"],
       "registered": "2026-10-26"
     },
     "artifacts/api-server/src/routes/explore/index.ts::walk-narration-audio": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "5e7385bafcb3a9ce0865bb198bf44ad94ee1a37e77970764b4c9fb4c4bad9c28",
-      "versions": ["v28"],
+      "sectionHash": "2231132b02fba55ec8b487a49fbf0054ce6136fbd592b10a15931adbd2dc6f0f",
+      "versions": ["v29"],
       "registered": "2026-10-26"
     }
   }
