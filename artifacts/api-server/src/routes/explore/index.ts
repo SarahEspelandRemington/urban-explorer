@@ -6441,7 +6441,13 @@ router.post("/explore/walk-narration", async (req, res) => {
   // whose own name wasn't restated in cited units may now be accepted)
   // that must evict stale pre-fix narrations. Bumped in lockstep with
   // /explore/walk-narration-audio.
-  const narrationCacheKey = `narration:v27:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v28 (2026-10-26): production break/fix — OpenAI deprecated
+  // `gpt-4.1-nano` (HTTP 404 on every live call); the narration writer model
+  // is replaced with `gpt-6-luna`, verified request/response-shape compatible
+  // beforehand. No prompt, token-limit, or logic change. Bumped in lockstep
+  // with /explore/walk-narration-audio to evict stale narrations cached
+  // under the old model so a consistent model generates all new narrations.
+  const narrationCacheKey = `narration:v28:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   // @end-prompt-region walk-narration
   const cachedNarration = getLLMCache<{ narration: string }>(narrationCacheKey);
   if (cachedNarration) {
@@ -6617,7 +6623,7 @@ router.post("/explore/walk-narration", async (req, res) => {
 
   const narrationPromise = openai.chat.completions
     .create({
-      model: "gpt-4.1-nano",
+      model: "gpt-6-luna",
       max_completion_tokens: 256,
       messages: [
         {
@@ -7333,7 +7339,11 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
   // v27 (2026-10-08): angle validator subject-identity grounding exemption
   // — bumped in lockstep with /explore/walk-narration. See that route's
   // comment and cacheVersions.ts's changelog for full rationale.
-  const narrationCacheKey = `narration:v27:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
+  // v28 (2026-10-26): production break/fix — `gpt-4.1-nano` deprecated by
+  // OpenAI, writer model replaced with `gpt-6-luna` — bumped in lockstep
+  // with /explore/walk-narration. See that route's comment and
+  // cacheVersions.ts's changelog for full rationale.
+  const narrationCacheKey = `narration:v28:${placeName.toLowerCase()}|${(category || "").toLowerCase()}|${summary.slice(0, 80).toLowerCase()}|${factsKeyPart}`;
   const audioCacheKey = `${narrationCacheKey}|voice:${voice}`;
   // @end-prompt-region walk-narration-audio
 
@@ -7502,7 +7512,7 @@ router.post("/explore/walk-narration-audio", async (req, res) => {
       const audioNarrationPromise = openai.chat.completions
         .create(
           {
-            model: "gpt-4.1-nano",
+            model: "gpt-6-luna",
             max_completion_tokens: 256,
             messages: [
               {

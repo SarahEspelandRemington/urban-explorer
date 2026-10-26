@@ -1,4 +1,4 @@
-// cache-versions:v22:
+// cache-versions:v23:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -216,6 +216,21 @@
  * osm-anchor discover cache-key literal bumped v84->v85. v84 is retired.
  * This file's own self-tag bumped v21->v22 in lockstep (prompt-manifest
  * bookkeeping only, not a cache-behavior change).
+ *
+ * v27-v28 (narration): Production break/fix — OpenAI deprecated
+ * `gpt-4.1-nano` (every live writer call started returning HTTP 404
+ * model_not_found). Both narration writer call sites
+ * (/explore/walk-narration, /explore/walk-narration-audio) now use
+ * `gpt-6-luna` instead — verified request/response-shape compatible
+ * (plain chat.completions.create, same max_completion_tokens/messages
+ * shape, same choices[0].message.content response shape) before switching.
+ * No prompt, token-limit, schema, or selection/acceptance-logic change.
+ * Shared narration cache-key literal bumped v27->v28 in lockstep across
+ * both narration routes to evict stale narrations cached under the
+ * retired model, so a consistent model generates all new narrations;
+ * v27 (short) is retired. deep-narration and the discover-time evidence
+ * selector/copy-gen models are untouched. This file's own self-tag
+ * bumped v22->v23 in lockstep (prompt-manifest bookkeeping only).
  */
 
 /**
@@ -244,7 +259,7 @@ export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   ["investigate", "v8"], // address investigation
   ["detail", "v11"], // place detail
   ["timeline", "v2"], // place timeline
-  ["narration", "v27"], // walk narration (short)
+  ["narration", "v28"], // walk narration (short)
   ["deep-narration", "v15"], // deep walk narration
   ["places-route", "v28"], // places along route
 ];
