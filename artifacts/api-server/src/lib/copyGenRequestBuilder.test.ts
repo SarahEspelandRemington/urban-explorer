@@ -7,6 +7,7 @@ import {
   parseCopyGenResponseContent,
   sanitizeOSMText,
   WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+  WIKIPEDIA_GROUNDING_ENVELOPE_CHARS_LEGACY,
   COPY_GEN_MAX_COMPLETION_TOKENS,
   COPY_GEN_MODEL,
   type CopyGenCandidateInput,
@@ -65,6 +66,12 @@ function legacyFormatForCopy(
   wikiSummary?: WikipediaSummary | null,
   enhancedWikipediaContent?: string,
   isPrimaryUnit?: boolean,
+  // Sources the current constant rather than a frozen literal (2026-10-29):
+  // this "legacy" truncation behavior is still an evolving part of
+  // production, not a one-time extraction snapshot, so this reference must
+  // track WIKIPEDIA_GROUNDING_ENVELOPE_CHARS_LEGACY's current value by
+  // default — non-Walk-Mode discover requests never pass an explicit cap.
+  wikipediaFallbackCap: number = WIKIPEDIA_GROUNDING_ENVELOPE_CHARS_LEGACY,
 ): Record<string, unknown> {
   const obj: Record<string, unknown> = {
     id: p.osmId,
@@ -82,7 +89,7 @@ function legacyFormatForCopy(
     obj.wikipediaContent = enhancedWikipediaContent;
     if (isPrimaryUnit) obj.wikipediaUnitOnly = true;
   } else if (wikiSummary?.extract) {
-    obj.wikipediaContent = wikiSummary.extract.slice(0, 1_000);
+    obj.wikipediaContent = wikiSummary.extract.slice(0, wikipediaFallbackCap);
   }
   const curatedEntry = getApprovedCuratedEntryFn(p.osmId);
   if (curatedEntry) {
@@ -135,6 +142,7 @@ function legacyBuildRequest(params: {
   selectorEnhancedWikiContent: Map<string, string>;
   selectorSingleUnitOsmIds: Set<string>;
   locationHint: string;
+  wikipediaFallbackCap?: number;
 }) {
   const {
     candidates,
@@ -144,6 +152,7 @@ function legacyBuildRequest(params: {
     selectorEnhancedWikiContent,
     selectorSingleUnitOsmIds,
     locationHint,
+    wikipediaFallbackCap,
   } = params;
   return {
     model: "gpt-4.1-mini",
@@ -155,7 +164,19 @@ function legacyBuildRequest(params: {
       },
       {
         role: "user" as const,
-        content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(candidates.map((c) => legacyFormatForCopy(c, computeOsmTrustLevelFn, getApprovedCuratedEntryFn, wikiMap.get(c.osmId), selectorEnhancedWikiContent.get(c.osmId), selectorSingleUnitOsmIds.has(c.osmId))))}`,
+        content: `Write historical copy for these real nearby places from OpenStreetMap near ${locationHint}:\n${JSON.stringify(
+          candidates.map((c) =>
+            legacyFormatForCopy(
+              c,
+              computeOsmTrustLevelFn,
+              getApprovedCuratedEntryFn,
+              wikiMap.get(c.osmId),
+              selectorEnhancedWikiContent.get(c.osmId),
+              selectorSingleUnitOsmIds.has(c.osmId),
+              wikipediaFallbackCap,
+            ),
+          ),
+        )}`,
       },
     ],
     response_format: { type: "json_object" as const },
@@ -268,16 +289,31 @@ describe("formatCandidateForCopyGen — parity with pre-extraction formatForCopy
     expect(actual).toEqual(expected);
   });
 
-  it("truncates wikipediaContent at exactly WIKIPEDIA_GROUNDING_ENVELOPE_CHARS, matching legacy's literal 1,000", () => {
-    const longExtract = "x".repeat(2000);
+  it("truncates wikipediaContent at WIKIPEDIA_GROUNDING_ENVELOPE_CHARS_LEGACY (1,000) by default — non-Walk-Mode discover requests pass no explicit cap", () => {
+    const longExtract = "x".repeat(6000);
     const actual = formatCandidateForCopyGen(
       ENRICHED_CANDIDATE,
       wikiSummary(longExtract),
     );
     expect(actual.wikipediaContent).toHaveLength(
+      WIKIPEDIA_GROUNDING_ENVELOPE_CHARS_LEGACY,
+    );
+    expect(WIKIPEDIA_GROUNDING_ENVELOPE_CHARS_LEGACY).toBe(1_000);
+  });
+
+  it("truncates wikipediaContent at WIKIPEDIA_GROUNDING_ENVELOPE_CHARS (4,000) when Walk Mode passes the raised cap explicitly", () => {
+    const longExtract = "x".repeat(6000);
+    const actual = formatCandidateForCopyGen(
+      ENRICHED_CANDIDATE,
+      wikiSummary(longExtract),
+      undefined,
+      undefined,
       WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
     );
-    expect(WIKIPEDIA_GROUNDING_ENVELOPE_CHARS).toBe(1_000);
+    expect(actual.wikipediaContent).toHaveLength(
+      WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+    );
+    expect(WIKIPEDIA_GROUNDING_ENVELOPE_CHARS).toBe(4_000);
   });
 });
 
@@ -288,7 +324,10 @@ describe("buildCopyGenSystemPrompt — parity with pre-extraction inline system 
 });
 
 describe("buildCopyGenRequest — parity with pre-extraction inline request construction", () => {
-  function runParity(candidates: CopyGenCandidateInput[]) {
+  function runParity(
+    candidates: CopyGenCandidateInput[],
+    wikipediaFallbackCap?: number,
+  ) {
     const wikiMap = new Map<string, WikipediaSummary | null | undefined>([
       [
         ENRICHED_CANDIDATE.osmId,
@@ -305,6 +344,7 @@ describe("buildCopyGenRequest — parity with pre-extraction inline request cons
       selectorEnhancedWikiContent,
       selectorSingleUnitOsmIds,
       locationHint,
+      wikipediaFallbackCap,
     });
     const expected = legacyBuildRequest({
       candidates,
@@ -314,6 +354,7 @@ describe("buildCopyGenRequest — parity with pre-extraction inline request cons
       selectorEnhancedWikiContent,
       selectorSingleUnitOsmIds,
       locationHint,
+      wikipediaFallbackCap,
     });
     return { actual, expected };
   }
@@ -341,6 +382,44 @@ describe("buildCopyGenRequest — parity with pre-extraction inline request cons
       actual.messages[1].content.split(":\n")[1],
     ).map((c: { id: string }) => c.id);
     expect(actualIds).toEqual(MULTI_CANDIDATES.map((c) => c.osmId));
+  });
+
+  it("matches when wikipediaFallbackCap is passed explicitly (Walk Mode's raised envelope)", () => {
+    const longExtract = "y".repeat(6000);
+    const wikiMap = new Map<string, WikipediaSummary | null | undefined>([
+      [ENRICHED_CANDIDATE.osmId, wikiSummary(longExtract)],
+    ]);
+    const selectorEnhancedWikiContent = new Map<string, string>();
+    const selectorSingleUnitOsmIds = new Set<string>();
+    const locationHint = "Midtown Manhattan";
+
+    const actual = buildCopyGenRequest({
+      candidates: [ENRICHED_CANDIDATE],
+      wikiMap,
+      selectorEnhancedWikiContent,
+      selectorSingleUnitOsmIds,
+      locationHint,
+      wikipediaFallbackCap: WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+    });
+    const expected = legacyBuildRequest({
+      candidates: [ENRICHED_CANDIDATE],
+      computeOsmTrustLevelFn: computeOsmTrustLevel,
+      getApprovedCuratedEntryFn: getApprovedCuratedEntry,
+      wikiMap,
+      selectorEnhancedWikiContent,
+      selectorSingleUnitOsmIds,
+      locationHint,
+      wikipediaFallbackCap: WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+    });
+    expect(actual).toEqual(expected);
+    // Sanity: this actually exercises the raised 4,000-char cap, not the
+    // 1,000-char default.
+    const parsedCandidate = JSON.parse(
+      actual.messages[1].content.split(":\n")[1],
+    )[0];
+    expect((parsedCandidate.wikipediaContent as string).length).toBe(
+      WIKIPEDIA_GROUNDING_ENVELOPE_CHARS,
+    );
   });
 
   it("exposes the exact production model/token-limit/response-format parameters", () => {

@@ -250,11 +250,13 @@ export function splitIntoSentenceUnits(text: string): string[] {
  * Stage-1-selected Wikipedia paragraph (never the full, possibly
  * multi-paragraph Stage-1 concatenation) whenever that one paragraph
  * exceeds the discover-time grounding envelope
- * (WIKIPEDIA_GROUNDING_ENVELOPE_CHARS, currently 1,000 chars) -- a real,
- * reachable case for any paragraph between that envelope and Stage 1's own,
- * larger EVIDENCE_SELECTOR_OUTPUT_CAP (2,500 chars) packing budget. Never
- * crosses a paragraph boundary: paragraphText must already be the single
- * paragraph to window within, not multiple concatenated paragraphs.
+ * (WIKIPEDIA_GROUNDING_ENVELOPE_CHARS, raised 2026-10-29 from 1,000 to
+ * 4,000 chars) -- a real, reachable case for any paragraph between that
+ * envelope and Stage 1's own, larger discover-time
+ * DISCOVER_EVIDENCE_SELECTOR_OUTPUT_CAP (raised in lockstep, 2,500 to
+ * 8,000 chars) packing budget. Never crosses a paragraph boundary:
+ * paragraphText must already be the single paragraph to window within, not
+ * multiple concatenated paragraphs.
  *
  * Starts at the chosen unit, extends forward through subsequent units up
  * to the cap, then extends backward through preceding units with any

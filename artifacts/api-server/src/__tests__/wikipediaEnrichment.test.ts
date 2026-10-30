@@ -849,7 +849,7 @@ describe("Bergdoll-selector-fix single-paragraph grounding pipeline (locateSelec
   // Mirrors routes/explore/index.ts's selector-invocation loop: isolate the
   // one Stage-1 paragraph containing the chosen sentence, then apply the
   // shared grounding envelope to that paragraph alone.
-  const GROUNDING_ENVELOPE_CHARS = 1_000; // mirrors WIKIPEDIA_GROUNDING_ENVELOPE_CHARS
+  const GROUNDING_ENVELOPE_CHARS = 4_000; // mirrors WIKIPEDIA_GROUNDING_ENVELOPE_CHARS
 
   const earlierParagraph =
     "Earlier paragraph sentence one covers an unrelated prior topic in full. " +
@@ -894,17 +894,17 @@ describe("Bergdoll-selector-fix single-paragraph grounding pipeline (locateSelec
   it("windows only the chosen paragraph when it exceeds the envelope, never crossing into an adjacent paragraph, and never exceeds the envelope", () => {
     const chosenSentence =
       "Chosen paragraph anchor sentence carries the key fact for this test case.";
-    // Build a chosen paragraph whose total length exceeds the 1,000-char
+    // Build a chosen paragraph whose total length exceeds the 4,000-char
     // envelope, with the anchor sentence placed in the middle so both
     // forward and backward extension are exercised.
     const paddingSentences = Array.from(
-      { length: 20 },
+      { length: 80 },
       (_, i) => `Padding sentence number ${i} repeats filler text for length.`,
     );
     const chosenParagraph = [
-      ...paddingSentences.slice(0, 10),
+      ...paddingSentences.slice(0, 40),
       chosenSentence,
-      ...paddingSentences.slice(10),
+      ...paddingSentences.slice(40),
     ].join(" ");
     expect(chosenParagraph.length).toBeGreaterThan(GROUNDING_ENVELOPE_CHARS);
 

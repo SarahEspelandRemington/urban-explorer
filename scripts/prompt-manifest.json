@@ -5,16 +5,16 @@
     "artifacts/api-server/src/lib/cacheVersions.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "2e8192a81ff4f6d22dbacaf0ba27c826a2ab0e8c95fac3903a4aa6016ace3639",
-      "versions": ["v24"],
-      "registered": "2026-10-26"
+      "sectionHash": "3eb17b12c1e2a263bd89977147871b1e8dd8a4d074b073a8ae75ea4ef99b7771",
+      "versions": ["v26"],
+      "registered": "2026-10-30"
     },
     "artifacts/api-server/src/lib/copyGenRequestBuilder.ts": {
       "kind": "module",
       "extraction": "whole-file",
-      "sectionHash": "c44a9fcc58d0636327d87196c8554a72b467434105915cfab24a64aa6ae5a09a",
-      "versions": ["v1"],
-      "registered": "2026-10-22"
+      "sectionHash": "5c4960f8ef5d5e582c0464bc884366151a143a1ec2bf6b720d819e2906e24f7d",
+      "versions": ["v3"],
+      "registered": "2026-10-30"
     },
     "artifacts/api-server/src/routes/explore/index.ts::deep-narration": {
       "kind": "route",
@@ -26,9 +26,9 @@
     "artifacts/api-server/src/routes/explore/index.ts::discover": {
       "kind": "route",
       "extraction": "marked",
-      "sectionHash": "217f8c817042490af022c2cc267b2e899637543d85d1bad0246763e9c3a64167",
-      "versions": ["v63", "v85"],
-      "registered": "2026-10-21"
+      "sectionHash": "d21035e777c5ae825ad4b9e97ac7e58701f09f6de1a9eb8d87150280ee40477e",
+      "versions": ["v63", "v86"],
+      "registered": "2026-10-29"
     },
     "artifacts/api-server/src/routes/explore/index.ts::geocode": {
       "kind": "route",
@@ -61,9 +61,9 @@
     "artifacts/api-server/src/routes/explore/index.ts::module:wiki-evidence-selector": {
       "kind": "module",
       "extraction": "marked",
-      "sectionHash": "62cadbb5b9d9ac3d3430889202b34fd6fe27ac9ce64225de12f55119a6207cc2",
-      "versions": ["v1"],
-      "registered": "2026-09-03"
+      "sectionHash": "283dad6cdc16f9e6f5315a339e3758ab68b7d9abc1b6e859453235ef28953c75",
+      "versions": ["v2"],
+      "registered": "2026-10-29"
     },
     "artifacts/api-server/src/routes/explore/index.ts::module:wiki-photo": {
       "kind": "module",

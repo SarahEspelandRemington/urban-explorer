@@ -1,4 +1,4 @@
-// cache-versions:v24:
+// cache-versions:v26:
 /**
  * Single source of truth for all LLM and OSM cache version strings.
  *
@@ -252,6 +252,64 @@
  * token for any such change, independent of whether the prior version was
  * ever actually cached. This file's own self-tag bumped v23->v24 in
  * lockstep (prompt-manifest bookkeeping only).
+ *
+ * v85-v86 (discover): First post-A-vs-B-experiment evidence-access
+ * improvement. The Story-Centric vs. Fact-Centric experiment
+ * (tools/prompt-eval/experiments/story-vs-fact) showed A-style synthesis
+ * produces materially better discoveries with rich/full Wikipedia
+ * evidence, and all six recorded A-winning story cores traced to full-
+ * article content the production path could never have delivered, since it
+ * windowed even a selector-approved paragraph down to a 1,000-char
+ * fragment. Raised WIKIPEDIA_GROUNDING_ENVELOPE_CHARS 1,000->4,000, used by
+ * (1) the selector path's own single-paragraph grounding window, which was
+ * already confined to Walk Mode requests (inside the pre-existing
+ * `if (walkMode && wikiMap.size > 0)` block), and (2) the non-selector
+ * Wikipedia fallback truncation in copyGenRequestBuilder.ts for rank-4+
+ * enriched candidates. (2) was corrected during review (2026-10-29) to also
+ * be Walk-Mode-only: buildCopyGenRequest/formatCandidateForCopyGen are
+ * invoked unconditionally for every osm-anchor discover request, so an
+ * unqualified constant bump would have silently broadened the raised
+ * envelope to non-Walk-Mode discover traffic too. formatCandidateForCopyGen
+ * now takes an explicit wikipediaFallbackCap parameter defaulting to the
+ * original, unchanged WIKIPEDIA_GROUNDING_ENVELOPE_CHARS_LEGACY = 1,000;
+ * the route passes the raised WIKIPEDIA_GROUNDING_ENVELOPE_CHARS only when
+ * walkMode is true. Non-Walk-Mode discover requests get byte-identical
+ * fallback behavior to before this change. Also added a new, discover-only
+ * DISCOVER_EVIDENCE_SELECTOR_OUTPUT_CAP = 8,000 (selectEvidenceParagraphs
+ * now takes an optional outputCap parameter; narration call sites
+ * (runNarrationJitEvidence, attemptNarrationWikipediaBridge) pass none and
+ * keep using the original, unchanged EVIDENCE_SELECTOR_OUTPUT_CAP = 2,500 -
+ * narration-time evidence selection is byte-identical to before this
+ * change). EVIDENCE_SELECTOR_SYSTEM_PROMPT's own internal packing-budget
+ * figure is now parameterized by the caller's outputCap for the same
+ * reason (a selector told to target ~2,500 chars would keep self-limiting
+ * regardless of a larger hard cap) - no evidence-value criterion,
+ * selection-discipline rule, or output shape changed, only the numeric
+ * budget. Both values empirically calibrated against the five frozen
+ * validation subjects' real Wikipedia paragraphs (largest single paragraph
+ * measured 2,867 chars across all five), so 4,000 chars delivers the
+ * selector's chosen paragraph whole (zero windowing) for all five, while
+ * 8,000 chars comfortably admits more than one substantial paragraph
+ * without being an unbounded raw-extract passthrough. No selector call-
+ * count change, no ranking/trust/grounding-rule change, no new LLM calls --
+ * but Stage 1's packed-text OUTPUT (and therefore Stage 2's input) can grow
+ * materially: measured against the five real validation subjects' actual
+ * paragraph pools, an upper-bound "selector retains every candidate
+ * paragraph" packing run grows from ~9,900 combined chars under the old
+ * 2,500 cap to ~24,400 combined chars under the new 8,000 cap (roughly
+ * 2,500 -> 6,100 tokens at ~4 chars/token) -- a real, bounded, non-zero
+ * latency/cost increase concentrated in Stage 2's own call, not a new call.
+ * See lib/copyGenRequestBuilder.ts's own v2->v3 self-tag changelog comment
+ * and routes/explore/index.ts's wiki-evidence-selector v1->v2 self-tag for
+ * the implementation-level detail. osm-anchor discover cache-key literal
+ * bumped v85->v86 (real content-length change reaching copy generation for
+ * a fixed cache key - same precedent as v82->v83 and v83->v84 above); v85
+ * is retired. This file's own self-tag bumped v24->v25->v26 in lockstep
+ * (prompt-manifest bookkeeping only, not a cache-behavior change). v26
+ * (2026-10-29) is a documentation-only correction of the v85-v86 entry
+ * above to reflect the Walk-Mode-scope fix and measured cost/latency
+ * impact from the review pass described there — no runtime behavior
+ * changed by this self-tag bump itself.
  */
 
 /**
@@ -270,8 +328,8 @@
 export const LLM_CACHE_CURRENT_VERSIONS: ReadonlyArray<
   [prefix: string, currentVersion: string | ReadonlyArray<string>]
 > = [
-  ["quick", ["v63", "v85"]], // discover — quick mode (legacy v63, osm-anchor v85)
-  ["full", ["v63", "v85"]], // discover — full mode (legacy v63, osm-anchor v85)
+  ["quick", ["v63", "v86"]], // discover — quick mode (legacy v63, osm-anchor v86)
+  ["full", ["v63", "v86"]], // discover — full mode (legacy v63, osm-anchor v86)
   ["suggest", "v12"], // location suggestions
   ["geocode", "v4"], // geocode
   ["revgeo", "v12"], // reverse geocode
