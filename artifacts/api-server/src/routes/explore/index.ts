@@ -1770,13 +1770,6 @@ import {
 } from "../../lib/discoveryTier";
 import { deriveHistoricalForce } from "../../lib/historicalForceMap";
 import { computeOrientation } from "../../lib/orientation";
-import {
-  computeSemanticWorthinessShadow,
-  isSemanticWorthinessShadowEnabled,
-  parseFactClaimTypes,
-  type SemanticWorthinessShadowDiagnostic,
-} from "../../lib/semanticWorthinessShadow";
-
 // ---------------------------------------------------------------------------
 // LLM precision claim detection
 // ---------------------------------------------------------------------------
@@ -4614,50 +4607,6 @@ router.post("/explore/discover", async (req, res) => {
         // 7. Standard post-processing filters (no Nominatim — coords are from OSM)
         classifyDiscovery(mergedPlaces);
         applyDiscoveryTier(mergedPlaces);
-        // SHADOW (diagnostic-only, see semanticWorthinessShadow.ts): never
-        // merged onto any place object, never included in the response or
-        // cached payload, never consulted by eligibility/ranking/narration/
-        // hasStoryBearingClaim/explicitDiscoveryTier/curated admission/
-        // reserved-slot logic. Best-effort — any failure here is logged and
-        // swallowed, never allowed to affect the request. Re-checks the kill
-        // switch independently of the prompt-building scope above (that
-        // const is block-scoped to the copy-gen try block).
-        if (isSemanticWorthinessShadowEnabled()) {
-          try {
-            const shadowDiagnostics: SemanticWorthinessShadowDiagnostic[] = [];
-            for (const p of mergedPlaces) {
-              const copy = copyMap.get(p.osmId);
-              if (!copy) continue;
-              const parsedClaimTypes = parseFactClaimTypes(
-                (copy as CopyResult & { factClaimTypes?: unknown })
-                  .factClaimTypes,
-                Array.isArray(copy.facts) ? copy.facts.length : 0,
-              );
-              const diagnostic = computeSemanticWorthinessShadow(
-                p.osmId ?? p.streetlitId ?? "",
-                p.discoveryTier,
-                parsedClaimTypes,
-              );
-              if (diagnostic) shadowDiagnostics.push(diagnostic);
-            }
-            if (shadowDiagnostics.length > 0) {
-              req.log.info(
-                {
-                  reqId: req.id,
-                  branch: "osm-anchor",
-                  candidateCount: shadowDiagnostics.length,
-                  shadowDiagnostics,
-                },
-                "[semantic-worthiness-shadow] diagnostic",
-              );
-            }
-          } catch (err) {
-            req.log.warn(
-              { reqId: req.id, err },
-              "[semantic-worthiness-shadow] diagnostic computation failed — ignored",
-            );
-          }
-        }
         // Walk Mode thin-lodging/commercial guardrail (Aug. 31 field test;
         // widened 2026-09-24 for lifecycle-prefixed former use — Production
         // Guardrail B; exemptions revised the same day to match the settled
