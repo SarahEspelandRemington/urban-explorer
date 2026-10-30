@@ -1,22 +1,5 @@
 [
   {
-    "sha": "75d874abcb02df38baaf753f370a10409f653ac7",
-    "shortSha": "75d874a",
-    "ts": "2026-10-03T21:58:39Z",
-    "lint": 0,
-    "tc": 0,
-    "format": 0,
-    "install_s": 18,
-    "install_spike": false,
-    "lint_s": 6,
-    "tc_s": 16,
-    "format_s": 18,
-    "build_job_s": 20,
-    "build_s": 60,
-    "build_spike": false,
-    "topFiles": []
-  },
-  {
     "sha": "a60b4d9c71f2a57622eb1461872d549afd6c96a0",
     "shortSha": "a60b4d9",
     "ts": "2026-10-04T01:26:03Z",
@@ -338,5 +321,37 @@
     "build_s": 64,
     "build_spike": false,
     "topFiles": []
+  },
+  {
+    "sha": "b907d80a04e2596446853ecb20f9de13e1d79380",
+    "shortSha": "b907d80",
+    "ts": "2026-10-30T00:47:34Z",
+    "lint": 0,
+    "tc": 0,
+    "format": 0,
+    "install_s": 17,
+    "install_spike": false,
+    "lint_s": 6,
+    "tc_s": 15,
+    "format_s": 22,
+    "build_job_s": 0,
+    "build_s": 43,
+    "build_spike": false,
+    "topFiles": [
+      {
+        "file": "artifacts/api-server typecheck: src/routes/explore/index.ts",
+        "lint_warnings": 0,
+        "tc_warnings": 0,
+        "warnings": 0,
+        "errors": 1,
+        "messages": [
+          "Cannot find module '../../lib/semanticWorthinessShadow' or its corresponding type declarations."
+        ],
+        "top_lint_rules": [],
+        "top_tc_rules": [
+          "TS2307"
+        ]
+      }
+    ]
   }
 ]
