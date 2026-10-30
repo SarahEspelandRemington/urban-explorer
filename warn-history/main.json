@@ -1,30 +1,5 @@
 [
   {
-    "sha": "5accbde075329307d9f24cbb354977dee6d19502",
-    "shortSha": "5accbde",
-    "ts": "2026-10-05T23:30:16Z",
-    "lint": 0,
-    "tc": 0,
-    "format": 0,
-    "install_s": 23,
-    "install_spike": false,
-    "lint_s": 10,
-    "lint_min_s": 6,
-    "lint_max_s": 11,
-    "tc_s": 16,
-    "tc_min_s": 10,
-    "tc_max_s": 17,
-    "format_s": 13,
-    "format_min_s": 6,
-    "format_max_s": 20,
-    "build_job_s": 20,
-    "build_job_min_s": 12,
-    "build_job_max_s": 20,
-    "build_s": 59,
-    "build_spike": false,
-    "topFiles": []
-  },
-  {
     "sha": "c85918f02370d32a085bcfb86b8da509ecac19bd",
     "shortSha": "c85918f",
     "ts": "2026-10-06T22:20:42Z",
@@ -498,5 +473,45 @@
     "build_s": 64,
     "build_spike": false,
     "topFiles": []
+  },
+  {
+    "sha": "b907d80a04e2596446853ecb20f9de13e1d79380",
+    "shortSha": "b907d80",
+    "ts": "2026-10-30T00:47:30Z",
+    "lint": 0,
+    "tc": 0,
+    "format": 0,
+    "install_s": 17,
+    "install_spike": false,
+    "lint_s": 6,
+    "lint_min_s": 6,
+    "lint_max_s": 11,
+    "tc_s": 15,
+    "tc_min_s": 10,
+    "tc_max_s": 17,
+    "format_s": 22,
+    "format_min_s": 15,
+    "format_max_s": 22,
+    "build_job_s": 0,
+    "build_job_min_s": 12,
+    "build_job_max_s": 21,
+    "build_s": 43,
+    "build_spike": false,
+    "topFiles": [
+      {
+        "file": "artifacts/api-server typecheck: src/routes/explore/index.ts",
+        "lint_warnings": 0,
+        "tc_warnings": 0,
+        "warnings": 0,
+        "errors": 1,
+        "messages": [
+          "Cannot find module '../../lib/semanticWorthinessShadow' or its corresponding type declarations."
+        ],
+        "top_lint_rules": [],
+        "top_tc_rules": [
+          "TS2307"
+        ]
+      }
+    ]
   }
 ]
