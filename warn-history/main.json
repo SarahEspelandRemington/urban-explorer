@@ -1,30 +1,5 @@
 [
   {
-    "sha": "c85918f02370d32a085bcfb86b8da509ecac19bd",
-    "shortSha": "c85918f",
-    "ts": "2026-10-06T22:20:42Z",
-    "lint": 0,
-    "tc": 0,
-    "format": 0,
-    "install_s": 14,
-    "install_spike": false,
-    "lint_s": 11,
-    "lint_min_s": 6,
-    "lint_max_s": 11,
-    "tc_s": 16,
-    "tc_min_s": 10,
-    "tc_max_s": 17,
-    "format_s": 19,
-    "format_min_s": 6,
-    "format_max_s": 20,
-    "build_job_s": 16,
-    "build_job_min_s": 12,
-    "build_job_max_s": 20,
-    "build_s": 62,
-    "build_spike": false,
-    "topFiles": []
-  },
-  {
     "sha": "686c24b5b5c8304a53c8ffe4d4798059c6193bfe",
     "shortSha": "686c24b",
     "ts": "2026-10-07T03:46:28Z",
@@ -513,5 +488,30 @@
         ]
       }
     ]
+  },
+  {
+    "sha": "f6b74fd05284e621ce1532fa8aaf88683d538fcb",
+    "shortSha": "f6b74fd",
+    "ts": "2026-10-30T01:20:13Z",
+    "lint": 0,
+    "tc": 0,
+    "format": 0,
+    "install_s": 20,
+    "install_spike": false,
+    "lint_s": 6,
+    "lint_min_s": 6,
+    "lint_max_s": 11,
+    "tc_s": 17,
+    "tc_min_s": 10,
+    "tc_max_s": 17,
+    "format_s": 23,
+    "format_min_s": 15,
+    "format_max_s": 23,
+    "build_job_s": 12,
+    "build_job_min_s": 12,
+    "build_job_max_s": 21,
+    "build_s": 58,
+    "build_spike": false,
+    "topFiles": []
   }
 ]
