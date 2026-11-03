@@ -1139,3 +1139,67 @@ describe("useNarration — trackNarrationPlayed fires once per actually-started 
     expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("text");
   });
 });
+
+describe("useNarration — prePlayCheck final pre-play abort", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  test("audio path: a false prePlayCheck skips player.play() and advances to the next item", () => {
+    const n = useFreshNarrationHook();
+    const prePlayCheck = jest.fn(() => false);
+
+    n.enqueueAudio(
+      "p1",
+      "file:///cache/p1.mp3",
+      "Place One",
+      undefined,
+      prePlayCheck,
+    );
+    n.enqueueAudio("p2", "file:///cache/p2.mp3", "Place Two");
+
+    expect(prePlayCheck).toHaveBeenCalledTimes(1);
+    // player.play() was never reached for item 1 — only item 2 created a
+    // player and played.
+    expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(1);
+    expect(mockCreatedPlayers[0].play).toHaveBeenCalledTimes(1);
+    // No narration.played for the aborted item — it never actually played.
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("audio");
+  });
+
+  test("audio path: a true prePlayCheck plays normally", () => {
+    const n = useFreshNarrationHook();
+    const prePlayCheck = jest.fn(() => true);
+
+    n.enqueueAudio(
+      "p1",
+      "file:///cache/p1.mp3",
+      "Place One",
+      undefined,
+      prePlayCheck,
+    );
+
+    expect(prePlayCheck).toHaveBeenCalledTimes(1);
+    expect(mockCreatedPlayers[0].play).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("audio");
+  });
+
+  test("text path: a false prePlayCheck skips Speech.speak and advances to the next item", () => {
+    const n = useFreshNarrationHook();
+    const prePlayCheck = jest.fn(() => false);
+
+    n.enqueue("p1", "first text", "Place One", prePlayCheck);
+    n.enqueue("p2", "second text", "Place Two");
+
+    expect(prePlayCheck).toHaveBeenCalledTimes(1);
+    // Only item 2 actually spoke.
+    expect(mockSpeechSpeak).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
+    expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("text");
+  });
+});

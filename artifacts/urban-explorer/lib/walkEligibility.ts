@@ -219,6 +219,39 @@ export function angularDiff(a: number, b: number): number {
 }
 
 /**
+ * Multiplier applied to the PICK-TIME maxQueueDistance when re-checking
+ * whether an already-selected place is still spatially relevant (stale-pick
+ * recheck, final pre-play check). Previously 2x the CURRENT density's
+ * maxQueueDistance — tightened to 1x the density that was active when the
+ * place was picked, per the Walk delivery diagnostic (see WALK_DIAGNOSTIC.md).
+ */
+export const STALE_DISTANCE_MULTIPLIER = 1;
+
+/**
+ * Continued-relevance check for a place AFTER pickNext already selected it
+ * (used by the stale-pick re-checks in fetchNarration and the final
+ * pre-play check). Distance-only, deliberately — heading is for candidate
+ * *choice* (pickNext/evaluateEligibility), not for whether an already-picked
+ * place is still worth playing. `pickTimeMaxQueueDistance` must be the
+ * maxQueueDistance of the density that was active when the place was
+ * originally picked, not today's density (which may have auto-switched
+ * since).
+ */
+export function checkContinuedRelevance(
+  userLat: number,
+  userLon: number,
+  placeLat: number,
+  placeLon: number,
+  pickTimeMaxQueueDistance: number,
+): { ok: boolean; distance: number } {
+  const distance = haversineMeters(userLat, userLon, placeLat, placeLon);
+  return {
+    ok: distance <= pickTimeMaxQueueDistance * STALE_DISTANCE_MULTIPLIER,
+    distance,
+  };
+}
+
+/**
  * A19: discovery-quality bonus for Walk Mode selection scoring (pickNext).
  * Positive-only distance-equivalent bonus (in metres, subtracted from the
  * selection score — lower score wins) so a stronger discovery can beat a

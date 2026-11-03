@@ -1,8 +1,10 @@
 import {
+  checkContinuedRelevance,
   discoveryTierBonusMeters,
   evaluateEligibility,
   haversineMeters,
   looksGenericCommercial,
+  STALE_DISTANCE_MULTIPLIER,
   updatePassedTracker,
   type EligibilityCandidate,
   type EligibilityState,
@@ -558,5 +560,82 @@ describe("looksGenericCommercial", () => {
       category: "convenience",
     });
     expect(looksGenericCommercial(genericCategoryOnly)).toBe(true);
+  });
+});
+
+describe("checkContinuedRelevance", () => {
+  // Points due north of NYC at a given metre offset, matching makePlace's
+  // dy-only convention above.
+  function northOf(meters: number) {
+    return {
+      latitude: NYC.latitude + meters / 111_111,
+      longitude: NYC.longitude,
+    };
+  }
+
+  it("uses a 1x multiplier, not the old 2x allowance", () => {
+    expect(STALE_DISTANCE_MULTIPLIER).toBe(1);
+  });
+
+  it("passes when the place is within 1x the pick-time maxQueueDistance", () => {
+    const pickTimeMaxQueueDistance = 90;
+    const user = northOf(80); // place is ~80m from user, place itself at 0
+    const result = checkContinuedRelevance(
+      user.latitude,
+      user.longitude,
+      NYC.latitude,
+      NYC.longitude,
+      pickTimeMaxQueueDistance,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.distance).toBeCloseTo(80, 0);
+  });
+
+  it("aborts beyond 1x the pick-time maxQueueDistance, even though 2x would have passed", () => {
+    const pickTimeMaxQueueDistance = 90;
+    const user = northOf(150); // > 1x (90) but < the old 2x (180) allowance
+    const result = checkContinuedRelevance(
+      user.latitude,
+      user.longitude,
+      NYC.latitude,
+      NYC.longitude,
+      pickTimeMaxQueueDistance,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.distance).toBeCloseTo(150, 0);
+  });
+
+  it("is distance-only — passes right at the 1x boundary (distance == threshold)", () => {
+    const user = northOf(90);
+    const exactDistance = haversineMeters(
+      user.latitude,
+      user.longitude,
+      NYC.latitude,
+      NYC.longitude,
+    );
+    const result = checkContinuedRelevance(
+      user.latitude,
+      user.longitude,
+      NYC.latitude,
+      NYC.longitude,
+      exactDistance,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("gates against the pick-time distance even when it differs from today's density", () => {
+    // Simulates a density switch between pick time and this recheck: the
+    // caller is responsible for passing the ORIGINAL pick-time
+    // maxQueueDistance, not whatever density is active now.
+    const pickTimeMaxQueueDistance = 400; // e.g. sparse density at pick time
+    const user = northOf(300); // would fail against a 90m dense-mode gate
+    const result = checkContinuedRelevance(
+      user.latitude,
+      user.longitude,
+      NYC.latitude,
+      NYC.longitude,
+      pickTimeMaxQueueDistance,
+    );
+    expect(result.ok).toBe(true);
   });
 });

@@ -35,6 +35,17 @@ interface NarrationItem {
   text?: string; // text path: web SpeechSynthesisUtterance, or native Speech.speak fallback
   audioUri?: string; // audio path: native expo-audio, plays a local file://...mp3
   cleanup?: () => void; // optional disposer (e.g. delete the temp MP3 when done)
+  /**
+   * Optional final continued-relevance predicate, run immediately before
+   * this item actually starts playing (after it's shifted off the queue,
+   * before speakingRef is set / play() is called). Returning false aborts
+   * this item WITHOUT calling `cleanup` here — the predicate itself (built
+   * in WalkModeContext, which has geo/place context this hook does not) is
+   * responsible for any cleanup/caching/un-marking/diagnostics on abort.
+   * Keeps this hook free of geo knowledge, per the Walk delivery diagnostic
+   * scope (see WALK_DIAGNOSTIC.md).
+   */
+  prePlayCheck?: () => boolean;
 }
 
 let webSpeechUnlocked = false;
@@ -229,6 +240,16 @@ export function useNarration() {
     if (interruptedRef.current) return;
 
     const item = queueRef.current.shift()!;
+
+    // Final continued-relevance check, immediately before committing to
+    // playback. Deliberately does NOT run item.cleanup on abort — the
+    // predicate (built in WalkModeContext) owns cleanup/caching/diagnostics
+    // for this case, since this hook has no geo/place context of its own.
+    if (item.prePlayCheck && !item.prePlayCheck()) {
+      processQueue();
+      return;
+    }
+
     speakingRef.current = true;
     setIsSpeaking(true);
     setCurrentPlace(item.placeName);
@@ -564,8 +585,13 @@ export function useNarration() {
   // Public API: play a text narration (used by web, and as a fallback on
   // native when the audio endpoint failed).
   const enqueue = useCallback(
-    (id: string, text: string, placeName: string) => {
-      queueRef.current.push({ id, text, placeName });
+    (
+      id: string,
+      text: string,
+      placeName: string,
+      prePlayCheck?: () => boolean,
+    ) => {
+      queueRef.current.push({ id, text, placeName, prePlayCheck });
       processQueue();
     },
     [processQueue],
@@ -575,8 +601,14 @@ export function useNarration() {
   // voice TTS path on native). The optional cleanup runs once playback
   // finishes or is aborted, so callers can delete the temp file safely.
   const enqueueAudio = useCallback(
-    (id: string, audioUri: string, placeName: string, cleanup?: () => void) => {
-      queueRef.current.push({ id, audioUri, placeName, cleanup });
+    (
+      id: string,
+      audioUri: string,
+      placeName: string,
+      cleanup?: () => void,
+      prePlayCheck?: () => boolean,
+    ) => {
+      queueRef.current.push({ id, audioUri, placeName, cleanup, prePlayCheck });
       processQueue();
     },
     [processQueue],

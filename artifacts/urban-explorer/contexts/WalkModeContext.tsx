@@ -45,6 +45,7 @@ import {
   createStalePrefetchPool,
   disposeStalePrefetchPool,
   emptyPrefetchCounters,
+  parkStalePrefetchedEntry,
   type PrefetchCounters,
   type PrefetchEntry,
   type PrefetchEvent,
@@ -52,6 +53,7 @@ import {
   type StalePrefetchPool,
 } from "@/lib/narrationPrefetchPipeline";
 import {
+  checkContinuedRelevance,
   discoveryTierBonusMeters,
   evaluateEligibility,
   looksGenericCommercial,
@@ -464,6 +466,17 @@ const DENSITY_CONFIG: Record<
     offAxisPenaltyMeters: 500,
   },
 };
+
+// Snapshot of the density config active at the moment pickNext selected a
+// place, threaded through to every later continued-relevance check
+// (fetchNarration's stale-pick re-checks, the final pre-play check) so they
+// apply the 1x multiplier against the PICK-TIME maxQueueDistance rather
+// than whatever density is active now (density can auto-switch mid-fetch).
+// See checkContinuedRelevance in lib/walkEligibility.ts.
+interface PickContext {
+  maxQueueDistance: number;
+  pickedAt: number;
+}
 
 // Auto-density tuning. We watch the user's rolling pace over a short window
 // and flip density when their behaviour clearly shifts between "browsing" and
@@ -1462,47 +1475,94 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // natural-voice path on native) or plain text (web, or native fallback when
   // the audio endpoint failed).
   const enqueueNarration = useCallback(
-    (place: WalkPlace, payload: NarrationPayload) => {
-      currentNarrationPlaceRef.current = place;
-      setCurrentNarrationPlace(place);
-      // Anchor the "(passed)" badge state to this narration. Use the place's
-      // own coordinates (not the user's) — that is what "passed" is measured
-      // against. Bumping narrationStartTick triggers a re-render so the
-      // badge can recompute against the latest currentLocation.
-      narrationStartLocationRef.current = {
-        latitude: place.latitude,
-        longitude: place.longitude,
+    (place: WalkPlace, payload: NarrationPayload, pickContext: PickContext) => {
+      // Final distance-only re-check, run immediately before playback
+      // actually begins (inside the narration queue, right before
+      // player.play()). Heading is deliberately NOT re-checked here — it's
+      // a candidate-choice signal, not a continued-relevance one. On abort,
+      // the place is freed (not permanently consumed) and the payload is
+      // parked for a possible later retry rather than cleaned up.
+      const prePlayCheck = (): boolean => {
+        const currentLoc = currentLocationRef.current;
+        if (!currentLoc) return true; // no GPS — don't second-guess
+        const { ok: stillRelevant, distance: dist } = checkContinuedRelevance(
+          currentLoc.latitude,
+          currentLoc.longitude,
+          place.latitude,
+          place.longitude,
+          pickContext.maxQueueDistance,
+        );
+        if (!stillRelevant) {
+          if (__DEV__) {
+            console.log(
+              `[prePlay] ABORT (stale pick): "${place.name}" is now ${Math.round(dist)}m away, beyond 1×pickTimeMaxQueueDistance=${pickContext.maxQueueDistance}m`,
+            );
+          }
+          narratedIdsRef.current.delete(place.id);
+          setNarratedIds(new Map(narratedIdsRef.current));
+          try {
+            parkStalePrefetchedEntry(getStalePrefetchPool(), {
+              placeId: place.id,
+              payload,
+              place,
+            });
+          } catch {}
+          recordRejection({
+            ts: Date.now(),
+            placeId: place.id,
+            placeName: place.name,
+            reason: "stale",
+            distance: dist,
+            bearingDiff: null,
+            discoverReqId: place.discoverReqId,
+          });
+          return false;
+        }
+        // Still relevant — this narration is genuinely about to play.
+        // Deferring this bookkeeping (vs. doing it unconditionally at
+        // enqueue time) ensures the "stories so far" stat and the
+        // "(passed)" badge anchor never count/activate a narration that
+        // was aborted by this same check before playback began.
+        currentNarrationPlaceRef.current = place;
+        setCurrentNarrationPlace(place);
+        narrationStartLocationRef.current = {
+          latitude: place.latitude,
+          longitude: place.longitude,
+        };
+        narrationStartTimeRef.current = Date.now();
+        setNarrationStartTick((t) => t + 1);
+        if (Platform.OS !== "web") {
+          // Wrapped in try/catch: Haptics can throw on devices without a
+          // haptic engine or when the audio session is temporarily locked
+          // by an incoming call. An unhandled rejection here would crash
+          // Expo Go.
+          try {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch {}
+        }
+        setStats((prev) => ({
+          ...prev,
+          placesNarrated: prev.placesNarrated + 1,
+        }));
+        return true;
       };
-      narrationStartTimeRef.current = Date.now();
-      setNarrationStartTick((t) => t + 1);
       if (payload.kind === "audio") {
         narration.enqueueAudio(
           place.id,
           payload.audioUri,
           place.name,
           payload.cleanup,
+          prePlayCheck,
         );
       } else {
-        narration.enqueue(place.id, payload.text, place.name);
+        narration.enqueue(place.id, payload.text, place.name, prePlayCheck);
       }
       addWalkBreadcrumb("narration fetched", {
         placeId: place.id,
         kind: payload.kind,
       });
-      if (Platform.OS !== "web") {
-        // Wrapped in try/catch: Haptics can throw on devices without a
-        // haptic engine or when the audio session is temporarily locked by
-        // an incoming call. An unhandled rejection here would crash Expo Go.
-        try {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        } catch {}
-      }
-      setStats((prev) => ({
-        ...prev,
-        placesNarrated: prev.placesNarrated + 1,
-      }));
     },
-    [narration],
+    [narration, getStalePrefetchPool],
   );
 
   // Single source of truth for "go fetch a narration for this place". On web
@@ -1586,7 +1646,14 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   // Reads currentLocationRef (NOT closure state) so the freshest GPS tick is
   // honored even when called after long awaits.
   const isStillCloseEnough = useCallback(
-    (place: WalkPlace, contextLabel: string): boolean => {
+    (
+      place: WalkPlace,
+      contextLabel:
+        | "fetchNarration:pre"
+        | "fetchNarration:cacheHit"
+        | "fetchNarration:postFetch",
+      pickContext: PickContext,
+    ): boolean => {
       // Re-read the freshest version of this place from the in-memory pool.
       // pickNext captured this object up to 15 s ago; a concurrent discover
       // response may have updated discoveryClass or autoNarrationBlocked since.
@@ -1640,17 +1707,17 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       }
       const currentLoc = currentLocationRef.current;
       if (!currentLoc) return true; // no GPS — don't second-guess pickNext
-      const cfg = DENSITY_CONFIG[densityRef.current];
-      const dist = haversineMeters(
+      const { ok: stillRelevant, distance: dist } = checkContinuedRelevance(
         currentLoc.latitude,
         currentLoc.longitude,
         place.latitude,
         place.longitude,
+        pickContext.maxQueueDistance,
       );
-      if (dist > cfg.maxQueueDistance * 2) {
+      if (!stillRelevant) {
         if (__DEV__) {
           console.log(
-            `[${contextLabel}] ABORT (stale pick): "${place.name}" is now ${Math.round(dist)}m away, beyond 2×maxQueueDistance=${cfg.maxQueueDistance * 2}m`,
+            `[${contextLabel}] ABORT (stale pick): "${place.name}" is now ${Math.round(dist)}m away, beyond 1×pickTimeMaxQueueDistance=${pickContext.maxQueueDistance}m`,
           );
         }
         narratedIdsRef.current.delete(place.id);
@@ -1710,7 +1777,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const fetchNarration = useCallback(
-    async (place: WalkPlace) => {
+    async (place: WalkPlace, pickContext: PickContext) => {
       // Captured before the 10–15 s live-fetch await below so the failure
       // branch can detect a stopWalk()+startWalk() that happened while this
       // fetch was in flight (see walkGenerationRef).
@@ -1718,7 +1785,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       // Pre-fetch sanity check: even before kicking off a 10–15 s request,
       // bail if the place is already too far. The authoritative re-check
       // happens immediately before each enqueueNarration call below.
-      if (!isStillCloseEnough(place, "fetchNarration:pre")) return;
+      if (!isStillCloseEnough(place, "fetchNarration:pre", pickContext)) return;
 
       // Re-resolve the candidate from the live pool using the same identity
       // isStillCloseEnough uses, so the narration request below reflects the
@@ -1784,15 +1851,24 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         }
         // Authoritative re-check: even cache hits can be stale if the user
         // moved a long way between pickNext and this point.
-        if (!isStillCloseEnough(place, "fetchNarration:cacheHit")) {
-          if (lookup.entry.payload.kind === "audio") {
-            try {
-              lookup.entry.payload.cleanup?.();
-            } catch {}
-          }
+        if (
+          !isStillCloseEnough(place, "fetchNarration:cacheHit", pickContext)
+        ) {
+          // Too far now, but the place remains eligible again later in the
+          // walk (isStillCloseEnough already un-marked narratedIds above) —
+          // park the already-fetched payload instead of destroying it, so a
+          // later re-pick within the TTL replays instantly via the existing
+          // stale-pool revival path (see consumePrefetchedNarration).
+          try {
+            parkStalePrefetchedEntry(getStalePrefetchPool(), {
+              placeId: place.id,
+              payload: lookup.entry.payload,
+              place,
+            });
+          } catch {}
           return;
         }
-        enqueueNarration(place, lookup.entry.payload);
+        enqueueNarration(place, lookup.entry.payload, pickContext);
         // Keep the pipeline going: pre-fetch the next candidate.
         prefetchNextRef.current?.();
         return;
@@ -1892,17 +1968,19 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       setIsReplay(false);
       // Authoritative re-check immediately before commit. The 10–15 s LLM/TTS
       // request just resolved; the user may now be a block past this place.
-      if (!isStillCloseEnough(place, "fetchNarration:postFetch")) {
-        if (payload.kind === "audio") {
-          try {
-            payload.cleanup?.();
-          } catch {}
-        }
+      if (!isStillCloseEnough(place, "fetchNarration:postFetch", pickContext)) {
+        try {
+          parkStalePrefetchedEntry(getStalePrefetchPool(), {
+            placeId: place.id,
+            payload,
+            place,
+          });
+        } catch {}
         return;
       }
       // Remember which place is now driving the lock-screen widget so the
       // artwork we send matches the story being spoken.
-      enqueueNarration(place, payload);
+      enqueueNarration(place, payload, pickContext);
       // Start pre-fetching the next candidate so it's ready when this
       // narration finishes and the movement gate clears.
       prefetchNextRef.current?.();
@@ -1941,7 +2019,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         };
       }
       lastNarrationEndRef.current = Date.now();
-      fetchNarration(place);
+      // Manual play has no real pickNext event to anchor a PickContext to —
+      // synthesize one from today's density and "now" so the stale-distance
+      // rechecks below have a well-defined 1×maxQueueDistance threshold.
+      fetchNarration(place, {
+        maxQueueDistance: DENSITY_CONFIG[densityRef.current].maxQueueDistance,
+        pickedAt: Date.now(),
+      });
     },
     [fetchNarration, narration, currentLocation],
   );
@@ -2753,7 +2837,10 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       setNarratedIds(new Map(narratedIdsRef.current));
       addWalkBreadcrumb("place visited", { placeId: next.id });
       narrationFetchInFlightRef.current = true;
-      fetchNarration(next).finally(() => {
+      fetchNarration(next, {
+        maxQueueDistance: cfg.maxQueueDistance,
+        pickedAt: Date.now(),
+      }).finally(() => {
         narrationFetchInFlightRef.current = false;
       });
     },
