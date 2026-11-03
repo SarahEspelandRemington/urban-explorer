@@ -1,4 +1,5 @@
 import type { AudioPlayer, AudioStatus } from "expo-audio";
+import { File, Paths } from "expo-file-system";
 import * as Speech from "expo-speech";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
@@ -86,6 +87,76 @@ export async function enableBackgroundAudio(): Promise<void> {
       interruptionMode: "doNotMix",
     });
     backgroundAudioConfigured = true;
+  } catch {}
+}
+
+// 60-byte silent WAV (8 samples @ 8kHz, 16-bit mono PCM, all-zero data) used
+// only to physically activate the native audio session. Generated at
+// runtime rather than bundled as a static asset, so it never adds to the
+// app bundle size.
+const SILENT_WARMUP_WAV_BYTES = new Uint8Array([
+  0x52, 0x49, 0x46, 0x46, 0x34, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45, 0x66,
+  0x6d, 0x74, 0x20, 0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x40, 0x1f,
+  0x00, 0x00, 0x80, 0x3e, 0x00, 0x00, 0x02, 0x00, 0x10, 0x00, 0x64, 0x61, 0x74,
+  0x61, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+]);
+
+let warmupFileUri: string | null = null;
+
+// Written once, lazily, on first use — reused for every subsequent Walk
+// session for the rest of the app process. Throws are left to the caller
+// (warmUpAudioSession's own try/catch).
+function getOrCreateWarmupFileUri(): string {
+  if (warmupFileUri) return warmupFileUri;
+  const file = new File(Paths.cache, "streetlit-audio-warmup.wav");
+  file.write(SILENT_WARMUP_WAV_BYTES);
+  warmupFileUri = file.uri;
+  return warmupFileUri;
+}
+
+/**
+ * One-time, silent, inaudible playback used solely to physically activate
+ * the native audio session before Walk Mode allows the phone to lock.
+ * enableBackgroundAudio (above) configures the *rules* for background
+ * playback, but on some devices the underlying session is only actually
+ * activated once something has played — if the phone locks before that
+ * first real playback, the first narration attempt can succeed (play()
+ * returns, no error) while producing no audible sound. See the Walk
+ * delivery diagnostic in WALK_DIAGNOSTIC.md (Part B).
+ *
+ * Deliberately bypasses the entire narration queue:
+ *  - never touches queueRef / speakingRef — this is not a NarrationItem
+ *  - never calls setActiveForLockScreen — no Now Playing / lock-screen entry
+ *  - never calls trackNarrationPlayed — does not count as a narration
+ * Intended to be called once per Walk session, from startWalk() (itself
+ * re-entrancy-guarded, so this naturally runs exactly once per walk — no
+ * extra once-per-process gate is used here, unlike enableBackgroundAudio,
+ * since each new walk is its own "session" per the task's lifecycle scope).
+ * Best-effort: any failure is swallowed so it can never block or fail
+ * Walk start.
+ *
+ * Audio content is genuinely silent (all-zero PCM samples) AND the player
+ * is explicitly muted/zero-volume — belt-and-suspenders inaudibility.
+ */
+export async function warmUpAudioSession(): Promise<void> {
+  if (Platform.OS === "web" || IS_EXPO_GO) return;
+  try {
+    const uri = getOrCreateWarmupFileUri();
+    const player = getExpoAudio().createAudioPlayer({ uri });
+    player.muted = true;
+    player.volume = 0;
+    player.play();
+    // Release the player shortly after — long enough for the OS to have
+    // actually started the session, short enough to never audibly linger.
+    setTimeout(() => {
+      try {
+        player.pause();
+      } catch {}
+      try {
+        player.remove();
+      } catch {}
+    }, 300);
   } catch {}
 }
 

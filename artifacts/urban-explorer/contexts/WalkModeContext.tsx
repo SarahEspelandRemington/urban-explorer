@@ -19,6 +19,7 @@ import {
   enableBackgroundAudio,
   unlockWebSpeech,
   useNarration,
+  warmUpAudioSession,
 } from "@/hooks/useNarration";
 import { API_BASE } from "@/lib/apiBase";
 import { authHeaders } from "@/lib/apiToken";
@@ -2987,6 +2988,13 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         // narration rather than refusing to start the walk.
         try {
           await enableBackgroundAudio();
+        } catch {}
+
+        // One-time, inaudible playback to actually activate the native
+        // audio session while still foregrounded — must run before the
+        // phone may be locked, and must never block or fail Walk start.
+        try {
+          await warmUpAudioSession();
         } catch {}
 
         isWalkingRef.current = true;

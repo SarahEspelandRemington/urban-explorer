@@ -116,6 +116,8 @@ interface FakePlayer {
   addListener: jest.Mock;
   __listeners: Listener[];
   __subRemove: jest.Mock | null;
+  muted?: boolean;
+  volume?: number;
 }
 
 const mockCreatedPlayers: FakePlayer[] = [];
@@ -147,6 +149,22 @@ jest.mock("expo-audio", () => ({
   createAudioPlayer: mockCreateAudioPlayer,
 }));
 
+// ─── expo-file-system ────────────────────────────────────────────────────────
+// Mocked (virtual: true, matching the convention in walkAudioCache.test.ts)
+// so importing useNarration — which uses File/Paths for the one-time audio
+// warm-up file — doesn't pull in the real native module.
+jest.mock(
+  "expo-file-system",
+  () => ({
+    File: jest.fn().mockImplementation(() => ({
+      uri: "mock://warmup.wav",
+      write: jest.fn(),
+    })),
+    Paths: { cache: "/mock/cache" },
+  }),
+  { virtual: true },
+);
+
 // ─── lib/expoEnv ─────────────────────────────────────────────────────────────
 // Mocked so that importing useNarration doesn't pull in expo-constants (which
 // uses ESM syntax incompatible with Jest's CommonJS transform). In these tests
@@ -166,7 +184,7 @@ jest.mock("../lib/sentryWalk", () => ({
   trackNarrationPlayed: jest.fn(),
 }));
 
-import { useNarration } from "../hooks/useNarration";
+import { useNarration, warmUpAudioSession } from "../hooks/useNarration";
 import {
   trackNarrationFallback as mockedTrackNarrationFallback,
   trackNarrationPlayed as mockedTrackNarrationPlayed,
@@ -1201,5 +1219,68 @@ describe("useNarration — prePlayCheck final pre-play abort", () => {
     expect(mockSpeechSpeak).toHaveBeenCalledTimes(1);
     expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
     expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("text");
+  });
+});
+
+describe("warmUpAudioSession — one-time silent/inaudible audio-session activation", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockCreateAudioPlayer.mockClear();
+    mockCreatedPlayers.length = 0;
+    mockTrackNarrationPlayed.mockClear();
+  });
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  test("plays a muted, zero-volume player and tears it down ~300ms later without counting as a narration", async () => {
+    await warmUpAudioSession();
+
+    expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(1);
+    const player = mockCreatedPlayers[0];
+    expect(player.muted).toBe(true);
+    expect(player.volume).toBe(0);
+    expect(player.play).toHaveBeenCalledTimes(1);
+    // Must never be counted as a real narration.
+    expect(mockTrackNarrationPlayed).not.toHaveBeenCalled();
+    expect(player.pause).not.toHaveBeenCalled();
+    expect(player.remove).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(300);
+
+    expect(player.pause).toHaveBeenCalledTimes(1);
+    expect(player.remove).toHaveBeenCalledTimes(1);
+  });
+
+  test("reuses the same cached warm-up file URI on a second call (writes the file only once)", async () => {
+    const { File } = require("expo-file-system") as { File: jest.Mock };
+    File.mockClear();
+
+    await warmUpAudioSession();
+    const firstCallCount = File.mock.calls.length;
+    jest.advanceTimersByTime(300);
+
+    await warmUpAudioSession();
+    jest.advanceTimersByTime(300);
+
+    // The underlying file is created at most once across repeated calls in
+    // the same process — the second call reuses the memoized URI.
+    expect(File.mock.calls.length).toBe(firstCallCount);
+    expect(mockCreateAudioPlayer).toHaveBeenCalledTimes(2);
+  });
+
+  test("never throws even if createAudioPlayer throws (must not block or fail Walk start)", async () => {
+    mockCreateAudioPlayer.mockImplementationOnce(() => {
+      throw new Error("native session busy");
+    });
+    await expect(warmUpAudioSession()).resolves.toBeUndefined();
+  });
+
+  test("is a no-op on web (no player created)", async () => {
+    mockPlatform.OS = "web";
+    await warmUpAudioSession();
+    expect(mockCreateAudioPlayer).not.toHaveBeenCalled();
+    mockPlatform.OS = "ios";
   });
 });
