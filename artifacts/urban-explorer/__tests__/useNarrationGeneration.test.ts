@@ -107,6 +107,8 @@ type AudioStatusLite = {
   didJustFinish?: boolean;
   playbackState?: string;
   reasonForWaitingToPlay?: string;
+  playing?: boolean;
+  currentTime?: number;
 };
 type Listener = (status: AudioStatusLite) => void;
 interface FakePlayer {
@@ -1219,6 +1221,43 @@ describe("useNarration — prePlayCheck final pre-play abort", () => {
     expect(mockSpeechSpeak).toHaveBeenCalledTimes(1);
     expect(mockTrackNarrationPlayed).toHaveBeenCalledTimes(1);
     expect(mockTrackNarrationPlayed).toHaveBeenCalledWith("text");
+  });
+});
+
+describe("useNarration — playback confirmation via playbackStatusUpdate", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
+  test("playing:true with currentTime > 0 marks the attempt confirmed in walkDiagnostics", () => {
+    const { getWalkDiagnostics } = require("../lib/walkDiagnostics");
+
+    const n = useFreshNarrationHook();
+    n.enqueueAudio("p1", "file:///cache/p1.mp3", "Place One");
+
+    const player = mockCreatedPlayers[0];
+    expect(player.__listeners.length).toBe(1);
+
+    // Before any status update, nothing is confirmed yet — play() returned
+    // but we haven't yet seen evidence audio actually advanced.
+    expect(getWalkDiagnostics().lastPlaybackConfirmation).toMatchObject({
+      placeId: "p1",
+      playCallReturned: true,
+      playbackConfirmed: false,
+    });
+
+    // Simulate the native player actually advancing playback.
+    player.__listeners[0]({ playing: true, currentTime: 1.2 });
+
+    expect(getWalkDiagnostics().lastPlaybackConfirmation).toMatchObject({
+      placeId: "p1",
+      playCallReturned: true,
+      playbackConfirmed: true,
+    });
   });
 });
 

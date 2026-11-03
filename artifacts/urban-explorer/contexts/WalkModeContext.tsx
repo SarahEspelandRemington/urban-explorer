@@ -65,6 +65,7 @@ import { isLiveFetchStale } from "@/lib/walkFetchSessionGuard";
 import {
   clearDiscoverError,
   recordBlock,
+  recordContinuedRelevanceCheck,
   recordDiscoverError,
   recordDiscoverResult,
   recordLockCycleEvent, // TEMP-LOCK-CYCLE-DIAG
@@ -479,6 +480,13 @@ interface PickContext {
   pickedAt: number;
 }
 
+// Rounding used only for the new continued-relevance diagnostic snapshots,
+// matching the ~5-decimal-place (~1.1 m) precision the debug overlay already
+// displays GPS coordinates at (see WalkModeDebugOverlay.tsx's toFixed(5)).
+function roundCoordForDiag(v: number): number {
+  return Math.round(v * 1e5) / 1e5;
+}
+
 // Auto-density tuning. We watch the user's rolling pace over a short window
 // and flip density when their behaviour clearly shifts between "browsing" and
 // "commuting". A manual pick from the user temporarily suspends auto-switching
@@ -643,6 +651,12 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
     latitude: number;
     longitude: number;
   } | null>(null);
+  // Age-of-fix companion to currentLocationRef — ms-since-epoch of the GPS
+  // sample currentLocationRef was last written from (not when it was read).
+  // Device-only diagnostic use: background position only updates on GPS
+  // callbacks, so this can be large while the phone is locked. See the Walk
+  // delivery diagnostic in WALK_DIAGNOSTIC.md.
+  const currentLocationTimestampRef = useRef<number | null>(null);
   const [nearbyPlaces, setNearbyPlaces] = useState<WalkPlace[]>([]);
   const [narratedIds, setNarratedIds] = useState<Map<string, number>>(
     new Map(),
@@ -1486,6 +1500,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       const prePlayCheck = (): boolean => {
         const currentLoc = currentLocationRef.current;
         if (!currentLoc) return true; // no GPS — don't second-guess
+        const cfg = DENSITY_CONFIG[densityRef.current];
         const { ok: stillRelevant, distance: dist } = checkContinuedRelevance(
           currentLoc.latitude,
           currentLoc.longitude,
@@ -1493,6 +1508,27 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           place.longitude,
           pickContext.maxQueueDistance,
         );
+        const positionFixAgeMs =
+          currentLocationTimestampRef.current !== null
+            ? Date.now() - currentLocationTimestampRef.current
+            : null;
+        recordContinuedRelevanceCheck({
+          ts: Date.now(),
+          placeId: place.id,
+          placeName: place.name,
+          checkLabel: "prePlay",
+          outcome: stillRelevant ? "ok" : "abort",
+          distance: dist,
+          bearingDiff: null,
+          pickTimeMaxQueueDistance: pickContext.maxQueueDistance,
+          currentMaxQueueDistance: cfg.maxQueueDistance,
+          elapsedSincePickMs: Date.now() - pickContext.pickedAt,
+          positionFixAgeMs,
+          location: {
+            latitude: roundCoordForDiag(currentLoc.latitude),
+            longitude: roundCoordForDiag(currentLoc.longitude),
+          },
+        });
         if (!stillRelevant) {
           if (__DEV__) {
             console.log(
@@ -1708,6 +1744,11 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       }
       const currentLoc = currentLocationRef.current;
       if (!currentLoc) return true; // no GPS — don't second-guess pickNext
+      // Today's density config — used ONLY for the diagnostic's
+      // currentMaxQueueDistance field below; the actual 1x gate is applied
+      // against pickContext.maxQueueDistance (the density active when this
+      // place was originally picked), not today's density.
+      const cfg = DENSITY_CONFIG[densityRef.current];
       const { ok: stillRelevant, distance: dist } = checkContinuedRelevance(
         currentLoc.latitude,
         currentLoc.longitude,
@@ -1715,6 +1756,27 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
         place.longitude,
         pickContext.maxQueueDistance,
       );
+      const positionFixAgeMs =
+        currentLocationTimestampRef.current !== null
+          ? Date.now() - currentLocationTimestampRef.current
+          : null;
+      recordContinuedRelevanceCheck({
+        ts: Date.now(),
+        placeId: place.id,
+        placeName: place.name,
+        checkLabel: contextLabel,
+        outcome: stillRelevant ? "ok" : "abort",
+        distance: dist,
+        bearingDiff: null,
+        pickTimeMaxQueueDistance: pickContext.maxQueueDistance,
+        currentMaxQueueDistance: cfg.maxQueueDistance,
+        elapsedSincePickMs: Date.now() - pickContext.pickedAt,
+        positionFixAgeMs,
+        location: {
+          latitude: roundCoordForDiag(currentLoc.latitude),
+          longitude: roundCoordForDiag(currentLoc.longitude),
+        },
+      });
       if (!stillRelevant) {
         if (__DEV__) {
           console.log(
@@ -2420,6 +2482,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
           headingSource,
           velocityHeadingFresh: velocityFresh,
           velocityMps: null,
+          density: densityRef.current,
           visiblePinCount: visible.length,
           eligibleCount: candidates.length,
           topCandidates: candidates.slice(0, 5),
@@ -2479,6 +2542,7 @@ export function WalkModeProvider({ children }: { children: React.ReactNode }) {
       const { latitude, longitude } = location.coords;
       const now = Date.now();
       currentLocationRef.current = { latitude, longitude };
+      currentLocationTimestampRef.current = now;
       setCurrentLocation({ latitude, longitude });
       setLocationError(null);
 

@@ -13,6 +13,8 @@ import {
   clearLockScreenError,
   recordLockCycleEvent, // TEMP-LOCK-CYCLE-DIAG
   recordLockScreenError,
+  recordPlaybackAttempt,
+  recordPlaybackConfirmed,
 } from "../lib/walkDiagnostics";
 
 /**
@@ -399,6 +401,7 @@ export function useNarration() {
         onFinish();
       });
 
+      let playbackConfirmedLocally = false;
       const sub = player.addListener(
         "playbackStatusUpdate",
         (status: AudioStatus) => {
@@ -407,6 +410,23 @@ export function useNarration() {
           // player.remove()), this is a stale event fired by the OS during teardown.
           // Exit early rather than risk calling remove() on an already-removed player.
           if (!currentSubRef.current) return;
+          // Device-only diagnostic: the first status event reporting
+          // playing:true with currentTime>0 is the closest available
+          // evidence (short of a native module built specifically for this)
+          // that the player is actually producing sound, not just that
+          // play() returned without throwing. See recordPlaybackAttempt
+          // above and DiagPlaybackConfirmation's doc comment for the
+          // accepted limitation of this approach.
+          if (
+            !playbackConfirmedLocally &&
+            status.playing &&
+            status.currentTime > 0
+          ) {
+            playbackConfirmedLocally = true;
+            try {
+              recordPlaybackConfirmed(item.id);
+            } catch {}
+          }
           if (status.didJustFinish) {
             if (__DEV__)
               console.log(`[narration audio] didJustFinish gen=${myGen}`);
@@ -483,6 +503,14 @@ export function useNarration() {
         // failures stay out of the denominator (the rate stays meaningful).
         try {
           trackNarrationPlayed("audio");
+        } catch {}
+        // Device-only diagnostic: play() returning without throwing is NOT
+        // proof the player actually began producing sound (see Walk delivery
+        // diagnostic Part B). Record the attempt now; the listener below
+        // upgrades it to "confirmed" on the first status event that reports
+        // genuine playback progress.
+        try {
+          recordPlaybackAttempt(item.id, item.placeName);
         } catch {}
       } catch (err) {
         if (__DEV__) console.log(`[narration audio] play() threw:`, err);

@@ -21,6 +21,8 @@ export interface DiagSelectionSnapshot {
   velocityMps: number | null;
   visiblePinCount: number;
   eligibleCount: number;
+  /** Density mode active at the moment this pick was made. */
+  density: "dense" | "sparse";
   /** Top candidates after ranking (lowest score first). Up to 5. */
   topCandidates: Array<{
     id: string;
@@ -206,6 +208,66 @@ export interface DiagLockCycleEvent {
   wasPlaying?: boolean | null;
 }
 
+/**
+ * One entry per continued-relevance check — the distance-only re-checks
+ * that run AFTER pickNext already selected a place (the stale-pick
+ * re-checks inside fetchNarration, plus the final check immediately before
+ * playback begins). Deliberately a separate, small buffer from
+ * `rejections` so this new, more verbose diagnostic cannot evict existing
+ * rejection history (see the Walk delivery diagnostic in
+ * WALK_DIAGNOSTIC.md).
+ *
+ * `pickTimeMaxQueueDistance` is the density's maxQueueDistance that was
+ * active when pickNext originally selected this place; `currentMaxQueueDistance`
+ * is today's value (may differ if density auto-switched meanwhile). The
+ * 1x-multiplier gate is always applied against `pickTimeMaxQueueDistance` —
+ * `currentMaxQueueDistance` is recorded for visibility only.
+ *
+ * `positionFixAgeMs` is the age (ms) of the GPS fix `location` was read
+ * from — background position only updates on GPS callbacks, so this can be
+ * large (many seconds) while the phone is locked. Null when no GPS fix has
+ * ever been recorded this walk.
+ */
+export interface DiagContinuedRelevanceCheck {
+  ts: number;
+  placeId: string;
+  placeName: string;
+  checkLabel:
+    | "fetchNarration:pre"
+    | "fetchNarration:cacheHit"
+    | "fetchNarration:postFetch"
+    | "prePlay";
+  outcome: "ok" | "abort";
+  distance: number;
+  bearingDiff: number | null;
+  pickTimeMaxQueueDistance: number;
+  currentMaxQueueDistance: number;
+  elapsedSincePickMs: number;
+  positionFixAgeMs: number | null;
+  location: { latitude: number; longitude: number };
+}
+
+/**
+ * Distinguishes "player.play() returned without throwing" from "the
+ * expo-audio player actually reported playing:true with currentTime>0" —
+ * closes the Part B gap where a successful-looking play() call produced no
+ * audible sound. `playbackConfirmed`/`confirmedAtMs` are populated
+ * asynchronously by the player's own playbackStatusUpdate event; if that
+ * event never arrives with playing:true before the item finishes/advances,
+ * playbackConfirmed stays false and confirmedAtMs stays null. This is the
+ * accepted limitation of reusing expo-audio's existing event surface
+ * rather than introducing a native module built specifically for playback
+ * confirmation (see WALK_DIAGNOSTIC.md).
+ */
+export interface DiagPlaybackConfirmation {
+  ts: number;
+  placeId: string;
+  placeName: string;
+  playCallReturned: boolean;
+  playbackConfirmed: boolean;
+  confirmedAtMs: number | null;
+}
+
 export interface DiagState {
   lastSnapshot: DiagSelectionSnapshot | null;
   rejections: DiagRejection[]; // capped, most recent first
@@ -216,11 +278,15 @@ export interface DiagState {
   lastDiscoverError: DiagDiscoverError | null;
   /** TEMP-LOCK-CYCLE-DIAG — capped, most recent first. */
   lockCycleEvents: DiagLockCycleEvent[];
+  /** Capped, most recent first — see DiagContinuedRelevanceCheck. */
+  continuedRelevanceChecks: DiagContinuedRelevanceCheck[];
+  lastPlaybackConfirmation: DiagPlaybackConfirmation | null;
 }
 
 const REJECTION_CAP = 30;
 const FETCH_CAP = 20;
 const LOCK_CYCLE_CAP = 40; // TEMP-LOCK-CYCLE-DIAG
+const CONTINUED_RELEVANCE_CAP = 15;
 
 const state: DiagState = {
   lastSnapshot: null,
@@ -231,6 +297,8 @@ const state: DiagState = {
   lastLockScreenError: null,
   lastDiscoverError: null,
   lockCycleEvents: [], // TEMP-LOCK-CYCLE-DIAG
+  continuedRelevanceChecks: [],
+  lastPlaybackConfirmation: null,
 };
 
 const subscribers = new Set<() => void>();
@@ -325,6 +393,46 @@ export function recordLockCycleEvent(event: DiagLockCycleEvent): void {
   notify();
 }
 
+/** See the doc comment on DiagContinuedRelevanceCheck. */
+export function recordContinuedRelevanceCheck(
+  check: DiagContinuedRelevanceCheck,
+): void {
+  state.continuedRelevanceChecks.unshift(check);
+  if (state.continuedRelevanceChecks.length > CONTINUED_RELEVANCE_CAP) {
+    state.continuedRelevanceChecks.length = CONTINUED_RELEVANCE_CAP;
+  }
+  notify();
+}
+
+/** Called right after a play() (or equivalent) call returns without
+ *  throwing — see the doc comment on DiagPlaybackConfirmation. */
+export function recordPlaybackAttempt(
+  placeId: string,
+  placeName: string,
+): void {
+  state.lastPlaybackConfirmation = {
+    ts: Date.now(),
+    placeId,
+    placeName,
+    playCallReturned: true,
+    playbackConfirmed: false,
+    confirmedAtMs: null,
+  };
+  notify();
+}
+
+/** Called when the player's own status event confirms playback actually
+ *  started for the place recorded by the most recent recordPlaybackAttempt.
+ *  A mismatched placeId (a newer attempt has already overwritten the slot)
+ *  or an already-confirmed slot is a no-op. */
+export function recordPlaybackConfirmed(placeId: string): void {
+  const slot = state.lastPlaybackConfirmation;
+  if (!slot || slot.placeId !== placeId || slot.playbackConfirmed) return;
+  slot.playbackConfirmed = true;
+  slot.confirmedAtMs = Date.now() - slot.ts;
+  notify();
+}
+
 export function resetWalkDiagnostics(): void {
   state.lastSnapshot = null;
   state.rejections = [];
@@ -334,5 +442,7 @@ export function resetWalkDiagnostics(): void {
   state.lastLockScreenError = null;
   state.lastDiscoverError = null;
   state.lockCycleEvents = []; // TEMP-LOCK-CYCLE-DIAG
+  state.continuedRelevanceChecks = [];
+  state.lastPlaybackConfirmation = null;
   notify();
 }
