@@ -12,6 +12,7 @@ import {
   fetchFromOverpassProviders,
   getOverpassBudgetAllocation,
 } from "../routes/explore/index";
+import { logger } from "../lib/logger";
 
 const COOLDOWN_MS = 10 * 60 * 1000;
 
@@ -369,5 +370,73 @@ describe("fetchFromOverpassProviders", () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(afterExpiry?.provider).toBe(url);
+  });
+
+  // Regression coverage for a Package-2-adjacent Step-0 finding: a complete
+  // loop exhaustion (every provider fails via non-cooldown error/timeout)
+  // previously produced zero log output, making outages impossible to
+  // classify from logs alone. These calls must now log a reason per attempt.
+  it("logs a reason when a provider responds with a non-cooldown error status", async () => {
+    const url = "https://mirror-log-500.test/api/interpreter";
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse(500, false));
+    vi.stubGlobal("fetch", fetchMock);
+    const infoSpy = vi.spyOn(logger, "info");
+
+    const result = await fetchFromOverpassProviders(
+      [url],
+      { method: "POST", headers: {}, body: "" },
+      11000,
+      7000,
+    );
+
+    expect(result).toBeNull();
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: url, status: 500 }),
+      "[overpass] provider responded with error status",
+    );
+    infoSpy.mockRestore();
+  });
+
+  it("logs a reason when a provider fetch throws (timeout/abort/network error)", async () => {
+    const url = "https://mirror-log-timeout.test/api/interpreter";
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValue(new DOMException("aborted", "AbortError"));
+    vi.stubGlobal("fetch", fetchMock);
+    const infoSpy = vi.spyOn(logger, "info");
+
+    const result = await fetchFromOverpassProviders(
+      [url],
+      { method: "POST", headers: {}, body: "" },
+      11000,
+      7000,
+    );
+
+    expect(result).toBeNull();
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: url, errName: "AbortError" }),
+      "[overpass] provider fetch failed (timeout/abort/network error)",
+    );
+    infoSpy.mockRestore();
+  });
+
+  it("still logs a reason for a cooldown-triggering status (403), in addition to starting the cooldown", async () => {
+    const url = "https://mirror-log-403.test/api/interpreter";
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse(403, false));
+    vi.stubGlobal("fetch", fetchMock);
+    const infoSpy = vi.spyOn(logger, "info");
+
+    await fetchFromOverpassProviders(
+      [url],
+      { method: "POST", headers: {}, body: "" },
+      11000,
+      7000,
+    );
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: url, status: 403 }),
+      "[overpass] provider responded with error status",
+    );
+    infoSpy.mockRestore();
   });
 });

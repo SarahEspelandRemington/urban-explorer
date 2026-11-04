@@ -232,12 +232,26 @@ export async function fetchFromOverpassProviders(
           );
           startOverpassProviderCooldown(url, resp.status, durationMs);
         }
+        logger.info(
+          { provider: url, status: resp.status, latencyMs },
+          "[overpass] provider responded with error status",
+        );
         continue;
       }
       return { resp, provider: url, latencyMs };
-    } catch {
+    } catch (err) {
       clearTimeout(timer);
-      remainingBudgetMs -= Date.now() - start;
+      const latencyMs = Date.now() - start;
+      remainingBudgetMs -= latencyMs;
+      logger.info(
+        {
+          provider: url,
+          latencyMs,
+          errName: err instanceof Error ? err.name : typeof err,
+          errMessage: err instanceof Error ? err.message : String(err),
+        },
+        "[overpass] provider fetch failed (timeout/abort/network error)",
+      );
       continue;
     }
   }
