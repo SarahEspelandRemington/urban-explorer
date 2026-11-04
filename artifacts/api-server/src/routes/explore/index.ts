@@ -747,6 +747,156 @@ function getOSMCacheKey(
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Persistent last-known-good OSM store ("stale-on-error", Package 2)
+// ---------------------------------------------------------------------------
+// Reuses the existing apiCache (Postgres) table under its own namespace,
+// "osm-last-good", so it survives restarts without a new table. Holds only
+// raw, already-successful OSM place arrays — never generated copy, never
+// LLM-derived data. Written on every successful live Overpass fetch inside
+// fetchNearbyOSMPlaces; read only when the live Overpass attempt in the
+// osm-anchor discover path fails or times out completely (see
+// computeAnchorDiscoverResult). The store starts empty at deploy — nothing
+// pre-warms it.
+//
+// Key = a ~125 m grid cell (independent, coarser than the unrelated 1/500°
+// "tile" used only for log display elsewhere in this file) plus a radius
+// bucket, so a successful fetch at one radius never overwrites a
+// successful fetch at a materially different radius for the same area.
+// "Most recent successful result wins for that key" falls out naturally
+// from apiCache's existing onConflictDoUpdate upsert (persistCacheEntry).
+const OSM_LAST_GOOD_TTL_MS = 72 * 60 * 60 * 1000;
+const OSM_LAST_GOOD_MAX_DISTANCE_M = 150;
+// ~125 m in degrees of latitude (111,320 m/degree); used uniformly for both
+// lat and lng grid rounding (no per-latitude longitude correction) — the
+// same simplification the existing diagnostic-only snapGrid helper makes
+// elsewhere in this file. "Approximately 125 m" per the product spec; this
+// never makes a cell larger than 125 m at any latitude actually served.
+const OSM_LAST_GOOD_GRID_DEG = 125 / 111320;
+
+interface OsmLastGoodRecord {
+  places: OSMPlace[];
+  centerLat: number;
+  centerLng: number;
+  radius: number;
+  fetchedAt: number;
+}
+
+function roundToOsmLastGoodGrid(value: number): number {
+  return Math.round(value / OSM_LAST_GOOD_GRID_DEG) * OSM_LAST_GOOD_GRID_DEG;
+}
+
+export function osmLastGoodKey(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+): string {
+  const gridLat = roundToOsmLastGoodGrid(lat).toFixed(6);
+  const gridLng = roundToOsmLastGoodGrid(lng).toFixed(6);
+  const radiusBucket = Math.ceil(radiusMeters / 50) * 50;
+  return `${gridLat},${gridLng}:r${radiusBucket}`;
+}
+
+// Re-anchors a stored (possibly stale) place array to the CURRENT request:
+// every place's distance is recomputed from the current request center, not
+// the stored center, and only places within the current requested radius
+// are kept. This is required so a walker who has moved since the stored
+// snapshot was captured never sees places re-anchored to a stale location.
+export function reAnchorStalePlaces(
+  places: readonly OSMPlace[],
+  lat: number,
+  lng: number,
+  requestedRadiusMeters: number,
+): OSMPlace[] {
+  return places.filter(
+    (p) => haversineDistance(lat, lng, p.lat, p.lon) <= requestedRadiusMeters,
+  );
+}
+
+// Pure eligibility/selection logic, kept separate from the DB query so it is
+// directly unit-testable. Implements every stale-read rule from the product
+// spec: distance <=150 m from the CURRENT request center, stored radius >=
+// the current requested radius, age <=72h (checked here against `now`,
+// independent of the DB's own expiresAt filter), nearest qualifying center
+// wins, ties broken by most recent fetchedAt.
+export function selectQualifyingOsmLastGood(
+  candidates: readonly OsmLastGoodRecord[],
+  lat: number,
+  lng: number,
+  requestedRadiusMeters: number,
+  now: number = Date.now(),
+): (OsmLastGoodRecord & { distanceMeters: number }) | null {
+  const qualifying = candidates
+    .map((entry) => ({
+      entry,
+      distanceMeters: haversineDistance(
+        lat,
+        lng,
+        entry.centerLat,
+        entry.centerLng,
+      ),
+    }))
+    .filter(
+      ({ entry, distanceMeters }) =>
+        distanceMeters <= OSM_LAST_GOOD_MAX_DISTANCE_M &&
+        entry.radius >= requestedRadiusMeters &&
+        now - entry.fetchedAt <= OSM_LAST_GOOD_TTL_MS,
+    );
+  if (qualifying.length === 0) return null;
+  qualifying.sort(
+    (a, b) =>
+      a.distanceMeters - b.distanceMeters ||
+      b.entry.fetchedAt - a.entry.fetchedAt,
+  );
+  const best = qualifying[0]!;
+  return { ...best.entry, distanceMeters: best.distanceMeters };
+}
+
+export async function upsertOsmLastGood(
+  lat: number,
+  lng: number,
+  radiusMeters: number,
+  places: OSMPlace[],
+): Promise<void> {
+  const key = osmLastGoodKey(lat, lng, radiusMeters);
+  const record: OsmLastGoodRecord = {
+    places,
+    centerLat: lat,
+    centerLng: lng,
+    radius: radiusMeters,
+    fetchedAt: Date.now(),
+  };
+  await persistCacheEntry("osm-last-good", key, record, OSM_LAST_GOOD_TTL_MS);
+}
+
+export async function findQualifyingOsmLastGood(
+  lat: number,
+  lng: number,
+  requestedRadiusMeters: number,
+): Promise<(OsmLastGoodRecord & { distanceMeters: number }) | null> {
+  try {
+    const rows = await db
+      .select()
+      .from(apiCache)
+      .where(
+        and(
+          eq(apiCache.namespace, "osm-last-good"),
+          gt(apiCache.expiresAt, new Date()),
+        ),
+      );
+    const candidates = rows.map((row) => row.data as OsmLastGoodRecord);
+    return selectQualifyingOsmLastGood(
+      candidates,
+      lat,
+      lng,
+      requestedRadiusMeters,
+    );
+  } catch (err) {
+    logger.warn({ err }, "[overpass] failed to query last-good OSM store");
+    return null;
+  }
+}
+
 // Returns null when Overpass errored or timed out (transient failure).
 // Returns OSMPlace[] (possibly empty) when Overpass responded successfully —
 // an empty array means the area is genuinely sparse, not a network failure.
@@ -863,6 +1013,7 @@ out center body qt ${maxResults};
       places: finalResults,
       timestamp: Date.now(),
     });
+    void upsertOsmLastGood(lat, lng, r, finalResults);
     return finalResults;
   } catch (err) {
     logger.warn({ err }, "Overpass fetch failed, returning null");
@@ -3821,11 +3972,24 @@ router.post("/explore/discover", async (req, res) => {
         // The outer 8 s race guards against fetchNearbyOSMPlaces stalling after
         // its own internal abort fires (e.g. slow TLS teardown).
         let overpassErrored = false;
+        // Set only when a qualifying last-known-good OSM snapshot (Package 2,
+        // "stale-on-error") is actually served below — never on a live
+        // success, and never merely because a live failure occurred (that
+        // case falls through to overpassErrored unchanged if no qualifying
+        // stale entry exists; see findQualifyingOsmLastGood's eligibility
+        // rules). Read lower down when building the final response/cache
+        // entry so stale responses can be tagged and cached distinctly.
+        let staleOsmServed: {
+          ageMs: number;
+          distanceMeters: number;
+        } | null = null;
+        let staleReAnchoredPlaces: OSMPlace[] = [];
+        const effectiveRadiusMeters = Math.min(searchRadius, 500);
         const osmRaceResult = await Promise.race([
           fetchNearbyOSMPlaces(
             latitude,
             longitude,
-            Math.min(searchRadius, 500),
+            effectiveRadiusMeters,
             false,
             // Walk Mode always requests a 300m radius (confirmed via both
             // WalkModeContext density profiles) — 120 fully covers the
@@ -3839,9 +4003,44 @@ router.post("/explore/discover", async (req, res) => {
           ),
         ]);
         if (osmRaceResult === null) {
-          overpassErrored = true;
+          // Live Overpass failed, timed out, or every provider is currently
+          // cooling down — try last-known-good OSM before falling back to
+          // the grounded-only empty response. Never attempted on a live
+          // success (including a genuinely sparse live result, which
+          // returns [] above, not null).
+          const staleEntry = await findQualifyingOsmLastGood(
+            latitude,
+            longitude,
+            effectiveRadiusMeters,
+          );
+          if (staleEntry) {
+            const reAnchored = reAnchorStalePlaces(
+              staleEntry.places,
+              latitude,
+              longitude,
+              effectiveRadiusMeters,
+            );
+            staleOsmServed = {
+              ageMs: Date.now() - staleEntry.fetchedAt,
+              distanceMeters: staleEntry.distanceMeters,
+            };
+            req.log.info(
+              {
+                reqId: req.id,
+                osmAgeMs: staleOsmServed.ageMs,
+                distanceMeters: Math.round(staleEntry.distanceMeters),
+                placeCount: reAnchored.length,
+              },
+              "[overpass] serving last-good",
+            );
+            staleReAnchoredPlaces = reAnchored;
+          } else {
+            overpassErrored = true;
+          }
         }
-        let osmCandidates: OSMPlace[] = osmRaceResult ?? [];
+        let osmCandidates: OSMPlace[] = staleOsmServed
+          ? staleReAnchoredPlaces
+          : (osmRaceResult ?? []);
         // Diagnostic-only funnel counts — see FreshFunnelDiagnostics. Does not
         // affect filtering, ranking, or response content.
         const rawOsmCandidates = osmCandidates.length;
@@ -4906,8 +5105,29 @@ router.post("/explore/discover", async (req, res) => {
             nbhdLabel.src === "nominatim" ? "nominatim" : "absent",
           osmCandidateCount,
           noVerifiedPlacesNearby: false,
+          ...(staleOsmServed
+            ? {
+                osmStale: true,
+                osmAgeMs: staleOsmServed.ageMs,
+                overpassFallback: false,
+              }
+            : {}),
         };
-        setLLMCache(discoverCacheKey, anchorResp);
+        if (staleOsmServed) {
+          // Stale-derived discover responses are served from a last-known-good
+          // OSM snapshot while live Overpass is unavailable. Copy generation
+          // may have run on that stale pool, so we cache the result briefly
+          // in memory only (5 min) to avoid rerunning copy-gen every poll
+          // during an outage, without ever persisting it to the long-lived
+          // Postgres "llm" cache namespace.
+          const STALE_DERIVED_TTL_MS = 5 * 60 * 1000;
+          llmCache.set(discoverCacheKey, {
+            data: anchorResp,
+            timestamp: Date.now() - (LLM_CACHE_TTL_MS - STALE_DERIVED_TTL_MS),
+          });
+        } else {
+          setLLMCache(discoverCacheKey, anchorResp);
+        }
         const funnelDiagnostics: FreshFunnelDiagnostics = {
           cacheStatus: "fresh_owner",
           funnelCompletedThrough: "final",
