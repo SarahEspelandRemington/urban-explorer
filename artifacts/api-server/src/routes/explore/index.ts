@@ -110,10 +110,157 @@ interface OSMPlace {
   candidateOrigin?: "streetlit" | "approvedRescue";
 }
 
-const OVERPASS_PROVIDERS = [
-  "https://overpass.openstreetmap.fr/api/interpreter",
-  "https://overpass-api.de/api/interpreter",
-];
+// overpass.openstreetmap.fr removed 2026-11-03: its /api/status endpoint
+// returns "403: This service is only available to white-listed usages",
+// and production logs show the same mirror failing every real query during
+// the Nov 3 outage. No attempt is made to regain access via headers — see
+// WALK_DIAGNOSTIC.md-adjacent investigation notes. Only overpass-api.de
+// remains; no verified, globally-covering, reliably-reachable second public
+// mirror was found as of this change (see OVERPASS_PROVIDERS doc below).
+export const OVERPASS_PROVIDERS = ["https://overpass-api.de/api/interpreter"];
+
+// Identifies Streetlit to the Overpass mirror(s) with a real contact address,
+// per Overpass fair-use policy guidance (public instances document this as
+// the main signal they use to distinguish good-faith app traffic from
+// unidentified bulk/scraper traffic). Shared by every function in this file
+// that queries Overpass directly.
+export const OVERPASS_USER_AGENT =
+  "Streetlit/1.0 (+mailto:streetlit-contact.conflict277@simplelogin.com)";
+
+// Per-mirror cooldown: once a provider returns HTTP 403 or 429, skip it for
+// a while rather than retrying it on every subsequent request — a policy
+// rejection or rate limit is not something retrying sooner will fix, and
+// continuing to hit it anyway is impolite to an operator who has already
+// said no. Timeout/abort/5xx do NOT trigger this — those are treated as
+// ordinary transient failures, consistent with existing behavior.
+//
+// 403 (policy rejection, e.g. "white-listed usages only") gets the long
+// 10-minute cooldown — it is not expected to resolve itself soon. 429
+// (rate limit) honors the server's own Retry-After header when present
+// (parsed as integer seconds), since the server is telling us exactly how
+// long to wait; absent that header, it falls back to a much shorter 60
+// seconds, since a rate limit is expected to clear quickly.
+const OVERPASS_403_COOLDOWN_MS = 10 * 60 * 1000;
+const OVERPASS_429_DEFAULT_COOLDOWN_MS = 60 * 1000;
+const overpassProviderCooldowns = new Map<string, number>();
+
+function isOverpassProviderCoolingDown(url: string): boolean {
+  const until = overpassProviderCooldowns.get(url);
+  if (until === undefined) return false;
+  if (Date.now() >= until) {
+    overpassProviderCooldowns.delete(url);
+    return false;
+  }
+  return true;
+}
+
+function getOverpassCooldownDurationMs(
+  status: number,
+  retryAfterHeader: string | null,
+): number {
+  if (status === 403) return OVERPASS_403_COOLDOWN_MS;
+  // status === 429
+  if (retryAfterHeader !== null) {
+    const retryAfterSeconds = Number.parseInt(retryAfterHeader, 10);
+    if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
+      return retryAfterSeconds * 1000;
+    }
+  }
+  return OVERPASS_429_DEFAULT_COOLDOWN_MS;
+}
+
+function startOverpassProviderCooldown(
+  url: string,
+  status: number,
+  durationMs: number,
+): void {
+  const until = Date.now() + durationMs;
+  overpassProviderCooldowns.set(url, until);
+  logger.info(
+    { provider: url, status, cooldownMs: durationMs },
+    "[overpass] provider entering cooldown",
+  );
+}
+
+// Sequential-with-budget-slicing Overpass fetch, used by fetchNearbyOSMPlaces.
+// Providers currently in cooldown are skipped entirely. The first
+// non-cooled-down provider gets up to `primarySliceMs` of the total budget;
+// any remaining providers share what's left, with the last one getting
+// whatever remains (never less than it would under a naive even split when
+// there's only one provider left to try). With OVERPASS_PROVIDERS currently
+// down to a single entry, this degenerates to "try the one provider with
+// the full budget, unless it's cooling down" — the slicing only matters if a
+// second verified provider is added back in the future.
+export async function fetchFromOverpassProviders(
+  providers: readonly string[],
+  fetchOptsBase: Omit<RequestInit, "signal">,
+  totalBudgetMs: number,
+  primarySliceMs: number,
+): Promise<{ resp: Response; provider: string; latencyMs: number } | null> {
+  const active = providers.filter((url) => !isOverpassProviderCoolingDown(url));
+  if (active.length === 0) {
+    logger.info(
+      { providers: [...providers] },
+      "[overpass] all providers cooling down — skipping fetch",
+    );
+    return null;
+  }
+
+  let remainingBudgetMs = totalBudgetMs;
+  for (let i = 0; i < active.length; i++) {
+    const url = active[i]!;
+    const isLast = i === active.length - 1;
+    const sliceMs = isLast
+      ? remainingBudgetMs
+      : Math.min(primarySliceMs, remainingBudgetMs);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), sliceMs);
+    const start = Date.now();
+    try {
+      const resp = await fetch(url, {
+        ...fetchOptsBase,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const latencyMs = Date.now() - start;
+      remainingBudgetMs -= latencyMs;
+      if (!resp.ok) {
+        if (resp.status === 403 || resp.status === 429) {
+          const durationMs = getOverpassCooldownDurationMs(
+            resp.status,
+            resp.headers.get("retry-after"),
+          );
+          startOverpassProviderCooldown(url, resp.status, durationMs);
+        }
+        continue;
+      }
+      return { resp, provider: url, latencyMs };
+    } catch {
+      clearTimeout(timer);
+      remainingBudgetMs -= Date.now() - start;
+      continue;
+    }
+  }
+  return null;
+}
+
+// Total client-side budget for a fetchNearbyOSMPlaces call, and how much of
+// it the first (non-cooled-down) provider gets before any remaining budget
+// is handed to the next one. See fetchFromOverpassProviders' doc comment —
+// with OVERPASS_PROVIDERS currently holding a single entry, the slice
+// figures only matter once a second verified provider exists again. Quick
+// mode scales the primary slice proportionally within its smaller total
+// budget (5s vs. 11s) rather than reusing the full-mode 7s outright.
+export function getOverpassBudgetAllocation(quickMode: boolean): {
+  totalBudgetMs: number;
+  primarySliceMs: number;
+} {
+  const totalBudgetMs = quickMode ? 5000 : 11000;
+  const primarySliceMs = quickMode
+    ? Math.round(7000 * (5000 / 11000)) // ≈3182ms, proportional to full mode
+    : 7000;
+  return { totalBudgetMs, primarySliceMs };
+}
 
 const DEFAULT_BORING_BUILDING_TYPES = [
   "garage",
@@ -620,32 +767,29 @@ async function fetchNearbyOSMPlaces(
 );
 out center body qt ${maxResults};
 `;
-  const controller = new AbortController();
-  const abortTimeout = quickMode ? 5000 : 11000;
-  const timeout = setTimeout(() => controller.abort(), abortTimeout);
+  const { totalBudgetMs, primarySliceMs } =
+    getOverpassBudgetAllocation(quickMode);
 
-  const fetchOpts = {
+  const fetchOptsBase: Omit<RequestInit, "signal"> = {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
-      "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+      "User-Agent": OVERPASS_USER_AGENT,
     },
     body: `data=${encodeURIComponent(query)}`,
-    signal: controller.signal,
   };
 
   try {
-    const { resp, provider } = await Promise.any(
-      OVERPASS_PROVIDERS.map((url) =>
-        fetch(url, fetchOpts).then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return { resp: r, provider: url };
-        }),
-      ),
+    const result = await fetchFromOverpassProviders(
+      OVERPASS_PROVIDERS,
+      fetchOptsBase,
+      totalBudgetMs,
+      primarySliceMs,
     );
-    clearTimeout(timeout);
-    logger.info({ provider }, "[overpass] provider responded");
+    if (!result) return null;
+    const { resp, provider, latencyMs } = result;
+    logger.info({ provider, latencyMs }, "[overpass] provider responded");
 
     const json = (await resp.json()) as { elements?: any[]; remark?: string };
     if (!json.elements) return null;
@@ -707,7 +851,6 @@ out center body qt ${maxResults};
     });
     return finalResults;
   } catch (err) {
-    clearTimeout(timeout);
     logger.warn({ err }, "Overpass fetch failed, returning null");
     return null;
   }
@@ -766,7 +909,7 @@ async function fetchApprovedOsmSubjects(
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
-      "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+      "User-Agent": OVERPASS_USER_AGENT,
     },
     body: `data=${encodeURIComponent(query)}`,
     signal: controller.signal,
@@ -8213,7 +8356,7 @@ out center body ${overpassLimit};
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
-      "User-Agent": "UrbanExplorer/1.0 (walking-tour app)",
+      "User-Agent": OVERPASS_USER_AGENT,
     },
     body: `data=${encodeURIComponent(query)}`,
     signal: controller.signal,
