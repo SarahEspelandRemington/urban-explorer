@@ -187,9 +187,23 @@ describe("buildWalkCandidateFunnelDiagnostic", () => {
   });
 
   it("falls back to not_retained when no deterministic reason matches", () => {
+    // Deliberately NOT a bare candidate: amenity=cafe alone has no
+    // wikidata/wikipedia/historic/description/heritage:description (the
+    // ENRICHED_TAGS set) and no start_date/denomination/operator/architect/
+    // building:material/alt_name (the STANDARD_TAGS set), so
+    // computeOsmTrustLevel would classify it osm_bare and the real
+    // osm_bare_no_curated branch would catch it first, never reaching this
+    // fallback. Adding operator= (a STANDARD_TAGS member) makes trust level
+    // osm_standard, so this candidate now passes every other deterministic
+    // branch (no building= -> not denylisted/residential; amenity, not
+    // shop/office/craft -> not ordinary_commercial_use; not in
+    // STALE_OSM_IDS; within requestedRadiusMeters; not osm_bare) and
+    // genuinely exercises the not_retained fallback -- the real case for a
+    // decently-tagged candidate excluded only by rank/cap, not by any of the
+    // deterministic predicates.
     const copyGenCandidates = [copyGenCand(1)];
     const mystery = raw("way/777", {
-      tags: { name: "Mystery", amenity: "cafe" },
+      tags: { name: "Mystery", amenity: "cafe", operator: "Some Operator" },
       distanceMeters: 10,
     });
     const diagnostic = buildWalkCandidateFunnelDiagnostic({
