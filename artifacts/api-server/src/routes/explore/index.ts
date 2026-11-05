@@ -53,6 +53,13 @@ import {
   WALK_RESERVED_SLOT_COUNT,
   type ReservedSlotShadowResult,
 } from "../../lib/walkReservedSlotShadow";
+// TEMP-WALK-CANDIDATE-FUNNEL-DIAGNOSTIC: remove after one successful
+// dense-area field session has been captured and analyzed.
+import {
+  buildWalkCandidateFunnelDiagnostic,
+  buildWalkCandidateFunnelLogEvents,
+  shouldEmitWalkCandidateFunnelDiagnostic,
+} from "../../lib/walkCandidateFunnelDiagnostic";
 import {
   getApprovedCuratedEntry,
   getApprovedOsmSubjectIds,
@@ -4044,6 +4051,15 @@ router.post("/explore/discover", async (req, res) => {
         // Diagnostic-only funnel counts — see FreshFunnelDiagnostics. Does not
         // affect filtering, ranking, or response content.
         const rawOsmCandidates = osmCandidates.length;
+        // TEMP-WALK-CANDIDATE-FUNNEL-DIAGNOSTIC: remove after one successful
+        // dense-area field session has been captured and analyzed. Pristine
+        // pre-filter snapshot — same array reference, no copy. osmCandidates
+        // itself is reassigned by the denylist/residential/commercial/stale
+        // filters below; this binding is not, so the funnel diagnostic can
+        // later classify exactly why a raw candidate never reached
+        // copyGenCandidates. No effect on filtering, ranking, or response.
+        const rawOsmCandidatesSnapshotForFunnelDiagnostic: OSMPlace[] =
+          osmCandidates;
 
         // Apply boring-building denylist
         if (effectiveDenylist.size > 0) {
@@ -4444,6 +4460,73 @@ router.post("/explore/discover", async (req, res) => {
             req.log.warn(
               { reqId: req.id, err },
               "[walk-reserved-slot-shadow] shadow computation failed (no effect on discover)",
+            );
+          }
+        }
+
+        // TEMP-WALK-CANDIDATE-FUNNEL-DIAGNOSTIC: remove after one successful
+        // dense-area field session has been captured and analyzed. Same
+        // Walk-only / over-cap gate as the reserved-slot shadow above. Pure
+        // computation + server-log-only emission; never touches
+        // cappedCandidates/cappedCandidateIds or anything sent to copy-gen,
+        // and failure is logged and swallowed like the shadow above. See
+        // walkCandidateFunnelDiagnostic.ts.
+        if (
+          shouldEmitWalkCandidateFunnelDiagnostic(
+            walkMode,
+            copyGenCandidates.length,
+            COPY_GEN_CANDIDATE_CAP,
+          )
+        ) {
+          try {
+            const funnelDiagnostic = buildWalkCandidateFunnelDiagnostic({
+              requestCenter: { lat: latitude, lon: longitude },
+              requestedRadiusMeters: searchRadius,
+              candidateCap: COPY_GEN_CANDIDATE_CAP,
+              rawOsmCandidates: rawOsmCandidatesSnapshotForFunnelDiagnostic.map(
+                (p) => ({
+                  osmId: p.osmId,
+                  name: p.name,
+                  tags: p.tags,
+                  distanceMeters: haversineDistance(
+                    latitude,
+                    longitude,
+                    p.lat,
+                    p.lon,
+                  ),
+                }),
+              ),
+              copyGenCandidates: copyGenCandidates.map((p) => ({
+                osmId: p.osmId,
+                name: p.name,
+                tags: p.tags,
+                candidateOrigin: p.candidateOrigin,
+                distanceMeters: haversineDistance(
+                  latitude,
+                  longitude,
+                  p.lat,
+                  p.lon,
+                ),
+              })),
+              effectiveDenylist,
+            });
+            for (const event of buildWalkCandidateFunnelLogEvents(
+              funnelDiagnostic,
+            )) {
+              req.log.info(
+                {
+                  reqId: req.id,
+                  branch: "osm-anchor",
+                  walkMode: true,
+                  ...event,
+                },
+                "[walk-candidate-funnel] diagnostic",
+              );
+            }
+          } catch (err) {
+            req.log.warn(
+              { reqId: req.id, err },
+              "[walk-candidate-funnel] diagnostic computation failed (no effect on discover)",
             );
           }
         }
