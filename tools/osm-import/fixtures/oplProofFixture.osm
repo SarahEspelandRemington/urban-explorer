@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Synthetic fixture proving the chosen intermediate format (OPL, produced via
+  `osmium add-locations-to-ways` + `osmium cat -f opl`) retains every
+  node/way/relation with full tags and resolved way-node coordinates —
+  including a non-area `type=site` relation — ahead of selector logic.
+  See Package 1 requirement B. Not real OSM data.
+-->
+<osm version="0.6" generator="streetlit-fixture">
+  <node id="1" lat="40.7000000" lon="-73.9000000" version="1"/>
+  <node id="2" lat="40.7010000" lon="-73.9000000" version="1"/>
+  <node id="3" lat="40.7010000" lon="-73.9010000" version="1"/>
+  <node id="4" lat="40.7000000" lon="-73.9010000" version="1"/>
+  <node id="5" lat="40.7050000" lon="-73.9050000" version="1">
+    <tag k="historic" v="memorial"/>
+    <tag k="name" v="Test Memorial"/>
+  </node>
+  <node id="6" lat="40.6950000" lon="-73.8950000" version="1"/>
+  <way id="10" version="1">
+    <nd ref="1"/>
+    <nd ref="2"/>
+    <nd ref="3"/>
+    <nd ref="4"/>
+    <nd ref="1"/>
+    <tag k="building" v="yes"/>
+    <tag k="name" v="Test Building"/>
+  </way>
+  <relation id="100" version="1">
+    <member type="way" ref="10" role="perimeter"/>
+    <member type="node" ref="6" role="label"/>
+    <tag k="type" v="site"/>
+    <tag k="historic" v="heritage"/>
+    <tag k="name" v="Test Heritage Site"/>
+  </relation>
+</osm>

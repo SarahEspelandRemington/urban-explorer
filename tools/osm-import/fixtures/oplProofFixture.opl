@@ -1,0 +1,4 @@
+n5 v1 dV c0 t i0 u Thistoric=memorial,name=Test%20%Memorial x-73.905 y40.705
+n6 v1 dV c0 t i0 u T x-73.895 y40.695
+w10 v1 dV c0 t i0 u Tbuilding=yes,name=Test%20%Building Nn1x-73.9y40.7,n2x-73.9y40.701,n3x-73.901y40.701,n4x-73.901y40.7,n1x-73.9y40.7
+r100 v1 dV c0 t i0 u Ttype=site,historic=heritage,name=Test%20%Heritage%20%Site Mw10@perimeter,n6@label

@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version="0.6" generator="osmium/1.19.1">
+  <node id="5" version="1" lat="40.705" lon="-73.905">
+    <tag k="historic" v="memorial"/>
+    <tag k="name" v="Test Memorial"/>
+  </node>
+  <node id="6" version="1" lat="40.695" lon="-73.895"/>
+  <way id="10" version="1">
+    <nd ref="1" lat="40.7" lon="-73.9"/>
+    <nd ref="2" lat="40.701" lon="-73.9"/>
+    <nd ref="3" lat="40.701" lon="-73.901"/>
+    <nd ref="4" lat="40.7" lon="-73.901"/>
+    <nd ref="1" lat="40.7" lon="-73.9"/>
+    <tag k="building" v="yes"/>
+    <tag k="name" v="Test Building"/>
+  </way>
+  <relation id="100" version="1">
+    <member type="way" ref="10" role="perimeter"/>
+    <member type="node" ref="6" role="label"/>
+    <tag k="type" v="site"/>
+    <tag k="historic" v="heritage"/>
+    <tag k="name" v="Test Heritage Site"/>
+  </relation>
+</osm>
