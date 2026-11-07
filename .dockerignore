@@ -1,0 +1,12 @@
+# Build context trimming for Dockerfile (OSM-import worker image only).
+# Does not affect the production web service, which builds via its own
+# "node" runtime (pnpm install / pnpm run build), not Docker.
+node_modules
+**/node_modules
+dist
+**/dist
+*.tsbuildinfo
+.expo
+.expo-shared
+.git
+tools/prompt-eval/results
